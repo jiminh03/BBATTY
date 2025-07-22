@@ -35,3 +35,8 @@ out/
 
 ### VS Code ###
 .vscode/
+
+# BBATTY 프로젝트 설정
+# 도메인 폴더 구조 유지 (빈 폴더도 추적)
+!src/main/java/com/ssafy/bbatty/domain/*/
+!src/main/java/com/ssafy/bbatty/global/*/
