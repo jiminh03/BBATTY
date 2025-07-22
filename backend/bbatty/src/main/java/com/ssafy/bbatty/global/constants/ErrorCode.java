@@ -1,0 +1,36 @@
+package com.ssafy.bbatty.global.constants;
+
+import org.springframework.http.HttpStatus;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
+
+@Getter
+@RequiredArgsConstructor
+public enum ErrorCode {
+
+    // COMMON
+    NOT_FOUND(HttpStatus.NOT_FOUND, "리소스를 찾을 수 없어요."),
+    FORBIDDEN(HttpStatus.FORBIDDEN, "접근 권한이 없어요."),
+    UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증이 필요해요."),
+    BAD_REQUEST(HttpStatus.BAD_REQUEST, "잘못된 요청이에요."),
+    SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 오류가 발생했어요."),
+
+    INVALID_ADDRESS_FORMAT(HttpStatus.BAD_REQUEST, "주소 형식이 올바르지 않아요."),
+    
+    // FILE PATH
+    INVALID_FILE_PATH(HttpStatus.BAD_REQUEST, "파일 경로가 유효하지 않아요."),
+    FILE_PATH_SECURITY_VIOLATION(HttpStatus.BAD_REQUEST, "허용되지 않는 파일 경로예요."),
+    FILE_NOT_FOUND(HttpStatus.NOT_FOUND, "파일을 찾을 수 없어요."),
+    FILE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "파일에 접근할 수 없어요.");
+
+    /*
+    본인에게 맞는 예외코드 설정하세요
+    // USER
+	EMAIL_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 존재하는 이메일이에요."),
+	USER_DELETED(HttpStatus.NOT_FOUND, "탈퇴한 사용자예요."),
+     */
+
+    private final HttpStatus status;
+    private final String message;
+}
