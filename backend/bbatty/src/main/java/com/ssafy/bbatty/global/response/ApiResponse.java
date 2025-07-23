@@ -1,4 +1,4 @@
-package com.ssafy.bbatty.global.dto.response;
+package com.ssafy.bbatty.global.response;
 
 
 import com.ssafy.bbatty.global.constants.ErrorCode;

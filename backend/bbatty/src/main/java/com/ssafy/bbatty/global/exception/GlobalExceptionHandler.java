@@ -2,7 +2,7 @@ package com.ssafy.bbatty.global.exception;
 
 
 import com.ssafy.bbatty.global.constants.ErrorCode;
-import com.ssafy.bbatty.global.dto.response.ApiResponse;
+import com.ssafy.bbatty.global.response.ApiResponse;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
