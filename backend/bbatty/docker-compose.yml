@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # MySQL 데이터베이스
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - app-network
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: spring-app
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - app-network
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-db:3306/${MYSQL_DATABASE}
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
+      SPRING_REDIS_HOST: redis-cache
+
+
+  # Jenkins CI/CD -> 로컬 필요 없음
+#  jenkins:
+#    image: jenkins/jenkins:lts
+#    container_name: jenkins-server
+#    restart: always
+#    ports:
+#      - "8081:8080"
+#      - "50000:50000"
+#    volumes:
+#      - jenkins_data:/var/jenkins_home
+#      - /var/run/docker.sock:/var/run/docker.sock
+#    environment:
+#      - DOCKER_HOST=unix:///var/run/docker.sock
+#    networks:
+#      - app-network
+#    user: root
+
+  # Redis 캐시
+  redis:
+    image: redis:alpine
+    container_name: redis-cache
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+
+volumes:
+  mysql_data:
+  jenkins_data:
+  redis_data:
+
+networks:
+  app-network:
+    driver: bridge
