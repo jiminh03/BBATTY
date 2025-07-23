@@ -1,7 +1,7 @@
 package com.ssafy.bbatty.global.util;
 
 import com.ssafy.bbatty.global.constants.ErrorCode;
-import com.ssafy.bbatty.global.dto.response.ApiException;
+import com.ssafy.bbatty.global.exception.ApiException;
 
 import java.io.File;
 import java.nio.file.InvalidPathException;
