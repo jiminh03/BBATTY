@@ -36,6 +36,12 @@ dependencies {
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	// for test H2 DB
 	testImplementation 'com.h2database:h2'
+	// for websocket
+	implementation 'org.springframework.boot:spring-boot-starter-websocket'
+
+	// for redis
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+	implementation 'redis.clients:jedis'
 }
 
 tasks.named('test') {
