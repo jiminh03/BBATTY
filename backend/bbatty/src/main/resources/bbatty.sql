@@ -49,13 +49,14 @@ CREATE TABLE `game` (
 
 -- 사용자 기본 정보 테이블
 CREATE TABLE `user` (
-                        `id` VARCHAR(36) NOT NULL COMMENT '사용자 고유 ID (UUID)',
+                        `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '사용자 ID',
                         `team_id` BIGINT NOT NULL COMMENT '응원팀 ID',
                         `nickname` VARCHAR(20) NOT NULL COMMENT '닉네임',
                         `gender` ENUM('MALE', 'FEMALE') NOT NULL COMMENT '성별',
                         `age` INT NOT NULL COMMENT '나이',
                         `role` ENUM('USER', 'ADMIN') NOT NULL DEFAULT 'USER' COMMENT '사용자 권한',
                         `profile_img` VARCHAR(255) NULL COMMENT '프로필 이미지 URL',
+                        `introduction` TEXT NULL COMMENT '자기소개',
                         `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                         PRIMARY KEY (`id`),
@@ -65,7 +66,7 @@ CREATE TABLE `user` (
 -- 사용자 상세 정보 테이블 (민감정보)
 CREATE TABLE `user_info` (
                              `id` BIGINT NOT NULL AUTO_INCREMENT,
-                             `user_id` VARCHAR(36) NOT NULL COMMENT '사용자 ID 참조',
+                             `user_id` BIGINT NOT NULL COMMENT '사용자 ID 참조',
                              `kakao_id` VARCHAR(50) NULL COMMENT '카카오 ID',
                              `email` VARCHAR(100) NOT NULL COMMENT '이메일',
                              `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -81,7 +82,7 @@ CREATE TABLE `user_info` (
 CREATE TABLE `user_attended` (
                                  `id` BIGINT NOT NULL AUTO_INCREMENT,
                                  `game_id` BIGINT NOT NULL COMMENT '경기 ID',
-                                 `user_id` VARCHAR(36) NOT NULL COMMENT '사용자 ID',
+                                 `user_id` BIGINT NOT NULL COMMENT '사용자 ID',
                                  `is_valid` BOOLEAN NOT NULL DEFAULT TRUE COMMENT '유효한 직관 여부',
                                  PRIMARY KEY (`id`),
                                  FOREIGN KEY (`game_id`) REFERENCES `game`(`id`) ON DELETE CASCADE,
@@ -103,7 +104,7 @@ CREATE TABLE `badge` (
 -- 사용자 뱃지 획득 테이블
 CREATE TABLE `user_badge` (
                               `id` BIGINT NOT NULL COMMENT '사용자 뱃지 ID',
-                              `user_id` VARCHAR(36) NOT NULL COMMENT '사용자 ID',
+                              `user_id` BIGINT NOT NULL COMMENT '사용자 ID',
                               `badge_id` BIGINT NOT NULL COMMENT '뱃지 ID',
                               `season` INT NOT NULL COMMENT '획득 시즌',
                               PRIMARY KEY (`id`),
@@ -117,7 +118,7 @@ CREATE TABLE `user_badge` (
 -- 게시글 테이블
 CREATE TABLE `post` (
                         `id` BIGINT NOT NULL AUTO_INCREMENT,
-                        `user_id` VARCHAR(36) NOT NULL COMMENT '작성자 ID',
+                        `user_id` BIGINT NOT NULL COMMENT '작성자 ID',
                         `team_id` BIGINT NOT NULL COMMENT '팀 ID',
                         `title` VARCHAR(100) NOT NULL COMMENT '제목',
                         `content` TEXT NOT NULL COMMENT '내용',
@@ -142,7 +143,7 @@ CREATE TABLE `post_image` (
 -- 게시글 좋아요 테이블
 CREATE TABLE `post_like` (
                              `id` BIGINT NOT NULL AUTO_INCREMENT,
-                             `user_id` VARCHAR(36) NOT NULL COMMENT '사용자 ID',
+                             `user_id` BIGINT NOT NULL COMMENT '사용자 ID',
                              `post_id` BIGINT NOT NULL COMMENT '게시글 ID',
                              PRIMARY KEY (`id`),
                              FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON DELETE CASCADE,
@@ -153,7 +154,7 @@ CREATE TABLE `post_like` (
 CREATE TABLE `comment` (
                            `id` BIGINT NOT NULL AUTO_INCREMENT,
                            `post_id` BIGINT NOT NULL COMMENT '게시글 ID',
-                           `user_id` VARCHAR(36) NOT NULL COMMENT '작성자 ID',
+                           `user_id` BIGINT NOT NULL COMMENT '작성자 ID',
                            `content` TEXT NOT NULL COMMENT '댓글 내용',
                            `depth` INT NOT NULL DEFAULT 0 COMMENT '댓글 깊이 (0: 댓글, 1: 대댓글)',
                            `parent_id` BIGINT NULL COMMENT '부모 댓글 ID',

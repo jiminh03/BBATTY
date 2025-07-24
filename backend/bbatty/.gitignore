@@ -43,4 +43,4 @@ out/
 
 
 # gitignore
-.env
+*.env
