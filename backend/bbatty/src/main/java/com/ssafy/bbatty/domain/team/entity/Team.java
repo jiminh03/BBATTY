@@ -38,7 +38,7 @@ public class Team {
     @Column(name = "loses", nullable = false)
     private Integer loses;
 
-    @Column(name = "rank")
+    @Column(name = "team_rank")
     private Integer rank;
 
     @Column(name = "win_rate", precision = 5, scale = 3)

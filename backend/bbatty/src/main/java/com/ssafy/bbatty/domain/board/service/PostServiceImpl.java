@@ -4,6 +4,8 @@ import com.ssafy.bbatty.domain.board.dto.request.PostCreateRequest;
 import com.ssafy.bbatty.domain.board.dto.response.PostCreateResponse;
 import com.ssafy.bbatty.domain.board.entity.Post;
 import com.ssafy.bbatty.domain.board.repository.PostRepository;
+import com.ssafy.bbatty.domain.user.entity.User;
+import com.ssafy.bbatty.domain.user.repository.UserRepository;
 import com.ssafy.bbatty.global.constants.ErrorCode;
 import com.ssafy.bbatty.global.exception.ApiException;
 import lombok.RequiredArgsConstructor;
@@ -16,14 +18,13 @@ import org.springframework.transaction.annotation.Transactional;
 public class PostServiceImpl implements PostService {
     
     private final PostRepository postRepository;
-    //private final UserRepository userRepository;
+    private final UserRepository userRepository;
     private final PostImageService postImageService;
-    /**/
+
     @Override
     @Transactional
     public PostCreateResponse createPost(PostCreateRequest request, Long userId) {
-    /*    User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
+        User user = (User) userRepository.findById(userId).orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND));
         
         Post post = new Post(
                 user,
@@ -34,14 +35,28 @@ public class PostServiceImpl implements PostService {
         );
         
         Post savedPost = postRepository.save(post);
-        
-        // 컨텐츠에 포함된 이미지들을 USED로 변경하고, 사용되지 않은 이미지들은 삭제
+
         postImageService.processImagesInContent(request.getContent(), savedPost);
         
         return new PostCreateResponse(savedPost.getId(), "게시글이 성공적으로 작성되었습니다.");
-    */
-    return null;
     }
 
+    @Override
+    @Transactional
+    public void deletePost(Long postId, Long userId) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND));
+
+        // 작성자 확인
+        if (!post.getUser().getId().equals(userId)) {
+            throw new ApiException(ErrorCode.FORBIDDEN);
+        }
+
+        // 먼저 S3에서 이미지 삭제
+        postImageService.deleteImagesForPost(postId);
+        
+        // 그 다음 게시글 삭제 (PostImage는 CASCADE로 자동 삭제됨)
+        postRepository.delete(post);
+    }
 
 }

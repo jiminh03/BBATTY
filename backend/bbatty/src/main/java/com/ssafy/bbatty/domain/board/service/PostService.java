@@ -7,4 +7,6 @@ public interface PostService {
     
     PostCreateResponse createPost(PostCreateRequest request, Long userId);
     
+    void deletePost(Long postId, Long userId);
+    
 }

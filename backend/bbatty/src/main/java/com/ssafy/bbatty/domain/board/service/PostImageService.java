@@ -23,6 +23,8 @@ public class PostImageService {
     private final S3Service s3Service;
 
     // S3 URL 패턴 (도메인 부분을 유연하게 처리)
+    // 게시글 내용에서 이미지 URL을 추출하기 위한 정규표현식 패턴
+    // https://도메인/posts/UUID형태파일명.(jpg|jpeg|png|gif|webp) 형식의 URL만 매칭
     private static final Pattern IMAGE_URL_PATTERN = Pattern.compile(
         "https://[^\\s/]+/posts/[a-f0-9-]+\\.(jpg|jpeg|png|gif|webp)",
         Pattern.CASE_INSENSITIVE
@@ -30,70 +32,39 @@ public class PostImageService {
 
 
     /*
-    이미지 url을 받아서 DB에 넣는 과정이다.
-    우선 초기에는 항상 null로 저장이된다.
+    이미지 업로드 시 DB에 저장하는 메서드
+    처음 업로드할 때는 post가 null로 저장됨 (나중에 게시글 작성 시 연결)
      */
     @Transactional
-    public PostImage saveUploadedImage(String imageUrl, Post post) {
+    public PostImage saveUploadedImage(String imageUrl) {
         PostImage postImage = PostImage.builder()
-                .post(post)
+                .post(null)  // 초기 업로드 시에는 post 연결 안됨
                 .imageUrl(imageUrl)
-                .status(PostImage.ImageStatus.UPLOADED)
                 .build();
         
         return postImageRepository.save(postImage);
     }
-    
+    /*
+    게시글 내용에 포함된 이미지들을 해당 게시글과 연결하는 메서드
+    postId가 null인 이미지들을 찾아서 post와 연결
+     */
     @Transactional
     public void processImagesInContent(String content, Post post) {
         List<String> imageUrls = extractImageUrls(content);
         
         if (!imageUrls.isEmpty()) {
-            // 컨텐츠에 포함된 이미지들을 USED로 변경
-            List<PostImage> uploadedImages = postImageRepository.findUploadedImagesByUrls(imageUrls);
-            uploadedImages.forEach(PostImage::markAsUsed);
-            postImageRepository.saveAll(uploadedImages);
+            // 컨텐츠에 포함된 이미지 URL들을 찾아서 해당 post와 연결
+            List<PostImage> usedImages = postImageRepository.findByImageUrlInAndPostIsNull(imageUrls);
+            usedImages.forEach(image -> image.setPost(post));
+            postImageRepository.saveAll(usedImages);
             
-            log.info("Marked {} images as USED for post {}", uploadedImages.size(), post.getId());
-        }
-        
-        // 해당 포스트의 사용되지 않은 이미지들을 DELETED로 변경하고 S3에서 삭제
-        markUnusedImagesAsDeleted(post);
-    }
-    
-    @Transactional
-    public void markUnusedImagesAsDeleted(Post post) {
-        // post가 null인 경우(orphan images) 처리
-        if (post == null) {
-            return;
-        }
-        
-        List<PostImage> postImages = postImageRepository.findByPostId(post.getId());
-        
-        List<PostImage> unusedImages = postImages.stream()
-                .filter(PostImage::isOrphan)
-                .collect(Collectors.toList());
-        
-        if (!unusedImages.isEmpty()) {
-            // DB에서 DELETED로 마킹
-            unusedImages.forEach(PostImage::markAsDeleted);
-            postImageRepository.saveAll(unusedImages);
-            
-            // S3에서 실제 파일 삭제
-            unusedImages.forEach(image -> {
-                try {
-                    String filePath = extractFilePathFromUrl(image.getImageUrl());
-                    s3Service.deleteFile(filePath);
-                    log.info("Deleted orphan image from S3: {}", filePath);
-                } catch (Exception e) {
-                    log.error("Failed to delete image from S3: {}", image.getImageUrl(), e);
-                }
-            });
-            
-            log.info("Marked {} unused images as DELETED for post {}", unusedImages.size(), post.getId());
+            log.info("Connected {} images to post {}", usedImages.size(), post.getId());
         }
     }
     
+    /*
+    이미지 url을 찾아내서 리스트로 받는다.
+     */
     public List<String> extractImageUrls(String content) {
         return IMAGE_URL_PATTERN.matcher(content)
                 .results()
@@ -101,8 +72,31 @@ public class PostImageService {
                 .collect(Collectors.toList());
     }
     
+    /*
+    게시글 삭제 시 연관된 이미지들을 S3에서 먼저 삭제하는 메서드
+    */
+    @Transactional
+    public void deleteImagesForPost(Long postId) {
+        List<String> imageUrls = postImageRepository.findImageUrlsByPostId(postId);
+        
+        if (!imageUrls.isEmpty()) {
+            // S3에서 실제 파일 삭제
+            imageUrls.forEach(imageUrl -> {
+                try {
+                    String filePath = extractFilePathFromUrl(imageUrl);
+                    s3Service.deleteFile(filePath);
+                    log.info("Deleted image from S3: {}", filePath);
+                } catch (Exception e) {
+                    log.error("Failed to delete image from S3: {}", imageUrl, e);
+                }
+            });
+            
+            log.info("Deleted {} images from S3 for post {}", imageUrls.size(), postId);
+        }
+    }
+    // URL에서 파일 경로 추출 (예: https://bucket.s3.region.amazonaws.com/posts/filename.jpg -> posts/filename.jpg)
+    // 이걸 해야 aws에서 삭제를 시킬 수 있다.
     private String extractFilePathFromUrl(String imageUrl) {
-        // URL에서 파일 경로 추출 (예: https://bucket.s3.region.amazonaws.com/posts/filename.jpg -> posts/filename.jpg)
         String[] parts = imageUrl.split("/");
         if (parts.length >= 2) {
             return parts[parts.length - 2] + "/" + parts[parts.length - 1];
@@ -110,26 +104,4 @@ public class PostImageService {
         throw new IllegalArgumentException("Invalid image URL format: " + imageUrl);
     }
     
-    @Transactional
-    public void cleanupOrphanImages() {
-        List<PostImage> orphanImages = postImageRepository.findAllOrphanImages();
-        
-        if (!orphanImages.isEmpty()) {
-            orphanImages.forEach(PostImage::markAsDeleted);
-            postImageRepository.saveAll(orphanImages);
-            
-            // S3에서 실제 파일 삭제
-            orphanImages.forEach(image -> {
-                try {
-                    String filePath = extractFilePathFromUrl(image.getImageUrl());
-                    s3Service.deleteFile(filePath);
-                    log.info("Cleaned up orphan image: {}", filePath);
-                } catch (Exception e) {
-                    log.error("Failed to cleanup orphan image: {}", image.getImageUrl(), e);
-                }
-            });
-            
-            log.info("Cleaned up {} orphan images", orphanImages.size());
-        }
-    }
 }

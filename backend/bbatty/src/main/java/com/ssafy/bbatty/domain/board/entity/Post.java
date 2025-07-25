@@ -1,6 +1,8 @@
 package com.ssafy.bbatty.domain.board.entity;
 
+import com.ssafy.bbatty.domain.user.entity.User;
 import jakarta.persistence.*;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
@@ -17,11 +19,11 @@ public class Post {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    /*
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
-    */
+
     @Column(name = "team_id", nullable = false)
     private Long teamId;
     
@@ -45,8 +47,16 @@ public class Post {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
     
-    protected Post() {}
+    public Post() {}
 
+    public Post(User user, Long teamId, String title, String content, Boolean isSameTeam) {
+        this.user = user;
+        this.teamId = teamId;
+        this.title = title;
+        this.content = content;
+        this.isSameTeam = isSameTeam;
+        this.viewCount = 0;
+    }
     
     public void updateTitle(String title) {
         this.title = title;
@@ -63,4 +73,5 @@ public class Post {
     public void increaseViewCount() {
         this.viewCount++;
     }
+
 }

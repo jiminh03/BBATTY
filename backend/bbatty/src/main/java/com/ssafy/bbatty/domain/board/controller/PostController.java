@@ -66,7 +66,7 @@ public class PostController {
             String fileUrl = s3Service.getPublicUrl(filePath);
             
             // PostImage 엔티티에 UPLOADED 상태로 임시 저장 (post_id는 null)
-            postImageService.saveUploadedImage(fileUrl, null);
+            postImageService.saveUploadedImage(fileUrl);
             
             return ResponseEntity.status(SuccessCode.SUCCESS_CREATED.getStatus())
                     .body(ApiResponse.success(SuccessCode.SUCCESS_CREATED, fileUrl));
@@ -74,6 +74,17 @@ public class PostController {
         } catch (IOException e) {
             throw new ApiException(ErrorCode.FILE_FAILED);
         }
+    }
+
+    @DeleteMapping("/{postId}")
+    public ResponseEntity<ApiResponse<Void>> deletePost(
+            @PathVariable Long postId,
+            @RequestHeader("userId") Long userId) {
+        
+        postService.deletePost(postId, userId);
+        
+        return ResponseEntity.status(SuccessCode.SUCCESS_DELETED.getStatus())
+                .body(ApiResponse.success(SuccessCode.SUCCESS_DELETED));
     }
 
 
