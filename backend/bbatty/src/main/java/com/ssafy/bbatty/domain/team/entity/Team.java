@@ -1,20 +1,23 @@
-package com.ssafy.bbatty.domain.user.entity;
+package com.ssafy.bbatty.domain.team.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.ColumnDefault;
 
 import java.math.BigDecimal;
-import java.time.Instant;
+import java.time.LocalDateTime;
 
+@Entity
+@Table(name = "team", schema = "BBATTY")
+@Getter
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@Getter
-@Setter
-@Entity
-@Table(name = "team", schema = "BBATTY")
 public class Team {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
@@ -46,6 +49,16 @@ public class Team {
 
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "updated_at")
-    private Instant updatedAt;
+    private LocalDateTime updatedAt;
 
+    // 비즈니스 메서드
+    public void updateStats(int wins, int draws, int loses, int rank, BigDecimal winRate, BigDecimal gb) {
+        this.wins = wins;
+        this.draws = draws;
+        this.loses = loses;
+        this.rank = rank;
+        this.winRate = winRate;
+        this.gb = gb;
+        this.updatedAt = LocalDateTime.now();
+    }
 }
