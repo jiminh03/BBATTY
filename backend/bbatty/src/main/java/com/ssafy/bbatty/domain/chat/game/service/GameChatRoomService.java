@@ -19,13 +19,13 @@ public interface GameChatRoomService {
 
     /**
      * 경기 시작 2시간 전 자동 활성화
-     * @parma gameID 경기 Id
+     * @param gameId 경기 Id
      */
     void activateGameChatRooms(Long gameId);
 
     /**
      * 자정 12시 자동 비활성화
-     * @param gameID 경기 ID
+     * @param gameId 경기 ID
      */
     void deactivateGameChatRooms(Long gameId);
 
@@ -66,6 +66,12 @@ public interface GameChatRoomService {
      * @param teamId 팀 Id
      */
     void sendTrafficAlert(Long gameId, Long teamId);
+    /**
+     * 채팅방 활성화 상태 확인
+     * @param teamId 팀 ID
+     * @return 활성화 여부
+     */
+    boolean isChatRoomActive(String teamId);
 
 
 
