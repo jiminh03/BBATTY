@@ -2,7 +2,6 @@
 -- 야구 직관 커뮤니티 "BBATTY" DB 스키마
 -- ===================================
 
-create database if not exists BBATTY;
 use BBATTY;
 
 -- 1. 기본 마스터 데이터
