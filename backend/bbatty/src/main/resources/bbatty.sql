@@ -2,7 +2,6 @@
 -- 야구 직관 커뮤니티 "BBATTY" DB 스키마
 -- ===================================
 
-create database if not exists BBATTY;
 use BBATTY;
 
 -- 1. 기본 마스터 데이터
@@ -15,7 +14,7 @@ CREATE TABLE `team` (
                         `wins` INT NOT NULL DEFAULT 0 COMMENT '승수',
                         `draws` INT NOT NULL DEFAULT 0 COMMENT '무승부수',
                         `loses` INT NOT NULL DEFAULT 0 COMMENT '패수',
-                        `rank` INT NULL COMMENT '현재 순위',
+                        `team_rank` INT NULL COMMENT '현재 순위',
                         `win_rate` DECIMAL(5, 3) NULL COMMENT '승률',
                         `gb` DECIMAL(3, 1) NULL COMMENT '게임차',
 #                         `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
