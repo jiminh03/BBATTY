@@ -1,4 +1,4 @@
-package com.ssafy.bbatty.domain.chat.service;
+package com.ssafy.bbatty.domain.chat.common.service;
 import org.springframework.data.redis.listener.ChannelTopic;
 
 import java.util.Map;
@@ -6,15 +6,15 @@ import java.util.Map;
 public interface RedisPubSubService {
     /**
      * 메시지 발행 (publish)
-     * @Param roomId 채팅방 ID (예: "game123_tigers")
-     * @Param message 전송할 메시지 (예: Map 형태)
+     * @param roomId 채팅방 ID (예: "game123_tigers")
+     * @param message 전송할 메시지 (예: Map 형태)
      */
     void publishMessage(String roomId, Map<String, Object> message);
 
     /**
      * 채널 구독 (Subscribe)
-     * @Param roomId 채팅방 ID
-     * @Param messageHandler 메시지 처리 핸들러
+     * @param roomId 채팅방 ID
+     * @param messageHandler 메시지 처리 핸들러
      */
     void subscribeToRoom(String roomId, ChatMessageHandler messageHandler);
 

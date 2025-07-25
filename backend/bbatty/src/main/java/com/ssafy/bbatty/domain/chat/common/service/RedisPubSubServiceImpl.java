@@ -1,4 +1,4 @@
-package com.ssafy.bbatty.domain.chat.service;
+package com.ssafy.bbatty.domain.chat.common.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
