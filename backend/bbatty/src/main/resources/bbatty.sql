@@ -131,13 +131,15 @@ CREATE TABLE `post` (
                         FOREIGN KEY (`team_id`) REFERENCES `team`(`id`) ON DELETE RESTRICT
 ) COMMENT='게시글';
 
--- 게시글 이미지 테이블
+-- 게시글 이미지 테이블 (status 컬럼 포함)
 CREATE TABLE `post_image` (
-                              `id` BIGINT NOT NULL AUTO_INCREMENT,
-                              `post_id` BIGINT NOT NULL COMMENT '게시글 ID',
-                              `image_url` VARCHAR(255) NOT NULL COMMENT '이미지 URL',
-                              PRIMARY KEY (`id`),
-                              FOREIGN KEY (`post_id`) REFERENCES `post`(`id`) ON DELETE CASCADE
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `post_id` BIGINT COMMENT '게시글 ID',
+    `image_url` VARCHAR(255) NOT NULL COMMENT '이미지 URL',
+    `status` ENUM('uploaded', 'used', 'deleted') DEFAULT 'uploaded' COMMENT '이미지 상태',
+    PRIMARY KEY (`id`),
+    FOREIGN KEY (`post_id`) REFERENCES `post`(`id`) ON DELETE CASCADE,
+    INDEX idx_post_image_status (`status`)
 ) COMMENT='게시글 이미지';
 
 -- 게시글 좋아요 테이블

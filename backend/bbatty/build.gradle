@@ -39,6 +39,8 @@ dependencies {
 	// for websocket
 	implementation 'org.springframework.boot:spring-boot-starter-websocket'
 
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+
 	// for redis
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	implementation 'redis.clients:jedis'

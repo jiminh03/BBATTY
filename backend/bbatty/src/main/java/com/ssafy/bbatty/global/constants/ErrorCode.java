@@ -15,15 +15,13 @@ public enum ErrorCode {
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증이 필요해요."),
     BAD_REQUEST(HttpStatus.BAD_REQUEST, "잘못된 요청이에요."),
     SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 오류가 발생했어요."),
-
-    INVALID_ADDRESS_FORMAT(HttpStatus.BAD_REQUEST, "주소 형식이 올바르지 않아요."),
     
     // FILE PATH
     INVALID_FILE_PATH(HttpStatus.BAD_REQUEST, "파일 경로가 유효하지 않아요."),
     FILE_PATH_SECURITY_VIOLATION(HttpStatus.BAD_REQUEST, "허용되지 않는 파일 경로예요."),
-    FILE_NOT_FOUND(HttpStatus.NOT_FOUND, "파일을 찾을 수 없어요."),
-    FILE_ACCESS_DENIED(HttpStatus.FORBIDDEN, "파일에 접근할 수 없어요.");
-
+    FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "파일의 크기가 제한 크기를 초과합니다."),
+    FILE_EMPTY(HttpStatus.BAD_REQUEST, "파일이 비어있습니다."),
+    FILE_FAILED(HttpStatus.BAD_REQUEST, "파일 업로드에 실패했습니다.");
     /*
     본인에게 맞는 예외코드 설정하세요
     // USER
