@@ -1,12 +1,10 @@
 package com.ssafy.bbatty.domain.chat.common.service;
 
-import com.ssafy.bbatty.domain.chat.common.enums.ChatRoomType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * 채팅 관련 Redis 키 생성 유틸리티
- * 일관된 키 네이밍 규칙을 제공하고 타입별 키 패턴을 관리
+ * 채팅 관련 Redis 키 생성 유틸리티 (최종)
  */
 @Component
 public class ChatRedisKeyGenerator {
@@ -14,210 +12,105 @@ public class ChatRedisKeyGenerator {
     @Value("${chat.redis.key-prefix:chat:}")
     private String keyPrefix;
 
-    // 기본 키 패턴들
-    private static final String STATUS_SUFFIX = ":status";
-    private static final String META_SUFFIX = ":meta";
-    private static final String USERS_SUFFIX = ":users";
-    private static final String ACTIVITY_SUFFIX = ":activity";
-    private static final String CHANNEL_SUFFIX = ":channel";
-    private static final String TRAFFIC_CURRENT_SUFFIX = ":traffic:current";
-    private static final String TRAFFIC_HISTORY_SUFFIX = ":traffic:history";
-    private static final String MESSAGES_SUFFIX = ":messages";
-    private static final String SEQUENCE_SUFFIX = ":sequence";
-    private static final String LOCK_SUFFIX = ":lock";
+    // ========== 경기 채팅방 (팀별) ==========
 
     /**
-     * 기본 채팅방 키 생성
-     * @param roomType 방 타입
-     * @param roomId 방 ID
-     * @return 기본 키 (예: "chat:game:tigers")
+     * 팀별 채팅방 기본 키
+     * @param gameId 경기 ID
+     * @param teamId 팀 ID
+     * @return 예: "chat:game:123:team:1"
      */
-    public String createRoomKey(ChatRoomType roomType, String roomId) {
-        return keyPrefix + roomType.getCode() + ":" + roomId;
+    public String createTeamChatRoomKey(Long gameId, Long teamId) {
+        return keyPrefix + "game:" + gameId + ":team:" + teamId;
     }
 
     /**
-     * 채팅방 상태 키 생성
-     * @return 예: "chat:game:tigers:status"
+     * 팀별 채팅방 상태 키
      */
-    public String createStatusKey(ChatRoomType roomType, String roomId) {
-        return createRoomKey(roomType, roomId) + STATUS_SUFFIX;
+    public String createTeamChatRoomStatusKey(Long gameId, Long teamId) {
+        return createTeamChatRoomKey(gameId, teamId) + ":status";
     }
 
     /**
-     * 채팅방 메타데이터 키 생성
-     * @return 예: "chat:game:tigers:meta"
+     * 팀별 채팅방 사용자 목록 키
      */
-    public String createMetaKey(ChatRoomType roomType, String roomId) {
-        return createRoomKey(roomType, roomId) + META_SUFFIX;
+    public String createTeamChatRoomUsersKey(Long gameId, Long teamId) {
+        return createTeamChatRoomKey(gameId, teamId) + ":users";
     }
 
     /**
-     * 사용자 목록 키 생성
-     * @return 예: "chat:game:tigers:users"
+     * 팀별 채팅방 트래픽 키
      */
-    public String createUsersKey(ChatRoomType roomType, String roomId) {
-        return createRoomKey(roomType, roomId) + USERS_SUFFIX;
+    public String createTeamChatRoomTrafficKey(Long gameId, Long teamId) {
+        return createTeamChatRoomKey(gameId, teamId) + ":traffic";
     }
 
     /**
-     * 사용자 활동 키 생성
-     * @return 예: "chat:game:tigers:activity"
+     * 팀별 채팅방 Pub/Sub 채널
      */
-    public String createActivityKey(ChatRoomType roomType, String roomId) {
-        return createRoomKey(roomType, roomId) + ACTIVITY_SUFFIX;
+    public String createTeamChatRoomChannelKey(Long gameId, Long teamId) {
+        return "chat:game_" + gameId + "_team_" + teamId;
+    }
+
+    // ========== 매칭 채팅방 ==========
+
+    /**
+     * 매칭 채팅방 기본 키
+     * @param matchRoomId 매칭 채팅방 ID
+     * @return 예: "chat:match:room123456"
+     */
+    public String createMatchChatRoomKey(String matchRoomId) {
+        return keyPrefix + "match:" + matchRoomId;
     }
 
     /**
-     * Pub/Sub 채널 키 생성
-     * @return 예: "chat:game:tigers:channel"
+     * 매칭 채팅방 상태 키
      */
-    public String createChannelKey(ChatRoomType roomType, String roomId) {
-        return createRoomKey(roomType, roomId) + CHANNEL_SUFFIX;
+    public String createMatchChatRoomStatusKey(String matchRoomId) {
+        return createMatchChatRoomKey(matchRoomId) + ":status";
     }
 
     /**
-     * 현재 트래픽 키 생성
-     * @return 예: "chat:game:tigers:traffic:current"
+     * 매칭 채팅방 참여자 목록 키
      */
-    public String createTrafficCurrentKey(ChatRoomType roomType, String roomId) {
-        return createRoomKey(roomType, roomId) + TRAFFIC_CURRENT_SUFFIX;
+    public String createMatchChatRoomParticipantsKey(String matchRoomId) {
+        return createMatchChatRoomKey(matchRoomId) + ":participants";
     }
 
     /**
-     * 트래픽 히스토리 키 생성
-     * @return 예: "chat:game:tigers:traffic:history"
+     * 매칭 채팅방 조건 키
      */
-    public String createTrafficHistoryKey(ChatRoomType roomType, String roomId) {
-        return createRoomKey(roomType, roomId) + TRAFFIC_HISTORY_SUFFIX;
+    public String createMatchChatRoomConditionsKey(String matchRoomId) {
+        return createMatchChatRoomKey(matchRoomId) + ":conditions";
     }
 
     /**
-     * 메시지 저장 키 생성
-     * @return 예: "chat:game:tigers:messages"
+     * 매칭 채팅방 Pub/Sub 채널
      */
-    public String createMessagesKey(ChatRoomType roomType, String roomId) {
-        return createRoomKey(roomType, roomId) + MESSAGES_SUFFIX;
+    public String createMatchChatRoomChannelKey(String matchRoomId) {
+        return "chat:" + matchRoomId;
+    }
+
+    // ========== 사용자 관련 ==========
+
+    /**
+     * 사용자 직관 인증 키
+     */
+    public String createUserAuthKey(Long userId, Long gameId) {
+        return keyPrefix + "auth:user:" + userId + ":game:" + gameId;
     }
 
     /**
-     * 메시지 시퀀스 키 생성
-     * @return 예: "chat:game:tigers:sequence"
+     * 사용자 승리요정 상태 키
      */
-    public String createSequenceKey(ChatRoomType roomType, String roomId) {
-        return createRoomKey(roomType, roomId) + SEQUENCE_SUFFIX;
+    public String createUserWinningFairyKey(Long userId) {
+        return keyPrefix + "user:" + userId + ":winning_fairy";
     }
 
     /**
-     * 분산 락 키 생성
-     * @return 예: "chat:game:tigers:lock"
+     * 매칭 채팅방 목록 인덱스 키 (검색용)
      */
-    public String createLockKey(ChatRoomType roomType, String roomId) {
-        return createRoomKey(roomType, roomId) + LOCK_SUFFIX;
-    }
-
-    // ========== 편의 메서드들 (기존 호환성 유지) ==========
-
-    /**
-     * 게임 채팅 전용 키들
-     */
-    public String createGameStatusKey(String teamId) {
-        return createStatusKey(ChatRoomType.GAME, teamId);
-    }
-
-    public String createGameMetaKey(String teamId) {
-        return createMetaKey(ChatRoomType.GAME, teamId);
-    }
-
-    public String createGameUsersKey(String teamId) {
-        return createUsersKey(ChatRoomType.GAME, teamId);
-    }
-
-    public String createGameActivityKey(String teamId) {
-        return createActivityKey(ChatRoomType.GAME, teamId);
-    }
-
-    public String createGameChannelKey(String teamId) {
-        return createChannelKey(ChatRoomType.GAME, teamId);
-    }
-
-    public String createGameTrafficCurrentKey(String teamId) {
-        return createTrafficCurrentKey(ChatRoomType.GAME, teamId);
-    }
-
-    public String createGameTrafficHistoryKey(String teamId) {
-        return createTrafficHistoryKey(ChatRoomType.GAME, teamId);
-    }
-
-    /**
-     * 매칭 채팅 전용 키들
-     */
-    public String createMatchStatusKey(String matchId) {
-        return createStatusKey(ChatRoomType.MATCH, matchId);
-    }
-
-    public String createMatchMetaKey(String matchId) {
-        return createMetaKey(ChatRoomType.MATCH, matchId);
-    }
-
-    public String createMatchUsersKey(String matchId) {
-        return createUsersKey(ChatRoomType.MATCH, matchId);
-    }
-
-    public String createMatchActivityKey(String matchId) {
-        return createActivityKey(ChatRoomType.MATCH, matchId);
-    }
-
-    public String createMatchChannelKey(String matchId) {
-        return createChannelKey(ChatRoomType.MATCH, matchId);
-    }
-
-    /**
-     * Pub/Sub 채널명 생성 (기존 RedisPubSubService 호환)
-     * @param roomId 방 ID
-     * @return 채널명 (예: "chat:tigers")
-     */
-    public String createPubSubChannelName(String roomId) {
-        return keyPrefix.substring(0, keyPrefix.length() - 1) + ":" + roomId;
-    }
-
-    /**
-     * roomId에서 방 타입 추출 (키 패턴 기반 추정)
-     * @param roomId 방 ID
-     * @return 추정된 방 타입
-     */
-    public ChatRoomType inferRoomType(String roomId) {
-        if (roomId == null) {
-            return null;
-        }
-
-        // 매칭 관련 패턴
-        if (roomId.startsWith("match_") || roomId.contains("match")) {
-            return ChatRoomType.MATCH;
-        }
-
-        // 기본적으로 게임 채팅으로 간주
-        return ChatRoomType.GAME;
-    }
-
-    /**
-     * 키에서 roomId 추출
-     * @param redisKey Redis 키
-     * @return roomId
-     */
-    public String extractRoomId(String redisKey) {
-        if (redisKey == null || !redisKey.startsWith(keyPrefix)) {
-            return null;
-        }
-
-        String withoutPrefix = redisKey.substring(keyPrefix.length());
-
-        // "game:tigers:status" → "tigers" 추출
-        String[] parts = withoutPrefix.split(":");
-        if (parts.length >= 2) {
-            return parts[1];
-        }
-
-        return null;
+    public String createMatchRoomIndexKey(String indexType) {
+        return keyPrefix + "match:index:" + indexType;
     }
 }

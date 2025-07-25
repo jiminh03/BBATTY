@@ -1,7 +1,7 @@
 package com.ssafy.bbatty.global.config;
 
 import com.ssafy.bbatty.domain.chat.game.handler.GameChatWebSocketHandler;
-import com.ssafy.bbatty.domain.chat.match.handler.MatchChatWebSocketHandler;
+//import com.ssafy.bbatty.domain.chat.match.handler.MatchChatWebSocketHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,7 +28,7 @@ import java.util.Map;
 public class WebSocketConfig implements WebSocketConfigurer {
 
     private final GameChatWebSocketHandler gameChatWebSocketHandler;
-    private final MatchChatWebSocketHandler matchChatWebSocketHandler;
+//    private final MatchChatWebSocketHandler matchChatWebSocketHandler;
 
     @Value("${websocket.allowed-origins:*}")
     private String allowedOrigins;
@@ -51,16 +51,16 @@ public class WebSocketConfig implements WebSocketConfigurer {
                 .addInterceptors(new ChatHandshakeInterceptor("game"));
 
         // 매칭 채팅 WebSocket 핸들러 등록
-        var matchChatRegistration = registry.addHandler(matchChatWebSocketHandler, matchChatPath)
-                .setAllowedOriginPatterns(allowedOrigins.split(","))
-                .addInterceptors(new ChatHandshakeInterceptor("match"));
+//        var matchChatRegistration = registry.addHandler(matchChatWebSocketHandler, matchChatPath)
+//                .setAllowedOriginPatterns(allowedOrigins.split(","))
+//                .addInterceptors(new ChatHandshakeInterceptor("match"));
 
-        // SockJS 지원 (설정에 따라)
-        if (sockJsEnabled) {
-            gameChatRegistration.withSockJS();
-            matchChatRegistration.withSockJS();
-            log.info("SockJS 폴백 지원 활성화");
-        }
+//        // SockJS 지원 (설정에 따라)
+//        if (sockJsEnabled) {
+//            gameChatRegistration.withSockJS();
+//            matchChatRegistration.withSockJS();
+//            log.info("SockJS 폴백 지원 활성화");
+//        }
 
         log.info("WebSocket 핸들러 등록 완료 - 게임: {}, 매칭: {}", gameChatPath, matchChatPath);
     }
