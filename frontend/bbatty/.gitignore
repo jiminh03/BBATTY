@@ -1,0 +1,106 @@
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+# ====================================== 추가 설정 ======================================
+
+# Environment variables - API 키와 민감한 설정 정보
+.env
+.env.development
+.env.staging
+.env.production
+src/config/secrets.ts
+src/config/api-keys.ts
+
+# Development tools - 개발 도구 설정 => vscode 설정을 갖게 할 경우 없앰
+.vscode/settings.json
+.idea/
+
+# Build artifacts - 빌드 결과물
+*.tgz
+build/
+coverage/
+
+# Logs - 로그 파일들
+logs/
+*.log
+
+# Cache directories - 캐시 디렉토리
+.cache/
+.parcel-cache/
+.eslintcache
+
+# iOS specific - iOS 개발 관련
+ios/Pods/
+ios/.xcode.env.local
+*.xcuserstate
+*.xcworkspace
+
+# Android specific - Android 개발 관련
+android/.gradle/
+android/app/build/
+*.hprof
+.cxx/
+local.properties
+
+# Testing - 테스트 관련
+test-results/
+__tests__/coverage/
+
+# Temporary files - 임시 파일
+tmp/
+temp/
+*.tmp
+*.swp
+*.swo
+*~
+
+# Database files - 로컬 데이터베이스
+*.db
+*.sqlite
+*.sqlite3
+
+# Media files - 업로드된 미디어 파일 캐시
+uploads/
+cache/images/
+cache/videos/
+
+# Package manager - 패키지 매니저 관련
+.npm/
+.yarn/
+yarn.lock.bak
+package-lock.json.bak
