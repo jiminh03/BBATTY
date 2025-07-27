@@ -2,6 +2,8 @@ package com.ssafy.bbatty.domain.board.controller;
 
 import com.ssafy.bbatty.domain.board.dto.request.PostCreateRequest;
 import com.ssafy.bbatty.domain.board.dto.response.PostCreateResponse;
+import com.ssafy.bbatty.domain.board.dto.response.PostDetailResponse;
+import com.ssafy.bbatty.domain.board.dto.response.PostListPageResponse;
 import com.ssafy.bbatty.domain.board.service.PostService;
 import com.ssafy.bbatty.domain.board.service.PostImageService;
 import com.ssafy.bbatty.global.constants.ErrorCode;
@@ -87,8 +89,41 @@ public class PostController {
                 .body(ApiResponse.success(SuccessCode.SUCCESS_DELETED));
     }
 
+    @GetMapping
+    public ResponseEntity<PostListPageResponse> getPostList(
+            @RequestParam(required = false) Long cursor) {
 
+        PostListPageResponse response = postService.getPostList(cursor);
+        return ResponseEntity.ok(response);
+    }
 
+    // 팀 별 게시글 조회
+    @GetMapping("/team/{teamId}")
+    public ResponseEntity<PostListPageResponse> getPostListByTeam(
+            @PathVariable Long teamId,
+            @RequestParam(required = false) Long cursor) {
 
+        PostListPageResponse response = postService.getPostListByTeam(teamId, cursor);
+        return ResponseEntity.ok(response);
+    }
 
+    @GetMapping("/{postId}")
+    public ResponseEntity<ApiResponse<PostDetailResponse>> getPostDetail(
+            @PathVariable Long postId) {
+        
+        PostDetailResponse response = postService.getPostDetail(postId);
+        
+        return ResponseEntity.status(SuccessCode.SUCCESS_DEFAULT.getStatus())
+                .body(ApiResponse.success(SuccessCode.SUCCESS_DEFAULT, response));
+    }
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<ApiResponse<PostListPageResponse>> getPostListByUser(
+            @PathVariable Long userId,
+            @RequestParam(required = false) Long cursor) {
+
+        PostListPageResponse response = postService.getPostListByUser(userId, cursor);
+        return ResponseEntity.status(SuccessCode.SUCCESS_DEFAULT.getStatus())
+                .body(ApiResponse.success(SuccessCode.SUCCESS_DEFAULT, response));
+    }
 }
