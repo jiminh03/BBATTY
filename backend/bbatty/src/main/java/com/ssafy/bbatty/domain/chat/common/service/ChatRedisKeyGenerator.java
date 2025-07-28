@@ -4,7 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * 채팅 관련 Redis 키 생성 유틸리티 (최종)
+ * 채팅 관련 Redis 키 생성 유틸리티
  */
 @Component
 public class ChatRedisKeyGenerator {

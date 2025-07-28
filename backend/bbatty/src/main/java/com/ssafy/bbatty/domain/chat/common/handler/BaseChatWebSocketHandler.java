@@ -1,6 +1,8 @@
 package com.ssafy.bbatty.domain.chat.common.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ssafy.bbatty.domain.chat.game.service.GameChatUserService;
+import com.ssafy.bbatty.domain.chat.game.service.GameChatUserServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.socket.*;
 
@@ -16,9 +18,11 @@ public abstract class BaseChatWebSocketHandler implements WebSocketHandler {
     protected final ObjectMapper objectMapper;
     protected final Map<String, WebSocketSession> connectedUsers = new ConcurrentHashMap<>();
     protected final Map<WebSocketSession, UserSessionInfo> sessionToUser = new ConcurrentHashMap<>();
+    protected final GameChatUserService gameChatUserService;
 
-    public BaseChatWebSocketHandler(ObjectMapper objectMapper) {
+    public BaseChatWebSocketHandler(ObjectMapper objectMapper, GameChatUserService gameChatUserService) {
         this.objectMapper = objectMapper;
+        this.gameChatUserService = gameChatUserService;
     }
 
     @Override
@@ -52,12 +56,16 @@ public abstract class BaseChatWebSocketHandler implements WebSocketHandler {
         try {
             UserSessionInfo userInfo = sessionToUser.get(session);
             if (userInfo != null) {
+                String teamId = userInfo.getRoomId();
+                // 도메인별 퇴장 처리
+                handleUserLeave(session, userInfo);
                 // 세션 정보 제거
                 connectedUsers.remove(userInfo.getUserId());
                 sessionToUser.remove(session);
-
-                // 도메인별 퇴장 처리
-                handleUserLeave(session, userInfo);
+                // 연결 해제시 리소스 정리 보장
+                if (gameChatUserService.getConnectedUserCount(teamId) == 0) {
+                    unsubscribeFromTeamChat(teamId);
+                }
 
                 log.info("WebSocket 연결 종료 - userId: {}, status: {}",
                         userInfo.getUserId(), status);
@@ -216,4 +224,6 @@ public abstract class BaseChatWebSocketHandler implements WebSocketHandler {
             additionalInfo.put(key, value);
         }
     }
+    protected abstract void unsubscribeFromTeamChat(String teamId);
+
 }
