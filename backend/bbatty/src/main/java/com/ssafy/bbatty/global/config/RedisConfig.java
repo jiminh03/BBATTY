@@ -3,7 +3,9 @@ package com.ssafy.bbatty.global.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
@@ -20,20 +22,54 @@ public class RedisConfig {
     private int redisPort;
 
     /**
-     * Redis 연결 팩토리
+     * 기본 Redis 연결 팩토리 (Database 0)
      */
     @Bean
+    @Primary
     public RedisConnectionFactory redisConnectionFactory() {
-        return new LettuceConnectionFactory(redisHost, redisPort);  // 👈 환경변수 사용
+        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
+        config.setHostName(redisHost);
+        config.setPort(redisPort);
+        config.setDatabase(0);  // Database 0 사용
+        return new LettuceConnectionFactory(config);
     }
 
     /**
-     * RedisTemplate 설정 (Spring Boot 3.x 호환)
+     * Post용 Redis 연결 팩토리 (Database 1)
      */
     @Bean
+    public RedisConnectionFactory postRedisConnectionFactory() {
+        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
+        config.setHostName(redisHost);
+        config.setPort(redisPort);
+        config.setDatabase(1);  // Database 1 사용
+        return new LettuceConnectionFactory(config);
+    }
+
+    /**
+     * Post용 RedisTemplate (Database 1, String-String)
+     */
+    @Bean
+    public RedisTemplate<String, String> postRedisTemplate() {
+        RedisTemplate<String, String> redisTemplate = new RedisTemplate<>();
+        redisTemplate.setConnectionFactory(postRedisConnectionFactory());  // Database 1 사용
+
+        // 키는 String, 값은 String으로 직렬화
+        redisTemplate.setKeySerializer(new StringRedisSerializer());
+        redisTemplate.setValueSerializer(new StringRedisSerializer());
+
+        redisTemplate.afterPropertiesSet();
+        return redisTemplate;
+    }
+
+    /**
+     * 기본 RedisTemplate (Database 0, Object 저장용)
+     */
+    @Bean
+    @Primary
     public RedisTemplate<String, Object> redisTemplate() {
         RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
-        redisTemplate.setConnectionFactory(redisConnectionFactory());
+        redisTemplate.setConnectionFactory(redisConnectionFactory());  // Database 0 사용
 
         GenericJackson2JsonRedisSerializer genericSerializer = new GenericJackson2JsonRedisSerializer();
 
@@ -43,7 +79,6 @@ public class RedisConfig {
         redisTemplate.setHashKeySerializer(new StringRedisSerializer());
         redisTemplate.setHashValueSerializer(genericSerializer);
 
-        // 설정 적용
         redisTemplate.afterPropertiesSet();
         return redisTemplate;
     }
