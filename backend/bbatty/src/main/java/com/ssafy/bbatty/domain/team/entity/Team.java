@@ -1,12 +1,12 @@
 package com.ssafy.bbatty.domain.team.entity;
 
-import com.ssafy.bbatty.global.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class Team extends BaseTimeEntity {
+public class Team {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -48,6 +48,11 @@ public class Team extends BaseTimeEntity {
     @Column(name = "gb", precision = 3, scale = 1)
     private BigDecimal gb;
 
+    @ColumnDefault("CURRENT_TIMESTAMP")
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
     // 비즈니스 메서드
     public void updateStats(int wins, int draws, int loses, int rank, BigDecimal winRate, BigDecimal gb) {
         this.wins = wins;
@@ -56,6 +61,6 @@ public class Team extends BaseTimeEntity {
         this.rank = rank;
         this.winRate = winRate;
         this.gb = gb;
-        // updatedAt은 BaseTimeEntity의 JPA Auditing이 자동 처리
+        this.updatedAt = LocalDateTime.now();
     }
 }

@@ -28,6 +28,8 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation("jakarta.validation:jakarta.validation-api:3.0.2")
 	compileOnly 'org.projectlombok:lombok' // lomboks -> lombok
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	runtimeOnly 'com.mysql:mysql-connector-j'
@@ -44,6 +46,14 @@ dependencies {
 	// for redis
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	implementation 'redis.clients:jedis'
+
+	// for JWT
+	implementation 'io.jsonwebtoken:jjwt-api:0.12.3'
+	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.3'
+	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.3'
+
+	// for Kakao OAuth
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 	// json
 	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 }

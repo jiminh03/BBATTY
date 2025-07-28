@@ -11,14 +11,13 @@ import java.util.Optional;
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
 
-    // 1. 닉네임 중복 확인 (GET /api/auth/check-nickname)
+    // 닉네임 중복 확인 - JPA 메서드 네이밍
     boolean existsByNickname(String nickname);
 
-    // 2. 사용자 ID로 기본 정보 조회 (토큰 검증, 프로필 조회 등)
+    // 복잡한 JOIN 쿼리는 @Query 유지
     @Query("SELECT u FROM User u JOIN FETCH u.team WHERE u.id = :userId")
     Optional<User> findByIdWithTeam(@Param("userId") Long userId);
 
-    // 3. 사용자 ID로 상세 정보 조회 (본인 정보 조회용)
     @Query("SELECT u FROM User u JOIN FETCH u.team JOIN FETCH u.userInfo WHERE u.id = :userId")
     Optional<User> findByIdWithTeamAndUserInfo(@Param("userId") Long userId);
 }

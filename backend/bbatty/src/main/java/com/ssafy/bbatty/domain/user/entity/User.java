@@ -5,6 +5,9 @@ import com.ssafy.bbatty.global.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
+import java.time.Period;
+
 @Entity
 @Table(name = "user", schema = "BBATTY")
 @Getter
@@ -55,6 +58,44 @@ public class User extends BaseTimeEntity {
 
     public enum Role {
         USER, ADMIN
+    }
+
+    // 유틸리티 메서드
+    public static int calculateAge(String birthyear, String birthday) {
+        if (birthyear == null || birthday == null) {
+            return 25; // 기본값
+        }
+        
+        try {
+            // birthday는 "MMDD" 형식
+            String month = birthday.substring(0, 2);
+            String day = birthday.substring(2, 4);
+            
+            LocalDate birthDate = LocalDate.of(
+                Integer.parseInt(birthyear),
+                Integer.parseInt(month), 
+                Integer.parseInt(day)
+            );
+            
+            return Period.between(birthDate, LocalDate.now()).getYears();
+        } catch (Exception e) {
+            return 25; // 파싱 실패 시 기본값
+        }
+    }
+
+    public static Gender parseGender(String kakaoGender) {
+        if (kakaoGender == null) {
+            return Gender.MALE; // 기본값
+        }
+        
+        switch (kakaoGender.toLowerCase()) {
+            case "female":
+                return Gender.FEMALE;
+            case "male":
+                return Gender.MALE;
+            default:
+                return Gender.MALE; // 기본값
+        }
     }
 
     // 비즈니스 메서드

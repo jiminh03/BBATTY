@@ -43,6 +43,14 @@ services:
       CLOUD_AWS_CREDENTIALS_SECRET_KEY: ${CLOUD_AWS_CREDENTIALS_SECRET_KEY}
       CLOUD_AWS_S3_BUCKET: ${CLOUD_AWS_S3_BUCKET}
 
+      # ✅ JWT 설정 추가
+      JWT_SECRET: ${JWT_SECRET}
+
+      # ✅ 카카오 OAuth 설정도 추가
+      KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID}
+      KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET}
+      KAKAO_REDIRECT_URI: ${KAKAO_REDIRECT_URI}
+
   # Redis 캐시
   redis:
     image: redis:alpine
