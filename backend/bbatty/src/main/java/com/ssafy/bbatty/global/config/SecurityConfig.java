@@ -40,7 +40,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 인증 불필요한 엔드포인트
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/teams/**").permitAll()  // 팀 목록 조회
+                        .requestMatchers("/api/teams/**").permitAll()
+                        .requestMatchers("/api/**").permitAll()// 팀 목록 조회
 
                         // WebSocket 엔드포인트
                         .requestMatchers("/ws/**").permitAll()

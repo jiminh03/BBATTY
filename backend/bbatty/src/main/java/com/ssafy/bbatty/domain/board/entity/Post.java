@@ -1,6 +1,8 @@
 package com.ssafy.bbatty.domain.board.entity;
 
+import com.ssafy.bbatty.domain.user.entity.User;
 import jakarta.persistence.*;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
@@ -17,11 +19,11 @@ public class Post {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    /*
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
-    */
+
     @Column(name = "team_id", nullable = false)
     private Long teamId;
     
@@ -32,7 +34,10 @@ public class Post {
     private String content;
     
     @Column(name = "view_count", nullable = false)
-    private Integer viewCount = 0;
+    private Long viewCount = 0L;
+
+    @Column(name = "like_count", nullable = false)
+    private Long likeCount = 0L;
     
     @Column(name = "is_same_team", nullable = false)
     private Boolean isSameTeam = false;
@@ -44,23 +49,17 @@ public class Post {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-    
-    protected Post() {}
 
-    
-    public void updateTitle(String title) {
+    public Post() {}
+
+    public Post(User user, Long teamId, String title, String content, Boolean isSameTeam) {
+        this.user = user;
+        this.teamId = teamId;
         this.title = title;
-    }
-    
-    public void updateContent(String content) {
         this.content = content;
-    }
-    
-    public void updateIsSameTeam(Boolean isSameTeam) {
         this.isSameTeam = isSameTeam;
+        this.viewCount = 0L;
+        this.likeCount = 0L;
     }
-    
-    public void increaseViewCount() {
-        this.viewCount++;
-    }
+
 }

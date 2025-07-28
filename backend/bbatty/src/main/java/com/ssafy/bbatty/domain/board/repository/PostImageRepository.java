@@ -13,11 +13,8 @@ public interface PostImageRepository extends JpaRepository<PostImage, Long> {
     
     List<PostImage> findByImageUrlIn(List<String> imageUrls);
     
-    @Query("SELECT pi FROM PostImage pi WHERE pi.status = 'UPLOADED' AND pi.imageUrl IN :imageUrls")
-    List<PostImage> findUploadedImagesByUrls(@Param("imageUrls") List<String> imageUrls);
-    
-    @Query("SELECT pi FROM PostImage pi WHERE pi.status = 'UPLOADED' AND pi.post IS NULL")
-    List<PostImage> findAllOrphanImages();
-    
-    List<PostImage> findByPostId(Long postId);
+    List<PostImage> findByImageUrlInAndPostIsNull(List<String> imageUrls);
+
+    @Query("SELECT pi.imageUrl FROM PostImage pi WHERE pi.post.id = :postId")
+    List<String> findImageUrlsByPostId(@Param("postId") Long postId);
 }

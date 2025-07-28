@@ -1,8 +1,8 @@
+
 package com.ssafy.bbatty.domain.chat.common.service;
 import org.springframework.data.redis.listener.ChannelTopic;
 
 import java.util.Map;
-
 public interface RedisPubSubService {
     /**
      * 메시지 발행 (publish)
