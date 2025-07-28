@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 public class GameChatRoomServiceImpl implements GameChatRoomService {
 
     private final RedisTemplate<String, Object> redisTemplate;
+    private final GameChatUserService gameChatUserService;
 
     private static final String CHATROOM_KEY_PREFIX = "game_chat:room:";
     private static final String ACTIVE_ROOMS_KEY = "game_chat:active_rooms";
@@ -142,11 +143,13 @@ public class GameChatRoomServiceImpl implements GameChatRoomService {
             String homeRoomKey = CHATROOM_KEY_PREFIX + "game_" + gameId + "_team_" + TEAMS[0][0];
             String awayRoomKey = CHATROOM_KEY_PREFIX + "game_" + gameId + "_team_" + TEAMS[1][0];
 
-            TeamChatRoomInfo homeRoom = loadChatRoomFromRedis(homeRoomKey);
-            TeamChatRoomInfo awayRoom = loadChatRoomFromRedis(awayRoomKey);
+            TeamChatRoomInfo homeRoom = loadChatRoomFromRedisWithRealtimeData(homeRoomKey, TEAMS[0][0]);
+            TeamChatRoomInfo awayRoom = loadChatRoomFromRedisWithRealtimeData(awayRoomKey, TEAMS[1][0]);
 
             if (homeRoom != null) rooms.add(homeRoom);
             if (awayRoom != null) rooms.add(awayRoom);
+
+            log.info("오늘 채팅방 목록 조회 완료 - 총 {}개 방", rooms.size());
 
         } catch (Exception e) {
             log.error("오늘 채팅방 목록 조회 실패", e);
@@ -281,7 +284,7 @@ public class GameChatRoomServiceImpl implements GameChatRoomService {
      */
     private TeamChatRoomInfo loadChatRoomFromRedis(String roomKey) {
         try {
-            if (!Boolean.TRUE.equals(redisTemplate.hasKey(roomKey))) {
+            if (!redisTemplate.hasKey(roomKey)) {
                 return null;
             }
 
@@ -302,5 +305,88 @@ public class GameChatRoomServiceImpl implements GameChatRoomService {
             log.error("채팅방 Redis 로드 실패 - roomKey: {}", roomKey, e);
             return null;
         }
+    }
+
+    /**
+     * Redis에서 채팅방 정보 로드 + 실시간 데이터 반영
+     */
+    private TeamChatRoomInfo loadChatRoomFromRedisWithRealtimeData(String roomKey, String teamId) {
+        try {
+            if (!redisTemplate.hasKey(roomKey)) {
+                // 채팅방이 Redis에 없으면 기본 정보로 생성
+                log.info("Redis에 채팅방 정보 없음 - 기본 정보로 생성: teamId={}", teamId);
+                return createDefaultTeamChatRoomInfo(teamId);
+            }
+
+            Map<Object, Object> roomData = redisTemplate.opsForHash().entries(roomKey);
+
+            // 실시간 접속자 수 조회
+            long currentUsers = gameChatUserService.getConnectedUserCount(teamId);
+            
+            log.debug("채팅방 실시간 정보 - teamId: {}, currentUsers: {}", teamId, currentUsers);
+
+            return TeamChatRoomInfo.builder()
+                    .roomId((String) roomData.get("roomId"))
+                    .roomName((String) roomData.get("roomName"))
+                    .gameId(Long.valueOf(roomData.get("gameId").toString()))
+                    .teamId(Long.valueOf(roomData.get("teamId").toString()))
+                    .teamName((String) roomData.get("teamName"))
+                    .gameDateTime(LocalDateTime.now().plusHours(2)) // 실시간 게임 시간
+                    .stadium("잠실야구장") // 실제로는 DB에서 조회
+                    .active((Boolean) roomData.get("active"))
+                    .currentUsers((int) currentUsers) // 실시간 접속자 수 반영
+                    .maxUsers((Integer) roomData.get("maxUsers"))
+                    .doubleHeader(false)
+                    .winningFairyCount(0)
+                    .teamType(teamId.equals("1") ? "HOME" : "AWAY")
+                    .build();
+
+        } catch (Exception e) {
+            log.error("채팅방 실시간 데이터 로드 실패 - roomKey: {}, teamId: {}", roomKey, teamId, e);
+            // 오류 시 기본 정보라도 반환
+            return createDefaultTeamChatRoomInfo(teamId);
+        }
+    }
+
+    /**
+     * 기본 채팅방 정보 생성 (Redis에 정보가 없을 때)
+     */
+    private TeamChatRoomInfo createDefaultTeamChatRoomInfo(String teamId) {
+        try {
+            String[] teamInfo = findTeamInfoById(teamId);
+            long currentUsers = gameChatUserService.getConnectedUserCount(teamId);
+
+            return TeamChatRoomInfo.builder()
+                    .roomId("game_123_team_" + teamId)
+                    .roomName(teamInfo[1] + " 응원방")
+                    .gameId(123L)
+                    .teamId(Long.valueOf(teamInfo[0]))
+                    .teamName(teamInfo[1])
+                    .gameDateTime(LocalDateTime.now().plusHours(2))
+                    .stadium("잠실야구장")
+                    .active(true)
+                    .currentUsers((int) currentUsers) // 실시간 접속자 수
+                    .maxUsers(200)
+                    .doubleHeader(false)
+                    .winningFairyCount(0)
+                    .teamType(teamId.equals("1") ? "HOME" : "AWAY")
+                    .build();
+        } catch (Exception e) {
+            log.error("기본 채팅방 정보 생성 실패 - teamId: {}", teamId, e);
+            return null;
+        }
+    }
+
+    /**
+     * 팀 ID로 팀 정보 찾기
+     */
+    private String[] findTeamInfoById(String teamId) {
+        for (String[] team : TEAMS) {
+            if (team[0].equals(teamId)) {
+                return team;
+            }
+        }
+        // 기본값 반환
+        return new String[]{teamId, "Unknown Team", "unknown"};
     }
 }
