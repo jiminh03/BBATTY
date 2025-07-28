@@ -21,7 +21,15 @@ public enum ErrorCode {
     FILE_PATH_SECURITY_VIOLATION(HttpStatus.BAD_REQUEST, "허용되지 않는 파일 경로예요."),
     FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "파일의 크기가 제한 크기를 초과합니다."),
     FILE_EMPTY(HttpStatus.BAD_REQUEST, "파일이 비어있습니다."),
-    FILE_FAILED(HttpStatus.BAD_REQUEST, "파일 업로드에 실패했습니다.");
+    FILE_FAILED(HttpStatus.BAD_REQUEST, "파일 업로드에 실패했습니다."),
+
+    // POST
+    POST_NOT_FOUND(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없어요"),
+
+    // Comment
+    COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없어요"),
+    POST_FORBIDDEN(HttpStatus.FORBIDDEN, "작성한 게시자만 삭제할 수 있습니다.");
+
     /*
     본인에게 맞는 예외코드 설정하세요
     // USER

@@ -1,0 +1,19 @@
+package com.ssafy.bbatty.domain.board.dto.response;
+
+import lombok.Builder;
+import lombok.Getter;
+
+@Getter
+@Builder
+public class PostDetailResponse {
+    
+    private Long postId;
+    private String title;
+    private String authorNickname;
+    private String content;
+    private Long likeCount;
+    private Long viewCount;
+    private String createdAt;
+    private String updatedAt;
+    
+}
