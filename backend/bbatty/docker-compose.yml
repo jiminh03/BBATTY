@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # MySQL 데이터베이스
+  # MySQL
   mysql:
     image: mysql:8.0
     container_name: mysql-db
@@ -17,6 +17,7 @@ services:
       - mysql_data:/var/lib/mysql
     networks:
       - app-network
+
   app:
     build:
       context: .
@@ -33,33 +34,19 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql-db:3306/${MYSQL_DATABASE}
       SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
-      SPRING_REDIS_HOST: redis-cache
+
+      # Redis 설정 (올바른 환경변수명)
+      SPRING_DATA_REDIS_HOST: redis-cache
+      SPRING_DATA_REDIS_PORT: 6379
 
       CLOUD_AWS_CREDENTIALS_ACCESS_KEY: ${CLOUD_AWS_CREDENTIALS_ACCESS_KEY}
       CLOUD_AWS_CREDENTIALS_SECRET_KEY: ${CLOUD_AWS_CREDENTIALS_SECRET_KEY}
       CLOUD_AWS_S3_BUCKET: ${CLOUD_AWS_S3_BUCKET}
 
-  # Jenkins CI/CD -> 로컬 필요 없음
-#  jenkins:
-#    image: jenkins/jenkins:lts
-#    container_name: jenkins-server
-#    restart: always
-#    ports:
-#      - "8081:8080"
-#      - "50000:50000"
-#    volumes:
-#      - jenkins_data:/var/jenkins_home
-#      - /var/run/docker.sock:/var/run/docker.sock
-#    environment:
-#      - DOCKER_HOST=unix:///var/run/docker.sock
-#    networks:
-#      - app-network
-#    user: root
-
   # Redis 캐시
   redis:
     image: redis:alpine
-    container_name: redis-cache
+    container_name: redis-cache  # 이 이름과 환경변수가 일치해야 함
     restart: always
     ports:
       - "6379:6379"
