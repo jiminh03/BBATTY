@@ -21,19 +21,17 @@ public class KakaoUserInfoDto {
         @JsonProperty("email")
         private String email;
 
-        @JsonProperty("profile")
-        private Profile profile;
-    }
+        @JsonProperty("name")
+        private String name;
 
-    @Getter
-    @NoArgsConstructor
-    public static class Profile {
+        @JsonProperty("birthyear")
+        private String birthyear;
 
-        @JsonProperty("nickname")
-        private String nickname;
+        @JsonProperty("birthday")
+        private String birthday;
 
-        @JsonProperty("profile_image_url")
-        private String profileImageUrl;
+        @JsonProperty("gender")
+        private String gender;
     }
 
     // 편의 메서드
@@ -41,10 +39,20 @@ public class KakaoUserInfoDto {
         return kakaoAccount != null ? kakaoAccount.getEmail() : null;
     }
 
-    public String getNickname() {
-        return kakaoAccount != null &&
-                kakaoAccount.getProfile() != null ?
-                kakaoAccount.getProfile().getNickname() : null;
+    public String getName() {
+        return kakaoAccount != null ? kakaoAccount.getName() : null;
+    }
+
+    public String getBirthyear() {
+        return kakaoAccount != null ? kakaoAccount.getBirthyear() : null;
+    }
+
+    public String getBirthday() {
+        return kakaoAccount != null ? kakaoAccount.getBirthday() : null;
+    }
+
+    public String getGender() {
+        return kakaoAccount != null ? kakaoAccount.getGender() : null;
     }
 
     public String getKakaoId() {
