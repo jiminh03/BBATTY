@@ -12,9 +12,11 @@ import com.ssafy.bbatty.domain.user.repository.UserRepository;
 import com.ssafy.bbatty.global.constants.ErrorCode;
 import com.ssafy.bbatty.global.exception.ApiException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,12 +27,16 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
+@Slf4j
 public class PostServiceImpl implements PostService {
-    
+
+    private final RedisTemplate<String, String> postRedisTemplate;
+
     private final PostRepository postRepository;
     private final UserRepository userRepository;
     private final PostImageService postImageService;
-
+    private static final String VIEW_COUNT_KEY_PREFIX = "view:count:";
+    private static final String LIKE_COUNT_KEY_PREFIX = "like:count:";
     private static final int PAGE_SIZE = 5; // 한 번에 가져올 게시글 수
 
     /*
@@ -145,6 +151,8 @@ public class PostServiceImpl implements PostService {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND));
 
+        incrementViewCount(postId, post.getViewCount());
+
         return PostDetailResponse.builder()
                 .postId(post.getId())
                 .title(post.getTitle())
@@ -155,6 +163,35 @@ public class PostServiceImpl implements PostService {
                 .createdAt(post.getCreatedAt().toString())
                 .updatedAt(post.getUpdatedAt().toString())
                 .build();
+    }
+
+    /**
+     * 게시글 조회수 증가 (Redis에만 저장)
+     * @param postId 게시글 ID
+     */
+    public void incrementViewCount(Long postId, Long DBViewCount) {
+        String key = VIEW_COUNT_KEY_PREFIX + postId;
+
+        try {
+            // Redis에서 조회수 증가
+            Long newCount = postRedisTemplate.opsForValue().increment(key);
+            System.out.println("newCount:" + newCount);
+            // 처음 증가된 경우 (Redis에 키가 없어서 1이 된 경우)
+            if (newCount == 1L) {
+                System.out.println("들어옴?:" + postId);
+                // DB의 현재 조회수를 가져와서 Redis에 설정한다.
+                if (DBViewCount != null && DBViewCount > 0) {
+                    // DB의 조회수 + 1 (현재 조회 포함)
+                    postRedisTemplate.opsForValue().set(key, String.valueOf(DBViewCount + 1));
+                }
+            }
+
+
+            System.out.println("Redis 조회수 증가 완료 - postId:" + postId);
+
+        } catch (Exception e) {
+            log.error("Redis 조회수 증가 실패 - postId: {}, error: {}", postId, e.getMessage());
+        }
     }
 
     /*
@@ -186,6 +223,28 @@ public class PostServiceImpl implements PostService {
         }
 
         return new PostListPageResponse(posts, hasNext, nextCursor);
+    }
+
+    /**
+     * 게시글 좋아요 증가 (Redis에만 저장)
+     * @param postId 게시글 ID
+     */
+    public void incrementLikeCount(Long postId) {
+        String key = LIKE_COUNT_KEY_PREFIX + postId;
+        // Redis에서 좋아요 수 증가
+        postRedisTemplate.opsForValue().increment(key);
+        log.debug("Redis 좋아요 증가 완료 - postId: {}", postId);
+    }
+
+    /**
+     * 게시글 좋아요 감소 (Redis에만 저장)
+     * @param postId 게시글 ID
+     */
+    public void decrementLikeCount(Long postId) {
+        String key = LIKE_COUNT_KEY_PREFIX + postId;
+        // Redis에서 좋아요 수 감소
+        postRedisTemplate.opsForValue().decrement(key);
+        log.debug("Redis 좋아요 감소 완료 - postId: {}", postId);
     }
 
 }

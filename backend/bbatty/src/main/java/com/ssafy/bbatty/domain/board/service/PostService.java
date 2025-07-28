@@ -19,4 +19,9 @@ public interface PostService {
     
     PostListPageResponse getPostListByUser(Long userId, Long cursor);
 
+    void incrementViewCount(Long postId, Long DBViewCount);
+
+    void incrementLikeCount(Long postId);
+
+    void decrementLikeCount(Long postId);
 }

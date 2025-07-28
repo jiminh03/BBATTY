@@ -107,10 +107,11 @@ public class PostController {
         return ResponseEntity.ok(response);
     }
 
+    // 게시글 상세 조회
     @GetMapping("/{postId}")
     public ResponseEntity<ApiResponse<PostDetailResponse>> getPostDetail(
             @PathVariable Long postId) {
-        
+
         PostDetailResponse response = postService.getPostDetail(postId);
         
         return ResponseEntity.status(SuccessCode.SUCCESS_DEFAULT.getStatus())
@@ -126,4 +127,31 @@ public class PostController {
         return ResponseEntity.status(SuccessCode.SUCCESS_DEFAULT.getStatus())
                 .body(ApiResponse.success(SuccessCode.SUCCESS_DEFAULT, response));
     }
+
+    /**
+     * 게시글 좋아요 (앱에서 사용자 좋아요 기록은 따로 저장)
+     */
+    @PostMapping("/{postId}/like")
+    public ResponseEntity<?> likePost(@PathVariable Long postId) {
+        // 좋아요 수 증가 (Redis에만 증가 되고 나중에 RDB에 반영된다.)
+        postService.incrementLikeCount(postId);
+
+        return ResponseEntity.status(SuccessCode.SUCCESS_DEFAULT.getStatus())
+                .body(ApiResponse.success(SuccessCode.SUCCESS_DEFAULT));
+    }
+
+    /**
+     * 게시글 좋아요 취소 (프론트에서 현재 좋아요 수 전달)
+     */
+    @DeleteMapping("/{postId}/like")
+    public ResponseEntity<?> unlikePost(@PathVariable Long postId) {
+
+        // 좋아요 수 감소 (Redis에만 감소 되고 나중에 RDB에 반영된다.)
+        postService.decrementLikeCount(postId);
+
+        return ResponseEntity.status(SuccessCode.SUCCESS_DEFAULT.getStatus())
+                .body(ApiResponse.success(SuccessCode.SUCCESS_DEFAULT));
+    }
+
+
 }
