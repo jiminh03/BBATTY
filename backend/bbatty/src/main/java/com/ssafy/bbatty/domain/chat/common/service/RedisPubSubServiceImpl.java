@@ -26,8 +26,8 @@ public class RedisPubSubServiceImpl implements RedisPubSubService {
     private final RedisMessageListenerContainer messageListenerContainer;
     private final ObjectMapper objectMapper;
 
-    // 채널별 구독 상태 관리
-    private final Map<String, ChannelTopic> subscribedChannels = new ConcurrentHashMap<>();
+    // 채널별 구독 상태 관리 (채널명 -> 리스너 매핑으로 변경)
+    private final Map<String, MessageListener> activeListeners = new ConcurrentHashMap<>();
 
     @Override
     public void publishMessage(String roomId, Map<String, Object> message) {
@@ -49,7 +49,7 @@ public class RedisPubSubServiceImpl implements RedisPubSubService {
         String channelName = createChannelName(roomId);
 
         // 이미 구독 중인 채널인지 확인
-        if (subscribedChannels.containsKey(channelName)) {
+        if (activeListeners.containsKey(channelName)) {
             log.debug("이미 구독 중인 채널: {}", channelName);
             return;
         }
@@ -61,8 +61,8 @@ public class RedisPubSubServiceImpl implements RedisPubSubService {
             ChatMessageListener listener = new ChatMessageListener(messageHandler, objectMapper);
             messageListenerContainer.addMessageListener(listener, topic);
 
-            // 구독 상태 저장
-            subscribedChannels.put(channelName, topic);
+            // 구독 상태 저장 (리스너도 함께 저장)
+            activeListeners.put(channelName, listener);
 
             log.info("Redis 채널 구독 시작: {}", channelName);
 
@@ -74,28 +74,37 @@ public class RedisPubSubServiceImpl implements RedisPubSubService {
     @Override
     public void unsubscribeFromRoom(String roomId) {
         String channelName = createChannelName(roomId);
-        ChannelTopic topic = subscribedChannels.remove(channelName);
+        MessageListener listener = activeListeners.remove(channelName);
 
-        if (topic != null) {
+        if (listener != null) {
             try {
+                ChannelTopic topic = new ChannelTopic(channelName);
+                messageListenerContainer.removeMessageListener(listener, topic);
                 log.info("Redis 채널 구독 해제: {}", channelName);
 
             } catch (Exception e) {
                 log.error("Redis 채널 구독 해제 실패: {}", channelName, e);
             }
+        } else {
+            log.debug("구독하지 않은 채널 구독 해제 시도: {}", channelName);
         }
     }
 
     @Override
     public Map<String, ChannelTopic> getSubscribedChannels() {
-        return new ConcurrentHashMap<>(subscribedChannels);
+        Map<String, ChannelTopic> result = new ConcurrentHashMap<>();
+
+        activeListeners.keySet().forEach(channelName ->
+                result.put(channelName, new ChannelTopic(channelName))
+        );
+
+        return result;
     }
 
     /**
      * 채널명 생성 규칙
-     *
-     * @param roomId 채팅방 ID (예: "game123_tigers")
-     * @return Redis 채널명 (예: "chat:game123_tigers")
+     * @param roomId 채팅방 ID (예: "tigers")
+     * @return Redis 채널명 (예: "chat:tigers")
      */
     private String createChannelName(String roomId) {
         return "chat:" + roomId;
