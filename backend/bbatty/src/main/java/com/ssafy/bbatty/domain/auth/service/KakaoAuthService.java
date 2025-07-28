@@ -7,7 +7,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 
 import java.time.Duration;
 
@@ -30,12 +29,8 @@ public class KakaoAuthService {
     public KakaoUserInfoDto getUserInfo(String accessToken) {
         try {
             return webClient.get()
-                    .uri(uriBuilder -> uriBuilder
-                            .path(kakaoUserInfoUrl)
-                            .queryParam("property_keys", "[\"kakao_account.email\",\"kakao_account.name\",\"kakao_account.birthyear\",\"kakao_account.birthday\",\"kakao_account.gender\"]")
-                            .build())
+                    .uri(kakaoUserInfoUrl)
                     .header("Authorization", AuthConstants.KAKAO_TOKEN_PREFIX + accessToken)
-                    .header("Content-Type", "application/x-www-form-urlencoded;charset=utf-8")
                     .retrieve()
                     .bodyToMono(KakaoUserInfoDto.class)
                     .timeout(Duration.ofSeconds(timeoutSeconds))

@@ -21,14 +21,11 @@ public class KakaoUserInfoDto {
         @JsonProperty("email")
         private String email;
 
-        @JsonProperty("name")
-        private String name;
+        @JsonProperty("birthday")
+        private String birthday;
 
         @JsonProperty("birthyear")
         private String birthyear;
-
-        @JsonProperty("birthday")
-        private String birthday;
 
         @JsonProperty("gender")
         private String gender;
@@ -39,16 +36,12 @@ public class KakaoUserInfoDto {
         return kakaoAccount != null ? kakaoAccount.getEmail() : null;
     }
 
-    public String getName() {
-        return kakaoAccount != null ? kakaoAccount.getName() : null;
+    public String getBirthday() {
+        return kakaoAccount != null ? kakaoAccount.getBirthday() : null;
     }
 
     public String getBirthyear() {
         return kakaoAccount != null ? kakaoAccount.getBirthyear() : null;
-    }
-
-    public String getBirthday() {
-        return kakaoAccount != null ? kakaoAccount.getBirthday() : null;
     }
 
     public String getGender() {

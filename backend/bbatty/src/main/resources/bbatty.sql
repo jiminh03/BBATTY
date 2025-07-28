@@ -22,6 +22,18 @@ CREATE TABLE `team` (
                         PRIMARY KEY (`id`)
 ) COMMENT='KBO 팀 정보';
 
+INSERT INTO `team` (`id`, `name`, `wins`, `draws`, `loses`, `team_rank`, `win_rate`, `gb`) VALUES
+                   (1, '한화 이글스', 0, 0, 0, NULL, NULL, NULL),
+                   (2, 'LG 트윈스', 0, 0, 0, NULL, NULL, NULL),
+                   (3, '롯데 자이언츠', 0, 0, 0, NULL, NULL, NULL),
+                   (4, 'KT 위즈', 0, 0, 0, NULL, NULL, NULL),
+                   (5, '삼성 라이온즈', 0, 0, 0, NULL, NULL, NULL),
+                   (6, 'KIA 타이거즈', 0, 0, 0, NULL, NULL, NULL),
+                   (7, 'SSG 랜더스', 0, 0, 0, NULL, NULL, NULL),
+                   (8, 'NC 다이노스', 0, 0, 0, NULL, NULL, NULL),
+                   (9, '두산 베어스', 0, 0, 0, NULL, NULL, NULL),
+                   (10, '키움 히어로즈', 0, 0, 0, NULL, NULL, NULL)
+
 -- 경기 정보 테이블
 CREATE TABLE `game` (
                         `id` BIGINT NOT NULL AUTO_INCREMENT,

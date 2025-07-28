@@ -64,7 +64,6 @@ public class AuthService {
             return KakaoLoginResponseDto.forNewUser(
                 kakaoUser.getKakaoId(), 
                 kakaoUser.getEmail(),
-                kakaoUser.getName(),
                 kakaoUser.getBirthyear(),
                 kakaoUser.getBirthday(),
                 kakaoUser.getGender()
@@ -85,7 +84,7 @@ public class AuthService {
         
         // 팀 정보 확인
         Team team = teamRepository.findById(request.getTeamId())
-                .orElseThrow(() -> new AuthExceptions.TeamNotFoundException());
+                .orElseThrow(AuthExceptions.TeamNotFoundException::new);
         
         // 카카오 정보로부터 나이와 성별 계산
         int age = User.calculateAge(request.getBirthyear(), request.getBirthday());
@@ -129,7 +128,7 @@ public class AuthService {
     public TeamSelectionResponseDto selectTeam(TeamSelectionRequestDto request) {
         // 팀 존재 확인
         Team team = teamRepository.findById(request.getTeamId())
-                .orElseThrow(() -> new AuthExceptions.TeamNotFoundException());
+                .orElseThrow(AuthExceptions.TeamNotFoundException::new);
 
         return TeamSelectionResponseDto.of(team.getId(), team.getName());
     }
