@@ -143,8 +143,9 @@ public class GameChatRoomServiceImpl implements GameChatRoomService {
             String homeRoomKey = CHATROOM_KEY_PREFIX + "game_" + gameId + "_team_" + TEAMS[0][0];
             String awayRoomKey = CHATROOM_KEY_PREFIX + "game_" + gameId + "_team_" + TEAMS[1][0];
 
-            TeamChatRoomInfo homeRoom = loadChatRoomFromRedisWithRealtimeData(homeRoomKey, TEAMS[0][0]);
-            TeamChatRoomInfo awayRoom = loadChatRoomFromRedisWithRealtimeData(awayRoomKey, TEAMS[1][0]);
+            // 실시간 데이터로 채팅방 정보 생성 (일관성 보장)
+            TeamChatRoomInfo homeRoom = buildTeamChatRoomWithRealtimeData(homeRoomKey, TEAMS[0][0]);
+            TeamChatRoomInfo awayRoom = buildTeamChatRoomWithRealtimeData(awayRoomKey, TEAMS[1][0]);
 
             if (homeRoom != null) rooms.add(homeRoom);
             if (awayRoom != null) rooms.add(awayRoom);
@@ -308,22 +309,22 @@ public class GameChatRoomServiceImpl implements GameChatRoomService {
     }
 
     /**
-     * Redis에서 채팅방 정보 로드 + 실시간 데이터 반영
+     * 실시간 데이터로 채팅방 정보 생성 (데이터 일관성 보장)
      */
-    private TeamChatRoomInfo loadChatRoomFromRedisWithRealtimeData(String roomKey, String teamId) {
+    private TeamChatRoomInfo buildTeamChatRoomWithRealtimeData(String roomKey, String teamId) {
         try {
+            // 항상 실시간 접속자 수를 조회하여 데이터 일관성 보장
+            long currentUsers = gameChatUserService.getConnectedUserCount(teamId);
+            
+            log.debug("채팅방 실시간 정보 생성 - teamId: {}, currentUsers: {}", teamId, currentUsers);
+
             if (!redisTemplate.hasKey(roomKey)) {
                 // 채팅방이 Redis에 없으면 기본 정보로 생성
                 log.info("Redis에 채팅방 정보 없음 - 기본 정보로 생성: teamId={}", teamId);
-                return createDefaultTeamChatRoomInfo(teamId);
+                return createTeamChatRoomWithRealtimeUsers(teamId, currentUsers);
             }
 
             Map<Object, Object> roomData = redisTemplate.opsForHash().entries(roomKey);
-
-            // 실시간 접속자 수 조회
-            long currentUsers = gameChatUserService.getConnectedUserCount(teamId);
-            
-            log.debug("채팅방 실시간 정보 - teamId: {}, currentUsers: {}", teamId, currentUsers);
 
             return TeamChatRoomInfo.builder()
                     .roomId((String) roomData.get("roomId"))
@@ -342,19 +343,25 @@ public class GameChatRoomServiceImpl implements GameChatRoomService {
                     .build();
 
         } catch (Exception e) {
-            log.error("채팅방 실시간 데이터 로드 실패 - roomKey: {}, teamId: {}", roomKey, teamId, e);
-            // 오류 시 기본 정보라도 반환
-            return createDefaultTeamChatRoomInfo(teamId);
+            log.error("채팅방 실시간 데이터 생성 실패 - roomKey: {}, teamId: {}", roomKey, teamId, e);
+            // 오류 시 기본 정보라도 반환 (실시간 접속자 수 0으로)
+            return createTeamChatRoomWithRealtimeUsers(teamId, 0);
         }
     }
 
     /**
-     * 기본 채팅방 정보 생성 (Redis에 정보가 없을 때)
+     * Redis에서 채팅방 정보 로드 + 실시간 데이터 반영 (하위 호환성 유지)
      */
-    private TeamChatRoomInfo createDefaultTeamChatRoomInfo(String teamId) {
+    private TeamChatRoomInfo loadChatRoomFromRedisWithRealtimeData(String roomKey, String teamId) {
+        return buildTeamChatRoomWithRealtimeData(roomKey, teamId);
+    }
+
+    /**
+     * 실시간 접속자 수로 채팅방 정보 생성 (데이터 일관성 보장)
+     */
+    private TeamChatRoomInfo createTeamChatRoomWithRealtimeUsers(String teamId, long currentUsers) {
         try {
             String[] teamInfo = findTeamInfoById(teamId);
-            long currentUsers = gameChatUserService.getConnectedUserCount(teamId);
 
             return TeamChatRoomInfo.builder()
                     .roomId("game_123_team_" + teamId)
@@ -365,16 +372,24 @@ public class GameChatRoomServiceImpl implements GameChatRoomService {
                     .gameDateTime(LocalDateTime.now().plusHours(2))
                     .stadium("잠실야구장")
                     .active(true)
-                    .currentUsers((int) currentUsers) // 실시간 접속자 수
+                    .currentUsers((int) currentUsers) // 매개변수로 받은 실시간 접속자 수
                     .maxUsers(200)
                     .doubleHeader(false)
                     .winningFairyCount(0)
                     .teamType(teamId.equals("1") ? "HOME" : "AWAY")
                     .build();
         } catch (Exception e) {
-            log.error("기본 채팅방 정보 생성 실패 - teamId: {}", teamId, e);
+            log.error("실시간 채팅방 정보 생성 실패 - teamId: {}, currentUsers: {}", teamId, currentUsers, e);
             return null;
         }
+    }
+
+    /**
+     * 기본 채팅방 정보 생성 (Redis에 정보가 없을 때) - 하위 호환성 유지
+     */
+    private TeamChatRoomInfo createDefaultTeamChatRoomInfo(String teamId) {
+        long currentUsers = gameChatUserService.getConnectedUserCount(teamId);
+        return createTeamChatRoomWithRealtimeUsers(teamId, currentUsers);
     }
 
     /**
