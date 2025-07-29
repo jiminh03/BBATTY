@@ -56,6 +56,26 @@ public class JwtUtil {
                 .compact();
     }
 
+    /**
+     * 사용자 정보 포함한 Access Token 생성
+     */
+    public String generateAccessTokenWithUserInfo(Long userId, String teamId, Integer age, String gender) {
+        Date now = new Date();
+        Date expiry = new Date(now.getTime() + accessTokenValidity.toMillis());
+
+        return Jwts.builder()
+                .setSubject(userId.toString())
+                .setIssuedAt(now)
+                .setExpiration(expiry)
+                .setIssuer(issuer)
+                .claim("type", "access")
+                .claim("teamId", teamId)
+                .claim("age", age)
+                .claim("gender", gender)
+                .signWith(secretKey)
+                .compact();
+    }
+
     public Long getUserIdFromToken(String token) {
         Claims claims = parseToken(token);
         return Long.parseLong(claims.getSubject());
