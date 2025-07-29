@@ -8,10 +8,12 @@ import com.ssafy.bbatty.domain.auth.dto.request.TeamSelectionRequestDto;
 import com.ssafy.bbatty.domain.auth.dto.response.*;
 import com.ssafy.bbatty.domain.auth.service.AuthService;
 import com.ssafy.bbatty.global.response.ApiResponse;
+import com.ssafy.bbatty.global.security.UserPrincipal;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @Slf4j
@@ -35,10 +37,13 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<Void>> logout(
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
             @RequestHeader(AuthConstants.JWT_HEADER) String authHeader) {
 
         String accessToken = authHeader.replace(AuthConstants.JWT_PREFIX, "");
         authService.logout(accessToken);
+
+        log.info("사용자 로그아웃 - ID: {}, 닉네임: {}", userPrincipal.getUserId(), userPrincipal.getNickname());
 
         return ResponseEntity.ok(
                 ApiResponse.success()
