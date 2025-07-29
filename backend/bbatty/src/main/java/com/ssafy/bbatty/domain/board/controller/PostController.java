@@ -11,9 +11,11 @@ import com.ssafy.bbatty.global.constants.SuccessCode;
 import com.ssafy.bbatty.global.exception.ApiException;
 import com.ssafy.bbatty.global.response.ApiResponse;
 import com.ssafy.bbatty.global.s3.S3Service;
+import com.ssafy.bbatty.global.security.UserPrincipal;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -31,9 +33,9 @@ public class PostController {
     @PostMapping
     public ResponseEntity<ApiResponse<PostCreateResponse>> createPost(
             @Valid @RequestBody PostCreateRequest request,
-            @RequestHeader("userId") Long userId) {
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
         
-        PostCreateResponse response = postService.createPost(request, userId);
+        PostCreateResponse response = postService.createPost(request, userPrincipal.getUserId());
         
         return ResponseEntity.status(SuccessCode.SUCCESS_CREATED.getStatus())
                 .body(ApiResponse.success(SuccessCode.SUCCESS_CREATED, response));
@@ -81,9 +83,9 @@ public class PostController {
     @DeleteMapping("/{postId}")
     public ResponseEntity<ApiResponse<Void>> deletePost(
             @PathVariable Long postId,
-            @RequestHeader("userId") Long userId) {
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
         
-        postService.deletePost(postId, userId);
+        postService.deletePost(postId, userPrincipal.getUserId());
         
         return ResponseEntity.status(SuccessCode.SUCCESS_DELETED.getStatus())
                 .body(ApiResponse.success(SuccessCode.SUCCESS_DELETED));

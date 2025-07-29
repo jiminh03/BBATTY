@@ -1,6 +1,8 @@
 package com.ssafy.bbatty.global.security;
 
 import com.ssafy.bbatty.domain.auth.constants.AuthConstants;
+import com.ssafy.bbatty.domain.user.entity.User;
+import com.ssafy.bbatty.domain.user.repository.UserRepository;
 import com.ssafy.bbatty.global.util.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -24,6 +26,7 @@ import java.util.ArrayList;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final UserRepository userRepository;
 
     @Override
     protected void doFilterInternal(
@@ -36,19 +39,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (StringUtils.hasText(token) && jwtUtil.validateToken(token)) {
                 Long userId = jwtUtil.getUserIdFromToken(token);
+                
+                User user = userRepository.findById(userId).orElse(null);
+                if (user != null) {
+                    UserPrincipal userPrincipal = new UserPrincipal(
+                            user.getId(),
+                            user.getNickname(),
+                            user.getRole().name()
+                    );
 
-                // Spring Security Context에 인증 정보 설정
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                userId,
-                                null,
-                                new ArrayList<>()  // authorities (권한)
-                        );
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(
+                                    userPrincipal,
+                                    null,
+                                    userPrincipal.getAuthorities()
+                            );
 
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                log.debug("JWT 인증 성공 - 사용자 ID: {}", userId);
+                    log.debug("JWT 인증 성공 - 사용자 ID: {}, 닉네임: {}", userId, user.getNickname());
+                }
             }
         } catch (Exception e) {
             log.error("JWT 필터에서 예외 발생: {}", e.getMessage());
