@@ -1,11 +1,13 @@
 package com.ssafy.bbatty.global.config;
 
+import com.ssafy.bbatty.domain.chat.common.dto.ChatSession;
 import com.ssafy.bbatty.domain.chat.game.handler.GameChatWebSocketHandler;
 //import com.ssafy.bbatty.domain.chat.match.handler.MatchChatWebSocketHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.web.socket.WebSocketHandler;
@@ -28,6 +30,7 @@ import java.util.Map;
 public class WebSocketConfig implements WebSocketConfigurer {
 
     private final GameChatWebSocketHandler gameChatWebSocketHandler;
+    private final RedisTemplate<String, Object> redisTemplate;
 //    private final MatchChatWebSocketHandler matchChatWebSocketHandler;
 
     @Value("${websocket.allowed-origins:*}")
@@ -69,7 +72,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
      * 채팅 핸드셰이크 인터셉터
      * 연결 전 기본적인 검증 수행
      */
-    public static class ChatHandshakeInterceptor implements HandshakeInterceptor {
+    public class ChatHandshakeInterceptor implements HandshakeInterceptor {
 
         private final String chatType;
 
@@ -153,29 +156,49 @@ public class WebSocketConfig implements WebSocketConfigurer {
         }
 
         /**
-         * 기본 파라미터 검증
+         * 기본 파라미터 검증 - 세션 토큰 기반
          */
         private boolean validateBasicParams(Map<String, String> params, String chatType) {
-            // 사용자 ID는 필수
-            String userId = params.get("userId");
-            if (userId == null || userId.trim().isEmpty()) {
+            String sessionToken = params.get("session");
+            if (sessionToken == null || sessionToken.trim().isEmpty()) {
+                log.warn("세션 토큰이 없습니다.");
                 return false;
             }
 
-            // 게임 채팅은 teamId 필수
-            if ("game".equals(chatType)) {
-                String teamId = params.get("teamId");
-                if (teamId == null || teamId.trim().isEmpty()) {
+            try {
+                // Redis에서 세션 검증
+                Object sessionObj = redisTemplate.opsForValue().get("chat_session:" + sessionToken);
+                if (sessionObj == null) {
+                    log.warn("유효하지 않은 세션 토큰: {}", sessionToken);
                     return false;
                 }
+
+                // 세션 정보를 attributes에 저장
+                if (sessionObj instanceof ChatSession) {
+                    ChatSession session = (ChatSession) sessionObj;
+                    if (session.isExpired()) {
+                        log.warn("만료된 세션 토큰: {}", sessionToken);
+                        return false;
+                    }
+
+                    // WebSocket attributes에 세션 정보 설정
+                    params.put("internalUserId", session.getUserId().toString());
+                    params.put("userNickname", session.getUserNickname());
+                    params.put("teamId", session.getTeamId());
+                    params.put("gameId", session.getGameId().toString());
+
+                    // 일회용 토큰 삭제
+                    redisTemplate.delete("chat_session:" + sessionToken);
+
+                    return true;
+                }
+
+                return false;
+
+            } catch (Exception e) {
+                log.error("세션 토큰 검증 중 오류", e);
+                return false;
             }
-
-            // 추가 검증 로직 (필요시)
-            // - 토큰 유효성 검사
-            // - 사용자 권한 확인
-            // - Rate limiting 등
-
-            return true;
         }
 
         /**

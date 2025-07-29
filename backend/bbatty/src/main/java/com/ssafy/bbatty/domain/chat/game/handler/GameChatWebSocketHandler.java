@@ -48,18 +48,19 @@ public class GameChatWebSocketHandler extends BaseChatWebSocketHandler {
 
     @Override
     protected UserSessionInfo createUserSessionInfo(WebSocketSession session) {
-        // WebSocket 연결 시 전달받은 파라미터에서 정보 추출
+        // WebSocket 연결 시 세션에서 정보 추출
         Map<String, Object> attributes = session.getAttributes();
 
-        String teamId = extractTeamId(session);
-        String userId = extractUserId(session);
-        String userName = extractUserName(session, userId);
+        String internalUserId = (String) attributes.get("internalUserId");
+        String userNickname = (String) attributes.get("userNickname");
+        String teamId = (String) attributes.get("teamId");
+        String gameId = (String) attributes.get("gameId");
 
-        UserSessionInfo userInfo = new UserSessionInfo(userId, userName, teamId);
+        UserSessionInfo userInfo = new UserSessionInfo(internalUserId, userNickname, teamId);
 
         // 게임 채팅 특화 정보 추가
         userInfo.addAdditionalInfo("chatType", "game");
-        userInfo.addAdditionalInfo("teamId", teamId);
+        userInfo.addAdditionalInfo("gameId", gameId);
 
         return userInfo;
     }
@@ -216,14 +217,19 @@ public class GameChatWebSocketHandler extends BaseChatWebSocketHandler {
      * 게임 채팅 메시지 생성 (기본 메시지에 게임 특화 정보 추가)
      */
     private Map<String, Object> createGameChatMessage(UserSessionInfo userInfo, String content) {
-        Map<String, Object> message = createChatMessage(userInfo, content);
-
+        Map<String, Object> message = new HashMap<>();
+        
+        // 기본 메시지 정보 (userId 노출하지 않음)
+        message.put("type", "message");
+        message.put("nickname", userInfo.getUserName()); // 닉네임만 노출
+        message.put("content", content);
+        message.put("timestamp", System.currentTimeMillis());
+        
         // 게임 채팅 특화 정보 추가
-        message.put("messageId", UUID.randomUUID().toString()); // messageID추가
+        message.put("messageId", UUID.randomUUID().toString());
         message.put("chatType", "game");
         message.put("teamId", userInfo.getRoomId());
-        message.put("serverId", getServerId()); // 서버 식별자
-        message.put("timestamp", System.currentTimeMillis());
+        message.put("serverId", getServerId());
 
         // 현재 트래픽 정보 추가
         try {

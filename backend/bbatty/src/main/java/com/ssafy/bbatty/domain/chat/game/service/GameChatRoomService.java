@@ -73,14 +73,35 @@ public interface GameChatRoomService {
      */
     boolean isChatRoomActive(String teamId);
 
+    /**
+     * 경기 ID로 채팅방 활성화 상태 확인
+     * @param gameId 경기 ID
+     * @return 활성화 여부
+     */
+    boolean isChatRoomActiveByGameId(Long gameId);
 
+    /**
+     * 모든 경기 채팅방 비활성화
+     */
+    void deactivateAllGameChatRooms();
 
+    /**
+     * 만료된 경기 채팅방 정리
+     */
+    void cleanupExpiredGameChatRooms();
 
+    /**
+     * 직관 인증 정보 초기화 (자정 리셋)
+     */
+    void resetAttendanceAuthentication();
 
+    /**
+     * Redis 연결 상태 확인
+     */
+    void healthCheckRedisConnection();
 
-
-
-
-
-
+    /**
+     * 좀비 채팅방 정리
+     */
+    void cleanupZombieChatRooms();
 }

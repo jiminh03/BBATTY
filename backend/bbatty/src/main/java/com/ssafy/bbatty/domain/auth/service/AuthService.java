@@ -48,7 +48,7 @@ public class AuthService {
         
         if (userInfo != null) {
             User user = userInfo.getUser();
-            String accessToken = jwtUtil.generateAccessToken(user.getId());
+            String accessToken = jwtUtil.generateAccessTokenWithUserInfo(\n                user.getId(), \n                user.getTeam().getId().toString(),\n                user.getAge(),\n                user.getGender().name()\n            );
             String refreshToken = jwtUtil.generateRefreshToken(user.getId());
             
             storeRefreshToken(user.getId(), refreshToken);
@@ -108,7 +108,7 @@ public class AuthService {
         userInfoRepository.save(userInfo);
         
         // JWT 토큰 생성 및 저장
-        String accessToken = jwtUtil.generateAccessToken(savedUser.getId());
+        String accessToken = jwtUtil.generateAccessTokenWithUserInfo(\n            savedUser.getId(),\n            savedUser.getTeam().getId().toString(),\n            savedUser.getAge(),\n            savedUser.getGender().name()\n        );
         String refreshToken = jwtUtil.generateRefreshToken(savedUser.getId());
         
         storeRefreshToken(savedUser.getId(), refreshToken);
@@ -170,7 +170,7 @@ public class AuthService {
         }
 
         // 새 토큰 생성 및 저장
-        String newAccessToken = jwtUtil.generateAccessToken(userId);
+        // \uc0ac\uc6a9\uc790 \uc815\ubcf4 \ub2e4\uc2dc \uc870\ud68c\ud574\uc11c \ucd5c\uc2e0 \uc815\ubcf4\ub85c \ud1a0\ud070 \uc0dd\uc131\n        User user = userRepository.findByIdWithTeam(userId)\n            .orElseThrow(() -> new RuntimeException(\"\uc0ac\uc6a9\uc790\ub97c \ucc3e\uc744 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4.\"));\n            \n        String newAccessToken = jwtUtil.generateAccessTokenWithUserInfo(\n            user.getId(),\n            user.getTeam().getId().toString(),\n            user.getAge(),\n            user.getGender().name()\n        );
         String newRefreshToken = jwtUtil.generateRefreshToken(userId);
 
         storeRefreshToken(userId, newRefreshToken);
