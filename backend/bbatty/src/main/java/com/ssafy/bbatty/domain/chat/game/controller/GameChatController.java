@@ -1,5 +1,8 @@
 package com.ssafy.bbatty.domain.chat.game.controller;
 
+import com.ssafy.bbatty.domain.chat.common.dto.ChatSession;
+import com.ssafy.bbatty.domain.chat.common.dto.ChatSessionResponse;
+import com.ssafy.bbatty.domain.chat.game.dto.GameChatJoinRequest;
 import com.ssafy.bbatty.domain.chat.game.dto.TeamChatRoomInfo;
 import com.ssafy.bbatty.domain.chat.game.handler.GameChatWebSocketHandler;
 import com.ssafy.bbatty.domain.chat.game.service.GameChatRoomService;
@@ -12,14 +15,21 @@ import com.ssafy.bbatty.domain.user.repository.UserRepository;
 import com.ssafy.bbatty.global.config.ProductInitializer;
 import com.ssafy.bbatty.global.response.ApiResponse;
 import com.ssafy.bbatty.global.constants.ErrorCode;
+import com.ssafy.bbatty.global.util.JwtUtil;
+import org.springframework.data.redis.core.RedisTemplate;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * 게임 채팅 테스트 및 관리 API
@@ -36,7 +46,100 @@ public class GameChatController {
     private final GameChatWebSocketHandler gameChatWebSocketHandler;
     private final TeamRepository teamRepository;
     private final UserRepository userRepository;
+    private final JwtUtil jwtUtil;
+    private final RedisTemplate<String, Object> redisTemplate;
     private final ProductInitializer productInitializer;
+
+    /**
+     * 경기 채팅 세션 생성 (안전한 WebSocket 연결용)
+     */
+    @PostMapping("/session")
+    public ResponseEntity<ApiResponse<ChatSessionResponse>> createGameChatSession(
+            @Valid @RequestBody GameChatJoinRequest request,
+            HttpServletRequest httpRequest) {
+        try {
+            // JWT에서 사용자 정보 추출
+            String token = extractTokenFromRequest(httpRequest);
+            Claims claims = jwtUtil.parseToken(token);
+            
+            Long userId = Long.valueOf(claims.getSubject());
+            String jwtTeamId = claims.get("teamId", String.class);
+            Integer age = claims.get("age", Integer.class);
+            String gender = claims.get("gender", String.class);
+            
+            // 팀 검증
+            if (!jwtTeamId.equals(request.getTeamId())) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.<ChatSessionResponse>fail(ErrorCode.UNAUTHORIZED, null));
+            }
+            
+            // 사용자 정보 조회 (닉네임, 승률 등)
+            User user = userRepository.findByIdWithTeam(userId).orElse(null);
+            if (user == null) {
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.<ChatSessionResponse>fail(ErrorCode.SERVER_ERROR, null));
+            }
+            
+            // 직관 인증 여부 확인 (Redis에서 조회)
+            String authKey = "attendance_auth:" + userId + ":" + request.getGameId();
+            boolean isAttendanceAuth = Boolean.TRUE.equals(redisTemplate.hasKey(authKey));
+            
+            // 일회용 세션 토큰 생성
+            String sessionToken = UUID.randomUUID().toString();
+            
+            // Redis에 세션 정보 저장 (3분 유효)
+            ChatSession session = ChatSession.builder()
+                    .sessionToken(sessionToken)
+                    .userId(userId)
+                    .userNickname(user.getNickname())
+                    .teamId(jwtTeamId)
+                    .gameId(request.getGameId())
+                    .expiresAt(System.currentTimeMillis() + 180000) // 3분
+                    .build();
+                    
+            redisTemplate.opsForValue().set(
+                "chat_session:" + sessionToken, 
+                session, 
+                Duration.ofMinutes(3)
+            );
+            
+            // 클라이언트 응답 (풍부한 정보 제공)
+            ChatSessionResponse response = ChatSessionResponse.builder()
+                    .sessionToken(sessionToken)
+                    .wsUrl("ws://localhost:8080/ws/game-chat")
+                    .userNickname(user.getNickname())
+                    .winRate(user.getWinRate())
+                    .attendanceAuth(isAttendanceAuth)
+                    .teamInfo(ChatSessionResponse.TeamInfo.builder()
+                            .teamId(jwtTeamId)
+                            .teamName(user.getTeam().getName())
+                            .teamLogo(user.getTeam().getLogo())
+                            .teamRank(user.getTeam().getRank())
+                            .build())
+                    .build();
+                    
+            log.info("경기 채팅 세션 생성 완료 - 사용자: {}, 팀: {}, 인증: {}", 
+                    user.getNickname(), jwtTeamId, isAttendanceAuth);
+                    
+            return ResponseEntity.ok(ApiResponse.success(response));
+            
+        } catch (Exception e) {
+            log.error("경기 채팅 세션 생성 실패", e);
+            return ResponseEntity.internalServerError()
+                    .body(ApiResponse.<ChatSessionResponse>fail(ErrorCode.SERVER_ERROR, null));
+        }
+    }
+    
+    /**
+     * HTTP 요청에서 JWT 토큰 추출
+     */
+    private String extractTokenFromRequest(HttpServletRequest request) {
+        String bearerToken = request.getHeader("Authorization");
+        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+        return null;
+    }
 
     /**
      * 게임 채팅방 생성 (테스트용)

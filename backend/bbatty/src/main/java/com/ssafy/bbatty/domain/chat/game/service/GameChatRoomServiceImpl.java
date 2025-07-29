@@ -232,6 +232,117 @@ public class GameChatRoomServiceImpl implements GameChatRoomService {
         }
     }
 
+    @Override
+    public boolean isChatRoomActiveByGameId(Long gameId) {
+        try {
+            String homeRoomKey = CHATROOM_KEY_PREFIX + "game_" + gameId + "_team_" + TEAMS[0][0];
+            String awayRoomKey = CHATROOM_KEY_PREFIX + "game_" + gameId + "_team_" + TEAMS[1][0];
+            
+            Boolean homeActive = (Boolean) redisTemplate.opsForHash().get(homeRoomKey, "active");
+            Boolean awayActive = (Boolean) redisTemplate.opsForHash().get(awayRoomKey, "active");
+            
+            return Boolean.TRUE.equals(homeActive) || Boolean.TRUE.equals(awayActive);
+            
+        } catch (Exception e) {
+            log.error("경기 채팅방 활성화 상태 확인 실패 - gameId: {}", gameId, e);
+            return false;
+        }
+    }
+
+    @Override
+    public void deactivateAllGameChatRooms() {
+        try {
+            String pattern = CHATROOM_KEY_PREFIX + "*";
+            
+            redisTemplate.keys(pattern).forEach(key -> {
+                redisTemplate.opsForHash().put(key, "active", false);
+            });
+            
+            // 활성 채팅방 목록 클리어
+            redisTemplate.delete(ACTIVE_ROOMS_KEY);
+            
+            log.info("모든 경기 채팅방 비활성화 완료");
+            
+        } catch (Exception e) {
+            log.error("모든 경기 채팅방 비활성화 실패", e);
+        }
+    }
+
+    @Override
+    public void cleanupExpiredGameChatRooms() {
+        try {
+            String pattern = CHATROOM_KEY_PREFIX + "*";
+            
+            redisTemplate.keys(pattern).forEach(key -> {
+                // 24시간 이상 된 채팅방 삭제
+                if (!redisTemplate.hasKey(key)) {
+                    gameChatUserService.getConnectedUsers(extractTeamIdFromKey(key))
+                            .forEach(userId -> gameChatUserService.removeUser(extractTeamIdFromKey(key), userId.toString()));
+                }
+            });
+            
+            log.info("만료된 경기 채팅방 정리 완료");
+            
+        } catch (Exception e) {
+            log.error("만료된 경기 채팅방 정리 실패", e);
+        }
+    }
+
+    @Override
+    public void resetAttendanceAuthentication() {
+        try {
+            String pattern = "game_auth:*";
+            
+            redisTemplate.keys(pattern).forEach(key -> {
+                redisTemplate.delete(key);
+            });
+            
+            log.info("직관 인증 정보 초기화 완료");
+            
+        } catch (Exception e) {
+            log.error("직관 인증 정보 초기화 실패", e);
+        }
+    }
+
+    @Override
+    public void healthCheckRedisConnection() {
+        try {
+            redisTemplate.opsForValue().set("health_check", System.currentTimeMillis());
+            redisTemplate.delete("health_check");
+            
+            log.debug("Redis 연결 상태 정상");
+            
+        } catch (Exception e) {
+            log.error("Redis 연결 상태 이상", e);
+        }
+    }
+
+    @Override
+    public void cleanupZombieChatRooms() {
+        try {
+            String pattern = CHATROOM_KEY_PREFIX + "*";
+            
+            redisTemplate.keys(pattern).forEach(key -> {
+                String teamId = extractTeamIdFromKey(key);
+                Boolean active = (Boolean) redisTemplate.opsForHash().get(key, "active");
+                
+                if (Boolean.TRUE.equals(active)) {
+                    long userCount = gameChatUserService.getConnectedUserCount(teamId);
+                    if (userCount == 0) {
+                        // 활성화되어 있지만 사용자가 없는 좀비 채팅방 비활성화
+                        redisTemplate.opsForHash().put(key, "active", false);
+                        redisTemplate.opsForSet().remove(ACTIVE_ROOMS_KEY, key);
+                        
+                        log.info("좀비 채팅방 비활성화 - teamId: {}", teamId);
+                    }
+                }
+            });
+            
+        } catch (Exception e) {
+            log.error("좀비 채팅방 정리 실패", e);
+        }
+    }
+
     /**
      * 팀별 채팅방 생성
      */
@@ -403,5 +514,22 @@ public class GameChatRoomServiceImpl implements GameChatRoomService {
         }
         // 기본값 반환
         return new String[]{teamId, "Unknown Team", "unknown"};
+    }
+
+    /**
+     * Redis 키에서 팀 ID 추출
+     */
+    private String extractTeamIdFromKey(String key) {
+        try {
+            // 예: "game_chat:room:game_123_team_1" -> "1"
+            String[] parts = key.split("_team_");
+            if (parts.length > 1) {
+                return parts[1];
+            }
+            return "unknown";
+        } catch (Exception e) {
+            log.warn("키에서 팀 ID 추출 실패 - key: {}", key, e);
+            return "unknown";
+        }
     }
 }
