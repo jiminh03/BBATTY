@@ -197,10 +197,8 @@ CREATE TABLE `post_image` (
                               `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '이미지 ID',
                               `post_id` BIGINT NOT NULL COMMENT '게시글 ID',
                               `image_url` VARCHAR(255) NOT NULL COMMENT '이미지 URL',
-                              `image_order` INT NOT NULL DEFAULT 1 COMMENT '이미지 순서',
                               PRIMARY KEY (`id`),
                               FOREIGN KEY (`post_id`) REFERENCES `post`(`id`) ON DELETE CASCADE,
-                              INDEX `idx_post_order` (`post_id`, `image_order`) COMMENT '게시글별 이미지 순서 조회용'
 ) COMMENT='게시글 이미지';
 
 -- 게시글 좋아요 테이블
