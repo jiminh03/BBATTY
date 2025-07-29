@@ -6,10 +6,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.ColumnDefault;
-import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "team", schema = "BBATTY")
@@ -48,11 +46,6 @@ public class Team {
     @Column(name = "gb", precision = 3, scale = 1)
     private BigDecimal gb;
 
-    @ColumnDefault("CURRENT_TIMESTAMP")
-    @UpdateTimestamp
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
     // 비즈니스 메서드
     public void updateStats(int wins, int draws, int loses, int rank, BigDecimal winRate, BigDecimal gb) {
         this.wins = wins;
@@ -61,6 +54,5 @@ public class Team {
         this.rank = rank;
         this.winRate = winRate;
         this.gb = gb;
-        this.updatedAt = LocalDateTime.now();
     }
 }
