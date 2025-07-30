@@ -5,8 +5,6 @@ export interface TimestampedEntity {
 
 export interface BaseEntity extends TimestampedEntity {
   id: string;
-  createdAt: string;
-  updatedAt: string;
 }
 
 export type RuntimeEnvironment = "development" | "production";
