@@ -54,6 +54,7 @@ dependencies {
 
 	// for Kakao OAuth
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
 	// json
 	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 }

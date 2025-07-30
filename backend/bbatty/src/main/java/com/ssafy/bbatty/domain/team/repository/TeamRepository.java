@@ -9,9 +9,8 @@ import java.util.List;
 @Repository
 public interface TeamRepository extends JpaRepository<Team, Long> {
 
-    // 1. 팀 선택 API용 - 순위별 팀 목록 조회 (POST /api/auth/select-team)
-    List<Team> findAllByOrderByRankAsc();
-
-    // 2. 팀 존재 여부 확인 (회원가입 시 유효성 검사)
-    boolean existsById(Long teamId);
+    /**
+     * 모든 팀 목록 조회 (회원가입 시 팀 선택용)
+     */
+    List<Team> findAllByOrderById();
 }

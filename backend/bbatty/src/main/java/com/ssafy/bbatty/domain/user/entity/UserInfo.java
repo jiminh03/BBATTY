@@ -1,6 +1,6 @@
 package com.ssafy.bbatty.domain.user.entity;
 
-import com.ssafy.bbatty.global.entity.BaseTimeEntity;
+import com.ssafy.bbatty.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -10,7 +10,7 @@ import lombok.*;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-public class UserInfo extends BaseTimeEntity {
+public class UserInfo extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

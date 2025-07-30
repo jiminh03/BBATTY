@@ -1,12 +1,14 @@
 package com.ssafy.bbatty.domain.user.entity;
 
 import com.ssafy.bbatty.domain.team.entity.Team;
-import com.ssafy.bbatty.global.entity.BaseTimeEntity;
+import com.ssafy.bbatty.global.constants.ErrorCode;
+import com.ssafy.bbatty.global.entity.BaseEntity;
+import com.ssafy.bbatty.global.exception.ApiException;
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.lang.Nullable;
 
 import java.time.LocalDate;
-import java.time.Period;
 
 @Entity
 @Table(name = "user", schema = "BBATTY")
@@ -14,7 +16,7 @@ import java.time.Period;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-public class User extends BaseTimeEntity {
+public class User extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -32,23 +34,25 @@ public class User extends BaseTimeEntity {
     @Column(name = "gender", nullable = false)
     private Gender gender;
 
-    @Column(name = "age", nullable = false)
-    private Integer age;
+    @Column(name = "birth_year", nullable = false)
+    private Integer birthYear;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false)
     @Builder.Default
     private Role role = Role.USER;
 
+    @Nullable
     @Column(name = "profile_img")
     private String profileImg;
 
-    @Lob
+    @Nullable
     @Column(name = "introduction")
     private String introduction;
 
     // UserInfo와 1:1 관계
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @Setter
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private UserInfo userInfo;
 
     // Enum 정의
@@ -61,51 +65,39 @@ public class User extends BaseTimeEntity {
     }
 
     // 유틸리티 메서드
-    public static int calculateAge(String birthyear, String birthday) {
-        if (birthyear == null || birthday == null) {
-            return 25; // 기본값
-        }
-        
-        try {
-            // birthday는 "MMDD" 형식
-            String month = birthday.substring(0, 2);
-            String day = birthday.substring(2, 4);
-            
-            LocalDate birthDate = LocalDate.of(
-                Integer.parseInt(birthyear),
-                Integer.parseInt(month), 
-                Integer.parseInt(day)
-            );
-            
-            return Period.between(birthDate, LocalDate.now()).getYears();
-        } catch (Exception e) {
-            return 25; // 파싱 실패 시 기본값
-        }
-    }
-
     public static Gender parseGender(String kakaoGender) {
         if (kakaoGender == null) {
-            return Gender.MALE; // 기본값
+            throw new ApiException(ErrorCode.KAKAO_GENDER_INFO_REQUIRED);
         }
-        
-        switch (kakaoGender.toLowerCase()) {
-            case "female":
-                return Gender.FEMALE;
-            case "male":
-                return Gender.MALE;
-            default:
-                return Gender.MALE; // 기본값
+
+        return switch (kakaoGender.toLowerCase()) {
+            case "female" -> Gender.FEMALE;
+            case "male" -> Gender.MALE;
+            default -> throw new ApiException(ErrorCode.KAKAO_GENDER_INFO_INVALID);
+        };
+    }
+
+    public static int parseBirthYear(String kakaoBirthyear) {
+        if (kakaoBirthyear == null || kakaoBirthyear.trim().isEmpty()) {
+            throw new ApiException(ErrorCode.KAKAO_BIRTH_INFO_REQUIRED);
+        }
+
+        try {
+            return Integer.parseInt(kakaoBirthyear.trim());
+        } catch (NumberFormatException e) {
+            throw new ApiException(ErrorCode.KAKAO_BIRTH_INFO_INVALID);
         }
     }
 
-    // 비즈니스 메서드
-    public static User createUser(String nickname, Gender gender, Integer age, Team team, String introduction) {
+    public static User createUser(String nickname, Gender gender, Integer birthYear, Team team,
+                                  String introduction, String profileImg) {
         return User.builder()
                 .nickname(nickname)
                 .gender(gender)
-                .age(age)
+                .birthYear(birthYear)
                 .team(team)
-                .introduction(introduction)
+                .introduction(introduction)  // null 가능 (필드에 @Nullable 있음)
+                .profileImg(profileImg)      // null 가능 (필드에 @Nullable 있음)
                 .role(Role.USER)
                 .build();
     }
@@ -114,9 +106,5 @@ public class User extends BaseTimeEntity {
         this.nickname = nickname;
         this.introduction = introduction;
         this.profileImg = profileImg;
-    }
-
-    public void setUserInfo(UserInfo userInfo) {
-        this.userInfo = userInfo;
     }
 }
