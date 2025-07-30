@@ -198,7 +198,7 @@ CREATE TABLE `post_image` (
                               `post_id` BIGINT NOT NULL COMMENT '게시글 ID',
                               `image_url` VARCHAR(255) NOT NULL COMMENT '이미지 URL',
                               PRIMARY KEY (`id`),
-                              FOREIGN KEY (`post_id`) REFERENCES `post`(`id`) ON DELETE CASCADE,
+                              FOREIGN KEY (`post_id`) REFERENCES `post`(`id`) ON DELETE CASCADE
 ) COMMENT='게시글 이미지';
 
 -- 게시글 좋아요 테이블
