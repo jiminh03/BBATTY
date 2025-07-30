@@ -1,6 +1,4 @@
 package com.ssafy.bbatty.domain.auth.client;
 
-
-public class KakaoApiClient {
-
+public class KakaoClient {
 }

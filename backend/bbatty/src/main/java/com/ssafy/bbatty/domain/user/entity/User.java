@@ -2,13 +2,13 @@ package com.ssafy.bbatty.domain.user.entity;
 
 import com.ssafy.bbatty.domain.team.entity.Team;
 import com.ssafy.bbatty.global.constants.ErrorCode;
+import com.ssafy.bbatty.global.constants.Gender;
+import com.ssafy.bbatty.global.constants.Role;
 import com.ssafy.bbatty.global.entity.BaseEntity;
 import com.ssafy.bbatty.global.exception.ApiException;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.lang.Nullable;
-
-import java.time.LocalDate;
 
 @Entity
 @Table(name = "user", schema = "BBATTY")
@@ -55,28 +55,14 @@ public class User extends BaseEntity {
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private UserInfo userInfo;
 
-    // Enum 정의
-    public enum Gender {
-        MALE, FEMALE
-    }
-
-    public enum Role {
-        USER, ADMIN
-    }
-
-    // 유틸리티 메서드
-    public static Gender parseGender(String kakaoGender) {
-        if (kakaoGender == null) {
-            throw new ApiException(ErrorCode.KAKAO_GENDER_INFO_REQUIRED);
-        }
-
-        return switch (kakaoGender.toLowerCase()) {
-            case "female" -> Gender.FEMALE;
-            case "male" -> Gender.MALE;
-            default -> throw new ApiException(ErrorCode.KAKAO_GENDER_INFO_INVALID);
-        };
-    }
-
+    // 유틸리티 메서드들
+    
+    /**
+     * 카카오 생년 문자열을 정수로 파싱
+     * @param kakaoBirthyear 카카오에서 받은 생년월일 문자열
+     * @return 생년 정수값
+     * @throws ApiException 유효하지 않은 값이거나 null인 경우
+     */
     public static int parseBirthYear(String kakaoBirthyear) {
         if (kakaoBirthyear == null || kakaoBirthyear.trim().isEmpty()) {
             throw new ApiException(ErrorCode.KAKAO_BIRTH_INFO_REQUIRED);
@@ -89,22 +75,34 @@ public class User extends BaseEntity {
         }
     }
 
-    public static User createUser(String nickname, Gender gender, Integer birthYear, Team team,
-                                  String introduction, String profileImg) {
+    /**
+     * 카카오 정보로 사용자 생성 (메인 팩토리 메서드)
+     * AuthService에서 검증된 데이터를 받아서 User 생성
+     */
+    public static User createFromKakao(String nickname, Gender gender, Integer birthYear,
+                                       Team team, String profileImg) {
         return User.builder()
                 .nickname(nickname)
-                .gender(gender)
-                .birthYear(birthYear)
+                .gender(gender)      // AuthService에서 이미 검증됨
+                .birthYear(birthYear) // AuthService에서 이미 검증됨
                 .team(team)
-                .introduction(introduction)  // null 가능 (필드에 @Nullable 있음)
-                .profileImg(profileImg)      // null 가능 (필드에 @Nullable 있음)
                 .role(Role.USER)
                 .build();
     }
 
+    /**
+     * 프로필 업데이트
+     */
     public void updateProfile(String nickname, String introduction, String profileImg) {
         this.nickname = nickname;
         this.introduction = introduction;
         this.profileImg = profileImg;
+    }
+
+    /**
+     * 나이 계산 (현재 년도 기준)
+     */
+    public int getAge() {
+        return java.time.LocalDate.now().getYear() - this.birthYear + 1;
     }
 }

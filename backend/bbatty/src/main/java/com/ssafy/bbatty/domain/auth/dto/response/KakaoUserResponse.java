@@ -1,6 +1,4 @@
 package com.ssafy.bbatty.domain.auth.dto.response;
 
-
-public class AuthResponseDto {
-
+public class KakaoUserResponse {
 }

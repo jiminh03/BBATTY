@@ -1,4 +1,4 @@
 package com.ssafy.bbatty.global.security;
 
-public class JwtAuthenticationFilter {
+public class JwtProvider {
 }

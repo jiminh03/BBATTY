@@ -1,6 +1,4 @@
 package com.ssafy.bbatty.domain.auth.dto.request;
 
-
-public class AuthRequestDto {
-
+public class KakaoLoginRequest {
 }
