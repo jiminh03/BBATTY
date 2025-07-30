@@ -211,7 +211,6 @@ CREATE TABLE `post_like` (
              FOREIGN KEY (`post_id`) REFERENCES `post`(`id`) ON DELETE CASCADE
 ) COMMENT='게시글 좋아요';
 
-
 -- 게시글 조회 로그 테이블
 CREATE TABLE `post_view` (
             `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '조회 로그 ID',
