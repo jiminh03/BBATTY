@@ -35,9 +35,6 @@ public class Post {
     
     @Column(name = "view_count", nullable = false)
     private Long viewCount = 0L;
-
-    @Column(name = "like_count", nullable = false)
-    private Long likeCount = 0L;
     
     @Column(name = "is_same_team", nullable = false)
     private Boolean isSameTeam = false;
@@ -59,7 +56,6 @@ public class Post {
         this.content = content;
         this.isSameTeam = isSameTeam;
         this.viewCount = 0L;
-        this.likeCount = 0L;
     }
 
 }
