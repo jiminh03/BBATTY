@@ -21,13 +21,8 @@ public class WatchChatJoinRequest {
     @NotBlank(message = "닉네임은 필수입니다.")
     private String nickname;
     
-    private String profileImageUrl; // S3 링크
-    
     // 직관 인증 정보
     private Boolean attendanceAuth;
-    
-    // 승률 정보 (자연수 %) -> 승리요정 뱃지 구분 기준
-    private Integer winRate;
     
     // 직관 채팅방 ID (팀별로 분리된 채팅방)
     @NotBlank(message = "채팅방 ID는 필수입니다.")

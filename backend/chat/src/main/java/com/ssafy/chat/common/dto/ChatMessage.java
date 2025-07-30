@@ -28,4 +28,7 @@ public class ChatMessage {
     // 메시지 내용
     private String content;
 
+    // 메시지 전송시간 (예: 2025-07-30T13:10:00)
+    private LocalDateTime timestamp;
+
 }
