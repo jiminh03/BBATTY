@@ -203,13 +203,27 @@ CREATE TABLE `post_image` (
 
 -- 게시글 좋아요 테이블
 CREATE TABLE `post_like` (
-                             `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '좋아요 ID',
-                             `user_id` BIGINT NOT NULL COMMENT '사용자 ID',
-                             `post_id` BIGINT NOT NULL COMMENT '게시글 ID',
-                             PRIMARY KEY (`id`),
-                             FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON DELETE CASCADE,
-                             FOREIGN KEY (`post_id`) REFERENCES `post`(`id`) ON DELETE CASCADE
+     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '좋아요 ID',
+     `user_id` BIGINT NOT NULL COMMENT '사용자 ID',
+     `post_id` BIGINT NOT NULL COMMENT '게시글 ID',
+     PRIMARY KEY (`id`),
+     FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON DELETE CASCADE,
+     FOREIGN KEY (`post_id`) REFERENCES `post`(`id`) ON DELETE CASCADE
 ) COMMENT='게시글 좋아요';
+
+
+-- 게시글 조회 로그 테이블
+CREATE TABLE `post_view` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '조회 로그 ID',
+    `user_id` BIGINT NOT NULL COMMENT '조회한 사용자 ID',
+    `post_id` BIGINT NOT NULL COMMENT '조회한 게시글 ID',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '조회 시각',
+    PRIMARY KEY (`id`),
+    FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`post_id`) REFERENCES `post`(`id`) ON DELETE CASCADE,
+    INDEX `idx_post_view_count` (`post_id`, `created_at` DESC) COMMENT '게시글별 조회수 집계용',
+    INDEX `idx_user_view_history` (`user_id`, `created_at` DESC) COMMENT '사용자 조회 기록용'
+) COMMENT='게시글 조회 로그';
 
 -- 댓글 테이블
 CREATE TABLE `comment` (
