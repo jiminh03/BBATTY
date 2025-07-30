@@ -30,7 +30,6 @@ public class PostImageService {
         Pattern.CASE_INSENSITIVE
     );
 
-
     /*
     이미지 업로드 시 DB에 저장하는 메서드
     처음 업로드할 때는 post가 null로 저장됨 (나중에 게시글 작성 시 연결)
@@ -41,24 +40,24 @@ public class PostImageService {
                 .post(null)  // 초기 업로드 시에는 post 연결 안됨
                 .imageUrl(imageUrl)
                 .build();
-        
         return postImageRepository.save(postImage);
     }
+
     /*
     게시글 내용에 포함된 이미지들을 해당 게시글과 연결하는 메서드
     postId가 null인 이미지들을 찾아서 post와 연결
      */
     @Transactional
     public void processImagesInContent(String content, Post post) {
+        // 이미지 url을 content에서 추출한다.
         List<String> imageUrls = extractImageUrls(content);
-        
-        if (!imageUrls.isEmpty()) {
-            // 컨텐츠에 포함된 이미지 URL들을 찾아서 해당 post와 연결
-            List<PostImage> usedImages = postImageRepository.findByImageUrlInAndPostIsNull(imageUrls);
-            usedImages.forEach(image -> image.setPost(post));
-            postImageRepository.saveAll(usedImages);
-            
-            log.info("Connected {} images to post {}", usedImages.size(), post.getId());
+        // url과 post를 postImage 테이블에 저장
+        for (String url : imageUrls) {
+            PostImage postImage = PostImage.builder()
+                    .post(post)
+                    .imageUrl(url)
+                    .build();
+            postImageRepository.save(postImage);
         }
     }
     
@@ -78,7 +77,7 @@ public class PostImageService {
     @Transactional
     public void deleteImagesForPost(Long postId) {
         List<String> imageUrls = postImageRepository.findImageUrlsByPostId(postId);
-        
+
         if (!imageUrls.isEmpty()) {
             // S3에서 실제 파일 삭제
             imageUrls.forEach(imageUrl -> {
@@ -90,10 +89,10 @@ public class PostImageService {
                     log.error("Failed to delete image from S3: {}", imageUrl, e);
                 }
             });
-            
             log.info("Deleted {} images from S3 for post {}", imageUrls.size(), postId);
         }
     }
+
     // URL에서 파일 경로 추출 (예: https://bucket.s3.region.amazonaws.com/posts/filename.jpg -> posts/filename.jpg)
     // 이걸 해야 aws에서 삭제를 시킬 수 있다.
     private String extractFilePathFromUrl(String imageUrl) {
@@ -103,5 +102,5 @@ public class PostImageService {
         }
         throw new IllegalArgumentException("Invalid image URL format: " + imageUrl);
     }
-    
+
 }

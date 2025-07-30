@@ -55,8 +55,6 @@ public class PostServiceImpl implements PostService {
                 request.getIsSameTeam()
         );
         Post savedPost = postRepository.save(post);
-        System.out.println(savedPost.getCreatedAt() + "[debug]");
-        System.out.println(savedPost.getTitle() + "[debug]");
         postImageService.processImagesInContent(request.getContent(), savedPost);
         return new PostCreateResponse(savedPost.getId(), "게시글이 성공적으로 작성되었습니다.");
     }
@@ -67,23 +65,20 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional
     public void deletePost(Long postId, Long userId) {
+        // 작성물 확인
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND));
-
         // 작성자 확인
         if (!post.getUser().getId().equals(userId)) {
             throw new ApiException(ErrorCode.POST_FORBIDDEN);
         }
-
         // 먼저 S3에서 이미지 삭제
         postImageService.deleteImagesForPost(postId);
-        
         // 그 다음 게시글 삭제 (PostImage는 CASCADE로 자동 삭제됨)
         postRepository.delete(post);
     }
-
     /*
-    커서기반 페이지네이션 게시물 조회 메서드 (ID 기준)
+    전체 게시물
     */
     public PostListPageResponse getPostList(Long cursor) {
         Pageable pageable = PageRequest.of(0, PAGE_SIZE);
@@ -158,7 +153,6 @@ public class PostServiceImpl implements PostService {
                 .title(post.getTitle())
                 .authorNickname(post.getUser().getNickname())
                 .content(post.getContent())
-                .likeCount(post.getLikeCount())
                 .viewCount(post.getViewCount())
                 .createdAt(post.getCreatedAt().toString())
                 .updatedAt(post.getUpdatedAt().toString())
