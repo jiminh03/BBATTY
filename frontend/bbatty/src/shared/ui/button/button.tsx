@@ -1,20 +1,20 @@
 import React from 'react';
-import { Pressable, Text } from 'react-native';
+import { Pressable } from 'react-native';
 
 interface ButtonProps {
-  title: string;
   onPress: () => void;
   disabled?: boolean;
+  children: React.ReactNode;
 }
 
 export const Button: React.FC<ButtonProps> = ({
-  title,
   onPress,
   disabled = false,
+  children,
 }) => {
   return (
     <Pressable onPress={onPress} disabled={disabled}>
-      <Text>{title}</Text>
+      {children}
     </Pressable>
   );
 };
