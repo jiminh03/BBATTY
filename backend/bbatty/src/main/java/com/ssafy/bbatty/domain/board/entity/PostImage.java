@@ -22,4 +22,8 @@ public class PostImage {
     
     @Column(name = "image_url", nullable = false, length = 255)
     private String imageUrl;
+    
+    @Column(name = "is_deleted", nullable = false)
+    @Builder.Default
+    private Boolean isDeleted = false;
 }

@@ -33,11 +33,11 @@ public class Post {
     @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     private String content;
     
-    @Column(name = "view_count", nullable = false)
-    private Long viewCount = 0L;
-    
     @Column(name = "is_same_team", nullable = false)
     private Boolean isSameTeam = false;
+    
+    @Column(name = "is_deleted", nullable = false)
+    private Boolean isDeleted = false;
     
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
@@ -55,7 +55,6 @@ public class Post {
         this.title = title;
         this.content = content;
         this.isSameTeam = isSameTeam;
-        this.viewCount = 0L;
     }
 
 }

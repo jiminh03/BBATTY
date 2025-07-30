@@ -1,13 +1,8 @@
 ﻿-- ===================================
 -- 야구 직관 커뮤니티 "BBATTY" 최종 DB 스키마
 -- ===================================
-
 CREATE DATABASE IF NOT EXISTS BBATTY;
 USE BBATTY;
-
--- ===================================
--- 1. 마스터 데이터 테이블
--- ===================================
 
 -- KBO 팀 정보 테이블
 CREATE TABLE `team` (
@@ -25,16 +20,16 @@ CREATE TABLE `team` (
 ) COMMENT='KBO 팀 정보';
 
 INSERT INTO `team` (`id`, `name`, `wins`, `draws`, `loses`, `team_rank`, `win_rate`, `gb`) VALUES
-                                                                                               (1, '한화 이글스', 0, 0, 0, NULL, NULL, NULL),
-                                                                                               (2, 'LG 트윈스', 0, 0, 0, NULL, NULL, NULL),
-                                                                                               (3, '롯데 자이언츠', 0, 0, 0, NULL, NULL, NULL),
-                                                                                               (4, 'KT 위즈', 0, 0, 0, NULL, NULL, NULL),
-                                                                                               (5, '삼성 라이온즈', 0, 0, 0, NULL, NULL, NULL),
-                                                                                               (6, 'KIA 타이거즈', 0, 0, 0, NULL, NULL, NULL),
-                                                                                               (7, 'SSG 랜더스', 0, 0, 0, NULL, NULL, NULL),
-                                                                                               (8, 'NC 다이노스', 0, 0, 0, NULL, NULL, NULL),
-                                                                                               (9, '두산 베어스', 0, 0, 0, NULL, NULL, NULL),
-                                                                                               (10, '키움 히어로즈', 0, 0, 0, NULL, NULL, NULL);
+(1, '한화 이글스', 0, 0, 0, NULL, NULL, NULL),
+(2, 'LG 트윈스', 0, 0, 0, NULL, NULL, NULL),
+(3, '롯데 자이언츠', 0, 0, 0, NULL, NULL, NULL),
+(4, 'KT 위즈', 0, 0, 0, NULL, NULL, NULL),
+(5, '삼성 라이온즈', 0, 0, 0, NULL, NULL, NULL),
+(6, 'KIA 타이거즈', 0, 0, 0, NULL, NULL, NULL),
+(7, 'SSG 랜더스', 0, 0, 0, NULL, NULL, NULL),
+(8, 'NC 다이노스', 0, 0, 0, NULL, NULL, NULL),
+(9, '두산 베어스', 0, 0, 0, NULL, NULL, NULL),
+(10, '키움 히어로즈', 0, 0, 0, NULL, NULL, NULL);
 
 -- KBO 경기 정보 테이블
 CREATE TABLE `game` (
@@ -181,8 +176,8 @@ CREATE TABLE `post` (
                         `team_id` BIGINT NOT NULL COMMENT '팀 ID',
                         `title` VARCHAR(100) NOT NULL COMMENT '제목',
                         `content` TEXT NOT NULL COMMENT '내용',
-                        `view_count` INT NOT NULL DEFAULT 0 COMMENT '조회수',
                         `is_same_team` BOOLEAN NOT NULL DEFAULT FALSE COMMENT '같은 팀만 댓글 허용',
+                        `is_deleted` BOOLEAN NOT NULL DEFAULT FALSE COMMENT '삭제 여부',
                         `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                         PRIMARY KEY (`id`),
@@ -197,6 +192,7 @@ CREATE TABLE `post_image` (
                               `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '이미지 ID',
                               `post_id` BIGINT NOT NULL COMMENT '게시글 ID',
                               `image_url` VARCHAR(255) NOT NULL COMMENT '이미지 URL',
+                              `is_deleted` BOOLEAN NOT NULL DEFAULT FALSE COMMENT '삭제 여부',
                               PRIMARY KEY (`id`),
                               FOREIGN KEY (`post_id`) REFERENCES `post`(`id`) ON DELETE CASCADE
 ) COMMENT='게시글 이미지';
@@ -206,6 +202,8 @@ CREATE TABLE `post_like` (
      `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '좋아요 ID',
      `user_id` BIGINT NOT NULL COMMENT '사용자 ID',
      `post_id` BIGINT NOT NULL COMMENT '게시글 ID',
+     `is_deleted` BOOLEAN NOT NULL DEFAULT FALSE COMMENT '삭제 여부',
+     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '조회 시각',
      PRIMARY KEY (`id`),
      FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON DELETE CASCADE,
      FOREIGN KEY (`post_id`) REFERENCES `post`(`id`) ON DELETE CASCADE
@@ -217,6 +215,7 @@ CREATE TABLE `post_view` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '조회 로그 ID',
     `user_id` BIGINT NOT NULL COMMENT '조회한 사용자 ID',
     `post_id` BIGINT NOT NULL COMMENT '조회한 게시글 ID',
+    `is_deleted` BOOLEAN NOT NULL DEFAULT FALSE COMMENT '삭제 여부',
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '조회 시각',
     PRIMARY KEY (`id`),
     FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON DELETE CASCADE,
@@ -233,6 +232,7 @@ CREATE TABLE `comment` (
                            `content` TEXT NOT NULL COMMENT '댓글 내용',
                            `depth` INT NOT NULL DEFAULT 0 COMMENT '댓글 깊이 (0: 댓글, 1: 대댓글)',
                            `parent_id` BIGINT NULL COMMENT '부모 댓글 ID',
+                           `is_deleted` BOOLEAN NOT NULL DEFAULT FALSE COMMENT '삭제 여부',
                            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                            PRIMARY KEY (`id`),

@@ -33,17 +33,16 @@ public class CommentServiceImpl implements CommentService{
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND));
 
-        Comment comment = new Comment();
-        comment.setPost(post);
-        comment.setUser(user);
-        comment.setContent(request.getContent());
-        comment.setDepth(request.getParentId() == null ? 0 : 1);
-
-
+        Comment comment;
+        
         if (request.getParentId() != null) {
+            // 대댓글 생성
             Comment parent = commentRepository.findById(request.getParentId())
                     .orElseThrow(() -> new ApiException(ErrorCode.COMMENT_NOT_FOUND));
-            comment.setParent(parent);
+            comment = new Comment(post, user, request.getContent(), parent);
+        } else {
+            // 일반 댓글 생성
+            comment = new Comment(post, user, request.getContent());
         }
 
         return commentRepository.save(comment);
@@ -95,7 +94,9 @@ public class CommentServiceImpl implements CommentService{
         Comment comment = commentRepository.findById(id)
                 .orElseThrow(() -> new ApiException(ErrorCode.COMMENT_NOT_FOUND));
 
-        commentRepository.delete(comment);
+        // 소프트 삭제 처리
+        comment.setIsDeleted(true);
+        commentRepository.save(comment);
     }
 
 }

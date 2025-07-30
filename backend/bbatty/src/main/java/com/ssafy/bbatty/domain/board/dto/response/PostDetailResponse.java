@@ -13,6 +13,7 @@ public class PostDetailResponse {
     private String content;
     private Long likeCount;
     private Long viewCount;
+    private Integer commentCount;
     private String createdAt;
     private String updatedAt;
     

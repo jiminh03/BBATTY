@@ -72,12 +72,27 @@ public class PostImageService {
     }
     
     /*
+    게시글 삭제 시 연관된 이미지들을 소프트 삭제하는 메서드
+    */
+    @Transactional
+    public void softDeleteImagesForPost(Long postId) {
+        List<PostImage> postImages = postImageRepository.findByPostId(postId);
+        if (!postImages.isEmpty()) {
+            postImages.forEach(postImage -> {
+                postImage.setIsDeleted(true);
+                postImageRepository.save(postImage);
+            });
+            log.info("Soft deleted {} images for post {}", postImages.size(), postId);
+        }
+    }
+    
+    /*
     게시글 삭제 시 연관된 이미지들을 S3에서 먼저 삭제하는 메서드
     */
     @Transactional
     public void deleteImagesForPost(Long postId) {
         List<String> imageUrls = postImageRepository.findImageUrlsByPostId(postId);
-
+        // 게시물을 삭세하기 전에 content에 있는 S3 파일을 삭제
         if (!imageUrls.isEmpty()) {
             // S3에서 실제 파일 삭제
             imageUrls.forEach(imageUrl -> {
@@ -102,5 +117,4 @@ public class PostImageService {
         }
         throw new IllegalArgumentException("Invalid image URL format: " + imageUrl);
     }
-
 }

@@ -62,9 +62,90 @@ public class S3Service {
         return UUID.randomUUID().toString() + extension;
     }
 
-    // 4. S3 파일 삭제 (게시물 삭제 시 호출)
+    // 3. 프론트엔드를 위한 Presigned URL 생성 (업로드용)
+    public String generatePresignedUploadUrl(String directory, String originalFilename) {
+        String fileName = generateFileName(originalFilename);
+        String filePath = directory + "/" + fileName;
+        
+        // 15분 후 만료되는 presigned URL 생성
+        Date expiration = new Date();
+        long expTimeMillis = expiration.getTime();
+        expTimeMillis += 1000 * 60 * 15; // 15분
+        expiration.setTime(expTimeMillis);
+        
+        GeneratePresignedUrlRequest generatePresignedUrlRequest = new GeneratePresignedUrlRequest(bucket, filePath)
+                .withMethod(HttpMethod.PUT)
+                .withExpiration(expiration);
+        
+        // Content-Type 헤더를 설정하도록 요구
+        generatePresignedUrlRequest.addRequestParameter("Content-Type", "image/*");
+        
+        URL url = amazonS3.generatePresignedUrl(generatePresignedUrlRequest);
+        return url.toString();
+    }
+    
+    // 4. 파일 경로와 presigned URL을 함께 반환하는 메서드
+    public PresignedUrlResponse generatePresignedUploadUrlWithPath(String directory, String originalFilename) {
+        // 이미지 파일 확장자 검증
+        if (!isValidImageFile(originalFilename)) {
+            throw new IllegalArgumentException("Invalid image file format. Only jpg, jpeg, png, gif, webp are allowed.");
+        }
+        
+        String fileName = generateFileName(originalFilename);
+        String filePath = directory + "/" + fileName;
+        
+        // 15분 후 만료되는 presigned URL 생성
+        Date expiration = new Date();
+        long expTimeMillis = expiration.getTime();
+        expTimeMillis += 1000 * 60 * 15; // 15분
+        expiration.setTime(expTimeMillis);
+        
+        GeneratePresignedUrlRequest generatePresignedUrlRequest = new GeneratePresignedUrlRequest(bucket, filePath)
+                .withMethod(HttpMethod.PUT)
+                .withExpiration(expiration);
+        
+        URL url = amazonS3.generatePresignedUrl(generatePresignedUrlRequest);
+        String publicUrl = getPublicUrl(filePath);
+        
+        return new PresignedUrlResponse(url.toString(), publicUrl, filePath);
+    }
+
+    // 5. S3 파일 삭제 (게시물 삭제 시 호출)
     public void deleteFile(String filePath) {
         // 파일 경로 유효성 검증 메서드
         amazonS3.deleteObject(bucket, filePath);
+    }
+    
+    /**
+     * 이미지 파일 확장자 검증
+     */
+    private boolean isValidImageFile(String filename) {
+        if (filename == null || filename.isEmpty()) {
+            return false;
+        }
+        
+        String lowercaseFilename = filename.toLowerCase();
+        return lowercaseFilename.endsWith(".jpg") || 
+               lowercaseFilename.endsWith(".jpeg") || 
+               lowercaseFilename.endsWith(".png") || 
+               lowercaseFilename.endsWith(".gif") || 
+               lowercaseFilename.endsWith(".webp");
+    }
+    
+    // Presigned URL 응답을 위한 내부 클래스
+    public static class PresignedUrlResponse {
+        private final String uploadUrl;
+        private final String fileUrl;
+        private final String filePath;
+        
+        public PresignedUrlResponse(String uploadUrl, String fileUrl, String filePath) {
+            this.uploadUrl = uploadUrl;
+            this.fileUrl = fileUrl;
+            this.filePath = filePath;
+        }
+        
+        public String getUploadUrl() { return uploadUrl; }
+        public String getFileUrl() { return fileUrl; }
+        public String getFilePath() { return filePath; }
     }
 }

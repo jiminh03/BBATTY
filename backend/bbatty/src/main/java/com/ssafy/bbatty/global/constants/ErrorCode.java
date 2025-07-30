@@ -23,7 +23,7 @@ public enum ErrorCode {
     SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 오류가 발생했어요."),
     
     // FILE PATH
-    INVALID_FILE_PATH(HttpStatus.BAD_REQUEST, "파일 경로가 유효하지 않아요."),
+    INVALID_FILE_PATH(HttpStatus.BAD_REQUEST, "파일 확장자가 유효하지 않아요."),
     FILE_PATH_SECURITY_VIOLATION(HttpStatus.BAD_REQUEST, "허용되지 않는 파일 경로예요."),
     FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "파일의 크기가 제한 크기를 초과합니다."),
     FILE_EMPTY(HttpStatus.BAD_REQUEST, "파일이 비어있습니다."),
