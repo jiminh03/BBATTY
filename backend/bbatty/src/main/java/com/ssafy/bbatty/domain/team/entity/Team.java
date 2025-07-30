@@ -1,5 +1,6 @@
 package com.ssafy.bbatty.domain.team.entity;
 
+import com.ssafy.bbatty.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -15,7 +16,7 @@ import java.math.BigDecimal;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class Team {
+public class Team extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -38,7 +39,7 @@ public class Team {
     private Integer loses;
 
     @Column(name = "team_rank")
-    private Integer rank;
+    private Integer teamRank;
 
     @Column(name = "win_rate", precision = 5, scale = 3)
     private BigDecimal winRate;
@@ -47,11 +48,11 @@ public class Team {
     private BigDecimal gb;
 
     // 비즈니스 메서드
-    public void updateStats(int wins, int draws, int loses, int rank, BigDecimal winRate, BigDecimal gb) {
+    public void updateStats(int wins, int draws, int loses, int teamRank, BigDecimal winRate, BigDecimal gb) {
         this.wins = wins;
         this.draws = draws;
         this.loses = loses;
-        this.rank = rank;
+        this.teamRank = teamRank;
         this.winRate = winRate;
         this.gb = gb;
     }
