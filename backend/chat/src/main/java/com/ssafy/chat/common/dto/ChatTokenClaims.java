@@ -1,6 +1,6 @@
-package com.ssafy.bbatty.domain.chat.common.dto;
+package com.ssafy.chat.common.dto;
 
-import com.ssafy.bbatty.domain.chat.common.enums.ChatType;
+import com.ssafy.chat.common.enums.ChatType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -52,7 +52,7 @@ public class ChatTokenClaims {
      * 게임 채팅 토큰인지 확인
      */
     public boolean isGameChat() {
-        return ChatType.GAME.equals(chatType);
+        return ChatType.WATCH.equals(chatType);
     }
 
     /**

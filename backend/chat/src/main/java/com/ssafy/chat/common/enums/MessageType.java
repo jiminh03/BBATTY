@@ -1,5 +1,8 @@
-package com.ssafy.bbatty.domain.chat.common.enums;
+package com.ssafy.chat.common.enums;
 
+import lombok.Getter;
+
+@Getter
 public enum MessageType {
     /** 일반 채팅 메시지 */
     CHAT("chat", "채팅 메시지"),
@@ -46,14 +49,6 @@ public enum MessageType {
     MessageType(String code, String description) {
         this.code = code;
         this.description = description;
-    }
-
-    public String getCode() {
-        return code;
-    }
-
-    public String getDescription() {
-        return description;
     }
 
     /**

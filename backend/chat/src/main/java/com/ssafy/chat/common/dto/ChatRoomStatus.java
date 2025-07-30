@@ -1,6 +1,6 @@
-package com.ssafy.bbatty.domain.chat.common.dto;
+package com.ssafy.chat.common.dto;
 
-import com.ssafy.bbatty.domain.chat.common.enums.ChatRoomType;
+import com.ssafy.chat.common.enums.ChatRoomType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

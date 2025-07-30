@@ -1,8 +1,11 @@
-package com.ssafy.bbatty.domain.chat.common.enums;
+package com.ssafy.chat.common.enums;
+
+import lombok.Getter;
 
 /**
  * 채팅방 타입
  */
+@Getter
 public enum ChatRoomType {
 
     /** 게임 채팅 */
@@ -17,14 +20,6 @@ public enum ChatRoomType {
     ChatRoomType(String code, String description) {
         this.code = code;
         this.description = description;
-    }
-
-    public String getCode() {
-        return code;
-    }
-
-    public String getDescription() {
-        return description;
     }
 
     /**

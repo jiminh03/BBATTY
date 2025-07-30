@@ -25,6 +25,18 @@ repositories {
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+	// WebSocket 지원
+	implementation 'org.springframework.boot:spring-boot-starter-websocket'
+
+	// Redis 지원
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+	// JWT 지원 (Auth0 java-jwt 라이브러리)
+	implementation 'com.auth0:java-jwt:4.4.0'
+
+	// Jakarta Validation API
+	implementation 'jakarta.validation:jakarta.validation-api:3.0.2'
+
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'

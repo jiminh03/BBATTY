@@ -1,4 +1,4 @@
-package com.ssafy.bbatty.domain.chat.common.enums;
+package com.ssafy.chat.common.enums;
 
 /**
  * 사용자 상태

@@ -1,4 +1,4 @@
-package com.ssafy.bbatty.domain.chat.common.dto;
+package com.ssafy.chat.common.dto;
 
 import com.ssafy.bbatty.domain.chat.common.enums.UserStatus;
 import lombok.AllArgsConstructor;
