@@ -25,25 +25,31 @@ public enum ErrorCode {
     // FILE PATH
     INVALID_FILE_PATH(HttpStatus.BAD_REQUEST, "파일 경로가 유효하지 않아요."),
     FILE_PATH_SECURITY_VIOLATION(HttpStatus.BAD_REQUEST, "허용되지 않는 파일 경로예요."),
-    FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "파일의 크기가 제한 크기를 초과합니다."),
-    FILE_EMPTY(HttpStatus.BAD_REQUEST, "파일이 비어있습니다."),
-    FILE_FAILED(HttpStatus.BAD_REQUEST, "파일 업로드에 실패했습니다."),
+    FILE_SIZE_EXCEEDED(HttpStatus.BAD_REQUEST, "파일의 크기가 제한 크기를 초과해요."),
+    FILE_EMPTY(HttpStatus.BAD_REQUEST, "파일이 비어있어요."),
+    FILE_FAILED(HttpStatus.BAD_REQUEST, "파일 업로드에 실패했어요."),
 
     // Auth 관련 에러코드
-    KAKAO_AUTH_FAILED(HttpStatus.UNAUTHORIZED, "카카오 인증에 실패했습니다."),
-    INVALID_STEP_TOKEN(HttpStatus.BAD_REQUEST, "유효하지 않거나 만료된 임시 토큰입니다."),
-    DUPLICATE_SIGNUP(HttpStatus.CONFLICT, "이미 가입된 계정입니다."),
-    DUPLICATE_NICKNAME(HttpStatus.CONFLICT, "이미 사용중인 닉네임입니다."),
-    TEAM_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 팀입니다."),
-    INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 토큰입니다."),
-    USER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 사용자입니다."),
+    KAKAO_AUTH_FAILED(HttpStatus.UNAUTHORIZED, "카카오 인증에 실패했어요."),
+    INVALID_STEP_TOKEN(HttpStatus.BAD_REQUEST, "유효하지 않거나 만료된 임시 토큰이에요."),
+    DUPLICATE_SIGNUP(HttpStatus.CONFLICT, "이미 가입된 계정이에요."),
+    DUPLICATE_NICKNAME(HttpStatus.CONFLICT, "이미 사용중인 닉네임이에요."),
+    TEAM_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 팀이에요."),
+    INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 토큰이에요."),
+    USER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 사용자에요."),
+
+    // 카카오 정보 관련 에러
+    KAKAO_BIRTH_INFO_REQUIRED(HttpStatus.BAD_REQUEST, "카카오에서 생년월일 정보를 가져올 수 없어요."),
+    KAKAO_BIRTH_INFO_INVALID(HttpStatus.BAD_REQUEST, "카카오 생년월일 정보가 올바르지 않아요."),
+    KAKAO_GENDER_INFO_REQUIRED(HttpStatus.BAD_REQUEST, "카카오에서 성별 정보를 가져올 수 없어요."),
+    KAKAO_GENDER_INFO_INVALID(HttpStatus.BAD_REQUEST, "카카오 성별 정보가 올바르지 않아요."),
 
     // POST
     POST_NOT_FOUND(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없어요"),
 
     // Comment
     COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없어요"),
-    POST_FORBIDDEN(HttpStatus.FORBIDDEN, "작성한 게시자만 삭제할 수 있습니다.");
+    POST_FORBIDDEN(HttpStatus.FORBIDDEN, "작성한 게시자만 삭제할 수 있어요.");
 
     private final HttpStatus status;
     private final String message;
