@@ -1,10 +1,12 @@
 package com.ssafy.chat.common.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ssafy.chat.common.dto.UserSessionInfo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.socket.*;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -14,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public abstract class BaseChatWebSocketHandler implements WebSocketHandler {
 
     protected final ObjectMapper objectMapper;
-    protected final Map<String, WebSocketSession> connectedUsers = new ConcurrentHashMap<>();
+    protected final Map<String, Set<WebSocketSession>> connectedUsers = new ConcurrentHashMap<>();
     protected final Map<WebSocketSession, UserSessionInfo> sessionToUser = new ConcurrentHashMap<>();
 
     public BaseChatWebSocketHandler(ObjectMapper objectMapper) {
@@ -31,8 +33,11 @@ public abstract class BaseChatWebSocketHandler implements WebSocketHandler {
                 return;
             }
 
+            // 도메인별 연결 관리 처리
+            handleConnectionManagement(session, userInfo);
+
             // 세션 정보 저장
-            connectedUsers.put(userInfo.getUserId(), session);
+            connectedUsers.computeIfAbsent(userInfo.getUserId(), k -> ConcurrentHashMap.newKeySet()).add(session);
             sessionToUser.put(session, userInfo);
 
             // 도메인별 입장 처리
@@ -56,7 +61,13 @@ public abstract class BaseChatWebSocketHandler implements WebSocketHandler {
                 // 도메인별 퇴장 처리
                 handleUserLeave(session, userInfo);
                 // 세션 정보 제거
-                connectedUsers.remove(userInfo.getUserId());
+                Set<WebSocketSession> userSessions = connectedUsers.get(userInfo.getUserId());
+                if (userSessions != null) {
+                    userSessions.remove(session);
+                    if (userSessions.isEmpty()) {
+                        connectedUsers.remove(userInfo.getUserId());
+                    }
+                }
                 sessionToUser.remove(session);
 
                 log.info("WebSocket 연결 종료 - userId: {}, status: {}",
@@ -127,6 +138,13 @@ public abstract class BaseChatWebSocketHandler implements WebSocketHandler {
     protected abstract boolean canJoinChatRoom(WebSocketSession session, UserSessionInfo userInfo);
 
     /**
+     * 연결 관리 처리 (하위 클래스에서 구현)
+     * - Match: 여러 세션 허용
+     * - Watch: 단일 세션만 허용 (기존 연결 해제)
+     */
+    protected abstract void handleConnectionManagement(WebSocketSession session, UserSessionInfo userInfo);
+
+    /**
      * 사용자 입장 처리 (하위 클래스에서 구현)
      */
     protected abstract void handleUserJoin(WebSocketSession session, UserSessionInfo userInfo);
@@ -186,33 +204,27 @@ public abstract class BaseChatWebSocketHandler implements WebSocketHandler {
      */
     public Map<String, Object> getConnectionStats() {
         Map<String, Object> stats = new ConcurrentHashMap<>();
-        stats.put("totalConnections", connectedUsers.size());
+        int totalSessions = connectedUsers.values().stream()
+                .mapToInt(Set::size)
+                .sum();
+        stats.put("totalUsers", connectedUsers.size());
+        stats.put("totalSessions", totalSessions);
         stats.put("timestamp", System.currentTimeMillis());
         return stats;
     }
 
     /**
-     * 사용자 세션 정보 클래스
+     * 테스트용: 연결된 사용자 세션 정보 반환
      */
-    public static class UserSessionInfo {
-        private final String userId;
-        private final String userName;
-        private final String roomId;
-        private final Map<String, Object> additionalInfo = new ConcurrentHashMap<>();
-
-        public UserSessionInfo(String userId, String userName, String roomId) {
-            this.userId = userId;
-            this.userName = userName;
-            this.roomId = roomId;
-        }
-
-        public String getUserId() { return userId; }
-        public String getUserName() { return userName; }
-        public String getRoomId() { return roomId; }
-        public Map<String, Object> getAdditionalInfo() { return additionalInfo; }
-
-        public void addAdditionalInfo(String key, Object value) {
-            additionalInfo.put(key, value);
-        }
+    public Set<WebSocketSession> getConnectedUserSessions(String userId) {
+        return connectedUsers.get(userId);
     }
+
+    /**
+     * 테스트용: 세션-사용자 매핑 정보 반환
+     */
+    public UserSessionInfo getUserSessionInfo(WebSocketSession session) {
+        return sessionToUser.get(session);
+    }
+
 }

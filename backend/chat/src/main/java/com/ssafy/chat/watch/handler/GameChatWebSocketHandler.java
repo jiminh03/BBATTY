@@ -1,15 +1,18 @@
 package com.ssafy.chat.watch.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ssafy.chat.common.dto.UserSessionInfo;
 import com.ssafy.chat.common.handler.BaseChatWebSocketHandler;
 import com.ssafy.chat.common.service.RedisPubSubService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 게임 채팅 WebSocket 핸들러 (단순화된 버전)
@@ -58,6 +61,44 @@ public class GameChatWebSocketHandler extends BaseChatWebSocketHandler {
         } catch (Exception e) {
             log.error("채팅방 입장 검증 실패 - userId: {}", userInfo.getUserId(), e);
             return false;
+        }
+    }
+
+    @Override
+    protected void handleConnectionManagement(WebSocketSession session, UserSessionInfo userInfo) {
+        try {
+            String userId = userInfo.getUserId();
+            
+            // 기존 연결이 있는지 확인
+            Set<WebSocketSession> existingSessions = connectedUsers.get(userId);
+            if (existingSessions != null && !existingSessions.isEmpty()) {
+                log.info("게임 채팅 - 기존 연결 해제 - userId: {}, 기존 세션 수: {}", 
+                        userId, existingSessions.size());
+                
+                // 기존 모든 세션 종료
+                for (WebSocketSession existingSession : existingSessions) {
+                    if (existingSession.isOpen()) {
+                        try {
+                            existingSession.close(CloseStatus.NORMAL.withReason("New connection established"));
+                        } catch (Exception e) {
+                            log.warn("기존 세션 종료 실패 - sessionId: {}", existingSession.getId(), e);
+                        }
+                    }
+                }
+                
+                // 맵에서 제거
+                existingSessions.clear();
+                connectedUsers.remove(userId);
+                
+                // sessionToUser 맵에서도 제거
+                sessionToUser.entrySet().removeIf(entry -> 
+                    entry.getValue().getUserId().equals(userId));
+            }
+            
+            log.info("게임 채팅 - 단일 세션 허용 - userId: {}", userId);
+            
+        } catch (Exception e) {
+            log.error("게임 채팅 연결 관리 실패 - userId: {}", userInfo.getUserId(), e);
         }
     }
 
