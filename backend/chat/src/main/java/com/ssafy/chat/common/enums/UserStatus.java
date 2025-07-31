@@ -1,8 +1,11 @@
 package com.ssafy.chat.common.enums;
 
+import lombok.Getter;
+
 /**
  * 사용자 상태
  */
+@Getter
 public enum UserStatus {
 
     /** 활성 상태 */
@@ -20,14 +23,6 @@ public enum UserStatus {
     UserStatus(String code, String description) {
         this.code = code;
         this.description = description;
-    }
-
-    public String getCode() {
-        return code;
-    }
-
-    public String getDescription() {
-        return description;
     }
 
     /**
