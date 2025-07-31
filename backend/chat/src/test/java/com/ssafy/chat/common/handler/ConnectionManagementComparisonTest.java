@@ -49,7 +49,8 @@ class ConnectionManagementComparisonTest {
     void setUp() {
         objectMapper = new ObjectMapper();
         matchHandler = new MatchChatWebSocketHandler(objectMapper, redisPubSubService);
-        gameHandler = new GameChatWebSocketHandler(objectMapper, redisPubSubService);
+        gameHandler = new GameChatWebSocketHandler(objectMapper, redisPubSubService, 
+                mock(org.springframework.data.redis.core.RedisTemplate.class));
     }
 
     @Test
