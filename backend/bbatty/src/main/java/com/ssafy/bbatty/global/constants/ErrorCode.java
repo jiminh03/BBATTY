@@ -39,15 +39,16 @@ public enum ErrorCode {
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 사용자에요."),
 
     // 카카오 정보 관련 에러
-    KAKAO_BIRTH_INFO_REQUIRED(HttpStatus.BAD_REQUEST, "카카오에서 생년월일 정보를 가져올 수 없어요."),
-    KAKAO_BIRTH_INFO_INVALID(HttpStatus.BAD_REQUEST, "카카오 생년월일 정보가 올바르지 않아요."),
+    KAKAO_EMAIL_INFO_REQUIRED(HttpStatus.BAD_REQUEST, "카카오에서 이메일 정보를 가져올 수 없어요."),
+    KAKAO_BIRTH_INFO_REQUIRED(HttpStatus.BAD_REQUEST, "카카오에서 생년 정보를 가져올 수 없어요."),
+    KAKAO_BIRTH_INFO_INVALID(HttpStatus.BAD_REQUEST, "카카오 생년 정보가 올바르지 않아요."),
     KAKAO_GENDER_INFO_REQUIRED(HttpStatus.BAD_REQUEST, "카카오에서 성별 정보를 가져올 수 없어요."),
     KAKAO_GENDER_INFO_INVALID(HttpStatus.BAD_REQUEST, "카카오 성별 정보가 올바르지 않아요."),
 
     // POST
     POST_NOT_FOUND(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없어요"),
 
-    // Comment
+    // COMMENT
     COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없어요"),
     POST_FORBIDDEN(HttpStatus.FORBIDDEN, "작성한 게시자만 삭제할 수 있어요.");
 
