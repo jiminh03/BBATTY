@@ -215,7 +215,6 @@ CREATE TABLE `post_view` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '조회 로그 ID',
     `user_id` BIGINT NOT NULL COMMENT '조회한 사용자 ID',
     `post_id` BIGINT NOT NULL COMMENT '조회한 게시글 ID',
-    `is_deleted` BOOLEAN NOT NULL DEFAULT FALSE COMMENT '삭제 여부',
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '조회 시각',
     PRIMARY KEY (`id`),
     FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON DELETE CASCADE,
