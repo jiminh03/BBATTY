@@ -1,6 +1,5 @@
 package com.ssafy.bbatty.global.s3;
 
-
 import com.amazonaws.HttpMethod;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.GeneratePresignedUrlRequest;

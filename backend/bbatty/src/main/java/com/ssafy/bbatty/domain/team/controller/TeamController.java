@@ -16,7 +16,7 @@ import java.util.List;
 @RequestMapping("/api/teams")
 @RequiredArgsConstructor
 public class TeamController {
-
+/*
     private final TeamService teamService;
 
     @GetMapping
@@ -26,5 +26,5 @@ public class TeamController {
         return ResponseEntity.ok(
             ApiResponse.success(teams)
         );
-    }
+    }*/
 }
