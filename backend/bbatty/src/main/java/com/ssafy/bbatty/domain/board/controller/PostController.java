@@ -12,7 +12,6 @@ import com.ssafy.bbatty.global.constants.SuccessCode;
 import com.ssafy.bbatty.global.exception.ApiException;
 import com.ssafy.bbatty.global.response.ApiResponse;
 import com.ssafy.bbatty.global.s3.S3Service;
-import com.ssafy.bbatty.global.security.UserPrincipal;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
