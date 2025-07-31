@@ -17,4 +17,6 @@ public interface PostImageRepository extends JpaRepository<PostImage, Long> {
 
     @Query("SELECT pi.imageUrl FROM PostImage pi WHERE pi.post.id = :postId")
     List<String> findImageUrlsByPostId(@Param("postId") Long postId);
+    
+    List<PostImage> findByPostId(Long postId);
 }

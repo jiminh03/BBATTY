@@ -16,7 +16,6 @@ import java.time.LocalDateTime;
 public class Comment {
 
     @Id
-    // IDENTITY는 DB의 전략을 사용하겠다는 의미이다.
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
@@ -42,6 +41,10 @@ public class Comment {
     @JoinColumn(name = "parent_id")
     private Comment parent;
 
+    // 삭제 여부 (소프트 삭제)
+    @Column(name = "is_deleted", nullable = false)
+    private Boolean isDeleted = false;
+
     // 생성일시
     @Column(name = "created_at", updatable = false)
     @CreationTimestamp
@@ -51,4 +54,27 @@ public class Comment {
     @Column(name = "updated_at")
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    // 기본 생성자
+    public Comment() {}
+
+    // 댓글 생성용 생성자
+    public Comment(Post post, User user, String content) {
+        this.post = post;
+        this.user = user;
+        this.content = content;
+        this.depth = 0;
+        this.parent = null;
+        this.isDeleted = false;
+    }
+
+    // 대댓글 생성용 생성자
+    public Comment(Post post, User user, String content, Comment parent) {
+        this.post = post;
+        this.user = user;
+        this.content = content;
+        this.depth = 1;
+        this.parent = parent;
+        this.isDeleted = false;
+    }
 }

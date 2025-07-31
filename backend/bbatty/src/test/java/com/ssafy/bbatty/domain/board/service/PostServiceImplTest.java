@@ -295,7 +295,7 @@ class PostServiceImplTest {
         when(postRepository.findById(postId)).thenReturn(Optional.of(post));
 
         // When
-        PostDetailResponse response = postService.getPostDetail(postId);
+        PostDetailResponse response = postService.getPostDetail(postId, user.getId());
 
         // Then
         assertThat(response.getPostId()).isEqualTo(postId);
@@ -397,7 +397,6 @@ class PostServiceImplTest {
         post.setId(id);
         post.setCreatedAt(LocalDateTime.now());
         post.setViewCount(0L);
-        post.setLikeCount(0L);
         return post;
     }
 }
