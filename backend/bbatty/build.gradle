@@ -24,38 +24,44 @@ repositories {
 }
 
 dependencies {
-	implementation 'org.springframework.cloud:spring-cloud-starter-aws:2.2.6.RELEASE'
+	// Spring Boot Starters
+	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
-	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
-	implementation("jakarta.validation:jakarta.validation-api:3.0.2")
-	compileOnly 'org.projectlombok:lombok' // lomboks -> lombok
-	developmentOnly 'org.springframework.boot:spring-boot-devtools'
-	runtimeOnly 'com.mysql:mysql-connector-j'
-	annotationProcessor 'org.projectlombok:lombok'
-	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-	// for test H2 DB
-	testImplementation 'com.h2database:h2'
-	// for websocket
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 	implementation 'org.springframework.boot:spring-boot-starter-websocket'
 
-	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	// Development Tools
+	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
-	// for redis
-	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+	// Database
+	runtimeOnly 'com.mysql:mysql-connector-j'
+
+	// Redis Client
 	implementation 'redis.clients:jedis'
 
-	// for JWT
+	// JWT
 	implementation 'io.jsonwebtoken:jjwt-api:0.12.3'
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.3'
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.3'
 
-	// for Kakao OAuth
-	implementation 'org.springframework.boot:spring-boot-starter-webflux'
-	// json
+	// AWS S3 (프로필 이미지, 게시글 첨부 이미지용)
+	implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3:3.0.1'
+
+	// JSON Processing
 	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+
+	// Lombok
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+
+	// Test Dependencies
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.security:spring-security-test'
+	testImplementation 'com.h2database:h2'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 tasks.named('test') {
