@@ -105,4 +105,11 @@ public class User extends BaseEntity {
     public int getAge() {
         return java.time.LocalDate.now().getYear() - this.birthYear + 1;
     }
+
+    /**
+     * 팀 ID 반환
+     */
+    public Long getTeamId() {
+        return this.team != null ? this.team.getId() : null;
+    }
 }
