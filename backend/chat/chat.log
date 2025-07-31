@@ -1,0 +1,431 @@
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.5.4)
+
+2025-07-31T11:00:06.869+09:00  INFO 25228 --- [chat] [           main] com.ssafy.chat.ChatApplication           : Starting ChatApplication v0.0.1-SNAPSHOT using Java 21.0.7 with PID 25228 (C:\Users\SSAFY\battying\S13P11A403\backend\chat\build\libs\chat-0.0.1-SNAPSHOT.jar started by SSAFY in C:\Users\SSAFY\battying\S13P11A403\backend\chat)
+2025-07-31T11:00:06.871+09:00 DEBUG 25228 --- [chat] [           main] com.ssafy.chat.ChatApplication           : Running with Spring Boot v3.5.4, Spring v6.2.9
+2025-07-31T11:00:06.871+09:00  INFO 25228 --- [chat] [           main] com.ssafy.chat.ChatApplication           : No active profile set, falling back to 1 default profile: "default"
+2025-07-31T11:00:07.839+09:00  INFO 25228 --- [chat] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2025-07-31T11:00:07.845+09:00  INFO 25228 --- [chat] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2025-07-31T11:00:07.887+09:00  INFO 25228 --- [chat] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 20 ms. Found 0 Redis repository interfaces.
+2025-07-31T11:00:08.361+09:00  INFO 25228 --- [chat] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8086 (http)
+2025-07-31T11:00:08.371+09:00  INFO 25228 --- [chat] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2025-07-31T11:00:08.371+09:00  INFO 25228 --- [chat] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.43]
+2025-07-31T11:00:08.408+09:00  INFO 25228 --- [chat] [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2025-07-31T11:00:08.408+09:00  INFO 25228 --- [chat] [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1461 ms
+2025-07-31T11:00:08.770+09:00  INFO 25228 --- [chat] [           main] com.ssafy.chat.config.WebSocketConfig    : WebSocket 핸들러 등록 시작
+2025-07-31T11:00:08.780+09:00  INFO 25228 --- [chat] [           main] com.ssafy.chat.config.WebSocketConfig    : WebSocket 핸들러 등록 완료 - /ws/game-chat, /ws/match-chat
+2025-07-31T11:00:08.905+09:00  INFO 25228 --- [chat] [           main] o.s.v.b.OptionalValidatorFactoryBean     : Failed to set up a Bean Validation provider: jakarta.validation.NoProviderFoundException: Unable to create a Configuration, because no Jakarta Bean Validation provider could be found. Add a provider like Hibernate Validator (RI) to your classpath.
+2025-07-31T11:00:09.370+09:00  INFO 25228 --- [chat] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8086 (http) with context path '/'
+2025-07-31T11:00:09.384+09:00  INFO 25228 --- [chat] [           main] com.ssafy.chat.ChatApplication           : Started ChatApplication in 3.072 seconds (process running for 3.775)
+2025-07-31T11:03:21.701+09:00  INFO 25228 --- [chat] [nio-8086-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-07-31T11:03:21.709+09:00  INFO 25228 --- [chat] [nio-8086-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2025-07-31T11:03:21.709+09:00  INFO 25228 --- [chat] [nio-8086-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 0 ms
+2025-07-31T11:03:21.765+09:00  INFO 25228 --- [chat] [nio-8086-exec-1] c.s.c.c.WebSocketHandshakeInterceptor    : WebSocket 핸드셰이크 요청 - URI: http://localhost:8086/ws/game-chat/websocket?userId=dlwlals&userName=%EC%9D%B4%EC%A7%80%EB%AF%BC%EC%9D%B4%EB%8B%A4&teamId=LG&userTeamId=LG
+2025-07-31T11:03:21.777+09:00  INFO 25228 --- [chat] [nio-8086-exec-1] c.s.c.c.WebSocketHandshakeInterceptor    : 쿼리 파라미터: {userId=dlwlals, userName=%EC%9D%B4%EC%A7%80%EB%AF%BC%EC%9D%B4%EB%8B%A4, teamId=LG, userTeamId=LG}
+2025-07-31T11:03:21.781+09:00  INFO 25228 --- [chat] [nio-8086-exec-1] c.s.c.c.WebSocketHandshakeInterceptor    : 핸드셰이크 성공 - userId: dlwlals
+2025-07-31T11:03:21.830+09:00  INFO 25228 --- [chat] [nio-8086-exec-1] c.s.c.c.WebSocketHandshakeInterceptor    : 핸드셰이크 완료
+2025-07-31T11:03:21.919+09:00  INFO 25228 --- [chat] [nio-8086-exec-1] c.s.c.w.h.GameChatWebSocketHandler       : 채팅방 입장 검증 - 채팅방팀: LG, 사용자팀: LG
+2025-07-31T11:03:21.920+09:00  INFO 25228 --- [chat] [nio-8086-exec-1] c.s.c.w.h.GameChatWebSocketHandler       : 팀 일치 - 입장 허용
+2025-07-31T11:03:21.920+09:00  INFO 25228 --- [chat] [nio-8086-exec-1] c.s.c.w.h.GameChatWebSocketHandler       : 게임 채팅방 입장 완료 - teamId: LG, userId: dlwlals
+2025-07-31T11:03:21.920+09:00  INFO 25228 --- [chat] [nio-8086-exec-1] c.s.c.c.h.BaseChatWebSocketHandler       : WebSocket 연결 성공 - userId: dlwlals, sessionId: 0a609b27-9908-7a91-0dc0-8123dfe0056d
+2025-07-31T11:03:23.233+09:00  INFO 25228 --- [chat] [nio-8086-exec-2] c.s.c.c.WebSocketHandshakeInterceptor    : WebSocket 핸드셰이크 요청 - URI: http://localhost:8086/ws/game-chat/websocket?userId=test_user_001&userName=%ED%85%8C%EC%8A%A4%ED%8A%B8%EC%9C%A0%EC%A0%80&teamId=LG&userTeamId=LG
+2025-07-31T11:03:23.233+09:00  INFO 25228 --- [chat] [nio-8086-exec-2] c.s.c.c.WebSocketHandshakeInterceptor    : 쿼리 파라미터: {userId=test_user_001, userName=%ED%85%8C%EC%8A%A4%ED%8A%B8%EC%9C%A0%EC%A0%80, teamId=LG, userTeamId=LG}
+2025-07-31T11:03:23.233+09:00  INFO 25228 --- [chat] [nio-8086-exec-2] c.s.c.c.WebSocketHandshakeInterceptor    : 핸드셰이크 성공 - userId: test_user_001
+2025-07-31T11:03:23.235+09:00  INFO 25228 --- [chat] [nio-8086-exec-2] c.s.c.c.WebSocketHandshakeInterceptor    : 핸드셰이크 완료
+2025-07-31T11:03:23.238+09:00  INFO 25228 --- [chat] [nio-8086-exec-2] c.s.c.w.h.GameChatWebSocketHandler       : 채팅방 입장 검증 - 채팅방팀: LG, 사용자팀: LG
+2025-07-31T11:03:23.238+09:00  INFO 25228 --- [chat] [nio-8086-exec-2] c.s.c.w.h.GameChatWebSocketHandler       : 팀 일치 - 입장 허용
+2025-07-31T11:03:23.238+09:00  INFO 25228 --- [chat] [nio-8086-exec-2] c.s.c.w.h.GameChatWebSocketHandler       : 게임 채팅방 입장 완료 - teamId: LG, userId: test_user_001
+2025-07-31T11:03:23.238+09:00  INFO 25228 --- [chat] [nio-8086-exec-2] c.s.c.c.h.BaseChatWebSocketHandler       : WebSocket 연결 성공 - userId: test_user_001, sessionId: 9f39b95d-6149-2616-a6c9-b643ad59d28b
+2025-07-31T11:03:25.926+09:00 ERROR 25228 --- [chat] [nio-8086-exec-3] c.s.c.c.service.RedisPubSubServiceImpl   : 메시지 발행 실패 - channel: LG
+
+com.fasterxml.jackson.databind.exc.InvalidDefinitionException: Java 8 date/time type `java.time.LocalDateTime` not supported by default: add Module "com.fasterxml.jackson.datatype:jackson-datatype-jsr310" to enable handling (or disable `MapperFeature.REQUIRE_HANDLERS_FOR_JAVA8_TIMES`) (through reference chain: java.util.HashMap["timestamp"])
+	at com.fasterxml.jackson.databind.exc.InvalidDefinitionException.from(InvalidDefinitionException.java:77) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.SerializerProvider.reportBadDefinition(SerializerProvider.java:1359) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.impl.UnsupportedTypeSerializer.serialize(UnsupportedTypeSerializer.java:34) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.std.MapSerializer.serializeFields(MapSerializer.java:807) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.std.MapSerializer.serializeWithoutTypeInfo(MapSerializer.java:763) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.std.MapSerializer.serialize(MapSerializer.java:719) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.std.MapSerializer.serialize(MapSerializer.java:34) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.DefaultSerializerProvider._serialize(DefaultSerializerProvider.java:503) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.DefaultSerializerProvider.serializeValue(DefaultSerializerProvider.java:342) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ObjectMapper._writeValueAndClose(ObjectMapper.java:4859) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ObjectMapper.writeValueAsString(ObjectMapper.java:4079) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.ssafy.chat.common.service.RedisPubSubServiceImpl.publishMessage(RedisPubSubServiceImpl.java:25) ~[!/:0.0.1-SNAPSHOT]
+	at com.ssafy.chat.watch.handler.GameChatWebSocketHandler.handleDomainMessage(GameChatWebSocketHandler.java:99) ~[!/:0.0.1-SNAPSHOT]
+	at com.ssafy.chat.common.handler.BaseChatWebSocketHandler.handleMessage(BaseChatWebSocketHandler.java:89) ~[!/:0.0.1-SNAPSHOT]
+	at org.springframework.web.socket.handler.WebSocketHandlerDecorator.handleMessage(WebSocketHandlerDecorator.java:75) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.springframework.web.socket.handler.LoggingWebSocketHandlerDecorator.handleMessage(LoggingWebSocketHandlerDecorator.java:56) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.springframework.web.socket.handler.ExceptionWebSocketHandlerDecorator.handleMessage(ExceptionWebSocketHandlerDecorator.java:58) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.springframework.web.socket.adapter.standard.StandardWebSocketHandlerAdapter.handleTextMessage(StandardWebSocketHandlerAdapter.java:113) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.springframework.web.socket.adapter.standard.StandardWebSocketHandlerAdapter$3.onMessage(StandardWebSocketHandlerAdapter.java:84) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.springframework.web.socket.adapter.standard.StandardWebSocketHandlerAdapter$3.onMessage(StandardWebSocketHandlerAdapter.java:81) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.apache.tomcat.websocket.WsFrameBase.sendMessageText(WsFrameBase.java:389) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.sendMessageText(WsFrameServer.java:130) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsFrameBase.processDataText(WsFrameBase.java:483) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsFrameBase.processData(WsFrameBase.java:283) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsFrameBase.processInputBuffer(WsFrameBase.java:129) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.onDataAvailable(WsFrameServer.java:85) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.doOnDataAvailable(WsFrameServer.java:184) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.notifyDataAvailable(WsFrameServer.java:164) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsHttpUpgradeHandler.upgradeDispatch(WsHttpUpgradeHandler.java:152) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.coyote.http11.upgrade.UpgradeProcessorInternal.dispatch(UpgradeProcessorInternal.java:60) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:57) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1769) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1189) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:658) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+
+2025-07-31T11:03:25.932+09:00 ERROR 25228 --- [chat] [nio-8086-exec-3] c.s.c.c.h.BaseChatWebSocketHandler       : 사용자 메시지 전송 실패 - sessionId: 0a609b27-9908-7a91-0dc0-8123dfe0056d
+
+com.fasterxml.jackson.databind.exc.InvalidDefinitionException: Java 8 date/time type `java.time.LocalDateTime` not supported by default: add Module "com.fasterxml.jackson.datatype:jackson-datatype-jsr310" to enable handling (or disable `MapperFeature.REQUIRE_HANDLERS_FOR_JAVA8_TIMES`) (through reference chain: java.util.HashMap["timestamp"])
+	at com.fasterxml.jackson.databind.exc.InvalidDefinitionException.from(InvalidDefinitionException.java:77) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.SerializerProvider.reportBadDefinition(SerializerProvider.java:1359) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.impl.UnsupportedTypeSerializer.serialize(UnsupportedTypeSerializer.java:34) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.std.MapSerializer.serializeFields(MapSerializer.java:807) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.std.MapSerializer.serializeWithoutTypeInfo(MapSerializer.java:763) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.std.MapSerializer.serialize(MapSerializer.java:719) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.std.MapSerializer.serialize(MapSerializer.java:34) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.DefaultSerializerProvider._serialize(DefaultSerializerProvider.java:503) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.DefaultSerializerProvider.serializeValue(DefaultSerializerProvider.java:342) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ObjectMapper._writeValueAndClose(ObjectMapper.java:4859) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ObjectMapper.writeValueAsString(ObjectMapper.java:4079) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.ssafy.chat.common.handler.BaseChatWebSocketHandler.sendMessageToUser(BaseChatWebSocketHandler.java:167) ~[!/:0.0.1-SNAPSHOT]
+	at com.ssafy.chat.common.handler.BaseChatWebSocketHandler.lambda$broadcastToRoom$1(BaseChatWebSocketHandler.java:181) ~[!/:0.0.1-SNAPSHOT]
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184) ~[na:na]
+	at java.base/java.util.stream.ReferencePipeline$2$1.accept(ReferencePipeline.java:179) ~[na:na]
+	at java.base/java.util.concurrent.ConcurrentHashMap$EntrySpliterator.forEachRemaining(ConcurrentHashMap.java:3652) ~[na:na]
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:509) ~[na:na]
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499) ~[na:na]
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151) ~[na:na]
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174) ~[na:na]
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234) ~[na:na]
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596) ~[na:na]
+	at com.ssafy.chat.common.handler.BaseChatWebSocketHandler.broadcastToRoom(BaseChatWebSocketHandler.java:181) ~[!/:0.0.1-SNAPSHOT]
+	at com.ssafy.chat.common.handler.BaseChatWebSocketHandler.handleMessage(BaseChatWebSocketHandler.java:93) ~[!/:0.0.1-SNAPSHOT]
+	at org.springframework.web.socket.handler.WebSocketHandlerDecorator.handleMessage(WebSocketHandlerDecorator.java:75) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.springframework.web.socket.handler.LoggingWebSocketHandlerDecorator.handleMessage(LoggingWebSocketHandlerDecorator.java:56) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.springframework.web.socket.handler.ExceptionWebSocketHandlerDecorator.handleMessage(ExceptionWebSocketHandlerDecorator.java:58) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.springframework.web.socket.adapter.standard.StandardWebSocketHandlerAdapter.handleTextMessage(StandardWebSocketHandlerAdapter.java:113) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.springframework.web.socket.adapter.standard.StandardWebSocketHandlerAdapter$3.onMessage(StandardWebSocketHandlerAdapter.java:84) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.springframework.web.socket.adapter.standard.StandardWebSocketHandlerAdapter$3.onMessage(StandardWebSocketHandlerAdapter.java:81) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.apache.tomcat.websocket.WsFrameBase.sendMessageText(WsFrameBase.java:389) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.sendMessageText(WsFrameServer.java:130) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsFrameBase.processDataText(WsFrameBase.java:483) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsFrameBase.processData(WsFrameBase.java:283) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsFrameBase.processInputBuffer(WsFrameBase.java:129) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.onDataAvailable(WsFrameServer.java:85) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.doOnDataAvailable(WsFrameServer.java:184) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.notifyDataAvailable(WsFrameServer.java:164) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsHttpUpgradeHandler.upgradeDispatch(WsHttpUpgradeHandler.java:152) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.coyote.http11.upgrade.UpgradeProcessorInternal.dispatch(UpgradeProcessorInternal.java:60) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:57) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1769) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1189) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:658) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+
+2025-07-31T11:03:25.932+09:00 ERROR 25228 --- [chat] [nio-8086-exec-3] c.s.c.c.h.BaseChatWebSocketHandler       : 사용자 메시지 전송 실패 - sessionId: 9f39b95d-6149-2616-a6c9-b643ad59d28b
+
+com.fasterxml.jackson.databind.exc.InvalidDefinitionException: Java 8 date/time type `java.time.LocalDateTime` not supported by default: add Module "com.fasterxml.jackson.datatype:jackson-datatype-jsr310" to enable handling (or disable `MapperFeature.REQUIRE_HANDLERS_FOR_JAVA8_TIMES`) (through reference chain: java.util.HashMap["timestamp"])
+	at com.fasterxml.jackson.databind.exc.InvalidDefinitionException.from(InvalidDefinitionException.java:77) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.SerializerProvider.reportBadDefinition(SerializerProvider.java:1359) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.impl.UnsupportedTypeSerializer.serialize(UnsupportedTypeSerializer.java:34) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.std.MapSerializer.serializeFields(MapSerializer.java:807) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.std.MapSerializer.serializeWithoutTypeInfo(MapSerializer.java:763) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.std.MapSerializer.serialize(MapSerializer.java:719) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.std.MapSerializer.serialize(MapSerializer.java:34) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.DefaultSerializerProvider._serialize(DefaultSerializerProvider.java:503) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.DefaultSerializerProvider.serializeValue(DefaultSerializerProvider.java:342) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ObjectMapper._writeValueAndClose(ObjectMapper.java:4859) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ObjectMapper.writeValueAsString(ObjectMapper.java:4079) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.ssafy.chat.common.handler.BaseChatWebSocketHandler.sendMessageToUser(BaseChatWebSocketHandler.java:167) ~[!/:0.0.1-SNAPSHOT]
+	at com.ssafy.chat.common.handler.BaseChatWebSocketHandler.lambda$broadcastToRoom$1(BaseChatWebSocketHandler.java:181) ~[!/:0.0.1-SNAPSHOT]
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184) ~[na:na]
+	at java.base/java.util.stream.ReferencePipeline$2$1.accept(ReferencePipeline.java:179) ~[na:na]
+	at java.base/java.util.concurrent.ConcurrentHashMap$EntrySpliterator.forEachRemaining(ConcurrentHashMap.java:3652) ~[na:na]
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:509) ~[na:na]
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499) ~[na:na]
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151) ~[na:na]
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174) ~[na:na]
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234) ~[na:na]
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596) ~[na:na]
+	at com.ssafy.chat.common.handler.BaseChatWebSocketHandler.broadcastToRoom(BaseChatWebSocketHandler.java:181) ~[!/:0.0.1-SNAPSHOT]
+	at com.ssafy.chat.common.handler.BaseChatWebSocketHandler.handleMessage(BaseChatWebSocketHandler.java:93) ~[!/:0.0.1-SNAPSHOT]
+	at org.springframework.web.socket.handler.WebSocketHandlerDecorator.handleMessage(WebSocketHandlerDecorator.java:75) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.springframework.web.socket.handler.LoggingWebSocketHandlerDecorator.handleMessage(LoggingWebSocketHandlerDecorator.java:56) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.springframework.web.socket.handler.ExceptionWebSocketHandlerDecorator.handleMessage(ExceptionWebSocketHandlerDecorator.java:58) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.springframework.web.socket.adapter.standard.StandardWebSocketHandlerAdapter.handleTextMessage(StandardWebSocketHandlerAdapter.java:113) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.springframework.web.socket.adapter.standard.StandardWebSocketHandlerAdapter$3.onMessage(StandardWebSocketHandlerAdapter.java:84) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.springframework.web.socket.adapter.standard.StandardWebSocketHandlerAdapter$3.onMessage(StandardWebSocketHandlerAdapter.java:81) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.apache.tomcat.websocket.WsFrameBase.sendMessageText(WsFrameBase.java:389) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.sendMessageText(WsFrameServer.java:130) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsFrameBase.processDataText(WsFrameBase.java:483) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsFrameBase.processData(WsFrameBase.java:283) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsFrameBase.processInputBuffer(WsFrameBase.java:129) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.onDataAvailable(WsFrameServer.java:85) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.doOnDataAvailable(WsFrameServer.java:184) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.notifyDataAvailable(WsFrameServer.java:164) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsHttpUpgradeHandler.upgradeDispatch(WsHttpUpgradeHandler.java:152) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.coyote.http11.upgrade.UpgradeProcessorInternal.dispatch(UpgradeProcessorInternal.java:60) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:57) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1769) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1189) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:658) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+
+2025-07-31T11:03:30.007+09:00 ERROR 25228 --- [chat] [nio-8086-exec-4] c.s.c.c.service.RedisPubSubServiceImpl   : 메시지 발행 실패 - channel: LG
+
+com.fasterxml.jackson.databind.exc.InvalidDefinitionException: Java 8 date/time type `java.time.LocalDateTime` not supported by default: add Module "com.fasterxml.jackson.datatype:jackson-datatype-jsr310" to enable handling (or disable `MapperFeature.REQUIRE_HANDLERS_FOR_JAVA8_TIMES`) (through reference chain: java.util.HashMap["timestamp"])
+	at com.fasterxml.jackson.databind.exc.InvalidDefinitionException.from(InvalidDefinitionException.java:77) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.SerializerProvider.reportBadDefinition(SerializerProvider.java:1359) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.impl.UnsupportedTypeSerializer.serialize(UnsupportedTypeSerializer.java:34) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.std.MapSerializer.serializeFields(MapSerializer.java:807) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.std.MapSerializer.serializeWithoutTypeInfo(MapSerializer.java:763) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.std.MapSerializer.serialize(MapSerializer.java:719) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.std.MapSerializer.serialize(MapSerializer.java:34) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.DefaultSerializerProvider._serialize(DefaultSerializerProvider.java:503) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.DefaultSerializerProvider.serializeValue(DefaultSerializerProvider.java:342) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ObjectMapper._writeValueAndClose(ObjectMapper.java:4859) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ObjectMapper.writeValueAsString(ObjectMapper.java:4079) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.ssafy.chat.common.service.RedisPubSubServiceImpl.publishMessage(RedisPubSubServiceImpl.java:25) ~[!/:0.0.1-SNAPSHOT]
+	at com.ssafy.chat.watch.handler.GameChatWebSocketHandler.handleDomainMessage(GameChatWebSocketHandler.java:99) ~[!/:0.0.1-SNAPSHOT]
+	at com.ssafy.chat.common.handler.BaseChatWebSocketHandler.handleMessage(BaseChatWebSocketHandler.java:89) ~[!/:0.0.1-SNAPSHOT]
+	at org.springframework.web.socket.handler.WebSocketHandlerDecorator.handleMessage(WebSocketHandlerDecorator.java:75) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.springframework.web.socket.handler.LoggingWebSocketHandlerDecorator.handleMessage(LoggingWebSocketHandlerDecorator.java:56) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.springframework.web.socket.handler.ExceptionWebSocketHandlerDecorator.handleMessage(ExceptionWebSocketHandlerDecorator.java:58) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.springframework.web.socket.adapter.standard.StandardWebSocketHandlerAdapter.handleTextMessage(StandardWebSocketHandlerAdapter.java:113) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.springframework.web.socket.adapter.standard.StandardWebSocketHandlerAdapter$3.onMessage(StandardWebSocketHandlerAdapter.java:84) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.springframework.web.socket.adapter.standard.StandardWebSocketHandlerAdapter$3.onMessage(StandardWebSocketHandlerAdapter.java:81) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.apache.tomcat.websocket.WsFrameBase.sendMessageText(WsFrameBase.java:389) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.sendMessageText(WsFrameServer.java:130) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsFrameBase.processDataText(WsFrameBase.java:483) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsFrameBase.processData(WsFrameBase.java:283) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsFrameBase.processInputBuffer(WsFrameBase.java:129) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.onDataAvailable(WsFrameServer.java:85) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.doOnDataAvailable(WsFrameServer.java:184) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.notifyDataAvailable(WsFrameServer.java:164) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsHttpUpgradeHandler.upgradeDispatch(WsHttpUpgradeHandler.java:152) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.coyote.http11.upgrade.UpgradeProcessorInternal.dispatch(UpgradeProcessorInternal.java:60) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:57) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1769) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1189) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:658) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+
+2025-07-31T11:03:30.007+09:00 ERROR 25228 --- [chat] [nio-8086-exec-4] c.s.c.c.h.BaseChatWebSocketHandler       : 사용자 메시지 전송 실패 - sessionId: 0a609b27-9908-7a91-0dc0-8123dfe0056d
+
+com.fasterxml.jackson.databind.exc.InvalidDefinitionException: Java 8 date/time type `java.time.LocalDateTime` not supported by default: add Module "com.fasterxml.jackson.datatype:jackson-datatype-jsr310" to enable handling (or disable `MapperFeature.REQUIRE_HANDLERS_FOR_JAVA8_TIMES`) (through reference chain: java.util.HashMap["timestamp"])
+	at com.fasterxml.jackson.databind.exc.InvalidDefinitionException.from(InvalidDefinitionException.java:77) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.SerializerProvider.reportBadDefinition(SerializerProvider.java:1359) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.impl.UnsupportedTypeSerializer.serialize(UnsupportedTypeSerializer.java:34) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.std.MapSerializer.serializeFields(MapSerializer.java:807) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.std.MapSerializer.serializeWithoutTypeInfo(MapSerializer.java:763) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.std.MapSerializer.serialize(MapSerializer.java:719) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.std.MapSerializer.serialize(MapSerializer.java:34) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.DefaultSerializerProvider._serialize(DefaultSerializerProvider.java:503) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.DefaultSerializerProvider.serializeValue(DefaultSerializerProvider.java:342) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ObjectMapper._writeValueAndClose(ObjectMapper.java:4859) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ObjectMapper.writeValueAsString(ObjectMapper.java:4079) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.ssafy.chat.common.handler.BaseChatWebSocketHandler.sendMessageToUser(BaseChatWebSocketHandler.java:167) ~[!/:0.0.1-SNAPSHOT]
+	at com.ssafy.chat.common.handler.BaseChatWebSocketHandler.lambda$broadcastToRoom$1(BaseChatWebSocketHandler.java:181) ~[!/:0.0.1-SNAPSHOT]
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184) ~[na:na]
+	at java.base/java.util.stream.ReferencePipeline$2$1.accept(ReferencePipeline.java:179) ~[na:na]
+	at java.base/java.util.concurrent.ConcurrentHashMap$EntrySpliterator.forEachRemaining(ConcurrentHashMap.java:3652) ~[na:na]
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:509) ~[na:na]
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499) ~[na:na]
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151) ~[na:na]
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174) ~[na:na]
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234) ~[na:na]
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596) ~[na:na]
+	at com.ssafy.chat.common.handler.BaseChatWebSocketHandler.broadcastToRoom(BaseChatWebSocketHandler.java:181) ~[!/:0.0.1-SNAPSHOT]
+	at com.ssafy.chat.common.handler.BaseChatWebSocketHandler.handleMessage(BaseChatWebSocketHandler.java:93) ~[!/:0.0.1-SNAPSHOT]
+	at org.springframework.web.socket.handler.WebSocketHandlerDecorator.handleMessage(WebSocketHandlerDecorator.java:75) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.springframework.web.socket.handler.LoggingWebSocketHandlerDecorator.handleMessage(LoggingWebSocketHandlerDecorator.java:56) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.springframework.web.socket.handler.ExceptionWebSocketHandlerDecorator.handleMessage(ExceptionWebSocketHandlerDecorator.java:58) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.springframework.web.socket.adapter.standard.StandardWebSocketHandlerAdapter.handleTextMessage(StandardWebSocketHandlerAdapter.java:113) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.springframework.web.socket.adapter.standard.StandardWebSocketHandlerAdapter$3.onMessage(StandardWebSocketHandlerAdapter.java:84) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.springframework.web.socket.adapter.standard.StandardWebSocketHandlerAdapter$3.onMessage(StandardWebSocketHandlerAdapter.java:81) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.apache.tomcat.websocket.WsFrameBase.sendMessageText(WsFrameBase.java:389) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.sendMessageText(WsFrameServer.java:130) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsFrameBase.processDataText(WsFrameBase.java:483) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsFrameBase.processData(WsFrameBase.java:283) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsFrameBase.processInputBuffer(WsFrameBase.java:129) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.onDataAvailable(WsFrameServer.java:85) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.doOnDataAvailable(WsFrameServer.java:184) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.notifyDataAvailable(WsFrameServer.java:164) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsHttpUpgradeHandler.upgradeDispatch(WsHttpUpgradeHandler.java:152) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.coyote.http11.upgrade.UpgradeProcessorInternal.dispatch(UpgradeProcessorInternal.java:60) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:57) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1769) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1189) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:658) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+
+2025-07-31T11:03:30.007+09:00 ERROR 25228 --- [chat] [nio-8086-exec-4] c.s.c.c.h.BaseChatWebSocketHandler       : 사용자 메시지 전송 실패 - sessionId: 9f39b95d-6149-2616-a6c9-b643ad59d28b
+
+com.fasterxml.jackson.databind.exc.InvalidDefinitionException: Java 8 date/time type `java.time.LocalDateTime` not supported by default: add Module "com.fasterxml.jackson.datatype:jackson-datatype-jsr310" to enable handling (or disable `MapperFeature.REQUIRE_HANDLERS_FOR_JAVA8_TIMES`) (through reference chain: java.util.HashMap["timestamp"])
+	at com.fasterxml.jackson.databind.exc.InvalidDefinitionException.from(InvalidDefinitionException.java:77) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.SerializerProvider.reportBadDefinition(SerializerProvider.java:1359) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.impl.UnsupportedTypeSerializer.serialize(UnsupportedTypeSerializer.java:34) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.std.MapSerializer.serializeFields(MapSerializer.java:807) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.std.MapSerializer.serializeWithoutTypeInfo(MapSerializer.java:763) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.std.MapSerializer.serialize(MapSerializer.java:719) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.std.MapSerializer.serialize(MapSerializer.java:34) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.DefaultSerializerProvider._serialize(DefaultSerializerProvider.java:503) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ser.DefaultSerializerProvider.serializeValue(DefaultSerializerProvider.java:342) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ObjectMapper._writeValueAndClose(ObjectMapper.java:4859) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.fasterxml.jackson.databind.ObjectMapper.writeValueAsString(ObjectMapper.java:4079) ~[jackson-databind-2.19.2.jar!/:2.19.2]
+	at com.ssafy.chat.common.handler.BaseChatWebSocketHandler.sendMessageToUser(BaseChatWebSocketHandler.java:167) ~[!/:0.0.1-SNAPSHOT]
+	at com.ssafy.chat.common.handler.BaseChatWebSocketHandler.lambda$broadcastToRoom$1(BaseChatWebSocketHandler.java:181) ~[!/:0.0.1-SNAPSHOT]
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:184) ~[na:na]
+	at java.base/java.util.stream.ReferencePipeline$2$1.accept(ReferencePipeline.java:179) ~[na:na]
+	at java.base/java.util.concurrent.ConcurrentHashMap$EntrySpliterator.forEachRemaining(ConcurrentHashMap.java:3652) ~[na:na]
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:509) ~[na:na]
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499) ~[na:na]
+	at java.base/java.util.stream.ForEachOps$ForEachOp.evaluateSequential(ForEachOps.java:151) ~[na:na]
+	at java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.evaluateSequential(ForEachOps.java:174) ~[na:na]
+	at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234) ~[na:na]
+	at java.base/java.util.stream.ReferencePipeline.forEach(ReferencePipeline.java:596) ~[na:na]
+	at com.ssafy.chat.common.handler.BaseChatWebSocketHandler.broadcastToRoom(BaseChatWebSocketHandler.java:181) ~[!/:0.0.1-SNAPSHOT]
+	at com.ssafy.chat.common.handler.BaseChatWebSocketHandler.handleMessage(BaseChatWebSocketHandler.java:93) ~[!/:0.0.1-SNAPSHOT]
+	at org.springframework.web.socket.handler.WebSocketHandlerDecorator.handleMessage(WebSocketHandlerDecorator.java:75) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.springframework.web.socket.handler.LoggingWebSocketHandlerDecorator.handleMessage(LoggingWebSocketHandlerDecorator.java:56) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.springframework.web.socket.handler.ExceptionWebSocketHandlerDecorator.handleMessage(ExceptionWebSocketHandlerDecorator.java:58) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.springframework.web.socket.adapter.standard.StandardWebSocketHandlerAdapter.handleTextMessage(StandardWebSocketHandlerAdapter.java:113) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.springframework.web.socket.adapter.standard.StandardWebSocketHandlerAdapter$3.onMessage(StandardWebSocketHandlerAdapter.java:84) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.springframework.web.socket.adapter.standard.StandardWebSocketHandlerAdapter$3.onMessage(StandardWebSocketHandlerAdapter.java:81) ~[spring-websocket-6.2.9.jar!/:6.2.9]
+	at org.apache.tomcat.websocket.WsFrameBase.sendMessageText(WsFrameBase.java:389) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.sendMessageText(WsFrameServer.java:130) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsFrameBase.processDataText(WsFrameBase.java:483) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsFrameBase.processData(WsFrameBase.java:283) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsFrameBase.processInputBuffer(WsFrameBase.java:129) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.onDataAvailable(WsFrameServer.java:85) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.doOnDataAvailable(WsFrameServer.java:184) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.notifyDataAvailable(WsFrameServer.java:164) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsHttpUpgradeHandler.upgradeDispatch(WsHttpUpgradeHandler.java:152) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.coyote.http11.upgrade.UpgradeProcessorInternal.dispatch(UpgradeProcessorInternal.java:60) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:57) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1769) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1189) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:658) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+
+2025-07-31T11:08:51.968+09:00 ERROR 25228 --- [chat] [nio-8086-exec-5] o.a.coyote.http11.Http11NioProtocol      : Error reading request, ignored
+
+java.lang.NoClassDefFoundError: org/apache/tomcat/websocket/WsRemoteEndpointImplBase$BlockingSendHandler
+	at org.apache.tomcat.websocket.WsRemoteEndpointImplBase.sendMessageBlockInternal(WsRemoteEndpointImplBase.java:283) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsRemoteEndpointImplBase.sendMessageBlock(WsRemoteEndpointImplBase.java:266) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsRemoteEndpointImplBase.sendMessageBlock(WsRemoteEndpointImplBase.java:257) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsSession.sendCloseMessage(WsSession.java:776) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsSession.onClose(WsSession.java:626) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsFrameBase.processDataControl(WsFrameBase.java:346) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsFrameBase.processData(WsFrameBase.java:278) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsFrameBase.processInputBuffer(WsFrameBase.java:129) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.onDataAvailable(WsFrameServer.java:85) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.doOnDataAvailable(WsFrameServer.java:184) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.notifyDataAvailable(WsFrameServer.java:164) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsHttpUpgradeHandler.upgradeDispatch(WsHttpUpgradeHandler.java:152) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.coyote.http11.upgrade.UpgradeProcessorInternal.dispatch(UpgradeProcessorInternal.java:60) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:57) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1769) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1189) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:658) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+Caused by: java.lang.ClassNotFoundException: org.apache.tomcat.websocket.WsRemoteEndpointImplBase$BlockingSendHandler
+	at java.base/java.net.URLClassLoader.findClass(URLClassLoader.java:445) ~[na:na]
+	at java.base/java.lang.ClassLoader.loadClass(ClassLoader.java:593) ~[na:na]
+	at org.springframework.boot.loader.net.protocol.jar.JarUrlClassLoader.loadClass(JarUrlClassLoader.java:107) ~[chat-0.0.1-SNAPSHOT.jar:0.0.1-SNAPSHOT]
+	at org.springframework.boot.loader.launch.LaunchedClassLoader.loadClass(LaunchedClassLoader.java:91) ~[chat-0.0.1-SNAPSHOT.jar:0.0.1-SNAPSHOT]
+	at java.base/java.lang.ClassLoader.loadClass(ClassLoader.java:526) ~[na:na]
+	... 21 common frames omitted
+
+2025-07-31T11:08:53.698+09:00  INFO 25228 --- [chat] [nio-8086-exec-6] c.s.c.c.WebSocketHandshakeInterceptor    : WebSocket 핸드셰이크 요청 - URI: http://localhost:8086/ws/game-chat/websocket?userId=test_user_001&userName=%ED%85%8C%EC%8A%A4%ED%8A%B8%EC%9C%A0%EC%A0%80&teamId=LG&userTeamId=LG
+2025-07-31T11:08:53.698+09:00  INFO 25228 --- [chat] [nio-8086-exec-6] c.s.c.c.WebSocketHandshakeInterceptor    : 쿼리 파라미터: {userId=test_user_001, userName=%ED%85%8C%EC%8A%A4%ED%8A%B8%EC%9C%A0%EC%A0%80, teamId=LG, userTeamId=LG}
+2025-07-31T11:08:53.698+09:00  INFO 25228 --- [chat] [nio-8086-exec-6] c.s.c.c.WebSocketHandshakeInterceptor    : 핸드셰이크 성공 - userId: test_user_001
+2025-07-31T11:08:53.705+09:00  INFO 25228 --- [chat] [nio-8086-exec-6] c.s.c.c.WebSocketHandshakeInterceptor    : 핸드셰이크 완료
+2025-07-31T11:08:53.705+09:00  INFO 25228 --- [chat] [nio-8086-exec-6] c.s.c.w.h.GameChatWebSocketHandler       : 채팅방 입장 검증 - 채팅방팀: LG, 사용자팀: LG
+2025-07-31T11:08:53.705+09:00  INFO 25228 --- [chat] [nio-8086-exec-6] c.s.c.w.h.GameChatWebSocketHandler       : 팀 일치 - 입장 허용
+2025-07-31T11:08:53.705+09:00  INFO 25228 --- [chat] [nio-8086-exec-6] c.s.c.w.h.GameChatWebSocketHandler       : 게임 채팅방 입장 완료 - teamId: LG, userId: test_user_001
+2025-07-31T11:08:53.705+09:00  INFO 25228 --- [chat] [nio-8086-exec-6] c.s.c.c.h.BaseChatWebSocketHandler       : WebSocket 연결 성공 - userId: test_user_001, sessionId: 0e4d7ac7-81bb-6953-2449-e50a52586bbe
+2025-07-31T11:08:55.881+09:00 ERROR 25228 --- [chat] [nio-8086-exec-7] o.a.coyote.http11.Http11NioProtocol      : Error reading request, ignored
+
+java.lang.NoClassDefFoundError: org/apache/tomcat/websocket/WsRemoteEndpointImplBase$BlockingSendHandler
+	at org.apache.tomcat.websocket.WsRemoteEndpointImplBase.sendMessageBlockInternal(WsRemoteEndpointImplBase.java:283) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsRemoteEndpointImplBase.sendMessageBlock(WsRemoteEndpointImplBase.java:266) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsRemoteEndpointImplBase.sendMessageBlock(WsRemoteEndpointImplBase.java:257) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsSession.sendCloseMessage(WsSession.java:776) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsSession.onClose(WsSession.java:626) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsFrameBase.processDataControl(WsFrameBase.java:346) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsFrameBase.processData(WsFrameBase.java:278) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsFrameBase.processInputBuffer(WsFrameBase.java:129) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.onDataAvailable(WsFrameServer.java:85) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.doOnDataAvailable(WsFrameServer.java:184) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.notifyDataAvailable(WsFrameServer.java:164) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsHttpUpgradeHandler.upgradeDispatch(WsHttpUpgradeHandler.java:152) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.coyote.http11.upgrade.UpgradeProcessorInternal.dispatch(UpgradeProcessorInternal.java:60) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:57) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1769) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1189) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:658) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+Caused by: java.lang.ClassNotFoundException: org.apache.tomcat.websocket.WsRemoteEndpointImplBase$BlockingSendHandler
+	... 21 common frames omitted
+
+2025-07-31T11:09:02.533+09:00 ERROR 25228 --- [chat] [nio-8086-exec-8] o.a.coyote.http11.Http11NioProtocol      : Error reading request, ignored
+
+java.lang.NoClassDefFoundError: org/apache/tomcat/websocket/WsRemoteEndpointImplBase$BlockingSendHandler
+	at org.apache.tomcat.websocket.WsRemoteEndpointImplBase.sendMessageBlockInternal(WsRemoteEndpointImplBase.java:283) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsRemoteEndpointImplBase.sendMessageBlock(WsRemoteEndpointImplBase.java:266) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsRemoteEndpointImplBase.sendMessageBlock(WsRemoteEndpointImplBase.java:257) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsSession.sendCloseMessage(WsSession.java:776) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsSession.onClose(WsSession.java:626) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsFrameBase.processDataControl(WsFrameBase.java:346) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsFrameBase.processData(WsFrameBase.java:278) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.WsFrameBase.processInputBuffer(WsFrameBase.java:129) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.onDataAvailable(WsFrameServer.java:85) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.doOnDataAvailable(WsFrameServer.java:184) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsFrameServer.notifyDataAvailable(WsFrameServer.java:164) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.tomcat.websocket.server.WsHttpUpgradeHandler.upgradeDispatch(WsHttpUpgradeHandler.java:152) ~[tomcat-embed-websocket-10.1.43.jar!/:na]
+	at org.apache.coyote.http11.upgrade.UpgradeProcessorInternal.dispatch(UpgradeProcessorInternal.java:60) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:57) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1769) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1189) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:658) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63) ~[tomcat-embed-core-10.1.43.jar!/:na]
+	at java.base/java.lang.Thread.run(Thread.java:1583) ~[na:na]
+Caused by: java.lang.ClassNotFoundException: org.apache.tomcat.websocket.WsRemoteEndpointImplBase$BlockingSendHandler
+	... 21 common frames omitted
+

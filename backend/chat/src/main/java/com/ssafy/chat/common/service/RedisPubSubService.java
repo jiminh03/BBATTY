@@ -1,41 +1,32 @@
-
-package com.ssafy.bbatty.domain.chat.common.service;
-import org.springframework.data.redis.listener.ChannelTopic;
+package com.ssafy.chat.common.service;
 
 import java.util.Map;
+
+/**
+ * Redis Pub/Sub 서비스 인터페이스
+ */
 public interface RedisPubSubService {
+    
     /**
-     * 메시지 발행 (publish)
-     * @param roomId 채팅방 ID (예: "game123_tigers")
-     * @param message 전송할 메시지 (예: Map 형태)
+     * 메시지 발행
      */
-    void publishMessage(String roomId, Map<String, Object> message);
-
+    void publishMessage(String channel, Map<String, Object> message);
+    
     /**
-     * 채널 구독 (Subscribe)
-     * @param roomId 채팅방 ID
-     * @param messageHandler 메시지 처리 핸들러
+     * 채널 구독
      */
-    void subscribeToRoom(String roomId, ChatMessageHandler messageHandler);
-
+    void subscribeToRoom(String roomId, ChatMessageHandler handler);
+    
     /**
      * 채널 구독 해제
-     * @param roomId 채팅방 ID
      */
     void unsubscribeFromRoom(String roomId);
-
+    
     /**
-     * 현재 구독중인 채널 목록 조회 (디버깅용)
-     * @return Map<String, ChannelTopic> 채널 목록
+     * 메시지 핸들러 인터페이스
      */
-    Map<String, ChannelTopic> getSubscribedChannels();
-
-    /**
-     * 채팅 메시지 처리 핸들러 인터페이스
-     */
-    interface ChatMessageHandler
-    {
-        void handleMessage(String roomId, Map<String, Object> message);
+    @FunctionalInterface
+    interface ChatMessageHandler {
+        void handle(String roomId, Map<String, Object> message);
     }
-
 }

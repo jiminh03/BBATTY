@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 /**
- * 공통 채팅 메시지 DTO
+ * 공통 채팅 메시지 DTO (기본 구조)
  */
 @Data
 @Builder
@@ -20,15 +20,12 @@ public class ChatMessage {
     private MessageType messageType;
 
     // 채팅방 ID
-    private String roomID;
-
-    // 사용자 닉네임
-    private String nickname;
+    private String roomId;
 
     // 메시지 내용
     private String content;
 
-    // 메시지 전송시간 (예: 2025-07-30T13:10:00)
+    // 메시지 전송시간 (서버에서 설정)
     private LocalDateTime timestamp;
 
 }

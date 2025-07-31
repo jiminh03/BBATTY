@@ -1,8 +1,6 @@
-package com.ssafy.bbatty.domain.chat.common.handler;
+package com.ssafy.chat.common.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ssafy.bbatty.domain.chat.game.service.GameChatUserService;
-import com.ssafy.bbatty.domain.chat.game.service.GameChatUserServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.socket.*;
 
@@ -18,11 +16,9 @@ public abstract class BaseChatWebSocketHandler implements WebSocketHandler {
     protected final ObjectMapper objectMapper;
     protected final Map<String, WebSocketSession> connectedUsers = new ConcurrentHashMap<>();
     protected final Map<WebSocketSession, UserSessionInfo> sessionToUser = new ConcurrentHashMap<>();
-    protected final GameChatUserService gameChatUserService;
 
-    public BaseChatWebSocketHandler(ObjectMapper objectMapper, GameChatUserService gameChatUserService) {
+    public BaseChatWebSocketHandler(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
-        this.gameChatUserService = gameChatUserService;
     }
 
     @Override
@@ -62,10 +58,6 @@ public abstract class BaseChatWebSocketHandler implements WebSocketHandler {
                 // 세션 정보 제거
                 connectedUsers.remove(userInfo.getUserId());
                 sessionToUser.remove(session);
-                // 연결 해제시 리소스 정리 보장
-                if (gameChatUserService.getConnectedUserCount(teamId) == 0) {
-                    unsubscribeFromTeamChat(teamId);
-                }
 
                 log.info("WebSocket 연결 종료 - userId: {}, status: {}",
                         userInfo.getUserId(), status);
@@ -160,10 +152,9 @@ public abstract class BaseChatWebSocketHandler implements WebSocketHandler {
     protected Map<String, Object> createChatMessage(UserSessionInfo userInfo, String content) {
         Map<String, Object> message = new ConcurrentHashMap<>();
         message.put("type", "message");
-        message.put("userId", userInfo.getUserId());
-        message.put("userName", userInfo.getUserName());
+        message.put("nickname", userInfo.getUserName());  // nickname으로 변경
         message.put("content", content);
-        message.put("timestamp", System.currentTimeMillis());
+        message.put("timestamp", java.time.LocalDateTime.now().toString()); // String으로 변경
         return message;
     }
 
@@ -224,6 +215,4 @@ public abstract class BaseChatWebSocketHandler implements WebSocketHandler {
             additionalInfo.put(key, value);
         }
     }
-    protected abstract void unsubscribeFromTeamChat(String teamId);
-
 }
