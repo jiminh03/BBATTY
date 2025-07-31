@@ -18,13 +18,12 @@ public class PostListResponse {
     private String createdAt;
     private Long viewCount;
     private Long likeCount;
+    private Integer commentCount;
 
     public PostListResponse(Post post) {
         this.id = post.getId();
         this.title = post.getTitle();
         this.nickname = post.getUser().getNickname();
-        this.createdAt = post.getCreatedAt().toString();;
-        this.viewCount = post.getViewCount();
-        this.likeCount = post.getLikeCount();
+        this.createdAt = post.getCreatedAt().toString();
     }
 }

@@ -66,7 +66,7 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
-      redis:
+      chat-redis:
         condition: service_started
     networks:
       - app-network
@@ -75,7 +75,7 @@ services:
       SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
 
-      SPRING_DATA_REDIS_HOST: redis-cache
+      SPRING_DATA_REDIS_HOST: chat-redis
       SPRING_DATA_REDIS_PORT: 6379
 
       CLOUD_AWS_CREDENTIALS_ACCESS_KEY: ${CLOUD_AWS_CREDENTIALS_ACCESS_KEY}
@@ -133,10 +133,23 @@ services:
     networks:
       - app-network
 
+  # 새로운 Redis (chat용)
+  chat-redis:
+    image: redis:alpine
+    container_name: redis-chat
+    restart: always
+    ports:
+      - "6380:6379"
+    volumes:
+      - chat_redis_data:/data
+    networks:
+      - app-network
+
 volumes:
   mysql_data:
   jenkins_data:
   redis_data:
+  chat_redis_data:
 
 networks:
   app-network:

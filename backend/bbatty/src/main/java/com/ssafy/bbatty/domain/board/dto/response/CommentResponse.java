@@ -25,18 +25,17 @@ public class CommentResponse {
 
     public CommentResponse(Comment comment) {
         this.id = comment.getId();
-        this.content = comment.getContent();
+        this.content = comment.getIsDeleted() ? "삭제된 댓글입니다." : comment.getContent();
         this.nickname = comment.getUser().getNickname();
         this.profileImg = comment.getUser().getProfileImg();
         this.createdAt = comment.getCreatedAt().toString();
         this.updatedAt = comment.getUpdatedAt().toString();
         this.depth = comment.getDepth();
-        // replies는 서비스에서 별도로 설정
     }
 
     public CommentResponse(Comment comment, List<CommentResponse> replies) {
         this.id = comment.getId();
-        this.content = comment.getContent();
+        this.content = comment.getIsDeleted() ? "삭제된 댓글입니다." : comment.getContent();
         this.nickname = comment.getUser().getNickname();
         this.profileImg = comment.getUser().getProfileImg();
         this.createdAt = comment.getCreatedAt().toString();

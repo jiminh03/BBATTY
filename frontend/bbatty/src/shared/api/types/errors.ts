@@ -1,5 +1,6 @@
 export const ErrorCodes = {
   // 인증 관련 에러
+  AUTH_TOKEN_EXPIRED: "AUTH_TOKEN_EXPIRED",
   AUTH_PERMISSION_DENIED: "AUTH_PERMISSION_DENIED",
 
   // 사용자 관련 에러
@@ -7,6 +8,9 @@ export const ErrorCodes = {
 
   // 서버 관련 에러
   SERVER_ERROR: "SERVER_ERROR",
+
+  // 네트워크 관련 에러
+  NETWORK_ERROR: "NETWORK_ERROR",
 } as const;
 
 export type ErrorCode = (typeof ErrorCodes)[keyof typeof ErrorCodes];
@@ -21,11 +25,15 @@ export interface ApiError {
 
 //Record : 모든 키에 대해 값이 존재함을 타입 레벨에서 보장
 export const ErrorMessages: Record<ErrorCode, string> = {
+  [ErrorCodes.AUTH_TOKEN_EXPIRED]:
+    "로그인이 만료되었습니다. 다시 로그인해주세요.",
   [ErrorCodes.AUTH_PERMISSION_DENIED]: "권한이 없습니다.",
 
   [ErrorCodes.USER_NOT_FOUND]: "존재하지 않는 사용자입니다.",
 
   [ErrorCodes.SERVER_ERROR]: "서버 오류가 발생했습니다.",
+
+  [ErrorCodes.NETWORK_ERROR]: "네트워크 연결을 확인해주세요.",
 };
 
 export const createApiError = (

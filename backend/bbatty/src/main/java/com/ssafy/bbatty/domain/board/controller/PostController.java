@@ -4,6 +4,7 @@ import com.ssafy.bbatty.domain.board.dto.request.PostCreateRequest;
 import com.ssafy.bbatty.domain.board.dto.response.PostCreateResponse;
 import com.ssafy.bbatty.domain.board.dto.response.PostDetailResponse;
 import com.ssafy.bbatty.domain.board.dto.response.PostListPageResponse;
+import com.ssafy.bbatty.domain.board.service.PostCountService;
 import com.ssafy.bbatty.domain.board.service.PostService;
 import com.ssafy.bbatty.domain.board.service.PostImageService;
 import com.ssafy.bbatty.global.constants.ErrorCode;
@@ -17,9 +18,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
 
 @RestController
 @RequestMapping("/api/posts")
@@ -28,14 +26,14 @@ public class PostController {
     
     private final PostService postService;
     private final S3Service s3Service;
-    private final PostImageService postImageService;
+    private final PostCountService postCountService;
 
     // 게시물 생성
     @PostMapping
     public ResponseEntity<ApiResponse<PostCreateResponse>> createPost(
             @Valid @RequestBody PostCreateRequest request,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
-        
+
         PostCreateResponse response = postService.createPost(request, userPrincipal.getUserId());
         return ResponseEntity.status(SuccessCode.SUCCESS_CREATED.getStatus())
                 .body(ApiResponse.success(SuccessCode.SUCCESS_CREATED, response));
@@ -46,9 +44,8 @@ public class PostController {
     public ResponseEntity<ApiResponse<Void>> deletePost(
             @PathVariable Long postId,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
-        
+
         postService.deletePost(postId, userPrincipal.getUserId());
-        
         return ResponseEntity.status(SuccessCode.SUCCESS_DELETED.getStatus())
                 .body(ApiResponse.success(SuccessCode.SUCCESS_DELETED));
     }
@@ -62,7 +59,7 @@ public class PostController {
         return ResponseEntity.ok(response);
     }
 
-    // 팀 별 게시글 조회
+    // 팀 별 게시글 목록 조회
     @GetMapping("/team/{teamId}")
     public ResponseEntity<PostListPageResponse> getPostListByTeam(
             @PathVariable Long teamId,
@@ -75,14 +72,16 @@ public class PostController {
     // 게시글 상세 조회
     @GetMapping("/{postId}")
     public ResponseEntity<ApiResponse<PostDetailResponse>> getPostDetail(
-            @PathVariable Long postId) {
+            @PathVariable Long postId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
 
-        PostDetailResponse response = postService.getPostDetail(postId);
+        PostDetailResponse response = postService.getPostDetail(postId, userPrincipal.getUserId());
         
         return ResponseEntity.status(SuccessCode.SUCCESS_DEFAULT.getStatus())
                 .body(ApiResponse.success(SuccessCode.SUCCESS_DEFAULT, response));
     }
 
+    // 사용자에 대한 게시물 조회
     @GetMapping("/user/{userId}")
     public ResponseEntity<ApiResponse<PostListPageResponse>> getPostListByUser(
             @PathVariable Long userId,
@@ -97,9 +96,10 @@ public class PostController {
      * 게시글 좋아요 (앱에서 사용자 좋아요 기록은 따로 저장)
      */
     @PostMapping("/{postId}/like")
-    public ResponseEntity<?> likePost(@PathVariable Long postId) {
+    public ResponseEntity<?> likePost(@PathVariable Long postId,
+                                      @AuthenticationPrincipal UserPrincipal userPrincipal) {
         // 좋아요 수 증가 (Redis에만 증가 되고 나중에 RDB에 반영된다.)
-        postService.incrementLikeCount(postId);
+        postCountService.incrementLikeCount(postId, userPrincipal.getUserId());
 
         return ResponseEntity.status(SuccessCode.SUCCESS_DEFAULT.getStatus())
                 .body(ApiResponse.success(SuccessCode.SUCCESS_DEFAULT));
@@ -109,45 +109,31 @@ public class PostController {
      * 게시글 좋아요 취소 (프론트에서 현재 좋아요 수 전달)
      */
     @DeleteMapping("/{postId}/like")
-    public ResponseEntity<?> unlikePost(@PathVariable Long postId) {
+    public ResponseEntity<?> unlikePost(@PathVariable Long postId,
+                                        @AuthenticationPrincipal UserPrincipal userPrincipal) {
 
-        // 좋아요 수 감소 (Redis에만 감소 되고 나중에 RDB에 반영된다.)
-        postService.decrementLikeCount(postId);
+        postCountService.decrementLikeCount(postId, userPrincipal.getUserId());
 
         return ResponseEntity.status(SuccessCode.SUCCESS_DEFAULT.getStatus())
                 .body(ApiResponse.success(SuccessCode.SUCCESS_DEFAULT));
     }
 
-
-    // 이미지 업로드
-    @PostMapping("/upload-image")
-    public ResponseEntity<ApiResponse<String>> uploadImage(
-            @RequestParam("file") MultipartFile file) {
-
+    /**
+     * 이미지 업로드를 위한 Presigned URL 생성
+     */
+    @PostMapping("/images/presigned-url")
+    public ResponseEntity<ApiResponse<S3Service.PresignedUrlResponse>> generatePresignedUrl(
+            @RequestParam String filename,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        
         try {
-            // 파일 존재 검증
-            if (file.isEmpty()) {
-                throw new ApiException(ErrorCode.FILE_EMPTY);
-            }
-
-            // 파일 크기 검증 (10MB)
-            if (file.getSize() > 10 * 1024 * 1024) {
-                throw new ApiException(ErrorCode.FILE_SIZE_EXCEEDED);
-            }
-
-            String filePath = s3Service.uploadFile(file, "posts");
-            String fileUrl = s3Service.getPublicUrl(filePath);
-
-            // PostImage 엔티티에 UPLOADED 상태로 임시 저장 (post_id는 null)
-            postImageService.saveUploadedImage(fileUrl);
-
-            return ResponseEntity.status(SuccessCode.SUCCESS_CREATED.getStatus())
-                    .body(ApiResponse.success(SuccessCode.SUCCESS_CREATED, fileUrl));
-
-        } catch (IOException e) {
-            throw new ApiException(ErrorCode.FILE_FAILED);
+            S3Service.PresignedUrlResponse response = s3Service.generatePresignedUploadUrlWithPath("posts", filename);
+            
+            return ResponseEntity.status(SuccessCode.SUCCESS_DEFAULT.getStatus())
+                    .body(ApiResponse.success(SuccessCode.SUCCESS_DEFAULT, response));
+        } catch (IllegalArgumentException e) {
+            throw new ApiException(ErrorCode.INVALID_FILE_PATH);
         }
     }
-
 
 }
