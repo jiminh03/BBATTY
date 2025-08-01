@@ -100,8 +100,8 @@ public abstract class BaseChatWebSocketHandler implements WebSocketHandler {
                 Map<String, Object> processedMessage = handleDomainMessage(session, userInfo, messageContent);
 
                 if (processedMessage != null) {
-                    // 같은 방의 다른 사용자들에게 브로드캐스트 (발신자 제외)
-                    broadcastToRoom(userInfo.getRoomId(), processedMessage, session);
+                    // 같은 방의 모든 사용자들에게 브로드캐스트
+                    broadcastToRoom(userInfo.getRoomId(), processedMessage);
                 }
             }
 
