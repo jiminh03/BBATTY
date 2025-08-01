@@ -1,6 +1,7 @@
 package com.ssafy.chat.match.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ssafy.chat.common.dto.UserSessionInfo;
 import com.ssafy.chat.common.handler.BaseChatWebSocketHandler;
 import com.ssafy.chat.common.service.RedisPubSubService;
 import lombok.extern.slf4j.Slf4j;
@@ -58,6 +59,12 @@ public class MatchChatWebSocketHandler extends BaseChatWebSocketHandler {
             log.error("매칭 채팅방 입장 검증 실패 - userId: {}", userInfo.getUserId(), e);
             return false;
         }
+    }
+
+    @Override
+    protected void handleConnectionManagement(WebSocketSession session, UserSessionInfo userInfo) {
+        // 매칭 채팅: 여러 세션 허용 (별도 처리 없음)
+        log.info("매칭 채팅 - 다중 세션 허용 - userId: {}", userInfo.getUserId());
     }
 
     @Override

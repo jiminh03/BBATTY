@@ -1,5 +1,6 @@
 package com.ssafy.bbatty.domain.board.service;
 
+import com.ssafy.bbatty.domain.board.common.LikeAction;
 import com.ssafy.bbatty.domain.board.entity.Post;
 import com.ssafy.bbatty.domain.board.entity.PostLike;
 import com.ssafy.bbatty.domain.board.entity.PostView;
@@ -48,7 +49,9 @@ public class PostCountServiceImpl implements PostCountService {
         Long count = redisUtil.getValue(key, Long.class);
         
         if (count == null) {
-            count = postLikeRepository.countByPostId(postId);
+            Long likeCount = postLikeRepository.countLikesByPostId(postId);
+            Long unlikeCount = postLikeRepository.countUnlikesByPostId(postId);
+            count = likeCount - unlikeCount;
             redisUtil.setValue(key, count);
         }
         
@@ -98,7 +101,7 @@ public class PostCountServiceImpl implements PostCountService {
         User user = userRepository.findById(userId).orElse(null);
 
         if (post != null && user != null) {
-            PostLike postLike = new PostLike(user, post, true);
+            PostLike postLike = new PostLike(user, post, LikeAction.LIKE);
             postLikeRepository.save(postLike);
         }
 
@@ -108,7 +111,9 @@ public class PostCountServiceImpl implements PostCountService {
             Long currentCount = redisUtil.getValue(key, Long.class);
             redisUtil.setValue(key, currentCount + 1);
         } else {
-            Long dbCount = postLikeRepository.countByPostId(postId);
+            Long likeCount = postLikeRepository.countLikesByPostId(postId);
+            Long unlikeCount = postLikeRepository.countUnlikesByPostId(postId);
+            Long dbCount = likeCount - unlikeCount;
             redisUtil.setValue(key, dbCount);
         }
     }
@@ -116,12 +121,12 @@ public class PostCountServiceImpl implements PostCountService {
     @Override
     @Transactional
     public void decrementLikeCount(Long postId, Long userId) {
-        // 1. PostLike 테이블에 좋아요 취소 기록 저장 (isDeleted = true)
+        // 1. PostLike 테이블에 좋아요 취소 기록 저장 (UNLIKE)
         Post post = postRepository.findById(postId).orElse(null);
         User user = userRepository.findById(userId).orElse(null);
 
         if (post != null && user != null) {
-            PostLike postLike = new PostLike(user, post, true);
+            PostLike postLike = new PostLike(user, post, LikeAction.UNLIKE);
             postLikeRepository.save(postLike);
         }
 
@@ -133,7 +138,9 @@ public class PostCountServiceImpl implements PostCountService {
                 redisUtil.setValue(key, currentCount - 1);
             }
         } else {
-            Long dbCount = postLikeRepository.countByPostId(postId);
+            Long likeCount = postLikeRepository.countLikesByPostId(postId);
+            Long unlikeCount = postLikeRepository.countUnlikesByPostId(postId);
+            Long dbCount = likeCount - unlikeCount;
             redisUtil.setValue(key, dbCount > 0 ? dbCount - 1 : 0);
         }
     }
@@ -145,7 +152,9 @@ public class PostCountServiceImpl implements PostCountService {
         String commentKey = COMMENT_COUNT_KEY + postId;
         
         Long viewCount = postViewRepository.countByPostId(postId);
-        Long likeCount = postLikeRepository.countByPostId(postId);
+        Long likes = postLikeRepository.countLikesByPostId(postId);
+        Long unlikes = postLikeRepository.countUnlikesByPostId(postId);
+        Long likeCount = likes - unlikes;
         Long commentCount = commentRepository.countByPostId(postId);
         
         redisUtil.setValue(viewKey, viewCount);

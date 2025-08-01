@@ -12,6 +12,7 @@ import com.ssafy.bbatty.global.constants.SuccessCode;
 import com.ssafy.bbatty.global.exception.ApiException;
 import com.ssafy.bbatty.global.response.ApiResponse;
 import com.ssafy.bbatty.global.s3.S3Service;
+import com.ssafy.bbatty.global.security.UserPrincipal;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -91,9 +92,7 @@ public class PostController {
                 .body(ApiResponse.success(SuccessCode.SUCCESS_DEFAULT, response));
     }
 
-    /**
-     * 게시글 좋아요 (앱에서 사용자 좋아요 기록은 따로 저장)
-     */
+    //게시글 좋아요 (앱에서 사용자 좋아요 기록은 따로 저장)
     @PostMapping("/{postId}/like")
     public ResponseEntity<?> likePost(@PathVariable Long postId,
                                       @AuthenticationPrincipal UserPrincipal userPrincipal) {
