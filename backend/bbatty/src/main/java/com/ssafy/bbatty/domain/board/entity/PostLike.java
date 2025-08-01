@@ -1,5 +1,6 @@
 package com.ssafy.bbatty.domain.board.entity;
 
+import com.ssafy.bbatty.domain.board.common.LikeAction;
 import com.ssafy.bbatty.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -25,9 +26,11 @@ public class PostLike {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "post_id", nullable = false)
     private Post post;
-    
-    @Column(name = "is_deleted", nullable = false)
-    private Boolean isDeleted = false;
+
+    // LIKE 또는 UNLIKE
+    @Enumerated(EnumType.STRING)
+    @Column(name = "like_action", nullable = false)
+    private LikeAction likeAction;
     
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
@@ -35,9 +38,9 @@ public class PostLike {
     
     public PostLike() {}
     
-    public PostLike(User user, Post post, Boolean isDeleted) {
+    public PostLike(User user, Post post, LikeAction likeAction) {
         this.user = user;
         this.post = post;
-        this.isDeleted = isDeleted;
+        this.likeAction = likeAction;
     }
 }

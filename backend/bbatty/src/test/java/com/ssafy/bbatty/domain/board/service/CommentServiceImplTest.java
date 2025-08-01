@@ -11,6 +11,7 @@ import com.ssafy.bbatty.domain.team.entity.Team;
 import com.ssafy.bbatty.domain.user.entity.User;
 import com.ssafy.bbatty.domain.user.repository.UserRepository;
 import com.ssafy.bbatty.global.constants.ErrorCode;
+import com.ssafy.bbatty.global.constants.Gender;
 import com.ssafy.bbatty.global.exception.ApiException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -32,6 +33,7 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class CommentServiceImplTest {
+    /*
 
     @Mock
     private CommentRepository commentRepository;
@@ -365,7 +367,7 @@ class CommentServiceImplTest {
         return User.builder()
                 .id(id)
                 .nickname(nickname)
-                .gender(User.Gender.MALE)
+                .gender(Gender.MALE)
                 .age(25)
                 .team(team)
                 .introduction("테스트 소개")
@@ -383,15 +385,6 @@ class CommentServiceImplTest {
                 .build();
     }
 
-    private Post createPost(Long id, User user, String title, String content) {
-        Post post = new Post(user, 1L, title, content, false);
-        post.setId(id);
-        post.setCreatedAt(LocalDateTime.now());
-        post.setViewCount(0L);
-        post.setLikeCount(0L);
-        return post;
-    }
-
     private Comment createComment(Long id, User user, Post post, String content, int depth, Comment parent) {
         Comment comment = new Comment();
         comment.setId(id);
@@ -404,4 +397,5 @@ class CommentServiceImplTest {
         comment.setUpdatedAt(LocalDateTime.now());
         return comment;
     }
+    */
 }

@@ -20,12 +20,12 @@ public class Post {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "team_id", nullable = false)
+    private Long teamId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
-
-    @Column(name = "team_id", nullable = false)
-    private Long teamId;
     
     @Column(name = "title", nullable = false, length = 100)
     private String title;

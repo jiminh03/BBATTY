@@ -92,7 +92,7 @@ public class JwtProvider {
                     .build()
                     .parseSignedClaims(token)
                     .getPayload();
-        } catch (SecurityException | MalformedJwtException e) {
+        } catch (SecurityException | MalformedJwtException | io.jsonwebtoken.security.SignatureException e) {
             log.warn("잘못된 JWT 서명입니다: {}", e.getMessage());
             throw new ApiException(ErrorCode.INVALID_TOKEN);
         } catch (ExpiredJwtException e) {

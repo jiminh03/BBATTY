@@ -1,6 +1,7 @@
 package com.ssafy.bbatty.domain.team.controller;
 
 import com.ssafy.bbatty.domain.team.entity.Team;
+import com.ssafy.bbatty.domain.team.service.TeamService;
 import com.ssafy.bbatty.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,7 +17,7 @@ import java.util.List;
 @RequestMapping("/api/teams")
 @RequiredArgsConstructor
 public class TeamController {
-
+/*
     private final TeamService teamService;
 
     @GetMapping
@@ -26,5 +27,5 @@ public class TeamController {
         return ResponseEntity.ok(
             ApiResponse.success(teams)
         );
-    }
+    }*/
 }

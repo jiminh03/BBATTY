@@ -5,7 +5,9 @@ import com.ssafy.bbatty.domain.auth.dto.request.SignupRequest;
 import com.ssafy.bbatty.domain.auth.dto.response.AuthResponse;
 import com.ssafy.bbatty.domain.auth.dto.response.TokenPair;
 import com.ssafy.bbatty.domain.auth.service.AuthService;
+import com.ssafy.bbatty.global.constants.ErrorCode;
 import com.ssafy.bbatty.global.constants.SuccessCode;
+import com.ssafy.bbatty.global.exception.ApiException;
 import com.ssafy.bbatty.global.response.ApiResponse;
 import com.ssafy.bbatty.global.security.JwtProvider;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,7 +24,7 @@ import org.springframework.web.bind.annotation.*;
  * - 로그아웃
  *
  * 📱 프론트엔드 개발자를 위한 API 가이드:
- * 1. POST /auth/kakao/login - 카카오 로그인 (기존 사용자)
+ * 1. POST /auth/login - 카카오 로그인 (기존 사용자)
  * 2. POST /auth/signup - 회원가입 (신규 사용자)
  * 3. POST /auth/refresh - 토큰 갱신
  * 4. POST /auth/logout - 로그아웃
@@ -102,12 +104,14 @@ public class AuthController {
     }
 
     /**
-     * 리프레시 토큰 추출 (헤더 또는 파라미터)
+     * 리프레시 토큰 추출 (헤더에서만)
+     * 보안상 URL 파라미터는 로그에 노출될 위험이 있어 제외
      */
     private String extractRefreshToken(HttpServletRequest request) {
         String refreshToken = request.getHeader("X-Refresh-Token");
-        if (refreshToken == null) {
-            refreshToken = request.getParameter("refreshToken");
+
+        if (refreshToken == null || refreshToken.trim().isEmpty()) {
+            throw new ApiException(ErrorCode.REFRESH_TOKEN_MISSING);
         }
         return refreshToken;
     }

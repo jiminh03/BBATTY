@@ -21,7 +21,7 @@ public enum ErrorCode {
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증이 필요해요."),
     BAD_REQUEST(HttpStatus.BAD_REQUEST, "잘못된 요청이에요."),
     SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 오류가 발생했어요."),
-    
+
     // FILE PATH
     INVALID_FILE_PATH(HttpStatus.BAD_REQUEST, "파일 확장자가 유효하지 않아요."),
     FILE_PATH_SECURITY_VIOLATION(HttpStatus.BAD_REQUEST, "허용되지 않는 파일 경로예요."),
@@ -37,6 +37,12 @@ public enum ErrorCode {
     TEAM_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 팀이에요."),
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 토큰이에요."),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 사용자에요."),
+    SHA_256_NOT_FOUND(HttpStatus.INTERNAL_SERVER_ERROR, "SHA-256 알고리즘을 찾을 수 없어요."),
+    REFRESH_TOKEN_MISSING(HttpStatus.NOT_FOUND, "존재하지 않는 리프레쉬 토큰이에요."),
+
+    // Redis 관련 에러코드
+    REDIS_CONNECTION_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "Redis 서버에 연결할 수 없어요."),
+    REDIS_OPERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "Redis 작업 처리 중 오류가 발생했어요."),
 
     // 카카오 정보 관련 에러
     KAKAO_EMAIL_INFO_REQUIRED(HttpStatus.BAD_REQUEST, "카카오에서 이메일 정보를 가져올 수 없어요."),
