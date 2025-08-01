@@ -1,6 +1,7 @@
 package com.ssafy.bbatty.domain.team.controller;
 
 import com.ssafy.bbatty.domain.team.entity.Team;
+import com.ssafy.bbatty.domain.team.service.TeamService;
 import com.ssafy.bbatty.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

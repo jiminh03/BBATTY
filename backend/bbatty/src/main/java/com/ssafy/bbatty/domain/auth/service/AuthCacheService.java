@@ -1,13 +1,20 @@
 package com.ssafy.bbatty.domain.auth.service;
 
+import com.ssafy.bbatty.global.constants.ErrorCode;
 import com.ssafy.bbatty.global.constants.RedisKey;
+import com.ssafy.bbatty.global.exception.ApiException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.Date;
+
+import static com.ssafy.bbatty.global.constants.ErrorCode.SHA_256_NOT_FOUND;
 
 /**
  * 인증 도메인 전용 Redis 서비스
@@ -43,9 +50,18 @@ public class AuthCacheService {
     }
 
     /**
-     * 토큰 보안을 위한 해시 처리
+     * 토큰 보안을 위한 SHA-256 해시 처리
+     * - 충돌 가능성 최소화
+     * - 보안 표준 준수
      */
     private String hashToken(String token) {
-        return String.valueOf(token.hashCode());
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
+            // Base64 인코딩
+            return java.util.Base64.getEncoder().encodeToString(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new ApiException(ErrorCode.SHA_256_NOT_FOUND);
+        }
     }
 }
