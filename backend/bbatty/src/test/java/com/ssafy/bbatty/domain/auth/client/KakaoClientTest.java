@@ -232,10 +232,10 @@ class KakaoClientTest {
     // Helper method
     private KakaoUserResponse createMockKakaoUserResponse() {
         KakaoUserResponse mockResponse = mock(KakaoUserResponse.class);
-        when(mockResponse.getKakaoId()).thenReturn("12345");
-        when(mockResponse.getEmail()).thenReturn("test@kakao.com");
-        when(mockResponse.getBirthYear()).thenReturn("1990");
-        when(mockResponse.getGender()).thenReturn("male");
+        lenient().when(mockResponse.getKakaoId()).thenReturn("12345");
+        lenient().when(mockResponse.getEmail()).thenReturn("test@kakao.com");
+        lenient().when(mockResponse.getBirthYear()).thenReturn("1990");
+        lenient().when(mockResponse.getGender()).thenReturn("male");
         return mockResponse;
     }
 }
