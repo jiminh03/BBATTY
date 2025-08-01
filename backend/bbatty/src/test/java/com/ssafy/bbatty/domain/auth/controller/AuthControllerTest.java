@@ -8,6 +8,7 @@ import com.ssafy.bbatty.domain.auth.dto.response.TokenPair;
 import com.ssafy.bbatty.domain.auth.service.AuthService;
 import com.ssafy.bbatty.global.constants.ErrorCode;
 import com.ssafy.bbatty.global.exception.ApiException;
+import com.ssafy.bbatty.global.exception.GlobalExceptionHandler;
 import com.ssafy.bbatty.global.security.JwtProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -33,15 +34,17 @@ class AuthControllerTest {
 
     @Mock private AuthService authService;
     @Mock private JwtProvider jwtProvider;
-    
+
     @InjectMocks private AuthController authController;
-    
+
     private MockMvc mockMvc;
     private ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(authController).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(authController)
+                .setControllerAdvice(new GlobalExceptionHandler()) // 글로벌 예외 핸들러 추가
+                .build();
     }
 
     @Test
@@ -58,7 +61,7 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.tokens.accessToken").value("access-token"))
                 .andExpect(jsonPath("$.data.userInfo.userId").value(1))
                 .andExpect(jsonPath("$.data.userInfo.nickname").value("testUser"));
@@ -80,7 +83,8 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.success").value(false));
+                .andExpect(jsonPath("$.status").value("ERROR"))
+                .andExpect(jsonPath("$.code").value("USER_NOT_FOUND"));
 
         verify(authService).kakaoLogin(any(KakaoLoginRequest.class));
     }
@@ -114,7 +118,7 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.tokens.accessToken").value("access-token"))
                 .andExpect(jsonPath("$.data.userInfo.nickname").value("testUser"));
 
@@ -134,8 +138,9 @@ class AuthControllerTest {
         mockMvc.perform(post("/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.success").value(false));
+                .andExpect(status().isConflict()) // DUPLICATE_SIGNUP은 409 Conflict
+                .andExpect(jsonPath("$.status").value("ERROR"))
+                .andExpect(jsonPath("$.code").value("DUPLICATE_SIGNUP"));
 
         verify(authService).signup(any(SignupRequest.class));
     }
@@ -151,7 +156,7 @@ class AuthControllerTest {
         mockMvc.perform(post("/auth/refresh")
                         .header("X-Refresh-Token", "valid-refresh-token"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.accessToken").value("new-access-token"))
                 .andExpect(jsonPath("$.data.refreshToken").value("new-refresh-token"));
 
@@ -163,8 +168,9 @@ class AuthControllerTest {
     void refreshToken_MissingRefreshToken_ThrowsException() throws Exception {
         // When & Then
         mockMvc.perform(post("/auth/refresh"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.success").value(false));
+                .andExpect(status().isNotFound()) // REFRESH_TOKEN_MISSING은 404
+                .andExpect(jsonPath("$.status").value("ERROR"))
+                .andExpect(jsonPath("$.code").value("REFRESH_TOKEN_MISSING"));
 
         verifyNoInteractions(authService);
     }
@@ -180,7 +186,8 @@ class AuthControllerTest {
         mockMvc.perform(post("/auth/refresh")
                         .header("X-Refresh-Token", "invalid-token"))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.success").value(false));
+                .andExpect(jsonPath("$.status").value("ERROR"))
+                .andExpect(jsonPath("$.code").value("INVALID_TOKEN"));
 
         verify(authService).refreshToken("invalid-token");
     }
@@ -197,7 +204,7 @@ class AuthControllerTest {
                         .header("Authorization", "Bearer access-token")
                         .header("X-Refresh-Token", "refresh-token"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true));
+                .andExpect(jsonPath("$.status").value("SUCCESS"));
 
         verify(jwtProvider).extractToken("Bearer access-token");
         verify(authService).logout("access-token", "refresh-token");
@@ -209,8 +216,9 @@ class AuthControllerTest {
         // When & Then
         mockMvc.perform(post("/auth/logout")
                         .header("Authorization", "Bearer access-token"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.success").value(false));
+                .andExpect(status().isNotFound()) // REFRESH_TOKEN_MISSING은 404
+                .andExpect(jsonPath("$.status").value("ERROR"))
+                .andExpect(jsonPath("$.code").value("REFRESH_TOKEN_MISSING"));
 
         verifyNoInteractions(authService);
     }
@@ -219,7 +227,7 @@ class AuthControllerTest {
     private AuthResponse createMockAuthResponse() {
         TokenPair tokenPair = TokenPair.of(
                 "access-token",
-                "refresh-token", 
+                "refresh-token",
                 new Date(),
                 new Date()
         );
