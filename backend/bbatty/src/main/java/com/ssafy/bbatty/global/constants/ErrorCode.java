@@ -37,6 +37,8 @@ public enum ErrorCode {
     TEAM_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 팀이에요."),
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 토큰이에요."),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 사용자에요."),
+    SHA_256_NOT_FOUND(HttpStatus.NOT_FOUND, "SHA-256 알고리즘을 찾을 수 없어요."),
+    REFRESH_TOKEN_MISSING(HttpStatus.NOT_FOUND, "존재하지 않는 리프레쉬 토큰이에요."),
 
     // 카카오 정보 관련 에러
     KAKAO_EMAIL_INFO_REQUIRED(HttpStatus.BAD_REQUEST, "카카오에서 이메일 정보를 가져올 수 없어요."),

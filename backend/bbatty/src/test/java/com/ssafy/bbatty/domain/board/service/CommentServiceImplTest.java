@@ -11,6 +11,7 @@ import com.ssafy.bbatty.domain.team.entity.Team;
 import com.ssafy.bbatty.domain.user.entity.User;
 import com.ssafy.bbatty.domain.user.repository.UserRepository;
 import com.ssafy.bbatty.global.constants.ErrorCode;
+import com.ssafy.bbatty.global.constants.Gender;
 import com.ssafy.bbatty.global.exception.ApiException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -365,7 +366,7 @@ class CommentServiceImplTest {
         return User.builder()
                 .id(id)
                 .nickname(nickname)
-                .gender(User.Gender.MALE)
+                .gender(Gender.MALE)
                 .age(25)
                 .team(team)
                 .introduction("테스트 소개")
