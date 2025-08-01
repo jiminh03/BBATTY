@@ -149,11 +149,12 @@ public class AuthServiceImpl implements AuthService {
     }
 
     /**
-     * WebSocket URL 생성
+     * WebSocket URL 생성 (SockJS용)
      */
     private String buildWebSocketUrl(String chatType, String sessionToken, String roomId) {
         String endpoint = "game".equals(chatType) ? "/ws/game-chat" : "/ws/match-chat";
-        return String.format("%s%s?token=%s&teamId=%s", 
+        // SockJS WebSocket 엔드포인트는 /websocket을 추가
+        return String.format("%s%s/websocket?token=%s&teamId=%s",
                 websocketBaseUrl, endpoint, sessionToken, roomId);
     }
 }
