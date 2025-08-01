@@ -92,9 +92,7 @@ public class PostController {
                 .body(ApiResponse.success(SuccessCode.SUCCESS_DEFAULT, response));
     }
 
-    /**
-     * 게시글 좋아요 (앱에서 사용자 좋아요 기록은 따로 저장)
-     */
+    //게시글 좋아요 (앱에서 사용자 좋아요 기록은 따로 저장)
     @PostMapping("/{postId}/like")
     public ResponseEntity<?> likePost(@PathVariable Long postId,
                                       @AuthenticationPrincipal UserPrincipal userPrincipal) {

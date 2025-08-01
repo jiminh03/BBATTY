@@ -17,10 +17,10 @@ public class PostImage {
     private Long id;
     
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "post_id", nullable = true)
+    @JoinColumn(name = "post_id")
     private Post post;
     
-    @Column(name = "image_url", nullable = false, length = 255)
+    @Column(name = "image_url", length = 255)
     private String imageUrl;
     
     @Column(name = "is_deleted", nullable = false)

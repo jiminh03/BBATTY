@@ -19,14 +19,15 @@ public class Comment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    // 일반 Column과 다르게 객체에 주로 쓰임
-    @JoinColumn(name="post_id", nullable = false)
-    private Post post;
     // 다대일 관계를 맺고 있으며 즉시 불러오지 않고 사용할 떼 불러옴
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    // 일반 Column과 다르게 객체에 주로 쓰임
+    @JoinColumn(name="post_id", nullable = false)
+    private Post post;
 
     // 댓글 내용
     @Column(columnDefinition = "TEXT", nullable = false)
