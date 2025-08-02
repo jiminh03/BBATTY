@@ -1,6 +1,6 @@
-import { Alert } from "react-native";
-import { AxiosError } from "axios";
-import { API_CONFIG } from "../client/config";
+import { Alert } from 'react-native';
+import { AxiosError } from 'axios';
+import { API_CONFIG } from '../client/config';
 import {
   ErrorCodes,
   ErrorMessages,
@@ -8,10 +8,10 @@ import {
   createApiError,
   type ApiError,
   type ErrorCode,
-} from "../types/errors";
+} from '../types/errors';
 
 interface ProcessedError {
-  type: "response_error" | "network_error" | "setup_error";
+  type: 'response_error' | 'network_error' | 'setup_error';
   statusCode?: number;
   code: ErrorCode;
   message: string;
@@ -46,12 +46,10 @@ const processError = (error: AxiosError): ProcessedError => {
     const responseData = error.response.data as any;
 
     return {
-      type: "response_error",
+      type: 'response_error',
       statusCode,
       code: responseData?.error?.code || mapHttpStatusToErrorCode(statusCode),
-      message:
-        responseData?.message ||
-        ErrorMessages[mapHttpStatusToErrorCode(statusCode)],
+      message: responseData?.message || ErrorMessages[mapHttpStatusToErrorCode(statusCode)],
       details: responseData?.error?.details || null,
       url: error.config?.url,
       method: error.config?.method?.toUpperCase(),
@@ -59,7 +57,7 @@ const processError = (error: AxiosError): ProcessedError => {
   } else if (error.request) {
     // 요청을 보냈지만 응답을 받지 못함 ( 네트워크 에러 )
     return {
-      type: "network_error",
+      type: 'network_error',
       code: ErrorCodes.NETWORK_ERROR,
       message: ErrorMessages[ErrorCodes.NETWORK_ERROR],
       details: error.message,
@@ -69,7 +67,7 @@ const processError = (error: AxiosError): ProcessedError => {
   } else {
     // 요청을 설정하는 중에 발생한 에러
     return {
-      type: "setup_error",
+      type: 'setup_error',
       code: ErrorCodes.SERVER_ERROR,
       message: error.message || ErrorMessages[ErrorCodes.SERVER_ERROR],
       details: error.stack,
@@ -96,12 +94,12 @@ const showErrorToUser = (processedError: ProcessedError): void => {
   ];
 
   if (criticalErrors.includes(processedError.code)) {
-    Alert.alert("오류 발생", processedError.message, [
-      { text: "확인", style: "default" },
+    Alert.alert('오류 발생', processedError.message, [
+      { text: '확인', style: 'default' },
       ...(processedError.code === ErrorCodes.NETWORK_ERROR
         ? [
             {
-              text: "재시도",
+              text: '재시도',
               onPress: () => {
                 /* 재시도 로직 */
               },
@@ -111,7 +109,7 @@ const showErrorToUser = (processedError: ProcessedError): void => {
     ]);
   } else {
     // Toast 메시지 표시 (실제 구현에서는 Toast 라이브러리 사용)
-    console.log(" Toast:", processedError.message);
+    console.log(' Toast:', processedError.message);
   }
 };
 
@@ -119,7 +117,7 @@ const showErrorToUser = (processedError: ProcessedError): void => {
 const reportErrorToService = (processedError: ProcessedError): void => {
   // 실제 구현에서는 Sentry, Crashlytics 등의 서비스 사용
   if (__DEV__) {
-    console.log(" Error would be reported:", processedError);
+    console.log(' Error would be reported:', processedError);
     return;
   }
 
@@ -127,13 +125,13 @@ const reportErrorToService = (processedError: ProcessedError): void => {
   try {
     // 예시: Sentry.captureException(processedError);
   } catch (reportingError) {
-    console.warn("Failed to report error:", reportingError);
+    console.warn('Failed to report error:', reportingError);
   }
 };
 
-/*
 // 특정 에러 타입인지 확인하는 헬퍼 함수들
 export class ErrorCheckers {
+  /*
   static isNetworkError(error: ProcessedError): boolean {
     return error.code === ErrorCodes.NETWORK_ERROR;
   }
@@ -149,15 +147,14 @@ export class ErrorCheckers {
     return [ErrorCodes.SERVER_ERROR].includes(error.code);
   }
 
-  /*
   static isValidationError(error: ProcessedError): boolean {
     return error.code === ErrorCodes.DATA_VALIDATION_FAILED;
   }
+    */
 
   static isRetryableError(error: ProcessedError): boolean {
-    return [ErrorCodes.NETWORK_ERROR, ErrorCodes.SERVER_ERROR].includes(
-      error.code
-    );
+    const retryableErrorList = [ErrorCodes.NETWORK_ERROR, ErrorCodes.SERVER_ERROR] as const;
+
+    return retryableErrorList.includes(error.code as any);
   }
 }
-  */

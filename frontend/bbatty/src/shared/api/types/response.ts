@@ -24,7 +24,7 @@ export interface ApiErrorResponse {
 export type ApiResponse<T = unknown> = ApiSuccessResponse<T> | ApiErrorResponse;
 
 export class ResponseBuilder {
-  static success<T>(data: T, message = "Success"): ApiSuccessResponse<T> {
+  static success<T>(data: T, message = 'Success'): ApiSuccessResponse<T> {
     return {
       success: true,
       message,
@@ -33,11 +33,7 @@ export class ResponseBuilder {
     };
   }
 
-  static error(
-    message: string,
-    code = "UNKNOWN_ERROR",
-    details?: unknown
-  ): ApiErrorResponse {
+  static error(message: string, code = 'UNKNOWN_ERROR', details?: unknown): ApiErrorResponse {
     return {
       success: false,
       message,
@@ -50,15 +46,11 @@ export class ResponseBuilder {
   }
 }
 
-export const isSuccessResponse = <T>(
-  response: ApiResponse<T>
-): response is ApiSuccessResponse<T> => {
+export const isSuccessResponse = <T>(response: ApiResponse<T>): response is ApiSuccessResponse<T> => {
   return response.success === true;
 };
 
-export const isErrorResponse = (
-  response: ApiResponse
-): response is ApiErrorResponse => {
+export const isErrorResponse = (response: ApiResponse): response is ApiErrorResponse => {
   return response.success === false;
 };
 
@@ -66,9 +58,7 @@ export const extractData = <T>(response: ApiResponse<T>): T | null => {
   return isSuccessResponse(response) ? response.data : null;
 };
 
-export const extractError = (
-  response: ApiResponse
-): { message: string; code: string; details?: unknown } | null => {
+export const extractError = (response: ApiResponse): { message: string; code: string; details?: unknown } | null => {
   return isErrorResponse(response)
     ? {
         message: response.message,
