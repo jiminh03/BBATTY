@@ -1,86 +1,231 @@
-import io, { Socket } from 'socket.io-client';
-import { SocketConfig } from './types';
+// 추후 활용법
+// const client = new SocketClient({
+//   url: 'ws://localhost:8084/ws/game-chat',
+//   options: {
+//     auth: { sessionToken: 'your-token' },
+//     query: { userId: '123', teamId: '1' }
+//   }
+// });
+
+// await client.connect();
+// client.sendChatMessage('안녕하세요!');
+
+import { SocketConfig, WebSocketMessage } from './types';
 
 class SocketClient {
-  private socket: Socket | null = null;
+  private ws: WebSocket | null = null;
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectInterval = 1000;
+  private eventListeners: Map<string, ((data: any) => void)[]> = new Map();
+  private isConnecting = false;
+  private messageQueue: WebSocketMessage[] = [];
+  private isAuthenticated = false;
 
   constructor(private config: SocketConfig) {}
 
-  connect(): Promise<Socket> {
-    if (this.socket?.connected) {
-      return Promise.resolve(this.socket);
+  async connect(): Promise<WebSocket> {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      return Promise.resolve(this.ws);
+    }
+
+    if (this.isConnecting) {
+      return new Promise((resolve, reject) => {
+        const checkConnection = () => {
+          if (this.ws?.readyState === WebSocket.OPEN) {
+            resolve(this.ws);
+          } else if (!this.isConnecting) {
+            reject(new Error('Connection failed'));
+          } else {
+            setTimeout(checkConnection, 100);
+          }
+        };
+        checkConnection();
+      });
     }
 
     return new Promise((resolve, reject) => {
       try {
-        this.socket = io(this.config.url, {
-          transports: ['websocket'],
-          timeout: 20000,
-          forceNew: true,
-          ...this.config.options,
-        });
+        this.isConnecting = true;
+        
+        let wsUrl = this.config.url;
+        if (!wsUrl.startsWith('ws://') && !wsUrl.startsWith('wss://')) {
+          wsUrl = wsUrl.replace(/^https?:\/\//, 'ws://');
+        }
+        
+        const queryParams = new URLSearchParams();
+        if (this.config.options?.query) {
+          Object.entries(this.config.options.query).forEach(([key, value]) => {
+            queryParams.append(key, String(value));
+          });
+        }
+        
+        if (this.config.options?.auth?.sessionToken) {
+          queryParams.append('token', this.config.options.auth.sessionToken);
+        }
+        
+        if (queryParams.toString()) {
+          wsUrl += `?${queryParams.toString()}`;
+        }
 
-        this.socket.on('connect', () => {
-          console.log('Socket connected');
+        this.ws = new WebSocket(wsUrl);
+
+        this.ws.onopen = () => {
+          this.isConnecting = false;
           this.reconnectAttempts = 0;
-          resolve(this.socket!);
-        });
+          this.isAuthenticated = true;
+          this.flushMessageQueue();
+          this.emitEvent('connect');
+          resolve(this.ws!);
+        };
 
-        this.socket.on('disconnect', (reason) => {
-          console.log('Socket disconnected:', reason);
+        this.ws.onclose = (event) => {
+          this.isConnecting = false;
+          this.isAuthenticated = false;
+          this.emitEvent('disconnect', { code: event.code, reason: event.reason });
           this.handleReconnect();
-        });
+        };
 
-        this.socket.on('connect_error', (error) => {
-          console.error('Socket connection error:', error);
+        this.ws.onerror = (error) => {
+          this.isConnecting = false;
+          this.isAuthenticated = false;
+          this.emitEvent('connect_error', error);
           reject(error);
-        });
+        };
+
+        this.ws.onmessage = (event) => {
+          try {
+            const message: WebSocketMessage = JSON.parse(event.data);
+            if (message.type) {
+              this.emitEvent(message.type, message.payload || message);
+            }
+            this.emitEvent('message', message);
+          } catch (error) {
+            // JSON이 아닌 순수 문자열 메시지 처리
+            this.emitEvent('message', { type: 'text', payload: event.data });
+          }
+        };
 
       } catch (error) {
+        this.isConnecting = false;
         reject(error);
       }
     });
   }
 
   disconnect(): void {
-    if (this.socket) {
-      this.socket.disconnect();
-      this.socket = null;
+    if (this.ws) {
+      this.ws.close(1000, 'Client disconnect');
+      this.ws = null;
     }
+    this.isConnecting = false;
+    this.isAuthenticated = false;
+    this.messageQueue = [];
   }
 
   emit(event: string, data?: any): void {
-    if (this.socket?.connected) {
-      this.socket.emit(event, data);
+    const message: WebSocketMessage = {
+      type: event,
+      payload: data,
+      messageId: this.generateMessageId(),
+      timestamp: new Date().toISOString()
+    };
+
+    if (this.ws?.readyState === WebSocket.OPEN && this.isAuthenticated) {
+      this.ws.send(JSON.stringify(message));
     } else {
-      console.warn('Socket not connected, cannot emit:', event);
+      this.messageQueue.push(message);
     }
   }
 
+  sendChatMessage(content: string): void {
+    if (this.ws?.readyState === WebSocket.OPEN && this.isAuthenticated) {
+      this.ws.send(content);
+    }
+  }
+
+  joinRoom(roomId: string, userData?: any): void {
+    this.emit('join_room', { roomId, ...userData });
+  }
+
+  leaveRoom(roomId: string): void {
+    this.emit('leave_room', { roomId });
+  }
+
+  private flushMessageQueue(): void {
+    while (this.messageQueue.length > 0 && this.ws?.readyState === WebSocket.OPEN) {
+      const message = this.messageQueue.shift();
+      if (message) {
+        this.ws.send(JSON.stringify(message));
+      }
+    }
+  }
+
+  private generateMessageId(): string {
+    return `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
   on(event: string, callback: (data: any) => void): void {
-    this.socket?.on(event, callback);
+    if (!this.eventListeners.has(event)) {
+      this.eventListeners.set(event, []);
+    }
+    this.eventListeners.get(event)!.push(callback);
   }
 
   off(event: string, callback?: (data: any) => void): void {
-    this.socket?.off(event, callback);
+    if (!this.eventListeners.has(event)) return;
+    
+    if (callback) {
+      const listeners = this.eventListeners.get(event)!;
+      const index = listeners.indexOf(callback);
+      if (index > -1) {
+        listeners.splice(index, 1);
+      }
+    } else {
+      this.eventListeners.delete(event);
+    }
+  }
+
+  private emitEvent(event: string, data?: any): void {
+    const listeners = this.eventListeners.get(event);
+    if (listeners) {
+      listeners.forEach(callback => {
+        try {
+          callback(data);
+        } catch (error) {
+          // 에러 무시
+        }
+      });
+    }
   }
 
   private handleReconnect(): void {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
-      console.log(`Attempting to reconnect... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+      const delay = this.reconnectInterval * Math.pow(2, this.reconnectAttempts - 1);
       
       setTimeout(() => {
-        this.connect().catch(console.error);
-      }, this.reconnectInterval * this.reconnectAttempts);
+        this.connect().catch(() => {});
+      }, delay);
+    } else {
+      this.emitEvent('max_reconnect_failed');
     }
   }
 
   getConnectionStatus(): boolean {
-    return this.socket?.connected ?? false;
+    return this.ws?.readyState === WebSocket.OPEN && this.isAuthenticated;
+  }
+
+  getConnectionState(): string {
+    if (!this.ws) return 'DISCONNECTED';
+    
+    switch (this.ws.readyState) {
+      case WebSocket.CONNECTING: return 'CONNECTING';
+      case WebSocket.OPEN: return this.isAuthenticated ? 'CONNECTED' : 'AUTHENTICATING';
+      case WebSocket.CLOSING: return 'CLOSING';
+      case WebSocket.CLOSED: return 'CLOSED';
+      default: return 'UNKNOWN';
+    }
   }
 }
 

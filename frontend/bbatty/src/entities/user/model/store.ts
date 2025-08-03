@@ -1,52 +1,66 @@
 import { create } from 'zustand';
-import { User } from './types';
+import { ChatUser, UserSessionInfo } from './types';
 
-interface UserStore {
-  currentUser: User | null;
-  connectedUsers: Record<string, User[]>; // roomId별로 연결된 사용자들
-  setCurrentUser: (user: User) => void;
-  addConnectedUser: (roomId: string, user: User) => void;
-  removeConnectedUser: (roomId: string, userId: string) => void;
-  clearConnectedUsers: (roomId: string) => void;
-  getConnectedUsers: (roomId: string) => User[];
+interface UserState {
+  currentUser: ChatUser | null;
+  sessionInfo: UserSessionInfo | null;
+  connectedUsers: Record<string, ChatUser[]>; // roomId -> users
 }
 
+interface UserActions {
+  setCurrentUser: (user: ChatUser | null) => void;
+  setSessionInfo: (info: UserSessionInfo | null) => void;
+  addUserToRoom: (roomId: string, user: ChatUser) => void;
+  removeUserFromRoom: (roomId: string, userId: string) => void;
+  setRoomUsers: (roomId: string, users: ChatUser[]) => void;
+  clearRoomUsers: (roomId: string) => void;
+  reset: () => void;
+}
+
+type UserStore = UserState & UserActions;
+
 export const useUserStore = create<UserStore>((set, get) => ({
+  // State
   currentUser: null,
+  sessionInfo: null,
   connectedUsers: {},
+
+  // Actions
+  setCurrentUser: (user) => set({ currentUser: user }),
   
-  setCurrentUser: (user: User) => {
-    set({ currentUser: user });
-  },
-  
-  addConnectedUser: (roomId: string, user: User) => {
-    set((state) => ({
-      connectedUsers: {
-        ...state.connectedUsers,
-        [roomId]: [...(state.connectedUsers[roomId] || []), user]
-      }
-    }));
-  },
-  
-  removeConnectedUser: (roomId: string, userId: string) => {
-    set((state) => ({
-      connectedUsers: {
-        ...state.connectedUsers,
-        [roomId]: (state.connectedUsers[roomId] || []).filter(user => user.userId !== userId)
-      }
-    }));
-  },
-  
-  clearConnectedUsers: (roomId: string) => {
-    set((state) => ({
-      connectedUsers: {
-        ...state.connectedUsers,
-        [roomId]: []
-      }
-    }));
-  },
-  
-  getConnectedUsers: (roomId: string) => {
-    return get().connectedUsers[roomId] || [];
-  }
+  setSessionInfo: (info) => set({ sessionInfo: info }),
+
+  addUserToRoom: (roomId, user) => set((state) => ({
+    connectedUsers: {
+      ...state.connectedUsers,
+      [roomId]: [...(state.connectedUsers[roomId] || []), user]
+    }
+  })),
+
+  removeUserFromRoom: (roomId, userId) => set((state) => ({
+    connectedUsers: {
+      ...state.connectedUsers,
+      [roomId]: (state.connectedUsers[roomId] || []).filter(u => u.id !== userId)
+    }
+  })),
+
+  setRoomUsers: (roomId, users) => set((state) => ({
+    connectedUsers: {
+      ...state.connectedUsers,
+      [roomId]: users
+    }
+  })),
+
+  clearRoomUsers: (roomId) => set((state) => ({
+    connectedUsers: {
+      ...state.connectedUsers,
+      [roomId]: []
+    }
+  })),
+
+  reset: () => set({
+    currentUser: null,
+    sessionInfo: null,
+    connectedUsers: {},
+  }),
 }));

@@ -1,27 +1,27 @@
-import { ChatRoomType } from '../../../shared/types/enums';
+export type ChatType = 'WATCH' | 'MATCH';
 
-export interface WatchChatRoom {
-  roomId: string;
-  gameId: string;
+export type ChatRoomType = 'game' | 'match';
+
+export interface ChatRoom {
+  id: string;
+  type: ChatRoomType;
+  chatType: ChatType;
+  isActive: boolean;
+  participants: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GameChatRoom extends ChatRoom {
+  type: 'game';
+  chatType: 'WATCH';
   teamId: string;
-  type: ChatRoomType.GAME;
+  gameId: string;
+  userTeamId: string;
 }
 
-export interface MatchChatRoom {
-  roomId: string;
-  matchChatRoomId: string;
-  type: ChatRoomType.MATCH;
-}
-
-export type ChatRoom = WatchChatRoom | MatchChatRoom;
-
-export interface AuthRequest {
-  chatType: string;
-  roomId: string;
-}
-
-export interface AuthResponse {
-  success: boolean;
-  sessionToken?: string;
-  errorMessage?: string;
+export interface MatchChatRoom extends ChatRoom {
+  type: 'match';
+  chatType: 'MATCH';
+  matchId: string;
 }
