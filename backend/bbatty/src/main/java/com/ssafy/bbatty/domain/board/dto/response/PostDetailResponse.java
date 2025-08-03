@@ -11,8 +11,8 @@ public class PostDetailResponse {
     private String title;
     private String authorNickname;
     private String content;
-    private Long likeCount;
-    private Long viewCount;
+    private Integer likeCount;
+    private Integer viewCount;
     private Integer commentCount;
     private String createdAt;
     private String updatedAt;

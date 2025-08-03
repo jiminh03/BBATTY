@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@Transactional(readOnly = true)
+@Transactional
 @RequiredArgsConstructor
 @Slf4j
 public class PostServiceImpl implements PostService {
@@ -45,7 +45,8 @@ public class PostServiceImpl implements PostService {
         
         // 사용자가 자신의 팀에만 게시글을 작성할 수 있도록 검증
         if (!user.getTeam().getId().equals(request.getTeamId())) {
-            throw new ApiException(ErrorCode.FORBIDDEN);
+
+            throw new ApiException(ErrorCode.FORBIDDEN_TEAM);
         }
         
         Post post = new Post(
@@ -103,7 +104,7 @@ public class PostServiceImpl implements PostService {
                     PostListResponse response = new PostListResponse(post);
                     response.setViewCount(postCountService.getViewCount(post.getId()));
                     response.setLikeCount(postCountService.getLikeCount(post.getId()));
-                    response.setCommentCount(postCountService.getCommentCount(post.getId()).intValue());
+                    response.setCommentCount(postCountService.getCommentCount(post.getId()));
                     return response;
                 })
                 .collect(Collectors.toList());
@@ -140,7 +141,7 @@ public class PostServiceImpl implements PostService {
                     PostListResponse response = new PostListResponse(post);
                     response.setViewCount(postCountService.getViewCount(post.getId()));
                     response.setLikeCount(postCountService.getLikeCount(post.getId()));
-                    response.setCommentCount(postCountService.getCommentCount(post.getId()).intValue());
+                    response.setCommentCount(postCountService.getCommentCount(post.getId()));
                     return response;
                 })
                 .collect(Collectors.toList());
@@ -177,7 +178,7 @@ public class PostServiceImpl implements PostService {
                 .content(post.getContent())
                 .viewCount(postCountService.getViewCount(postId))
                 .likeCount(postCountService.getLikeCount(postId))
-                .commentCount(postCountService.getCommentCount(post.getId()).intValue())
+                .commentCount(postCountService.getCommentCount(post.getId()))
                 .createdAt(post.getCreatedAt().toString())
                 .updatedAt(post.getUpdatedAt().toString())
                 .build();
@@ -190,6 +191,9 @@ public class PostServiceImpl implements PostService {
     public PostListPageResponse getPostListByUser(Long userId, Long cursor) {
         Pageable pageable = PageRequest.of(0, PAGE_SIZE);
         Page<Post> postPage;
+
+        // 해당 유저가 존재하는지는 유저 구현되면 작성
+
 
         if (cursor == null) {
             // 첫 페이지 - 사용자별 조회 (삭제되지 않은 게시글만)
@@ -205,7 +209,7 @@ public class PostServiceImpl implements PostService {
                     PostListResponse response = new PostListResponse(post);
                     response.setViewCount(postCountService.getViewCount(post.getId()));
                     response.setLikeCount(postCountService.getLikeCount(post.getId()));
-                    response.setCommentCount(postCountService.getCommentCount(post.getId()).intValue());
+                    response.setCommentCount(postCountService.getCommentCount(post.getId()));
                     return response;
                 })
                 .collect(Collectors.toList());

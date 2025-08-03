@@ -1,6 +1,8 @@
 package com.ssafy.bbatty.domain.board.controller;
 
 import com.ssafy.bbatty.domain.board.dto.request.CommentCreateRequest;
+import com.ssafy.bbatty.domain.board.dto.request.CommentUpdateRequest;
+import com.ssafy.bbatty.domain.board.dto.response.CommentListPageResponse;
 import com.ssafy.bbatty.domain.board.dto.response.CommentListResponse;
 import com.ssafy.bbatty.domain.board.entity.Comment;
 import com.ssafy.bbatty.domain.board.service.CommentService;
@@ -27,22 +29,20 @@ public class CommentController {
                 ApiResponse.success(SuccessCode.SUCCESS_CREATED));
     }
 
-    // 4. 댓글 수정
-    @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> updateComment(
-            @PathVariable Long id,
-            @RequestBody String content
-    ) {
-        commentService.updateComment(id, content);
-        return ResponseEntity.status(SuccessCode.SUCCESS_UPDATED.getStatus()).body(
-                ApiResponse.success(SuccessCode.SUCCESS_UPDATED));
-    }
-
     // 2. 게시글의 댓글 목록 조회 (대댓글 포함)
     @GetMapping("/post/{postId}")
     public ResponseEntity<ApiResponse<CommentListResponse>> getCommentsByPostId(@PathVariable Long postId) {
         CommentListResponse response = commentService.getCommentsWithRepliesByPostId(postId);
         return ResponseEntity.ok(ApiResponse.success(SuccessCode.SUCCESS_DEFAULT, response));
+    }
+    
+    // 3. 게시글의 댓글 목록 페이지네이션 조회 (대댓글 포함)
+    @GetMapping("/post/{postId}/page")
+    public ResponseEntity<CommentListPageResponse> getCommentsByPostIdWithPagination(
+            @PathVariable Long postId,
+            @RequestParam(required = false) Long cursor) {
+        CommentListPageResponse response = commentService.getCommentsWithRepliesByPostIdWithPagination(postId, cursor);
+        return ResponseEntity.ok(response);
     }
 
     // 5. 댓글 삭제
@@ -51,5 +51,16 @@ public class CommentController {
         commentService.deleteComment(id);
         return ResponseEntity.status(SuccessCode.SUCCESS_DELETED.getStatus()).body(
                 ApiResponse.success(SuccessCode.SUCCESS_DELETED));
+    }
+
+    // 4. 댓글 수정
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> updateComment(
+            @PathVariable Long id,
+            @Valid @RequestBody CommentUpdateRequest request
+    ) {
+        commentService.updateComment(id, request.getContent());
+        return ResponseEntity.status(SuccessCode.SUCCESS_UPDATED.getStatus()).body(
+                ApiResponse.success(SuccessCode.SUCCESS_UPDATED));
     }
 }

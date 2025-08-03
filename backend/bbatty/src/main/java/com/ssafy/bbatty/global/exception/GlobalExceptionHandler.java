@@ -39,19 +39,19 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler(ApiException.class)
-    public ResponseEntity<ApiResponse<Void>> handleApiException(ApiException e) {
+    public ResponseEntity<ApiResponse<?>> handleApiException(ApiException e) {
         ErrorCode errorCode = e.getErrorCode();
         log.error("API error occurred: {}", errorCode.getMessage());
         return ResponseEntity.status(errorCode.getStatus())
-                .body(ApiResponse.fail(errorCode));
+                .body(ApiResponse.fail(errorCode, errorCode.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Void>> handleGeneralException(Exception e) {
+    public ResponseEntity<ApiResponse<?>> handleGeneralException(Exception e) {
         ErrorCode errorCode = ErrorCode.SERVER_ERROR;
         log.error("General error occurred: {} - {}", errorCode.getMessage(), e.getMessage());
         return ResponseEntity.status(errorCode.getStatus())
-                .body(ApiResponse.fail(errorCode));
+                .body(ApiResponse.fail(errorCode, errorCode.getMessage()));
     }
 
     private ErrorCode mapToErrorCode(Exception e) {
