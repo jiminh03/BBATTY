@@ -20,7 +20,7 @@ public class AuthController {
     private final AuthService authService;
 
     /**
-     * 채팅 인증 및 세션 생성
+     * 채팅 인증 및 세션 생성 (d)
      */
     @PostMapping("/session")
     public ResponseEntity<AuthResponse> createChatSession(@RequestBody AuthRequest authRequest) {
