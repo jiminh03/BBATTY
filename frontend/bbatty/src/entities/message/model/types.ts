@@ -1,21 +1,49 @@
-import { MessageType } from '../../../shared/types/enums';
+export type MessageType = 
+  | 'CHAT' 
+  | 'SYSTEM' 
+  | 'ERROR' 
+  | 'USER_JOIN' 
+  | 'USER_LEAVE' 
+  | 'USER_ACTIVITY';
 
 export interface BaseMessage {
-  roomId: string;
+  type: string;
+  messageId?: string;
   content: string;
-  timestamp?: string;
-  type?: MessageType;
+  timestamp: string;
+  messageType: MessageType;
 }
 
-export interface WatchMessage extends BaseMessage {
-  // Watch 채팅은 기본 필드만 사용
+// 게임 채팅 메시지 (익명)
+export interface GameChatMessage extends BaseMessage {
+  type: 'message';
+  roomId: string;
+  messageType: 'CHAT';
+  chatType: 'game';
+  teamId: string;
+  serverId?: string;
+  messageSequence?: number;
 }
 
-export interface MatchMessage extends BaseMessage {
-  userId: string;
+// 매칭 채팅 메시지
+export interface MatchChatMessage extends BaseMessage {
+  type: 'message';
+  roomId: string;
+  userId: string;  
   nickname: string;
+  messageType: 'CHAT';
   profileImgUrl?: string;
   isVictoryFairy?: boolean;
 }
 
-export type ChatMessage = WatchMessage | MatchMessage;
+// 시스템 메시지
+export interface SystemMessage extends BaseMessage {
+  type: 'user_join' | 'user_leave' | 'system' | 'error';
+  userId?: string;
+  userName?: string;
+  teamId?: string;
+  matchId?: string;
+  serverId?: string;
+}
+
+export type ChatMessage = GameChatMessage | MatchChatMessage | SystemMessage;

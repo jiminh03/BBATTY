@@ -1,3 +1,12 @@
-export * from './model/types';
-export * from './model/store';
-export * from './model/utils';
+export type { 
+  ChatMessage, 
+  GameChatMessage, 
+  MatchChatMessage, 
+  SystemMessage, 
+  BaseMessage, 
+  MessageType 
+} from './model/types';
+
+export { useMessageStore } from './model/store';
+
+export { messageUtils } from './util/utils';
