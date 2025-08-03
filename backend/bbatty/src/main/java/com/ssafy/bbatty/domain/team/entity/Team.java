@@ -10,6 +10,9 @@ import org.hibernate.annotations.ColumnDefault;
 
 import java.math.BigDecimal;
 
+/**
+ * 팀 정보 엔티티
+ */
 @Entity
 @Table(name = "team", schema = "BBATTY")
 @Getter
