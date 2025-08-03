@@ -38,6 +38,7 @@ class SocketClient {
           console.error('Socket connection error:', error);
           reject(error);
         });
+
       } catch (error) {
         reject(error);
       }
@@ -71,7 +72,7 @@ class SocketClient {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       console.log(`Attempting to reconnect... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
-
+      
       setTimeout(() => {
         this.connect().catch(console.error);
       }, this.reconnectInterval * this.reconnectAttempts);
