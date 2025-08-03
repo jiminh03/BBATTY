@@ -1,10 +1,4 @@
-export type MessageType = 
-  | 'CHAT' 
-  | 'SYSTEM' 
-  | 'ERROR' 
-  | 'USER_JOIN' 
-  | 'USER_LEAVE' 
-  | 'USER_ACTIVITY';
+export type MessageType = 'CHAT' | 'SYSTEM' | 'ERROR' | 'USER_JOIN' | 'USER_LEAVE' | 'USER_ACTIVITY';
 
 export interface BaseMessage {
   type: string;
@@ -29,7 +23,7 @@ export interface GameChatMessage extends BaseMessage {
 export interface MatchChatMessage extends BaseMessage {
   type: 'message';
   roomId: string;
-  userId: string;  
+  userId: string;
   nickname: string;
   messageType: 'CHAT';
   profileImgUrl?: string;
