@@ -30,8 +30,7 @@ export const setupInterceptors = (client: AxiosInstance): void => {
         requestId,
       };
 
-      /*
-      // 디버그 로깅
+      /* 디버그 로깅
       if (DEBUG_CONFIG.enableRequestLogging) {
         console.log(`🚀 API Request [${requestId}]: ${config.method?.toUpperCase()} ${config.url}`, {
           params: config.params,

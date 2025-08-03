@@ -95,8 +95,8 @@ export const tokenManager: TokenManager = {
     try {
       await SecureStore.deleteItemAsync(AUTH_TOKEN);
       delete apiClient.defaults.headers.common[AUTHORIZATION];
-      delete apiClient.defaults.headers.common[AUTHORIZATION];
-      delete apiClient.defaults.headers.common[AUTHORIZATION];
+      delete uploadClient.defaults.headers.common[AUTHORIZATION];
+      delete downloadClient.defaults.headers.common[AUTHORIZATION];
     } catch (error) {
       console.warn('토큰 제거 실패', error);
     }

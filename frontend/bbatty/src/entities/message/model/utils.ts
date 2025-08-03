@@ -14,7 +14,7 @@ export const createWatchMessage = (roomId: string, content: string): WatchMessag
     roomId,
     content,
     timestamp: new Date().toISOString(),
-    type: MessageType.CHAT
+    type: MessageType.CHAT,
   };
 };
 
@@ -34,6 +34,6 @@ export const createMatchMessage = (
     profileImgUrl,
     isVictoryFairy,
     timestamp: new Date().toISOString(),
-    type: MessageType.CHAT
+    type: MessageType.CHAT,
   };
 };

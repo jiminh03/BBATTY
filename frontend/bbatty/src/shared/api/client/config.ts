@@ -21,7 +21,6 @@ interface CacheConfig {
 interface UploadConfig {
   maxFileSize: number;
   allowedTypes: string[];
-  compressionQuality: number;
 }
 
 interface PaginationConfig {
@@ -76,7 +75,6 @@ export const API_CONFIG: ApiConfig = {
   upload: {
     maxFileSize: 10 * 1024 * 1024, // 10MB
     allowedTypes: ['image/jpeg', 'image/png', 'image/webp'],
-    compressionQuality: 0.8,
   },
 
   pagination: {
