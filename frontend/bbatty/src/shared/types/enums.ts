@@ -1,3 +1,24 @@
+// 사용 예시
+// const config: SocketConfig = {
+//   url: 'ws://localhost:8084/ws/game-chat',
+//   options: {
+//     auth: { sessionToken: 'token123' },
+//     query: { 
+//       chatType: ChatType.WATCH,
+//       roomType: ChatRoomType.GAME 
+//     }
+//   }
+// };
+
+// 이벤트 처리
+// client.on(MessageType.USER_JOIN, (data) => {
+//   console.log('사용자 입장:', data);
+// });
+
+// client.on(MessageType.CHAT, (data) => {
+//   console.log('채팅 메시지:', data);
+// });
+
 export enum ChatType {
   WATCH = 'WATCH',
   MATCH = 'MATCH',

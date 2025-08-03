@@ -1,18 +1,34 @@
-import { UserStatus } from '../../../shared/types/enums';
+export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'BLOCKED';
 
-export interface User {
-  userId: string;
+export interface BaseUser {
+  id: string;
   nickname: string;
-  profileImgUrl?: string;
-  winRate?: number;
   status: UserStatus;
-  teamId?: string;
-  userTeamId?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface MatchChatJoinRequest {
-  nickname: string;
-  profileImageUrl?: string;
+export interface ChatUser extends BaseUser {
+  teamId: string;
+  age?: number;
+  gender?: string;
+  profileImgUrl?: string;
+  isVictoryFairy?: boolean;
   winRate?: number;
-  matchChatRoomId: string;
+}
+
+// WebSocket 세션 정보
+export interface UserSessionInfo {
+  userId: string;
+  userName: string;
+  roomId: string;
+  additionalInfo: Record<string, any>;
+}
+
+// JWT에서 추출되는 사용자 정보
+export interface JwtUserInfo {
+  userId: string;
+  teamId: string;
+  age: number;
+  gender: string;
 }
