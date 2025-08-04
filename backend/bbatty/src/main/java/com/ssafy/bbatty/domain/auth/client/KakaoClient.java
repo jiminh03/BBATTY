@@ -36,7 +36,7 @@ public class KakaoClient {
      * @param accessToken 카카오 액세스 토큰
      * @return 카카오 사용자 정보
      */
-    public KakaoUserResponse getUserInfo(String accessToken) {
+    public KakaoUserResponse getUserInfoFromKakao(String accessToken) {
         try {
             log.debug("카카오 사용자 정보 조회 시작");
 
@@ -72,7 +72,7 @@ public class KakaoClient {
      */
     public boolean validateToken(String accessToken) {
         try {
-            getUserInfo(accessToken);
+            getUserInfoFromKakao(accessToken);
             return true;
         } catch (ApiException e) {
             log.warn("카카오 토큰 검증 실패: {}", e.getMessage());

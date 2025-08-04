@@ -231,7 +231,7 @@ class AuthControllerTest {
                 new Date(),
                 new Date()
         );
-        AuthResponse.UserInfo userInfo = AuthResponse.UserInfo.builder()
+        AuthResponse.UserProfile userProfile = AuthResponse.UserProfile.builder()
                 .userId(1L)
                 .nickname("testUser")
                 .profileImg("profile.jpg")
@@ -244,7 +244,7 @@ class AuthControllerTest {
 
         return AuthResponse.builder()
                 .tokens(tokenPair)
-                .userInfo(userInfo)
+                .userProfile(userProfile)
                 .build();
     }
 
