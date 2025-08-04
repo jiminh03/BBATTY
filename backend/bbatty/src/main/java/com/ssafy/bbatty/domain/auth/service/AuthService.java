@@ -3,6 +3,7 @@ package com.ssafy.bbatty.domain.auth.service;
 import com.ssafy.bbatty.domain.auth.client.KakaoClient;
 import com.ssafy.bbatty.domain.auth.dto.request.KakaoLoginRequest;
 import com.ssafy.bbatty.domain.auth.dto.request.SignupRequest;
+import com.ssafy.bbatty.domain.auth.dto.KakaoUserInfo;
 import com.ssafy.bbatty.domain.auth.dto.response.AuthResponse;
 import com.ssafy.bbatty.domain.auth.dto.response.KakaoUserResponse;
 import com.ssafy.bbatty.domain.auth.dto.response.TokenPair;
@@ -14,16 +15,17 @@ import com.ssafy.bbatty.domain.user.repository.UserInfoRepository;
 import com.ssafy.bbatty.domain.user.repository.UserRepository;
 import com.ssafy.bbatty.global.constants.ErrorCode;
 import com.ssafy.bbatty.global.constants.Gender;
+import com.ssafy.bbatty.global.constants.Role;
 import com.ssafy.bbatty.global.exception.ApiException;
 import com.ssafy.bbatty.global.security.JwtProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.Optional;
+import java.util.function.BiFunction;
 
 /**
  * 인증 서비스 - Stateless JWT 방식
@@ -47,28 +49,28 @@ public class AuthService {
     /**
      * 카카오 로그인 처리
      */
-    @Transactional
     public AuthResponse kakaoLogin(KakaoLoginRequest request) {
-        // 1. 카카오 사용자 정보 조회
-        KakaoUserResponse kakaoUser = kakaoClient.getUserInfo(request.getAccessToken());
-
-        // 2. 필수 정보 검증
-        validateKakaoUserInfo(kakaoUser);
-
-        // 3. 기존 사용자 확인
-        Optional<UserInfo> existingUserInfo = userInfoRepository.findByKakaoId(kakaoUser.getKakaoId());
+        // 1. 카카오 사용자 정보 추출 (외부 API 호출)
+        KakaoUserInfo kakaoUserInfo = extractKakaoUserInfo(request.getAccessToken());
+        
+        // 2. DB 작업은 트랜잭션 내부에서
+        return performLogin(kakaoUserInfo);
+    }
+    
+    @Transactional
+    public AuthResponse performLogin(KakaoUserInfo kakaoUserInfo) {
+        // 기존 사용자 확인
+        Optional<UserInfo> existingUserInfo = userInfoRepository.findByKakaoId(kakaoUserInfo.getKakaoId());
 
         if (existingUserInfo.isPresent()) {
             // 기존 사용자 로그인
             User user = existingUserInfo.get().getUser();
-            TokenPair tokens = createTokenPair(user);
-            AuthResponse.UserInfo userInfo = createUserInfoResponse(user);
-
-            log.info("카카오 로그인 성공: userId={}, kakaoId={}", user.getId(), kakaoUser.getKakaoId());
-            return AuthResponse.ofLogin(tokens, userInfo);
+            
+            log.info("카카오 로그인 성공: userId={}, kakaoId={}", user.getId(), kakaoUserInfo.getKakaoId());
+            return createAuthResponse(user, AuthResponse::ofLogin);
         } else {
             // 신규 사용자 - 회원가입 필요
-            log.info("신규 사용자 로그인 시도: kakaoId={}", kakaoUser.getKakaoId());
+            log.info("신규 사용자 로그인 시도: kakaoId={}", kakaoUserInfo.getKakaoId());
             throw new ApiException(ErrorCode.USER_NOT_FOUND);
         }
     }
@@ -78,55 +80,19 @@ public class AuthService {
      */
     @Transactional
     public AuthResponse signup(SignupRequest request) {
-        // 1. 카카오 사용자 정보 조회
-        KakaoUserResponse kakaoUser = kakaoClient.getUserInfo(request.getAccessToken());
-
-        // 2. 필수 정보 검증
-        validateKakaoUserInfo(kakaoUser);
-
-        // 3. 중복 가입 확인
-        if (userInfoRepository.existsByKakaoId(kakaoUser.getKakaoId())) {
-            throw new ApiException(ErrorCode.DUPLICATE_SIGNUP);
-        }
-
-        // 4. 닉네임 중복 확인
-        if (userRepository.existsByNickname(request.getNickname())) {
-            throw new ApiException(ErrorCode.DUPLICATE_NICKNAME);
-        }
-
-        // 5. 팀 존재 확인
-        Team team = teamRepository.findById(request.getTeamId())
-                .orElseThrow(() -> new ApiException(ErrorCode.TEAM_NOT_FOUND));
-
-        // 6. 사용자 생성
-        User user = User.builder()
-                .team(team)
-                .nickname(request.getNickname())
-                .gender(Gender.fromKakaoValue(kakaoUser.getGender()))
-                .birthYear(Integer.parseInt(kakaoUser.getBirthYear()))
-                .profileImg(request.getProfileImg())
-                .introduction(request.getIntroduction())
-                .build();
-
-        userRepository.save(user);
-
-        // 8. 사용자 상세 정보 생성
-        UserInfo userInfo = UserInfo.builder()
-                .user(user)
-                .kakaoId(kakaoUser.getKakaoId())
-                .email(kakaoUser.getEmail())
-                .build();
-
-        userInfoRepository.save(userInfo);
-
-        // 9. JWT 토큰 발급
-        TokenPair tokens = createTokenPair(user);
-        AuthResponse.UserInfo responseUserInfo = createUserInfoResponse(user);
-
+        // 1. 카카오 사용자 정보 추출 (외부 API 호출)
+        KakaoUserInfo kakaoUserInfo = extractKakaoUserInfo(request.getAccessToken());
+        
+        // 2. 회원가입 요청 검증
+        validateSignupRequest(request, kakaoUserInfo);
+        
+        // 3. 사용자 및 사용자 정보 생성
+        User user = createUserWithInfo(request, kakaoUserInfo);
+        
         log.info("회원가입 성공: userId={}, kakaoId={}, teamId={}",
-                user.getId(), kakaoUser.getKakaoId(), team.getId());
-
-        return AuthResponse.ofSignup(tokens, responseUserInfo);
+                user.getId(), kakaoUserInfo.getKakaoId(), user.getTeamId());
+        
+        return createAuthResponse(user, AuthResponse::ofSignup);
     }
 
     /**
@@ -178,6 +144,72 @@ public class AuthService {
     }
 
     // Private 헬퍼 메서드들
+    
+    /**
+     * 카카오 사용자 정보 추출 및 검증
+     */
+    private KakaoUserInfo extractKakaoUserInfo(String accessToken) {
+        KakaoUserResponse kakaoUser = kakaoClient.getUserInfoFromKakao(accessToken);
+        validateKakaoUserInfo(kakaoUser);
+        
+        return KakaoUserInfo.builder()
+                .kakaoId(kakaoUser.getKakaoId())
+                .email(kakaoUser.getEmail())
+                .gender(Gender.fromKakaoValue(kakaoUser.getGender()))
+                .birthYear(Integer.parseInt(kakaoUser.getBirthYear()))
+                .build();
+    }
+    
+    /**
+     * 회원가입 요청 검증
+     */
+    private void validateSignupRequest(SignupRequest request, KakaoUserInfo kakaoInfo) {
+        // 중복 가입 확인
+        if (userInfoRepository.existsByKakaoId(kakaoInfo.getKakaoId())) {
+            throw new ApiException(ErrorCode.DUPLICATE_SIGNUP);
+        }
+        
+        // 닉네임 중복 확인
+        if (userRepository.existsByNickname(request.getNickname())) {
+            throw new ApiException(ErrorCode.DUPLICATE_NICKNAME);
+        }
+    }
+    
+    /**
+     * 사용자 및 사용자 정보 생성
+     */
+    private User createUserWithInfo(SignupRequest request, KakaoUserInfo kakaoInfo) {
+        // 팀 존재 확인
+        Team team = teamRepository.findById(request.getTeamId())
+                .orElseThrow(() -> new ApiException(ErrorCode.TEAM_NOT_FOUND));
+        
+        // 사용자 생성
+        User user = User.createUser(
+                request.getNickname(),
+                team,
+                kakaoInfo.getGender(),
+                kakaoInfo.getBirthYear(),
+                request.getProfileImg(),
+                request.getIntroduction(),
+                Role.USER
+        );
+        userRepository.save(user);
+        
+        // 사용자 상세 정보 생성
+        UserInfo userInfo = UserInfo.createUserInfo(user, kakaoInfo.getKakaoId(), kakaoInfo.getEmail());
+        userInfoRepository.save(userInfo);
+        
+        return user;
+    }
+    
+    /**
+     * 공통 인증 응답 생성
+     */
+    private AuthResponse createAuthResponse(User user, BiFunction<TokenPair, AuthResponse.UserProfile, AuthResponse> responseFactory) {
+        TokenPair tokens = createTokenPair(user);
+        AuthResponse.UserProfile userProfile = createUserProfileResponse(user);
+        return responseFactory.apply(tokens, userProfile);
+    }
 
     private void validateKakaoUserInfo(KakaoUserResponse kakaoUser) {
         if (kakaoUser.getEmail() == null) {
@@ -207,9 +239,11 @@ public class AuthService {
      * JWT 토큰 쌍 생성 (순수 JWT, Redis 저장 없음)
      */
     private TokenPair createTokenPair(User user) {
+        int userAge = user.getAge(); // 한 번만 계산
+        
         String accessToken = jwtProvider.createAccessToken(
                 user.getId(),
-                user.getAge(),
+                userAge,
                 user.getGender().name(),
                 user.getTeamId()
         );
@@ -224,15 +258,17 @@ public class AuthService {
         );
     }
 
-    private AuthResponse.UserInfo createUserInfoResponse(User user) {
-        return AuthResponse.UserInfo.builder()
+    private AuthResponse.UserProfile createUserProfileResponse(User user) {
+        int userAge = user.getAge(); // 한 번만 계산
+        
+        return AuthResponse.UserProfile.builder()
                 .userId(user.getId())
                 .nickname(user.getNickname())
                 .profileImg(user.getProfileImg())
                 .teamId(user.getTeamId())
                 .teamName(user.getTeam().getName())
                 .introduction(user.getIntroduction())
-                .age(user.getAge())
+                .age(userAge)
                 .gender(user.getGender().name())
                 .build();
     }
