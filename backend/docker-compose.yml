@@ -1,5 +1,6 @@
 services:
   # MySQL
+  # compose 테스트
   mysql:
     image: mysql:8.0
     container_name: mysql-db
