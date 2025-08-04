@@ -1,5 +1,6 @@
 services:
   # MySQL
+  # compose 테스트
   mysql:
     image: mysql:8.0
     container_name: mysql-db
@@ -79,6 +80,7 @@ services:
       SPRING_DATA_REDIS_HOST: chat-redis
       SPRING_DATA_REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD}
+      command : redis-server --requirepass ${REDIS_PASSWORD}
       CLOUD_AWS_CREDENTIALS_ACCESS_KEY: ${CLOUD_AWS_CREDENTIALS_ACCESS_KEY}
       CLOUD_AWS_CREDENTIALS_SECRET_KEY: ${CLOUD_AWS_CREDENTIALS_SECRET_KEY}
       CLOUD_AWS_S3_BUCKET: ${CLOUD_AWS_S3_BUCKET}

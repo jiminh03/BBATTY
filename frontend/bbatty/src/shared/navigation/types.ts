@@ -75,8 +75,8 @@ export type ChatStackParamList = {
   ChatList: undefined;
   ChatRoom: {
     roomId: string;
-    roomType: 'game' | 'match' | 'team';
-    roomName: string;
+    roomType: 'match';
+    roomName?: string;
   };
   MatchingCreate: {
     gameId?: string;

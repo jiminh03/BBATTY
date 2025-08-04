@@ -1,20 +1,72 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { initializeApiClient } from './src/shared';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ThemeProvider } from './src/shared/styles';
+import { AppInitService } from './src/app/services/initService';
+/*
+import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
+import { ToastProvider } from '@/shared/components/ToastProvider';
+import { LoadingProvider } from '@/shared/components/LoadingProvider';
+*/
 
-export default function App() {
-  return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnReconnect: true,
+      refetchOnWindowFocus: false,
+    },
+    mutations: {
+      retry: false,
+    },
   },
 });
+
+export default function App() {
+  const [isAppReady, setIsAppReady] = React.useState(false);
+
+  useEffect(() => {
+    initializeApp();
+  }, []);
+
+  const initializeApp = async () => {
+    try {
+      await initializeApiClient();
+
+      await AppInitService.checkNetworkConnection();
+
+      await AppInitService.clearOldCache();
+
+      setIsAppReady(true);
+    } catch (error) {
+      console.log('앱 초기화 실패: ', error);
+
+      //초기화되도 일단 앱은 실행
+      setIsAppReady(true);
+    }
+  };
+
+  if (!isAppReady) {
+    // 스플래쉬 화면 ㄱㄱ
+    return null;
+  }
+
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider>
+            {/* <ErrorBoundary>
+              <LoadingProvider>
+                <ToastProvider> */}
+            <App />
+            {/* </ToastProvider>
+              </LoadingProvider>
+            </ErrorBoundary> */}
+          </ThemeProvider>
+        </QueryClientProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
+  );
+}

@@ -9,7 +9,7 @@ export interface Location {
   timestamp?: number;
 }
 
-// 야구장 정보 =? 맞는진 모름 ㅋㅋ
+// 야구장 정보
 export const STADIUM_LOCATIONS = {
   JAMSIL: {
     name: '잠실야구장',

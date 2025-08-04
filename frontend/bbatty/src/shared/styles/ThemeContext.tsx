@@ -8,7 +8,6 @@ import {
   RADIUS,
   SHADOWS,
   Z_INDEX,
-  ANIMATION,
   type Theme,
   type TeamName,
   type DynamicColors,
@@ -55,7 +54,6 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children, initialT
       radius: RADIUS,
       shadows: SHADOWS,
       zIndex: Z_INDEX,
-      animation: ANIMATION,
     };
 
     return themeObject;
