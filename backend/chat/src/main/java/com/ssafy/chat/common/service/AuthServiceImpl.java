@@ -24,7 +24,7 @@ public class AuthServiceImpl implements AuthService {
     private final RedisTemplate<String, Object> redisTemplate;
 
 //    @Value("${websocket.base.url:http://i13a403.p.ssafy.io:8084}")
-    @Value("${websocket.base.url:ws://localhost:8084/ws}")
+    @Value("${websocket.base.url:ws://localhost:8084}")
     private String websocketBaseUrl;
 
     private static final String SESSION_KEY_PREFIX = "user:session:";
