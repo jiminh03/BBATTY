@@ -34,6 +34,7 @@ public class RedisConfig {
         RedisStandaloneConfiguration config = new RedisStandaloneConfiguration();
         config.setHostName(host);
         config.setPort(port);
+        config.setPassword(password);
 
         return new JedisConnectionFactory(config);
     }

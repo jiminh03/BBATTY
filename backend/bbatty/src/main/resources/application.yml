@@ -67,8 +67,8 @@ jwt:
   issuer: bbatty
   header: Authorization
   prefix: Bearer
-  access-token-validity-hours: 1
-  refresh-token-validity-days: 14
+  access-token-validity-hours: 336
+  refresh-token-validity-days: 30
   refresh-threshold-minutes: 5
 
 # ?? ??
