@@ -74,6 +74,7 @@ public class AuthController {
      *
      * 📝 프론트 처리:
      * - X-Refresh-Token 헤더에 리프레시 토큰 포함
+     *   (X-refresh-token은 HTTP 헤더에서 리프레시 토큰을 전달하는데 사용되는 커스텀 헤더)
      * - 새로운 TokenPair 받아서 기존 토큰 교체
      */
     @PostMapping("/refresh")
