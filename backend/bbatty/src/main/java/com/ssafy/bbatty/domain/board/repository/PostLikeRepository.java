@@ -10,10 +10,10 @@ import org.springframework.stereotype.Repository;
 public interface PostLikeRepository extends JpaRepository<PostLike, Long> {
     
     @Query("SELECT COUNT(pl) FROM PostLike pl WHERE pl.post.id = :postId AND pl.likeAction = 'LIKE'")
-    Long countLikesByPostId(@Param("postId") Long postId);
+    Integer countLikesByPostId(@Param("postId") Long postId);
     
     @Query("SELECT COUNT(pl) FROM PostLike pl WHERE pl.post.id = :postId AND pl.likeAction = 'UNLIKE'")
-    Long countUnlikesByPostId(@Param("postId") Long postId);
+    Integer countUnlikesByPostId(@Param("postId") Long postId);
 
 
 }

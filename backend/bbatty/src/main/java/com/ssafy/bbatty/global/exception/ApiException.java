@@ -2,6 +2,7 @@ package com.ssafy.bbatty.global.exception;
 
 
 import com.ssafy.bbatty.global.constants.ErrorCode;
+import com.ssafy.bbatty.global.response.ApiResponse;
 import lombok.Getter;
 
 @Getter
@@ -20,4 +21,5 @@ public class ApiException extends RuntimeException {
         super(errorCode.getMessage());
         this.errorCode = errorCode;
     }
+
 }

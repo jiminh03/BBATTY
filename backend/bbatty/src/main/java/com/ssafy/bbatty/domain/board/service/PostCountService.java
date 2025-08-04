@@ -2,9 +2,9 @@ package com.ssafy.bbatty.domain.board.service;
 
 public interface PostCountService {
     
-    Long getViewCount(Long postId);
+    Integer getViewCount(Long postId);
     
-    Long getLikeCount(Long postId);
+    Integer getLikeCount(Long postId);
     
     void incrementViewCount(Long postId, Long userId);
 
@@ -14,5 +14,5 @@ public interface PostCountService {
     
     void refreshCountsFromDB(Long postId);
     
-    Long getCommentCount(Long postId);
+    Integer getCommentCount(Long postId);
 }

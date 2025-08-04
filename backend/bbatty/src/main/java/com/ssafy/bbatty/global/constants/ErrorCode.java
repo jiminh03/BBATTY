@@ -53,6 +53,7 @@ public enum ErrorCode {
 
     // POST
     POST_NOT_FOUND(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없어요"),
+    FORBIDDEN_TEAM(HttpStatus.FORBIDDEN, "해당 팀만 사용가능한 기능입니다."),
 
     // COMMENT
     COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없어요"),
