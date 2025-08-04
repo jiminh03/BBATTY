@@ -4,6 +4,7 @@ import { initializeApiClient } from './src/shared';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider } from './src/shared/styles';
+import { AppInitService } from './src/app/services/initService';
 /*
 import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
 import { ToastProvider } from '@/shared/components/ToastProvider';
@@ -26,12 +27,16 @@ export default function App() {
   const [isAppReady, setIsAppReady] = React.useState(false);
 
   useEffect(() => {
-    initializeApiClient();
-  });
+    initializeApp();
+  }, []);
 
   const initializeApp = async () => {
     try {
       await initializeApiClient();
+
+      await AppInitService.checkNetworkConnection();
+
+      await AppInitService.clearOldCache();
 
       setIsAppReady(true);
     } catch (error) {

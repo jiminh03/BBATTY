@@ -1,7 +1,6 @@
-import { useQuery, useMutation, useQueryClient, UseQueryOptions, UseMutationOptions } from '@tanstack/react-query';
-import { InternalAxiosRequestConfig, AxiosResponse } from 'axios';
-import { apiClient } from '../client/apiClient';
-import { QueryKeys, type QueryKey } from '../lib/tanstack/queryKeys';
+import { useQuery, useMutation, UseQueryOptions, UseMutationOptions } from '@tanstack/react-query';
+import { AxiosResponse } from 'axios';
+import { type QueryKey } from '../lib/tanstack/queryKeys';
 import { extractData, isSuccessResponse, type ApiResponse, type ApiSuccessResponse } from '../types/response';
 
 type ApiFunction<TData, TVariables = void> = (variablese: TVariables) => Promise<AxiosResponse<ApiResponse<TData>>>;
