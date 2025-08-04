@@ -26,7 +26,7 @@ export function reset(routes: any[]) {
   }
 }
 
-export function resetToken() {
+export function resetToAuth() {
   reset([{ name: 'AuthStack' }]);
 }
 
