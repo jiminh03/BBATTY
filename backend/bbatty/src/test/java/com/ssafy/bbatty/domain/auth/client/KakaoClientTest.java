@@ -17,8 +17,6 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
 
-import java.time.Duration;
-
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -42,7 +40,7 @@ class KakaoClientTest {
 
     @Test
     @DisplayName("카카오 사용자 정보 조회 - 성공")
-    void getUserInfo_Success() {
+    void getUserInfo_FromKakao_Success() {
         // Given
         String accessToken = "valid-kakao-token";
         KakaoUserResponse expectedResponse = createMockKakaoUserResponse();
@@ -59,7 +57,7 @@ class KakaoClientTest {
                 .thenReturn(Mono.just(expectedResponse));
 
         // When
-        KakaoUserResponse result = kakaoClient.getUserInfo(accessToken);
+        KakaoUserResponse result = kakaoClient.getUserInfoFromKakao(accessToken);
 
         // Then
         assertThat(result).isNotNull();
@@ -75,7 +73,7 @@ class KakaoClientTest {
 
     @Test
     @DisplayName("카카오 사용자 정보 조회 - 4xx 클라이언트 오류")
-    void getUserInfo_ClientError_ThrowsException() {
+    void getUserInfo_FromKakao_ClientError_ThrowsException() {
         // Given
         String accessToken = "invalid-token";
         WebClientResponseException clientError = WebClientResponseException.create(
@@ -96,7 +94,7 @@ class KakaoClientTest {
                 .thenReturn(Mono.error(clientError));
 
         // When & Then
-        assertThatThrownBy(() -> kakaoClient.getUserInfo(accessToken))
+        assertThatThrownBy(() -> kakaoClient.getUserInfoFromKakao(accessToken))
                 .isInstanceOf(ApiException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.KAKAO_AUTH_FAILED);
 
@@ -105,7 +103,7 @@ class KakaoClientTest {
 
     @Test
     @DisplayName("카카오 사용자 정보 조회 - 5xx 서버 오류")
-    void getUserInfo_ServerError_ThrowsException() {
+    void getUserInfo_FromKakao_ServerError_ThrowsException() {
         // Given
         String accessToken = "valid-token";
         WebClientResponseException serverError = WebClientResponseException.create(
@@ -126,7 +124,7 @@ class KakaoClientTest {
                 .thenReturn(Mono.error(serverError));
 
         // When & Then
-        assertThatThrownBy(() -> kakaoClient.getUserInfo(accessToken))
+        assertThatThrownBy(() -> kakaoClient.getUserInfoFromKakao(accessToken))
                 .isInstanceOf(ApiException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.KAKAO_AUTH_FAILED);
 
@@ -135,7 +133,7 @@ class KakaoClientTest {
 
     @Test
     @DisplayName("카카오 사용자 정보 조회 - 타임아웃 예외")
-    void getUserInfo_Timeout_ThrowsException() {
+    void getUserInfo_FromKakao_Timeout_ThrowsException() {
         // Given
         String accessToken = "valid-token";
         RuntimeException timeoutException = new RuntimeException("Timeout");
@@ -150,7 +148,7 @@ class KakaoClientTest {
                 .thenReturn(Mono.error(timeoutException));
 
         // When & Then
-        assertThatThrownBy(() -> kakaoClient.getUserInfo(accessToken))
+        assertThatThrownBy(() -> kakaoClient.getUserInfoFromKakao(accessToken))
                 .isInstanceOf(ApiException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.KAKAO_AUTH_FAILED);
 

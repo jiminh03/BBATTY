@@ -53,7 +53,7 @@ class AuthServiceTest {
         UserInfo existingUserInfo = createMockUserInfo(existingUser, kakaoUser.getKakaoId());
         TokenPair tokenPair = createMockTokenPair();
 
-        when(kakaoClient.getUserInfo("valid-kakao-token")).thenReturn(kakaoUser);
+        when(kakaoClient.getUserInfoFromKakao("valid-kakao-token")).thenReturn(kakaoUser);
         when(userInfoRepository.findByKakaoId(kakaoUser.getKakaoId()))
                 .thenReturn(Optional.of(existingUserInfo));
         when(jwtProvider.createAccessToken(any(), anyInt(), anyString(), any()))
@@ -68,11 +68,11 @@ class AuthServiceTest {
         // Then
         assertThat(response).isNotNull();
         assertThat(response.getTokens()).isNotNull();
-        assertThat(response.getUserInfo()).isNotNull();
-        assertThat(response.getUserInfo().getUserId()).isEqualTo(existingUser.getId());
-        assertThat(response.getUserInfo().getNickname()).isEqualTo(existingUser.getNickname());
+        assertThat(response.getUserProfile()).isNotNull();
+        assertThat(response.getUserProfile().getUserId()).isEqualTo(existingUser.getId());
+        assertThat(response.getUserProfile().getNickname()).isEqualTo(existingUser.getNickname());
 
-        verify(kakaoClient).getUserInfo("valid-kakao-token");
+        verify(kakaoClient).getUserInfoFromKakao("valid-kakao-token");
         verify(userInfoRepository).findByKakaoId(kakaoUser.getKakaoId());
         verify(jwtProvider).createAccessToken(existingUser.getId(), existingUser.getAge(), 
                 existingUser.getGender().name(), existingUser.getTeamId());
@@ -85,7 +85,7 @@ class AuthServiceTest {
         KakaoLoginRequest request = new KakaoLoginRequest("valid-kakao-token");
         KakaoUserResponse kakaoUser = createMockKakaoUser();
 
-        when(kakaoClient.getUserInfo("valid-kakao-token")).thenReturn(kakaoUser);
+        when(kakaoClient.getUserInfoFromKakao("valid-kakao-token")).thenReturn(kakaoUser);
         when(userInfoRepository.findByKakaoId(kakaoUser.getKakaoId()))
                 .thenReturn(Optional.empty());
 
@@ -94,7 +94,7 @@ class AuthServiceTest {
                 .isInstanceOf(ApiException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.USER_NOT_FOUND);
 
-        verify(kakaoClient).getUserInfo("valid-kakao-token");
+        verify(kakaoClient).getUserInfoFromKakao("valid-kakao-token");
         verify(userInfoRepository).findByKakaoId(kakaoUser.getKakaoId());
         verifyNoInteractions(jwtProvider);
     }
@@ -108,7 +108,7 @@ class AuthServiceTest {
         Team team = createMockTeam();
         User savedUser = createMockUser();
 
-        when(kakaoClient.getUserInfo(request.getAccessToken())).thenReturn(kakaoUser);
+        when(kakaoClient.getUserInfoFromKakao(request.getAccessToken())).thenReturn(kakaoUser);
         when(userInfoRepository.existsByKakaoId(kakaoUser.getKakaoId())).thenReturn(false);
         when(userRepository.existsByNickname(request.getNickname())).thenReturn(false);
         when(teamRepository.findById(request.getTeamId())).thenReturn(Optional.of(team));
@@ -126,9 +126,9 @@ class AuthServiceTest {
         // Then
         assertThat(response).isNotNull();
         assertThat(response.getTokens()).isNotNull();
-        assertThat(response.getUserInfo()).isNotNull();
+        assertThat(response.getUserProfile()).isNotNull();
 
-        verify(kakaoClient).getUserInfo(request.getAccessToken());
+        verify(kakaoClient).getUserInfoFromKakao(request.getAccessToken());
         verify(userInfoRepository).existsByKakaoId(kakaoUser.getKakaoId());
         verify(userRepository).existsByNickname(request.getNickname());
         verify(teamRepository).findById(request.getTeamId());
@@ -143,7 +143,7 @@ class AuthServiceTest {
         SignupRequest request = createSignupRequest();
         KakaoUserResponse kakaoUser = createMockKakaoUser();
 
-        when(kakaoClient.getUserInfo(request.getAccessToken())).thenReturn(kakaoUser);
+        when(kakaoClient.getUserInfoFromKakao(request.getAccessToken())).thenReturn(kakaoUser);
         when(userInfoRepository.existsByKakaoId(kakaoUser.getKakaoId())).thenReturn(true);
 
         // When & Then
@@ -162,7 +162,7 @@ class AuthServiceTest {
         SignupRequest request = createSignupRequest();
         KakaoUserResponse kakaoUser = createMockKakaoUser();
 
-        when(kakaoClient.getUserInfo(request.getAccessToken())).thenReturn(kakaoUser);
+        when(kakaoClient.getUserInfoFromKakao(request.getAccessToken())).thenReturn(kakaoUser);
         when(userInfoRepository.existsByKakaoId(kakaoUser.getKakaoId())).thenReturn(false);
         when(userRepository.existsByNickname(request.getNickname())).thenReturn(true);
 

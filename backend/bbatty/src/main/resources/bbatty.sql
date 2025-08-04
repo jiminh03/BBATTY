@@ -64,7 +64,7 @@ CREATE TABLE `user` (
             `team_id` BIGINT NOT NULL COMMENT '응원팀 ID',
             `nickname` VARCHAR(20) NOT NULL COMMENT '닉네임',
             `gender` ENUM('MALE', 'FEMALE') NOT NULL COMMENT '성별',
-            `age` INT NOT NULL COMMENT '나이',
+            `birth_year` INT NOT NULL COMMENT '생년',
             `role` ENUM('USER', 'ADMIN') NOT NULL DEFAULT 'USER' COMMENT '사용자 권한',
             `profile_img` VARCHAR(255) NULL COMMENT '프로필 이미지 URL',
             `introduction` TEXT NULL COMMENT '자기소개',
