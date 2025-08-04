@@ -16,8 +16,8 @@ public class PostListResponse {
     private String title;
     private String nickname;
     private String createdAt;
-    private Long viewCount;
-    private Long likeCount;
+    private Integer viewCount;
+    private Integer likeCount;
     private Integer commentCount;
 
     public PostListResponse(Post post) {

@@ -1,6 +1,8 @@
 package com.ssafy.bbatty.domain.board.repository;
 
 import com.ssafy.bbatty.domain.board.entity.Comment;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -16,5 +18,10 @@ public interface CommentRepository extends JpaRepository<Comment, Long> {
     List<Comment> findByParentIdOrderByCreatedAtAsc(Long parentId);
     
     // 특정 게시글의 총 댓글 수 조회
-    Long countByPostId(Long postId);
+    Integer countByPostId(Long postId);
+    
+    // 페이지네이션을 위한 댓글 조회 메소드들
+    Page<Comment> findByPostIdAndDepthOrderByIdDesc(Long postId, int depth, Pageable pageable);
+    
+    Page<Comment> findByPostIdAndDepthAndIdLessThanOrderByIdDesc(Long postId, int depth, Long cursor, Pageable pageable);
 }

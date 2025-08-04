@@ -15,15 +15,18 @@ import com.ssafy.bbatty.global.s3.S3Service;
 import com.ssafy.bbatty.global.security.UserPrincipal;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+
+@Slf4j
 @RestController
 @RequestMapping("/api/posts")
 @RequiredArgsConstructor
 public class PostController {
-    
+
     private final PostService postService;
     private final S3Service s3Service;
     private final PostCountService postCountService;
@@ -33,7 +36,6 @@ public class PostController {
     public ResponseEntity<ApiResponse<PostCreateResponse>> createPost(
             @Valid @RequestBody PostCreateRequest request,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
-
         PostCreateResponse response = postService.createPost(request, userPrincipal.getUserId());
         return ResponseEntity.status(SuccessCode.SUCCESS_CREATED.getStatus())
                 .body(ApiResponse.success(SuccessCode.SUCCESS_CREATED, response));

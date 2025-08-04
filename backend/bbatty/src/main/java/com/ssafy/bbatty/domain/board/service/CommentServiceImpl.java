@@ -1,6 +1,7 @@
 package com.ssafy.bbatty.domain.board.service;
 
 import com.ssafy.bbatty.domain.board.dto.request.CommentCreateRequest;
+import com.ssafy.bbatty.domain.board.dto.response.CommentListPageResponse;
 import com.ssafy.bbatty.domain.board.dto.response.CommentListResponse;
 import com.ssafy.bbatty.domain.board.dto.response.CommentResponse;
 import com.ssafy.bbatty.domain.board.entity.Comment;
@@ -12,6 +13,9 @@ import com.ssafy.bbatty.domain.user.repository.UserRepository;
 import com.ssafy.bbatty.global.constants.ErrorCode;
 import com.ssafy.bbatty.global.exception.ApiException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -25,6 +29,7 @@ public class CommentServiceImpl implements CommentService{
     private final PostRepository postRepository;
     private final UserRepository userRepository;
     private final CommentRepository commentRepository;
+    private static final int PAGE_SIZE = 10; // 한 번에 가져올 댓글 수
 
     @Override
     public Comment createComment(CommentCreateRequest request) {
@@ -87,6 +92,45 @@ public class CommentServiceImpl implements CommentService{
                 .collect(Collectors.toList());
         
         return new CommentListResponse(commentResponses);
+    }
+
+    @Override
+    public CommentListPageResponse getCommentsWithRepliesByPostIdWithPagination(Long postId, Long cursor) {
+        Pageable pageable = PageRequest.of(0, PAGE_SIZE);
+        Page<Comment> commentPage;
+
+        if (cursor == null) {
+            // 첫 페이지 - 부모 댓글들만 조회 (depth = 0)
+            commentPage = commentRepository.findByPostIdAndDepthOrderByIdDesc(postId, 0, pageable);
+        } else {
+            // 다음 페이지 - 커서 이후 데이터 조회
+            commentPage = commentRepository.findByPostIdAndDepthAndIdLessThanOrderByIdDesc(postId, 0, cursor, pageable);
+        }
+
+        List<CommentResponse> commentResponses = commentPage.getContent()
+                .stream()
+                .map(parentComment -> {
+                    // 해당 부모 댓글의 대댓글들 조회
+                    List<Comment> replies = commentRepository.findByParentIdOrderByCreatedAtAsc(parentComment.getId());
+                    
+                    // 대댓글들을 CommentResponse로 변환
+                    List<CommentResponse> replyResponses = replies.stream()
+                            .map(CommentResponse::new)
+                            .collect(Collectors.toList());
+                    
+                    // 부모 댓글을 CommentResponse로 변환 (대댓글 포함)
+                    return new CommentResponse(parentComment, replyResponses);
+                })
+                .collect(Collectors.toList());
+
+        boolean hasNext = commentPage.hasNext();
+        Long nextCursor = null;
+
+        if (hasNext && !commentResponses.isEmpty()) {
+            nextCursor = commentResponses.getLast().getId();
+        }
+
+        return new CommentListPageResponse(commentResponses, hasNext, nextCursor);
     }
 
     @Override
