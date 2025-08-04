@@ -21,7 +21,6 @@ public class CrawlerController {
 
     private final ScheduledGameService scheduledGameService;
     private final FinishedGameService finishedGameService;
-    private final GameRepository gameRepository;
 
     @PostMapping("/scheduled-games/{date}")
     public ResponseEntity<Map<String, Object>> crawlScheduledGames(@PathVariable String date) {

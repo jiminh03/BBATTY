@@ -1,6 +1,7 @@
 package com.ssafy.schedule.scheduler;
 
 import com.ssafy.schedule.service.FinishedGameService;
+import com.ssafy.schedule.service.GameEventScheduler;
 import com.ssafy.schedule.service.ScheduledGameService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,7 @@ public class GameScheduler {
 
     private final ScheduledGameService scheduledGameService;
     private final FinishedGameService finishedGameService;
+    private final GameEventScheduler gameEventScheduler;
 
     /**
      * 매일 00:00에 오늘 날짜의 경기 일정을 크롤링하여 저장
@@ -24,15 +26,17 @@ public class GameScheduler {
      */
     @Scheduled(cron = "0 0 0 * * *")
     public void crawlTodayScheduledGames() {
-        String today = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
         
-        log.info("========== 오늘({}) 경기 일정 크롤링 시작 ==========", today);
+        // 3주 뒤의 날짜 계산
+        String targetDate = LocalDate.now()
+                .plusWeeks(3)  
+                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
         
         try {
-            int savedCount = scheduledGameService.crawlAndSaveScheduledGames(today);
-            log.info("========== 오늘({}) 경기 일정 크롤링 완료: {}개 저장 ==========", today, savedCount);
+            int savedCount = scheduledGameService.crawlAndSaveScheduledGames(targetDate);
+            log.info("========== 오늘({}) 경기 일정 크롤링 완료: {}개 저장 ==========", targetDate, savedCount);
         } catch (Exception e) {
-            log.error("========== 오늘({}) 경기 일정 크롤링 실패: {} ==========", today, e.getMessage(), e);
+            log.error("========== 오늘({}) 경기 일정 크롤링 실패: {} ==========", targetDate, e.getMessage(), e);
         }
     }
 
@@ -52,6 +56,23 @@ public class GameScheduler {
             log.info("========== 어제({}) 경기 결과 업데이트 완료: {}개 업데이트 ==========", yesterday, updatedCount);
         } catch (Exception e) {
             log.error("========== 어제({}) 경기 결과 업데이트 실패: {} ==========", yesterday, e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 매일 02:00에 완료된 이벤트 스케줄 정리
+     * - 이미 실행 완료되거나 취소된 스케줄 작업들을 메모리에서 제거
+     */
+    @Scheduled(cron = "0 0 2 * * *")
+    public void cleanupCompletedEventSchedules() {
+        log.info("========== 완료된 이벤트 스케줄 정리 시작 ==========");
+        
+        try {
+            gameEventScheduler.cleanupCompletedTasks();
+            int currentTaskCount = gameEventScheduler.getScheduledTaskCount();
+            log.info("========== 이벤트 스케줄 정리 완료: 현재 {}개 스케줄 활성 ==========", currentTaskCount);
+        } catch (Exception e) {
+            log.error("========== 이벤트 스케줄 정리 실패: {} ==========", e.getMessage(), e);
         }
     }
 }

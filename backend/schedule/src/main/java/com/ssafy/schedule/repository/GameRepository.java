@@ -15,10 +15,6 @@ import java.util.Optional;
 @Repository
 public interface GameRepository extends JpaRepository<Game, Long> {
     
-    List<Game> findByStatus(GameStatus status);
-    
-    List<Game> findByDateTimeBetween(LocalDateTime start, LocalDateTime end);
-    
     @Query("SELECT g FROM Game g WHERE g.homeTeam = :team OR g.awayTeam = :team")
     List<Game> findByTeam(@Param("team") Team team);
     
@@ -31,4 +27,6 @@ public interface GameRepository extends JpaRepository<Game, Long> {
     
     @Query("SELECT CASE WHEN COUNT(g) > 0 THEN true ELSE false END FROM Game g WHERE g.homeTeam = :homeTeam AND g.awayTeam = :awayTeam AND DATE(g.dateTime) = DATE(:gameDate)")
     boolean existsByHomeTeamAndAwayTeamAndDate(@Param("homeTeam") Team homeTeam, @Param("awayTeam") Team awayTeam, @Param("gameDate") LocalDateTime gameDate);
+    
+    List<Game> findByStatusAndDateTimeAfter(GameStatus status, LocalDateTime dateTime);
 }
