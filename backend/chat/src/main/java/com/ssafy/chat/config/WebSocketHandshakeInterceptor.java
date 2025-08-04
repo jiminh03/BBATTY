@@ -36,13 +36,13 @@ public class WebSocketHandshakeInterceptor implements HandshakeInterceptor {
         attributes.putAll(queryParams);
         
         // 필수 파라미터 검증
-        String tokken = queryParams.get("token");
-        if (tokken == null || tokken.trim().isEmpty()) {
-            log.warn("필수 파라미터 누락: sessionToken");
+        String token = queryParams.get("token");
+        if (token == null || token.trim().isEmpty()) {
+            log.warn("필수 파라미터 누락: token");
             return false;
         }
         
-        log.info("핸드셰이크 성공 - userId: {}", tokken);
+        log.info("핸드셰이크 성공 - token: {}", token);
         return true;
     }
 

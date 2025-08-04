@@ -28,7 +28,7 @@ public class MatchChatJoinRequest {
     private Integer winRate;
 
     // 승리 요정 여부
-    private boolean winFairy;
+//    private boolean winFairy;
     
     // 매칭 채팅방 ID 
     @NotBlank(message = "채팅방 ID는 필수입니다.")

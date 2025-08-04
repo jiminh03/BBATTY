@@ -2,45 +2,165 @@ package com.ssafy.chat.match.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.chat.common.dto.UserSessionInfo;
-import com.ssafy.chat.common.handler.BaseChatWebSocketHandler;
-import com.ssafy.chat.common.service.RedisPubSubService;
+import com.ssafy.chat.match.dto.MatchChatMessage;
+import com.ssafy.chat.match.service.MatchChatService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.*;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 매칭 채팅 WebSocket 핸들러 (단순화된 버전)
+ * 매칭 채팅 WebSocket 핸들러 (완전 독립)
+ * MatchChatService를 통해 Kafka와 연동
  */
 @Component("matchChatWebSocketHandler")
 @Slf4j
-public class MatchChatWebSocketHandler extends BaseChatWebSocketHandler {
+@RequiredArgsConstructor
+public class MatchChatWebSocketHandler implements WebSocketHandler {
 
-    private final RedisPubSubService redisPubSubService;
+    private final ObjectMapper objectMapper;
+    private final MatchChatService matchChatService;
+    
+    // 로컬 세션 관리 (Kafka Consumer와 별도)
+    private final Map<String, Set<WebSocketSession>> connectedUsers = new ConcurrentHashMap<>();
+    private final Map<WebSocketSession, UserSessionInfo> sessionToUser = new ConcurrentHashMap<>();
 
-    @Autowired
-    public MatchChatWebSocketHandler(ObjectMapper objectMapper,
-                                     RedisPubSubService redisPubSubService) {
-        super(objectMapper);
-        this.redisPubSubService = redisPubSubService;
+    @Override
+    public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+        try {
+            UserSessionInfo userInfo = createUserSessionInfo(session);
+
+            if (!canJoinChatRoom(session, userInfo)) {
+                session.close(CloseStatus.POLICY_VIOLATION.withReason("Access denied"));
+                return;
+            }
+
+            // 매칭 채팅: 여러 세션 허용
+            handleConnectionManagement(session, userInfo);
+
+            // 로컬 세션 정보 저장
+            connectedUsers.computeIfAbsent(userInfo.getUserId(), k -> ConcurrentHashMap.newKeySet()).add(session);
+            sessionToUser.put(session, userInfo);
+
+            // Kafka Consumer에 세션 등록
+            matchChatService.addSessionToMatchRoom(userInfo.getRoomId(), session);
+
+            // 입장 이벤트 발송
+            matchChatService.sendUserJoinEvent(userInfo.getRoomId(), userInfo.getUserId(), userInfo.getUserName());
+
+            log.info("매칭 채팅 WebSocket 연결 성공 - userId: {}, matchId: {}, sessionId: {}",
+                    userInfo.getUserId(), userInfo.getRoomId(), session.getId());
+
+        } catch (Exception e) {
+            log.error("매칭 채팅 WebSocket 연결 처리 실패 - sessionId: {}", session.getId(), e);
+            session.close(CloseStatus.SERVER_ERROR);
+        }
     }
 
     @Override
-    protected UserSessionInfo createUserSessionInfo(WebSocketSession session) {
+    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
+        try {
+            UserSessionInfo userInfo = sessionToUser.get(session);
+            if (userInfo != null) {
+                String matchId = userInfo.getRoomId();
+                
+                // Kafka Consumer에서 세션 제거
+                matchChatService.removeSessionFromMatchRoom(matchId, session);
+                
+                // 퇴장 이벤트 발송
+                matchChatService.sendUserLeaveEvent(matchId, userInfo.getUserId(), userInfo.getUserName());
+                
+                // 로컬 세션 정보 제거
+                Set<WebSocketSession> userSessions = connectedUsers.get(userInfo.getUserId());
+                if (userSessions != null) {
+                    userSessions.remove(session);
+                    if (userSessions.isEmpty()) {
+                        connectedUsers.remove(userInfo.getUserId());
+                    }
+                }
+                sessionToUser.remove(session);
+
+                log.info("매칭 채팅 WebSocket 연결 종료 - userId: {}, matchId: {}, status: {}",
+                        userInfo.getUserId(), matchId, status);
+            }
+        } catch (Exception e) {
+            log.error("매칭 채팅 WebSocket 연결 종료 처리 실패 - sessionId: {}", session.getId(), e);
+        }
+    }
+
+    @Override
+    public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) throws Exception {
+        try {
+            UserSessionInfo userInfo = sessionToUser.get(session);
+            if (userInfo == null) {
+                log.warn("세션 정보 없음 - sessionId: {}", session.getId());
+                return;
+            }
+
+            if (message instanceof TextMessage) {
+                String messageContent = ((TextMessage) message).getPayload();
+
+                // 메시지 검증
+                if (!isValidMessage(messageContent, userInfo)) {
+                    log.warn("유효하지 않은 메시지 - userId: {}", userInfo.getUserId());
+                    return;
+                }
+
+                // 매칭 채팅 메시지 생성
+                MatchChatMessage chatMessage = createMatchChatMessage(session, userInfo, messageContent);
+
+                // Kafka로 메시지 발송 (브로드캐스트는 Consumer에서 처리)
+                matchChatService.sendChatMessage(userInfo.getRoomId(), chatMessage);
+            }
+
+        } catch (Exception e) {
+            log.error("매칭 채팅 메시지 처리 실패 - sessionId: {}", session.getId(), e);
+        }
+    }
+
+    @Override
+    public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
+        log.error("매칭 채팅 WebSocket 전송 오류 - sessionId: {}", session.getId(), exception);
+
+        UserSessionInfo userInfo = sessionToUser.get(session);
+        if (userInfo != null) {
+            matchChatService.removeSessionFromMatchRoom(userInfo.getRoomId(), session);
+            matchChatService.sendUserLeaveEvent(userInfo.getRoomId(), userInfo.getUserId(), userInfo.getUserName());
+        }
+
+        session.close(CloseStatus.SERVER_ERROR);
+    }
+
+    @Override
+    public boolean supportsPartialMessages() {
+        return false;
+    }
+
+    /**
+     * 사용자 세션 정보 생성
+     */
+    private UserSessionInfo createUserSessionInfo(WebSocketSession session) {
         Map<String, Object> attributes = session.getAttributes();
 
         String userId = (String) attributes.get("userId");
         String userName = (String) attributes.get("userName");
         String matchId = (String) attributes.get("matchId");
 
+        if (userId == null || userName == null || matchId == null) {
+            throw new IllegalArgumentException("필수 세션 정보 누락");
+        }
+
         return new UserSessionInfo(userId, userName, matchId);
     }
 
-    @Override
-    protected boolean canJoinChatRoom(WebSocketSession session, UserSessionInfo userInfo) {
+    /**
+     * 채팅방 입장 가능 여부 확인
+     */
+    private boolean canJoinChatRoom(WebSocketSession session, UserSessionInfo userInfo) {
         try {
             String matchId = userInfo.getRoomId();
             String userId = userInfo.getUserId();
@@ -61,66 +181,17 @@ public class MatchChatWebSocketHandler extends BaseChatWebSocketHandler {
         }
     }
 
-    @Override
-    protected void handleConnectionManagement(WebSocketSession session, UserSessionInfo userInfo) {
-        // 매칭 채팅: 여러 세션 허용 (별도 처리 없음)
+    /**
+     * 연결 관리 처리 (매칭 채팅: 여러 세션 허용)
+     */
+    private void handleConnectionManagement(WebSocketSession session, UserSessionInfo userInfo) {
         log.info("매칭 채팅 - 다중 세션 허용 - userId: {}", userInfo.getUserId());
     }
 
-    @Override
-    protected void handleUserJoin(WebSocketSession session, UserSessionInfo userInfo) {
-        try {
-            String matchId = userInfo.getRoomId();
-            String userId = userInfo.getUserId();
-
-            log.info("매칭 채팅방 입장 - matchId: {}, userId: {}", matchId, userId);
-
-            // Redis Pub/Sub으로 다른 서버에 입장 알림
-            Map<String, Object> joinEvent = createJoinEvent(userInfo);
-            redisPubSubService.publishMessage(matchId, joinEvent);
-
-        } catch (Exception e) {
-            log.error("매칭 채팅방 입장 처리 실패 - userId: {}", userInfo.getUserId(), e);
-        }
-    }
-
-    @Override
-    protected void handleUserLeave(WebSocketSession session, UserSessionInfo userInfo) {
-        try {
-            String matchId = userInfo.getRoomId();
-            String userId = userInfo.getUserId();
-
-            log.info("매칭 채팅방 퇴장 - matchId: {}, userId: {}", matchId, userId);
-
-            // Redis Pub/Sub으로 다른 서버에 퇴장 알림
-            Map<String, Object> leaveEvent = createLeaveEvent(userInfo);
-            redisPubSubService.publishMessage(matchId, leaveEvent);
-
-        } catch (Exception e) {
-            log.error("매칭 채팅방 퇴장 처리 실패 - userId: {}", userInfo.getUserId(), e);
-        }
-    }
-
-    @Override
-    protected Map<String, Object> handleDomainMessage(WebSocketSession session, UserSessionInfo userInfo, String content) {
-        try {
-            // 매칭 채팅 메시지 생성 (userId, nickname, profileImgUrl, isVictoryFairy 포함)
-            Map<String, Object> matchMessage = createMatchChatMessage(session, userInfo, content);
-
-            // Redis Pub/Sub으로 다른 서버에 메시지 전파
-            redisPubSubService.publishMessage(userInfo.getRoomId(), matchMessage);
-
-            return matchMessage;
-
-        } catch (Exception e) {
-            log.error("매칭 채팅 메시지 처리 실패 - userId: {}", userInfo.getUserId(), e);
-            return null;
-        }
-    }
-
-    @Override
-    protected boolean isValidMessage(String content, UserSessionInfo userInfo) {
-        // 기본 검증
+    /**
+     * 메시지 유효성 검증
+     */
+    private boolean isValidMessage(String content, UserSessionInfo userInfo) {
         if (content == null || content.trim().isEmpty()) {
             return false;
         }
@@ -132,53 +203,23 @@ public class MatchChatWebSocketHandler extends BaseChatWebSocketHandler {
         return true;
     }
 
-
     /**
-     * 매칭 채팅 메시지 생성 (userId, nickname, profileImgUrl, isVictoryFairy 포함)
+     * 매칭 채팅 메시지 생성
      */
-    private Map<String, Object> createMatchChatMessage(WebSocketSession session, UserSessionInfo userInfo, String content) {
-        Map<String, Object> message = new HashMap<>();
+    private MatchChatMessage createMatchChatMessage(WebSocketSession session, UserSessionInfo userInfo, String content) {
         Map<String, Object> attributes = session.getAttributes();
 
+        MatchChatMessage message = new MatchChatMessage();
+        message.setRoomId(userInfo.getRoomId());
+        message.setContent(content);
+        message.setTimestamp(java.time.LocalDateTime.now());
+        
         // 매칭 채팅 특화 정보
-        message.put("type", "message");
-        message.put("roomId", userInfo.getRoomId());
-        message.put("userId", userInfo.getUserId());
-        message.put("nickname", userInfo.getUserName());
-        message.put("content", content);
-        message.put("timestamp", java.time.LocalDateTime.now().toString());
-        message.put("messageType", "CHAT");
-
-        // 클라이언트에서 보낸 추가 정보
-        message.put("profileImgUrl", attributes.get("profileImgUrl"));
-        message.put("isVictoryFairy", attributes.get("isVictoryFairy"));
+        message.setUserId(userInfo.getUserId());
+        message.setNickname(userInfo.getUserName());
+        message.setProfileImgUrl((String) attributes.get("profileImgUrl"));
+        message.setVictoryFairy((Boolean) attributes.getOrDefault("isVictoryFairy", false));
 
         return message;
-    }
-
-    /**
-     * 입장 이벤트 생성
-     */
-    private Map<String, Object> createJoinEvent(UserSessionInfo userInfo) {
-        Map<String, Object> event = new HashMap<>();
-        event.put("type", "user_join");
-        event.put("userId", userInfo.getUserId());
-        event.put("userName", userInfo.getUserName());
-        event.put("matchId", userInfo.getRoomId());
-        event.put("timestamp", System.currentTimeMillis());
-        return event;
-    }
-
-    /**
-     * 퇴장 이벤트 생성
-     */
-    private Map<String, Object> createLeaveEvent(UserSessionInfo userInfo) {
-        Map<String, Object> event = new HashMap<>();
-        event.put("type", "user_leave");
-        event.put("userId", userInfo.getUserId());
-        event.put("userName", userInfo.getUserName());
-        event.put("matchId", userInfo.getRoomId());
-        event.put("timestamp", System.currentTimeMillis());
-        return event;
     }
 }
