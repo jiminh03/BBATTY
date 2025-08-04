@@ -31,6 +31,9 @@ dependencies {
 	// Redis 지원
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
+	// Kafka 지원
+	implementation 'org.springframework.kafka:spring-kafka'
+
 	// JWT 지원 (Auth0 java-jwt 라이브러리)
 	implementation 'com.auth0:java-jwt:4.4.0'
 
