@@ -1,0 +1,78 @@
+# BBATTY ?? ?? ???? ??? ?? (?? properties ??)
+spring:
+  application:
+    name: bbatty
+
+  # ?????? ??
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # JPA/Hibernate ??
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    database-platform: org.hibernate.dialect.MySQL8Dialect
+
+  # Redis ??
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD}
+      timeout: 2000ms
+
+# AWS S3 ??
+cloud:
+  aws:
+    credentials:
+      access-key: ${CLOUD_AWS_CREDENTIALS_ACCESS_KEY}
+      secret-key: ${CLOUD_AWS_CREDENTIALS_SECRET_KEY}
+    s3:
+      bucket: ${CLOUD_AWS_S3_BUCKET}
+    region:
+      static: ap-northeast-2
+    stack:
+      auto: false
+
+# WebSocket ??
+websocket:
+  allowed-origins: "*"
+  sockjs:
+    enabled: false
+
+# WebSocket - Chatting ??
+chat:
+  game:
+    enable-spam-filter: false
+    enable-profanity-filter: false
+  match:
+    auto-create-room: true
+
+# Kakao OAuth ??
+kakao:
+  client-id: ${KAKAO_CLIENT_ID}
+  client-secret: ${KAKAO_CLIENT_SECRET}
+  user-info-url: https://kapi.kakao.com/v2/user/me
+  redirect-uri: ${KAKAO_REDIRECT_URI}
+  timeout-seconds: 10
+  scope: account_email,birthday,gender
+
+# JWT ??
+jwt:
+  secret: ${JWT_SECRET}
+  issuer: bbatty
+  header: Authorization
+  prefix: Bearer
+  access-token-validity-hours: 1
+  refresh-token-validity-days: 14
+  refresh-threshold-minutes: 5
+
+# ?? ??
+logging:
+  level:
+    com.ssafy.bbatty.domain.chat: DEBUG
+    org.springframework.web.socket: DEBUG
