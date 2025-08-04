@@ -7,6 +7,7 @@ import com.ssafy.bbatty.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -50,10 +51,10 @@ public class Game extends BaseEntity {
     private String stadium;
 
     @Column(precision = 10, scale = 7)
-    private Double latitude;
+    private BigDecimal latitude;
 
     @Column(precision = 10, scale = 7)
-    private Double longitude;
+    private BigDecimal longitude;
 
     @Column(name = "double_header", nullable = false)
     private Boolean doubleHeader;
@@ -61,7 +62,7 @@ public class Game extends BaseEntity {
     @Builder
     public Game(Team awayTeam, Team homeTeam, GameStatus status, Integer awayScore,
                 Integer homeScore, LocalDateTime dateTime, GameResult result,
-                String stadium, Double latitude, Double longitude, Boolean doubleHeader) {
+                String stadium, BigDecimal latitude, BigDecimal longitude, Boolean doubleHeader) {
         this.awayTeam = awayTeam;
         this.homeTeam = homeTeam;
         this.status = status;
