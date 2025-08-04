@@ -10,5 +10,5 @@ import org.springframework.stereotype.Repository;
 public interface PostViewRepository extends JpaRepository<PostView, Long> {
     
     @Query("SELECT COUNT(pv) FROM PostView pv WHERE pv.post.id = :postId")
-    Long countByPostId(@Param("postId") Long postId);
+    Integer countByPostId(@Param("postId") Long postId);
 }

@@ -31,9 +31,9 @@ public class PostCountServiceImpl implements PostCountService {
     private static final String COMMENT_COUNT_KEY = "post:comment:";
     
     @Override
-    public Long getViewCount(Long postId) {
+    public Integer getViewCount(Long postId) {
         String key = VIEW_COUNT_KEY + postId;
-        Long count = redisUtil.getValue(key, Long.class);
+        Integer count = redisUtil.getValue(key, Integer.class);
         
         if (count == null) {
             count = postViewRepository.countByPostId(postId);
@@ -44,24 +44,23 @@ public class PostCountServiceImpl implements PostCountService {
     }
     
     @Override
-    public Long getLikeCount(Long postId) {
+    public Integer getLikeCount(Long postId) {
         String key = LIKE_COUNT_KEY + postId;
-        Long count = redisUtil.getValue(key, Long.class);
+        Integer count = redisUtil.getValue(key, Integer.class);
         
         if (count == null) {
-            Long likeCount = postLikeRepository.countLikesByPostId(postId);
-            Long unlikeCount = postLikeRepository.countUnlikesByPostId(postId);
+            Integer likeCount = postLikeRepository.countLikesByPostId(postId);
+            Integer unlikeCount = postLikeRepository.countUnlikesByPostId(postId);
             count = likeCount - unlikeCount;
             redisUtil.setValue(key, count);
         }
-        
         return count;
     }
 
     @Override
-    public Long getCommentCount(Long postId) {
+    public Integer getCommentCount(Long postId) {
         String key = COMMENT_COUNT_KEY + postId;
-        Long count = redisUtil.getValue(key, Long.class);
+        Integer count = redisUtil.getValue(key, Integer.class);
 
         if (count == null) {
             count = commentRepository.countByPostId(postId);
@@ -85,10 +84,10 @@ public class PostCountServiceImpl implements PostCountService {
 
         String key = VIEW_COUNT_KEY + postId;
         if (redisUtil.hasKey(key)) {
-            Long currentCount = redisUtil.getValue(key, Long.class);
+            Integer currentCount = redisUtil.getValue(key, Integer.class);
             redisUtil.setValue(key, currentCount + 1);
         } else {
-            Long dbCount = postViewRepository.countByPostId(postId);
+            Integer dbCount = postViewRepository.countByPostId(postId);
             redisUtil.setValue(key, dbCount);
         }
     }
@@ -108,12 +107,12 @@ public class PostCountServiceImpl implements PostCountService {
         // 2. Redis 좋아요 카운트 증가
         String key = LIKE_COUNT_KEY + postId;
         if (redisUtil.hasKey(key)) {
-            Long currentCount = redisUtil.getValue(key, Long.class);
+            Integer currentCount = redisUtil.getValue(key, Integer.class);
             redisUtil.setValue(key, currentCount + 1);
         } else {
-            Long likeCount = postLikeRepository.countLikesByPostId(postId);
-            Long unlikeCount = postLikeRepository.countUnlikesByPostId(postId);
-            Long dbCount = likeCount - unlikeCount;
+            Integer likeCount = postLikeRepository.countLikesByPostId(postId);
+            Integer unlikeCount = postLikeRepository.countUnlikesByPostId(postId);
+            Integer dbCount = likeCount - unlikeCount;
             redisUtil.setValue(key, dbCount);
         }
     }
@@ -133,14 +132,14 @@ public class PostCountServiceImpl implements PostCountService {
         // 2. Redis 좋아요 카운트 감소
         String key = LIKE_COUNT_KEY + postId;
         if (redisUtil.hasKey(key)) {
-            Long currentCount = redisUtil.getValue(key, Long.class);
+            Integer currentCount = redisUtil.getValue(key, Integer.class);
             if (currentCount > 0) {
                 redisUtil.setValue(key, currentCount - 1);
             }
         } else {
-            Long likeCount = postLikeRepository.countLikesByPostId(postId);
-            Long unlikeCount = postLikeRepository.countUnlikesByPostId(postId);
-            Long dbCount = likeCount - unlikeCount;
+            Integer likeCount = postLikeRepository.countLikesByPostId(postId);
+            Integer unlikeCount = postLikeRepository.countUnlikesByPostId(postId);
+            Integer dbCount = likeCount - unlikeCount;
             redisUtil.setValue(key, dbCount > 0 ? dbCount - 1 : 0);
         }
     }
@@ -151,11 +150,11 @@ public class PostCountServiceImpl implements PostCountService {
         String likeKey = LIKE_COUNT_KEY + postId;
         String commentKey = COMMENT_COUNT_KEY + postId;
         
-        Long viewCount = postViewRepository.countByPostId(postId);
-        Long likes = postLikeRepository.countLikesByPostId(postId);
-        Long unlikes = postLikeRepository.countUnlikesByPostId(postId);
-        Long likeCount = likes - unlikes;
-        Long commentCount = commentRepository.countByPostId(postId);
+        Integer viewCount = postViewRepository.countByPostId(postId);
+        Integer likes = postLikeRepository.countLikesByPostId(postId);
+        Integer unlikes = postLikeRepository.countUnlikesByPostId(postId);
+        Integer likeCount = likes - unlikes;
+        Integer commentCount = commentRepository.countByPostId(postId);
         
         redisUtil.setValue(viewKey, viewCount);
         redisUtil.setValue(likeKey, likeCount);

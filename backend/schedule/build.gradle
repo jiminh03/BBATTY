@@ -25,10 +25,20 @@ repositories {
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.seleniumhq.selenium:selenium-java:4.21.0'
+	implementation 'org.seleniumhq.selenium:selenium-chrome-driver:4.21.0'
+	implementation 'org.jsoup:jsoup:1.18.3'
+	implementation 'org.springframework.boot:spring-boot-starter-quartz'
+	runtimeOnly 'mysql:mysql-connector-java:8.0.33'
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.withType(JavaCompile) {
+	options.encoding = 'UTF-8'
 }
 
 tasks.named('test') {
