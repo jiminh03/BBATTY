@@ -28,6 +28,7 @@ public class CommentController {
     }
 
     // 4. 댓글 수정
+    // 주석 추가
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> updateComment(
             @PathVariable Long id,
