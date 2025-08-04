@@ -29,7 +29,7 @@ public class CommentController {
                 ApiResponse.success(SuccessCode.SUCCESS_CREATED));
     }
 
-    // 4. 댓글 수정
+    // 2. 댓글 수정
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> updateComment(
             @PathVariable Long id,
