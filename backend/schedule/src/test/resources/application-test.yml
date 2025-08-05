@@ -1,0 +1,31 @@
+# BBATTY 야구 직관 커뮤니티 백엔드 설정 (테스트용)
+spring:
+  application:
+    name: schedule
+
+  # H2 메모리 데이터베이스 설정 (테스트용)
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;REFERENTIAL_INTEGRITY=FALSE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  # JPA/Hibernate 설정
+  jpa:
+    hibernate:
+      ddl-auto: create-drop  # 테스트 시마다 스키마 재생성
+    show-sql: true
+    database-platform: org.hibernate.dialect.H2Dialect
+
+  # Redis 설정 (테스트용)
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:
+      timeout: 2000ms
+
+    # H2 콘솔 활성화
+  h2:
+    console:
+      enabled: true
