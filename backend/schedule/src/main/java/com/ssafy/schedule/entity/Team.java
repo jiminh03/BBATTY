@@ -1,52 +1,31 @@
 package com.ssafy.schedule.entity;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.springframework.data.annotation.CreatedDate;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
+@Table(name = "team", schema = "BBATTY")
 @Getter
-@Setter
-@Table(name = "team")
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class Team {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id", nullable = false)
     private Long id;
 
     @Column(name = "name", nullable = false, length = 20)
     private String name;
 
-    @Column(name = "stadium", nullable = false, length = 50)
-    private String stadium;
-
-    @Column(name = "latitude", precision = 10, scale = 7)
-    private BigDecimal latitude;
-
-    @Column(name = "longitude", precision = 10, scale = 7)
-    private BigDecimal longitude;
-
-    @CreationTimestamp
+    @CreatedDate
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
-
-    @OneToMany(mappedBy = "homeTeam")
-    private List<Game> homeGames;
-
-    @OneToMany(mappedBy = "awayTeam")
-    private List<Game> awayGames;
-
-    public Team() {}
-
-    public Team(String name, String stadium, BigDecimal latitude, BigDecimal longitude) {
-        this.name = name;
-        this.stadium = stadium;
-        this.latitude = latitude;
-        this.longitude = longitude;
-    }
 }

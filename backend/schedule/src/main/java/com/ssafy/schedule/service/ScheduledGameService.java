@@ -1,10 +1,12 @@
 package com.ssafy.schedule.service;
 
 import com.ssafy.schedule.common.GameStatus;
+import com.ssafy.schedule.common.Stadium;
 import com.ssafy.schedule.entity.Game;
 import com.ssafy.schedule.entity.Team;
 import com.ssafy.schedule.repository.GameRepository;
 import com.ssafy.schedule.repository.TeamRepository;
+import com.ssafy.schedule.scheduler.ChatCreateScheduler;
 import com.ssafy.schedule.service.base.BaseCrawlerService;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
@@ -25,9 +27,10 @@ import java.util.List;
 public class ScheduledGameService extends BaseCrawlerService {
 
     private final GameRepository gameRepository;
-    private final GameEventScheduler gameEventScheduler;
+    private final ChatCreateScheduler gameEventScheduler;
 
-    public ScheduledGameService(TeamRepository teamRepository, GameRepository gameRepository, GameEventScheduler gameEventScheduler) {
+    public ScheduledGameService(TeamRepository teamRepository,
+                               GameRepository gameRepository, ChatCreateScheduler gameEventScheduler) {
         super(teamRepository);
         this.gameRepository = gameRepository;
         this.gameEventScheduler = gameEventScheduler;
@@ -41,7 +44,6 @@ public class ScheduledGameService extends BaseCrawlerService {
      */
     public int crawlAndSaveScheduledGames(String date) {
         log.info("{} 예정된 경기 일정 크롤링 시작", date);
-
 
         List<String> gameUrls = crawlGameUrls(date);
         if (gameUrls.isEmpty()) {
@@ -87,6 +89,9 @@ public class ScheduledGameService extends BaseCrawlerService {
         // 경기 시간 추출
         String gameTime = extractGameTime(doc);
 
+        // 경기장 지역명 추출
+        String stadiumLocation = extractStadiumLocation(doc);
+
         // 점수 확인 - 점수가 있으면 이미 진행된 경기이므로 건너뛰기
         Integer[] scores = extractScores(doc);
         if (scores != null) {
@@ -95,14 +100,16 @@ public class ScheduledGameService extends BaseCrawlerService {
             return false;
         }
 
+
+
         // 필수 정보 검증
         if (homeTeamName == null || awayTeamName == null || gameTime == null) {
             log.warn("필수 정보 누락 - 홈팀: {}, 원정팀: {}, 시간: {}", homeTeamName, awayTeamName, gameTime);
             return false;
         }
 
-        log.debug("예정된 경기 발견: {} vs {} at {}", awayTeamName, homeTeamName, gameTime);
-        return saveScheduledGame(homeTeamName, awayTeamName, gameTime, dateStr);
+        log.debug("예정된 경기 발견: {} vs {} at {} (경기장: {})", awayTeamName, homeTeamName, gameTime, stadiumLocation);
+        return saveScheduledGame(homeTeamName, awayTeamName, gameTime, dateStr, stadiumLocation);
     }
 
     /**
@@ -112,9 +119,10 @@ public class ScheduledGameService extends BaseCrawlerService {
      * @param awayTeamName 원정팀명 (크롤링된 이름)
      * @param gameTime 경기 시간 (HH:mm)
      * @param dateStr 경기 날짜 (YYYY-MM-DD)
+     * @param stadiumLocation 경기장 지역명 (크롤링된 이름)
      * @return 저장 성공 여부
      */
-    private boolean saveScheduledGame(String homeTeamName, String awayTeamName, String gameTime, String dateStr) {
+    private boolean saveScheduledGame(String homeTeamName, String awayTeamName, String gameTime, String dateStr, String stadiumLocation) {
         try {
             // 팀명 매핑 및 조회
             String mappedHomeTeamName = mapTeamName(homeTeamName);
@@ -142,6 +150,10 @@ public class ScheduledGameService extends BaseCrawlerService {
             // 경기 일정 저장 (SCHEDULED 상태)
             Game game = new Game(awayTeam, homeTeam, gameDateTime);
             game.setStatus(GameStatus.SCHEDULED);
+            
+            // 경기장 정보 설정
+            setStadiumInfo(game, stadiumLocation);
+            
             Game savedGame = gameRepository.save(game);
 
             // 경기 시작 2시간 전 이벤트 스케줄 등록

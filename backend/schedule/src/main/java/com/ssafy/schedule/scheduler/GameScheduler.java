@@ -1,7 +1,6 @@
 package com.ssafy.schedule.scheduler;
 
 import com.ssafy.schedule.service.FinishedGameService;
-import com.ssafy.schedule.service.GameEventScheduler;
 import com.ssafy.schedule.service.ScheduledGameService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,10 +17,10 @@ public class GameScheduler {
 
     private final ScheduledGameService scheduledGameService;
     private final FinishedGameService finishedGameService;
-    private final GameEventScheduler gameEventScheduler;
+    private final ChatCreateScheduler gameEventScheduler;
 
     /**
-     * 매일 00:00에 오늘 날짜의 경기 일정을 크롤링하여 저장
+     * 매일 00:00에 3주뒤의 날짜의 경기 일정을 크롤링하여 저장
      * - 아직 진행되지 않은 예정된 경기들을 SCHEDULED 상태로 저장
      */
     @Scheduled(cron = "0 0 0 * * *")
