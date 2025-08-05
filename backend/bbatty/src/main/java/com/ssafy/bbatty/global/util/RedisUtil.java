@@ -51,4 +51,39 @@ public class RedisUtil {
     public void decrement(String key, long delta) {
         redisTemplate.opsForValue().decrement(key, delta);
     }
+    
+    /**
+     * Set에 값 추가
+     */
+    public void addToSet(String key, Object value) {
+        redisTemplate.opsForSet().add(key, value);
+    }
+    
+    /**
+     * Set에서 값 제거
+     */
+    public void removeFromSet(String key, Object value) {
+        redisTemplate.opsForSet().remove(key, value);
+    }
+    
+    /**
+     * Set에 값이 있는지 확인
+     */
+    public boolean isMemberOfSet(String key, Object value) {
+        return Boolean.TRUE.equals(redisTemplate.opsForSet().isMember(key, value));
+    }
+    
+    /**
+     * Set의 크기 반환
+     */
+    public Long getSetSize(String key) {
+        return redisTemplate.opsForSet().size(key);
+    }
+    
+    /**
+     * 키에 TTL 설정
+     */
+    public void expire(String key, Duration timeout) {
+        redisTemplate.expire(key, timeout);
+    }
 }

@@ -1,7 +1,6 @@
 import { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import { Alert } from 'react-native';
 import { API_CONFIG /*, DEBUG_CONFIG*/ } from './config';
-import { tokenManager } from './apiClient';
 import { handleApiError } from '../utils/errorHandler';
 import { retryRequest } from '../utils/retry';
 
@@ -19,7 +18,7 @@ declare module 'axios' {
   }
 }
 
-export const setupInterceptors = (client: AxiosInstance): void => {
+export const setupInterceptors = (client: AxiosInstance, tokenManager: any): void => {
   // 요청 인터셉터
   client.interceptors.request.use(
     async (config: InternalAxiosRequestConfig) => {

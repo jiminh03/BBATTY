@@ -42,10 +42,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (token != null && jwtProvider.validateAccessToken(token)) {
                 // Redis 블랙리스트 확인
                 if (isTokenBlacklisted(token)) {
-                    log.warn("블랙리스트에 등록된 토큰입니다: {}", token);
+                    log.info("블랙리스트에 등록된 토큰입니다: {}", token);
                 } else {
                     // 토큰에서 사용자 정보 추출
                     Long userId = jwtProvider.getUserId(token);
+                    log.info("디버깅용 : {}", userId);
                     int age = jwtProvider.getAge(token);
                     String gender = jwtProvider.getGender(token);
                     Long teamId = jwtProvider.getTeamId(token);

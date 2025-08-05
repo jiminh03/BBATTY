@@ -1,21 +1,14 @@
-import React, { useEffect } from 'react';
+// App.tsx
+import React from 'react';
+import { View, StyleSheet, SafeAreaView } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { initializeApiClient } from './src/shared';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { ThemeProvider } from './src/shared/styles';
-import { AppInitService } from './src/app/services/initService';
-/*
-import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
-import { ToastProvider } from '@/shared/components/ToastProvider';
-import { LoadingProvider } from '@/shared/components/LoadingProvider';
-*/
+import { SendMessageForm } from './src/features/send-message/ui/SendMessageForm';
 
+// QueryClient 생성
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      refetchOnReconnect: true,
-      refetchOnWindowFocus: false,
+      retry: false,
     },
     mutations: {
       retry: false,
@@ -23,50 +16,37 @@ const queryClient = new QueryClient({
   },
 });
 
-export default function App() {
-  const [isAppReady, setIsAppReady] = React.useState(false);
-
-  useEffect(() => {
-    initializeApp();
-  }, []);
-
-  const initializeApp = async () => {
-    try {
-      await initializeApiClient();
-
-      await AppInitService.checkNetworkConnection();
-
-      await AppInitService.clearOldCache();
-
-      setIsAppReady(true);
-    } catch (error) {
-      console.log('앱 초기화 실패: ', error);
-
-      //초기화되도 일단 앱은 실행
-      setIsAppReady(true);
-    }
+const App = () => {
+  const handleSend = (message: string) => {
+    console.log('Message sent from App:', message);
   };
 
-  if (!isAppReady) {
-    // 스플래쉬 화면 ㄱㄱ
-    return null;
-  }
-
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
-          <ThemeProvider>
-            {/* <ErrorBoundary>
-              <LoadingProvider>
-                <ToastProvider> */}
-            <App />
-            {/* </ToastProvider>
-              </LoadingProvider>
-            </ErrorBoundary> */}
-          </ThemeProvider>
-        </QueryClientProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <QueryClientProvider client={queryClient}>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.content}>
+          <SendMessageForm
+            roomId="test-room-123"
+            placeholder="테스트 메시지를 입력하세요..."
+            maxLength={200}
+            onSend={handleSend}
+          />
+        </View>
+      </SafeAreaView>
+    </QueryClientProvider>
   );
-}
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  content: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    padding: 16,
+  },
+});
+
+export default App;

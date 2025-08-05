@@ -4,7 +4,7 @@ import { AxiosRequestConfig } from 'axios';
 interface TimeoutConfig {
   default: number;
   upload: number;
-  download: number;
+  // download: number;-
 }
 
 interface RetryConfig {
@@ -46,12 +46,12 @@ interface ApiConfig {
 }
 
 export const API_CONFIG: ApiConfig = {
-  baseURL: '--', //API_URLS[getCurrentEnvironment()],
+  baseURL: 'http://',
 
   timeout: {
     default: 3000, // 3초
     upload: 10000, // 파일 업로드는 10초
-    download: 30000, // 파일 다운로드는 30초
+    // download: 30000, // 파일 다운로드는 30초
   },
 
   retry: {
