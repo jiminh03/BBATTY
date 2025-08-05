@@ -1,12 +1,12 @@
 # BBATTY 야구 직관 커뮤니티 백엔드 설정 (테스트용)
 spring:
   application:
-    name: bbatty
+    name: schedule
 
-  # H2 메모리 데이터베이스 설정 (테스트용)
+  # H2 메모리 데이터베이스 설정
   datasource:
     url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;REFERENTIAL_INTEGRITY=FALSE
-    username: sa
+    username: test
     password:
     driver-class-name: org.h2.Driver
 
@@ -25,7 +25,7 @@ spring:
       password:
       timeout: 2000ms
 
-    # H2 콘솔 활성화 (테스트용)
+    # H2 콘솔 활성화
   h2:
     console:
       enabled: true
