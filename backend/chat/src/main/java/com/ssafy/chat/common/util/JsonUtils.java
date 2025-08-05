@@ -1,4 +1,4 @@
-package com.ssafy.chat.common.utils;
+package com.ssafy.chat.common.util;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;

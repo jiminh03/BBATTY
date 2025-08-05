@@ -55,4 +55,30 @@ public class RedisUtil {
     public void decrement(String key, long delta) {
         redisTemplate.opsForValue().decrement(key, delta);
     }
+
+    // Hash 관련 메서드들
+    public void setHashValue(String key, String hashKey, Object value) {
+        redisTemplate.opsForHash().put(key, hashKey, value);
+    }
+
+    public void setHashValue(String key, String hashKey, Object value, Duration timeout) {
+        redisTemplate.opsForHash().put(key, hashKey, value);
+        redisTemplate.expire(key, timeout);
+    }
+
+    public Object getHashValue(String key, String hashKey) {
+        return redisTemplate.opsForHash().get(key, hashKey);
+    }
+    
+    public java.util.Map<String, Object> getHashEntries(String key) {
+        return redisTemplate.opsForHash().entries(key);
+    }
+
+    public void deleteHashKey(String key, String hashKey) {
+        redisTemplate.opsForHash().delete(key, hashKey);
+    }
+
+    public int getHashSize(String key) {
+        return redisTemplate.opsForHash().size(key).intValue();
+    }
 }
