@@ -1,4 +1,4 @@
-import { apiClient } from '../../../shared/api';
+import { apiClient, ApiResponse } from '../../../shared/api';
 import {
   CreatePostPayload,
   UpdatePostPayload,
@@ -7,11 +7,11 @@ import {
   GetPostsParams,
   Post,
 } from './types';
-import { AxiosHeaders } from 'axios';
+import { AxiosHeaders, AxiosResponse } from 'axios';
 
 export const postApi = {
   // 게시글 생성
-  createPost: (payload: CreatePostPayload) =>
+  createPost: (payload: CreatePostPayload): Promise<AxiosResponse<ApiResponse<Post>>> => 
     apiClient.post('/api/posts', payload),
 
   // 게시글 수정
