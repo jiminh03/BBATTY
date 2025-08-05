@@ -1,5 +1,7 @@
 package com.ssafy.schedule.service.base;
 
+import com.ssafy.schedule.common.Stadium;
+import com.ssafy.schedule.entity.Game;
 import com.ssafy.schedule.entity.Team;
 import com.ssafy.schedule.repository.TeamRepository;
 import lombok.RequiredArgsConstructor;
@@ -74,7 +76,7 @@ public abstract class BaseCrawlerService {
         Document doc = Jsoup.parse(html);
         // 경기 박스 링크 선택자
         Elements links = doc.select("a.MatchBox_link_match_end__3HGjy");
-        log.info("발견된 경기 링크 개수: {}", links.size());
+        log.info("발견된 링크 개수: {}", links.size());
 
         List<String> gameUrls = new ArrayList<>();
         for (Element link : links) {
@@ -96,10 +98,9 @@ public abstract class BaseCrawlerService {
     }
 
     /**
-     * 경기 상세 페이지에서 팀 정보 추출
+     * 경기 상세 페이지에서 삽입할 데이터 추출
      * 
      * @param doc Jsoup Document 객체
-     * @return [원정팀명, 홈팀명] 배열 (null일 수 있음)
      */
     protected String[] extractTeamNames(Document doc) {
         Elements teamElements = doc.select("em.MatchBox_name__11AyG");
@@ -150,6 +151,70 @@ public abstract class BaseCrawlerService {
             log.warn("점수 파싱 실패: {}", e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * 경기장 지역명 추출
+     * 
+     * @param doc Jsoup Document 객체
+     * @return 경기장 지역명 (예: "대전", "고척" 등, null일 수 있음)
+     */
+    protected String extractStadiumLocation(Document doc) {
+        try {
+            Element stadiumElement = doc.selectFirst(".MatchBox_stadium__17mQ4");
+            if (stadiumElement != null) {
+                String locationText = stadiumElement.text().trim();
+                log.debug("HTML에서 추출한 경기장 지역: {}", locationText);
+                return locationText;
+            }
+        } catch (Exception e) {
+            log.error("HTML에서 경기장 지역 추출 중 오류 발생", e);
+        }
+        
+        log.warn("HTML에서 경기장 지역 정보를 찾을 수 없습니다.");
+        return null;
+    }
+
+    /**
+     * 경기 취소 상태 확인
+     * 
+     * @param doc Jsoup Document 객체
+     * @return 경기가 취소되었으면 true, 아니면 false
+     */
+    protected boolean isGameCancelled(Document doc) {
+        try {
+            Element stateElement = doc.selectFirst(".MatchBox_state__2AzL_");
+            if (stateElement != null) {
+                String stateText = stateElement.text().trim();
+                log.info("HTML에서 추출한 경기 상태: {}", stateText);
+                return "경기취소".equals(stateText);
+            }
+        } catch (Exception e) {
+            log.info("HTML에서 경기 상태 추출 중 오류 발생", e);
+        }
+        
+        return false;
+    }
+
+    /**
+     * Game 엔티티에 경기장 정보 설정
+     * 
+     * @param game 경기 엔티티
+     * @param stadiumLocation 경기장 지역명
+     */
+    protected void setStadiumInfo(Game game, String stadiumLocation) {
+        if (stadiumLocation != null) {
+            Stadium stadium = Stadium.findByLocation(stadiumLocation);
+            if (stadium != null) {
+                game.setStadium(stadium.getStadiumName());
+                game.setLatitude(stadium.getLatitude());
+                game.setLongitude(stadium.getLongitude());
+                log.info("경기장 정보 설정 완료: {} ({})", stadium.getStadiumName(), stadiumLocation);
+            } else {
+                log.info("지역명 '{}'에 해당하는 경기장을 찾을 수 없습니다.", stadiumLocation);
+                game.setStadium(stadiumLocation); // 지역명이라도 저장
+            }
+        } 
     }
 
     /**
@@ -213,7 +278,7 @@ public abstract class BaseCrawlerService {
             LocalTime time = LocalTime.parse(timeStr, DateTimeFormatter.ofPattern("HH:mm"));
             return LocalDateTime.of(date, time);
         } catch (Exception e) {
-            log.warn("날짜/시간 파싱 실패: {} {}, 기본값(14:00) 사용", dateStr, timeStr);
+            log.info("날짜/시간 파싱 실패: {} {}, 기본값(14:00) 사용", dateStr, timeStr);
             LocalDate date = LocalDate.parse(dateStr, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
             return LocalDateTime.of(date, LocalTime.of(14, 0));
         }

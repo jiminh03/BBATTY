@@ -1,6 +1,7 @@
-package com.ssafy.schedule.service;
+package com.ssafy.schedule.scheduler;
 
 import com.ssafy.schedule.entity.Game;
+import com.ssafy.schedule.service.GameEventService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -21,7 +22,7 @@ import java.util.concurrent.ScheduledFuture;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class GameEventScheduler {
+public class ChatCreateScheduler {
 
     @Qualifier("gameEventTaskScheduler")
     private final TaskScheduler taskScheduler;
