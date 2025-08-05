@@ -46,11 +46,11 @@ const uploadClient: CustomAxiosInstance = axios.create({
 }) as CustomAxiosInstance;
 
 // 파일 다운로드용 클라
-const downloadClient = axios.create({
-  baseURL: API_CONFIG.baseURL,
-  timeout: API_CONFIG.timeout.download,
-  responseType: 'blob',
-});
+// const downloadClient = axios.create({
+//   baseURL: API_CONFIG.baseURL,
+//   timeout: API_CONFIG.timeout.download,
+//   responseType: 'blob',
+// });
 
 // ========================== TokenManager =====================================
 // 별도 파일로 분리하려다가 구조가 지저분해져서 통합
@@ -74,7 +74,7 @@ export const tokenManager: TokenManager = {
       const authHeader = `Bearer ${token}`;
       apiClient.defaults.headers.common[AUTHORIZATION] = authHeader;
       uploadClient.defaults.headers.common[AUTHORIZATION] = authHeader;
-      downloadClient.defaults.headers.common[AUTHORIZATION] = authHeader;
+      // downloadClient.defaults.headers.common[AUTHORIZATION] = authHeader;
     } catch (error) {
       console.warn('토큰을 저장하는데 실패하였습니다 : ', error);
       //throw하지 않으면 호출자가 실패를 모를 수 있어서 예상치 못한 버그가 발생 => 반환타입이 void라 별도 체크해줘야함
@@ -96,7 +96,7 @@ export const tokenManager: TokenManager = {
       await SecureStore.deleteItemAsync(AUTH_TOKEN);
       delete apiClient.defaults.headers.common[AUTHORIZATION];
       delete uploadClient.defaults.headers.common[AUTHORIZATION];
-      delete downloadClient.defaults.headers.common[AUTHORIZATION];
+      // delete downloadClient.defaults.headers.common[AUTHORIZATION];
     } catch (error) {
       console.warn('토큰 제거 실패', error);
     }
@@ -116,7 +116,7 @@ export const initializeApiClient = async (): Promise<void> => {
 
   setupInterceptors(apiClient);
   setupInterceptors(uploadClient);
-  setupInterceptors(downloadClient);
+  // setupInterceptors(downloadClient);
 
   /*
   // 디버그 모드에서 초기화 로그
@@ -126,4 +126,4 @@ export const initializeApiClient = async (): Promise<void> => {
     */
 };
 
-export { apiClient, uploadClient, downloadClient };
+export { apiClient, uploadClient /*downloadClient*/ };
