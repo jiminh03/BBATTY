@@ -126,6 +126,13 @@ public class AuthService {
     }
 
     /**
+     * 닉네임 중복 확인
+     */
+    public boolean isNicknameAvailable(String nickname) {
+        return !userRepository.existsByNickname(nickname);
+    }
+
+    /**
      * 로그아웃
      */
     @Transactional
@@ -169,7 +176,7 @@ public class AuthService {
             throw new ApiException(ErrorCode.DUPLICATE_SIGNUP);
         }
         
-        // 닉네임 중복 확인
+        // 닉네임 중복 확인 (서버에서 최종 검증)
         if (userRepository.existsByNickname(request.getNickname())) {
             throw new ApiException(ErrorCode.DUPLICATE_NICKNAME);
         }
