@@ -3,13 +3,10 @@ spring:
   application:
     name: schedule
 
-server:
-  port: 8082
-
   # 데이터베이스 설정
   datasource:
     url: ${SPRING_DATASOURCE_URL}
-    username: ${SPRING_DATASOURCE_USERNAME}
+    username: ${SPRING_DATASOURCE_USERNAM}
     password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
@@ -28,9 +25,11 @@ server:
       password: ${REDIS_PASSWORD}
       timeout: 2000ms
 
-
 # 로깅 설정
 logging:
   level:
     com.ssafy.bbatty.domain.chat: DEBUG
     org.springframework.web.socket: DEBUG
+
+server:
+  port: 8082

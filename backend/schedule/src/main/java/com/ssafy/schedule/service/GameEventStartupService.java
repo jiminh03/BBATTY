@@ -14,8 +14,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 애플리케이션 시작 시 기존 예정된 경기들의 이벤트 스케줄을 재등록하는 서비스
- * - 서버 재시작 후에도 경기 시작 2시간 전 이벤트가 정상 작동하도록 보장
+ * 애플리케이션 시작 시 초기화 서비스
+ * - 기존 예정된 경기들의 이벤트 스케줄 재등록
+ * - 순위 데이터 Redis 캐시 초기화
  */
 @Service
 @Slf4j
@@ -24,21 +25,28 @@ public class GameEventStartupService implements ApplicationRunner {
 
     private final GameRepository gameRepository;
     private final ChatCreateScheduler gameEventScheduler;
+    private final TeamRankingService teamRankingService;
 
     /**
      * 애플리케이션 시작 시 실행되는 메서드
      * - 기존 예정된 경기들의 이벤트 스케줄을 재등록
+     * - 팀 순위 Redis 캐시 초기화
      * 
      * @param args 애플리케이션 실행 인자
      */
     @Override
     public void run(ApplicationArguments args) {
-        log.info("🚀 애플리케이션 시작: 기존 예정된 경기들의 이벤트 스케줄 재등록 시작");
+        log.info("🚀 애플리케이션 시작: 초기화 작업 시작");
         
         try {
+            // 1. 기존 경기 이벤트 스케줄 재등록
             rescheduleExistingGames();
+            
+            // 2. 팀 순위 캐시 초기화
+            initializeRankingCache();
+            
         } catch (Exception e) {
-            log.error("기존 경기 이벤트 스케줄 재등록 실패: {}", e.getMessage(), e);
+            log.error("애플리케이션 시작 시 초기화 작업 실패: {}", e.getMessage(), e);
         }
     }
 
@@ -97,5 +105,19 @@ public class GameEventStartupService implements ApplicationRunner {
         
         // 서버 시작 시 모든 스케줄된 이벤트 목록 출력
         gameEventScheduler.printAllScheduledTasks();
+    }
+
+    /**
+     * 팀 순위 Redis 캐시 초기화
+     * - 서버 시작 시 현재 순위를 계산하여 Redis에 저장
+     */
+    private void initializeRankingCache() {
+        try {
+            log.info("🏆 팀 순위 캐시 초기화 시작");
+            teamRankingService.cacheCurrentRanking();
+            log.info("✅ 팀 순위 캐시 초기화 완료");
+        } catch (Exception e) {
+            log.error("팀 순위 캐시 초기화 실패: {}", e.getMessage(), e);
+        }
     }
 }
