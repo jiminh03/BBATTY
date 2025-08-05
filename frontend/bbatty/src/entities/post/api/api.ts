@@ -11,12 +11,8 @@ import { AxiosHeaders, AxiosResponse } from 'axios';
 
 export const postApi = {
   // 게시글 생성
-<<<<<<< HEAD
-  createPost: (payload: CreatePostPayload) => apiClient.post('/api/posts', payload),
-=======
-  createPost: (payload: CreatePostPayload): Promise<AxiosResponse<ApiResponse<Post>>> => 
+  createPost: (payload: CreatePostPayload): Promise<AxiosResponse<ApiResponse<Post>>> =>
     apiClient.post('/api/posts', payload),
->>>>>>> 646ba46470e8adcb2f2521504a4996173c66de83
 
   // 게시글 수정
   updatePost: (postId: string, payload: UpdatePostPayload) => apiClient.put(`/api/posts/${postId}`, payload),
