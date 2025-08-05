@@ -1,1 +1,1 @@
-export { default } from './ui/LandingScreen';
+export { default } from './LandingScreen';

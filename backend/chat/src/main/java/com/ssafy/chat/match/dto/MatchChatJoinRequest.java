@@ -1,5 +1,6 @@
 package com.ssafy.chat.match.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,20 +18,21 @@ import jakarta.validation.constraints.NotBlank;
 @AllArgsConstructor
 public class MatchChatJoinRequest {
     
-    // 클라이언트에서 제공하는 기본 데이터
+    // 매칭 채팅방 ID 
+    @NotBlank(message = "매칭 ID는 필수입니다.")
+    private String matchId;
+    
+    // 클라이언트에서 제공하는 정보
     @NotBlank(message = "닉네임은 필수입니다.")
     private String nickname;
-
-//    @NotBlank(message = "프로필 이미지는 필수입니다.")
-//    private String profileImageUrl; // S3 링크
     
-    // 승률 정보 (자연수 %)
-    private Integer winRate;
-
-    // 승리 요정 여부
-    private boolean winFairy;
+    // 승률 정보 (정수 %)
+    private int winRate;
     
-    // 매칭 채팅방 ID 
-    @NotBlank(message = "채팅방 ID는 필수입니다.")
-    private String matchChatRoomId;
+    // 프로필 이미지 URL
+    private String profileImgUrl;
+    
+    // 승요정 여부
+    @JsonProperty("isWinFairy")
+    private boolean isWinFairy;
 }

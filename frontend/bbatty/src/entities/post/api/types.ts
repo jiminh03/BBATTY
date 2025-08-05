@@ -18,8 +18,8 @@ export interface Post extends BaseEntity {
 export interface CreatePostPayload {
   title: string;
   content: string;
-  tags?: string[];
-  images?: string[];
+  teamId: number;
+  isSameTeam?: boolean;
 }
 
 export interface UpdatePostPayload {

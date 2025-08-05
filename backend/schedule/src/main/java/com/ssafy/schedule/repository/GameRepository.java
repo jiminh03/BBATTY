@@ -29,4 +29,7 @@ public interface GameRepository extends JpaRepository<Game, Long> {
     boolean existsByHomeTeamAndAwayTeamAndDate(@Param("homeTeam") Team homeTeam, @Param("awayTeam") Team awayTeam, @Param("gameDate") LocalDateTime gameDate);
     
     List<Game> findByStatusAndDateTimeAfter(GameStatus status, LocalDateTime dateTime);
+    
+    @Query("SELECT g FROM Game g WHERE g.status = :status AND YEAR(g.dateTime) = :year ORDER BY g.dateTime ASC")
+    List<Game> findByStatusAndYear(@Param("status") GameStatus status, @Param("year") int year);
 }
