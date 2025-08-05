@@ -26,7 +26,6 @@ public class ChatCreateScheduler {
 
     @Qualifier("gameEventTaskScheduler")
     private final TaskScheduler taskScheduler;
-    
     private final GameEventService gameEventService;
 
     /**
@@ -99,23 +98,6 @@ public class ChatCreateScheduler {
         
         log.debug("취소할 스케줄이 없음: 경기 ID={}", gameId);
         return false;
-    }
-
-    /**
-     * 경기 정보 업데이트 시 스케줄 재등록
-     * - 기존 스케줄 취소 후 새로운 스케줄 등록
-     * 
-     * @param game 업데이트된 경기 정보
-     * @return 재등록 성공 여부
-     */
-    public boolean rescheduleGameEvent(Game game) {
-        log.debug("경기 이벤트 스케줄 재등록: 경기 ID={}", game.getId());
-        
-        // 기존 스케줄 취소
-        cancelGameEvent(game.getId());
-        
-        // 새로운 스케줄 등록
-        return scheduleGameStartingEvent(game);
     }
 
     /**

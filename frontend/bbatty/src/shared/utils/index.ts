@@ -2,7 +2,6 @@ export * from './date';
 export * from './validation';
 export * from './image';
 export * from './storage';
-export * from './accessibility';
 export * from './animation';
 export * from './device';
 export * from './security';

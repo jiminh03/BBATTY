@@ -1,10 +1,7 @@
-# BBATTY 애플리케이션 설정 파일 (기존 properties 대체)
+# BBATTY 애플리케이션 설정 파일
 spring:
   application:
     name: schedule
-
-server:
-  port: 8082
 
   # 데이터베이스 설정
   datasource:
@@ -28,9 +25,11 @@ server:
       password: ${REDIS_PASSWORD}
       timeout: 2000ms
 
-
 # 로깅 설정
 logging:
   level:
     com.ssafy.bbatty.domain.chat: DEBUG
     org.springframework.web.socket: DEBUG
+
+server:
+  port: 8082

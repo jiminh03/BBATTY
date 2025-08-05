@@ -17,7 +17,9 @@ export type RootStackParamList = {
 export type AuthStackParamList = {
   Landing: undefined;
   Login: undefined;
-  TeamSelect: undefined;
+  TeamSelect: {
+    nickname: string;
+  };
   SignUp: undefined;
 };
 

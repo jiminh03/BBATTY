@@ -14,14 +14,17 @@ import MainNavigator from './MainNavigator';
 // import { SplashS }
 import { navigationRef } from './naviagtionRefs';
 import { linking } from './linking';
+import SplashScreen from '../widgets/SplashScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
   const [isLoading, setIsLoading] = useState(true);
+  const [showSplash, setShowSplash] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { theme } = useTheme();
 
+  /*
   useEffect(() => {
     checkAuthStatus();
   }, []);
@@ -36,13 +39,23 @@ export default function AppNavigator() {
     } finally {
       setIsLoading(false);
     }
-  };
+  };*/
 
   if (isLoading) {
     // return <SplashScreen />;
   }
 
   return (
+    <SplashScreen
+      onAnimationComplete={() => {
+        setShowSplash(false);
+      }}
+    ></SplashScreen>
+  );
+}
+
+/*
+
     <>
       <StatusBar
         barStyle={theme.colors.primary === '#FFFFFF' ? 'dark-content' : 'light-content'}
@@ -76,14 +89,13 @@ export default function AppNavigator() {
           }}
         >
           <>
-            {/* 로그인 전 화면들 */}
+            { 로그인 전 화면들 }
             <Stack.Screen name='AuthStack' component={AuthNavigator} />
           </>
         </Stack.Navigator>
       </NavigationContainer>
     </>
-  );
-}
+*/
 
 /*
 

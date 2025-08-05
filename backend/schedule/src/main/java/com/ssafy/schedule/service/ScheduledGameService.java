@@ -140,10 +140,10 @@ public class ScheduledGameService extends BaseCrawlerService {
             // 날짜/시간 파싱
             LocalDateTime gameDateTime = parseGameDateTime(dateStr, gameTime);
 
-            // 중복 확인 (같은 날짜에 같은 팀들의 경기가 이미 있는지)
-            if (gameRepository.existsByHomeTeamAndAwayTeamAndDate(homeTeam, awayTeam, gameDateTime)) {
-                log.debug("이미 존재하는 경기 일정 - 건너뛰기: {} vs {} on {}", 
-                        mappedAwayTeamName, mappedHomeTeamName, dateStr);
+            // 중복 확인 (같은 날짜/시간에 같은 팀들의 경기가 이미 있는지 - 더블헤더 고려)
+            if (gameRepository.existsByHomeTeamAndAwayTeamAndDateTime(homeTeam, awayTeam, gameDateTime)) {
+                log.debug("이미 존재하는 경기 일정 - 건너뛰기: {} vs {} at {}", 
+                        mappedAwayTeamName, mappedHomeTeamName, gameDateTime);
                 return false;
             }
 
