@@ -34,6 +34,15 @@ public interface MatchChatService {
      * @return 최근 메시지 목록
      */
     List<Map<String, Object>> getRecentMessages(String matchId, int limit);
+    
+    /**
+     * 매칭 채팅방의 특정 시점 이전 메시지 히스토리 조회 (페이징용)
+     * @param matchId 매칭 Id
+     * @param lastMessageTimestamp 마지막으로 받은 메시지의 timestamp (이 시점 이전 메시지들을 조회)
+     * @param limit 조회할 메시지 수
+     * @return 해당 시점 이전의 메시지 목록
+     */
+    List<Map<String, Object>> getRecentMessages(String matchId, long lastMessageTimestamp, int limit);
     /**
      * 활성화된 매칭 채팅방 수 반환
      */

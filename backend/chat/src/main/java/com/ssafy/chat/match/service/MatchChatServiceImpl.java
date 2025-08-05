@@ -8,8 +8,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.WebSocketSession;
 
-import java.util.List;
-import java.util.Map;
+
+import java.time.Duration;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 매칭 채팅 서비스 구현체
@@ -55,10 +57,15 @@ public class MatchChatServiceImpl implements MatchChatService {
     
     @Override
     public List<Map<String, Object>> getRecentMessages(String matchId, int limit) {
-        // TODO: Kafka Consumer API를 통해 최근 메시지 조회 구현
-        // 현재는 빈 리스트 반환
         log.debug("최근 메시지 조회 - matchId: {}, limit: {}", matchId, limit);
-        return List.of();
+        return kafkaConsumer.getRecentMessages(matchId, limit);
+    }
+    
+    @Override
+    public List<Map<String, Object>> getRecentMessages(String matchId, long lastMessageTimestamp, int limit) {
+        log.debug("특정 시점 이전 메시지 조회 - matchId: {}, beforeTimestamp: {}, limit: {}", 
+                matchId, lastMessageTimestamp, limit);
+        return kafkaConsumer.getRecentMessages(matchId, lastMessageTimestamp, limit);
     }
     
     @Override
