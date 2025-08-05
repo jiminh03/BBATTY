@@ -85,9 +85,9 @@ public class AttendanceServiceImpl implements AttendanceService {
         Duration ttlUntilMidnight = DateUtil.calculateTTLUntilMidnight();
         redisUtil.setValue(redisKey, "ATTENDED", ttlUntilMidnight);
         
-        // 당일 인증자 목록에 추가 (1주일 TTL)
+        // 당일 인증자 목록에 추가 (이틀 TTL)
         String dailyAttendeesKey = RedisKey.ATTENDANCE_DAILY_ATTENDEES + today;
-        Duration weekTTL = Duration.ofDays(7);
+        Duration weekTTL = Duration.ofDays(2);
         redisUtil.addToSet(dailyAttendeesKey, userId.toString());
         redisUtil.expire(dailyAttendeesKey, weekTTL);
         
