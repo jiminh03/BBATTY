@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ChatMessage {
-    // 메시지 타입 (CHAT vs SYSTEM)
+    // 메시지 타입 (CHAT, SYSTEM, USER_JOIN 등)
     private MessageType messageType;
 
     // 채팅방 ID
