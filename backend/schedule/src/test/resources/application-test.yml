@@ -6,7 +6,7 @@ spring:
   # H2 메모리 데이터베이스 설정
   datasource:
     url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;REFERENTIAL_INTEGRITY=FALSE
-    username: sa
+    username: test
     password:
     driver-class-name: org.h2.Driver
 
