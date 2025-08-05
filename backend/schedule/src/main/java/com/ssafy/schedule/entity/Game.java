@@ -8,6 +8,7 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -45,6 +46,15 @@ public class Game {
     @Column(name = "result")
     private GameResult result;
 
+    @Column(name = "stadium", nullable = false, length = 50)
+    private String stadium;
+
+    @Column(name = "latitude", precision = 10, scale = 7)
+    private BigDecimal latitude;
+
+    @Column(name = "longitude", precision = 10, scale = 7)
+    private BigDecimal longitude;
+
     @Column(name = "double_header", nullable = false)
     private Boolean doubleHeader = false;
 
@@ -69,6 +79,27 @@ public class Game {
         this.homeTeam = homeTeam;
         this.dateTime = dateTime;
         this.doubleHeader = doubleHeader;
+    }
+
+    public Game(Team awayTeam, Team homeTeam, LocalDateTime dateTime, 
+                String stadium, BigDecimal latitude, BigDecimal longitude) {
+        this.awayTeam = awayTeam;
+        this.homeTeam = homeTeam;
+        this.dateTime = dateTime;
+        this.stadium = stadium;
+        this.latitude = latitude;
+        this.longitude = longitude;
+    }
+
+    public Game(Team awayTeam, Team homeTeam, LocalDateTime dateTime, Boolean doubleHeader,
+                String stadium, BigDecimal latitude, BigDecimal longitude) {
+        this.awayTeam = awayTeam;
+        this.homeTeam = homeTeam;
+        this.dateTime = dateTime;
+        this.doubleHeader = doubleHeader;
+        this.stadium = stadium;
+        this.latitude = latitude;
+        this.longitude = longitude;
     }
 }
 

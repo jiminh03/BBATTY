@@ -2,6 +2,7 @@
 import React, { useState } from 'react'
 import { useUpdateComment } from '../queries/useCommentQueries'
 import { useCommentStore } from '../model/store'
+import { isValidComment } from '../utils/validation'
 
 interface CommentEditFormProps {
   commentId: string
@@ -16,35 +17,42 @@ export const CommentEditForm: React.FC<CommentEditFormProps> = ({
   const updateComment = useUpdateComment()
   const { setEditingCommentId } = useCommentStore()
 
-  const handleUpdate = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleUpdate = () => {
+    if (!isValidComment(content)) {
+      alert('댓글은 1자 이상 200자 이하여야 합니다.')
+      return
+    }
+
     updateComment.mutate(
       { commentId, content },
       {
         onSuccess: () => {
-          setEditingCommentId(null)
+          setEditingCommentId(null) // 수정 종료
         },
       }
     )
   }
 
+  const handleCancel = () => {
+    setEditingCommentId(null)
+  }
+
   return (
-    <form onSubmit={handleUpdate}>
-      <input
+    <div style={{ marginTop: '0.5rem' }}>
+      <textarea
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        style={{ width: '300px' }}
+        rows={3}
+        style={{ width: '100%' }}
       />
-      <button type="submit" style={{ marginLeft: '8px' }}>
-        저장
-      </button>
-      <button
-        type="button"
-        onClick={() => setEditingCommentId(null)}
-        style={{ marginLeft: '4px' }}
-      >
-        취소
-      </button>
-    </form>
+      <div style={{ marginTop: '0.5rem' }}>
+        <button onClick={handleUpdate} style={{ marginRight: '0.5rem' }}>
+          저장
+        </button>
+        <button onClick={handleCancel} style={{ color: 'gray' }}>
+          취소
+        </button>
+      </div>
+    </div>
   )
 }
