@@ -1,5 +1,6 @@
 import { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import { Alert } from 'react-native';
+import { tokenManager } from './tokenManager';
 import { API_CONFIG /*, DEBUG_CONFIG*/ } from './config';
 import { handleApiError } from '../utils/errorHandler';
 import { retryRequest } from '../utils/retry';
@@ -18,7 +19,10 @@ declare module 'axios' {
   }
 }
 
-export const setupInterceptors = (client: AxiosInstance, tokenManager: any): void => {
+// 토큰 제거시 호출될 콜백
+type OnUnauthorizedCallback = () => Promise<void>;
+
+export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnauthorizedCallback): void => {
   // 요청 인터셉터
   client.interceptors.request.use(
     async (config: InternalAxiosRequestConfig) => {
@@ -106,6 +110,11 @@ export const setupInterceptors = (client: AxiosInstance, tokenManager: any): voi
         originalRequest._retry = true;
         // 토큰 제거
         await tokenManager.removeToken();
+
+        // 콜백이 제공된 경우 실행 (클라이언트 헤더 업데이트 등)
+        if (onUnauthorized) {
+          await onUnauthorized();
+        }
 
         //  적절한 네비게이션 로직으로 대체해야 함
         return Promise.reject(error);

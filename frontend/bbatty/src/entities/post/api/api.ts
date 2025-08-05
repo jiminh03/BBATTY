@@ -11,20 +11,17 @@ import { AxiosHeaders, AxiosResponse } from 'axios';
 
 export const postApi = {
   // 게시글 생성
-  createPost: (payload: CreatePostPayload): Promise<AxiosResponse<ApiResponse<Post>>> => 
+  createPost: (payload: CreatePostPayload): Promise<AxiosResponse<ApiResponse<Post>>> =>
     apiClient.post('/api/posts', payload),
 
   // 게시글 수정
-  updatePost: (postId: string, payload: UpdatePostPayload) =>
-    apiClient.put(`/api/posts/${postId}`, payload),
+  updatePost: (postId: string, payload: UpdatePostPayload) => apiClient.put(`/api/posts/${postId}`, payload),
 
   // 게시글 삭제
-  deletePost: (postId: string) =>
-    apiClient.delete(`/api/posts/${postId}`),
+  deletePost: (postId: string) => apiClient.delete(`/api/posts/${postId}`),
 
   // 게시글 상세 조회
-  getPostById: (postId: string) =>
-    apiClient.get<Post>(`/api/posts/${postId}`),
+  getPostById: (postId: string) => apiClient.get<Post>(`/api/posts/${postId}`),
 
   // 전체 게시글 목록 조회
   getPosts: ({ page = 0, size = 10, teamId }: GetPostsParams) =>
@@ -41,12 +38,10 @@ export const postApi = {
     }),
 
   // 게시글 좋아요
-  likePost: (postId: string) =>
-    apiClient.post(`/api/posts/${postId}/like`),
+  likePost: (postId: string) => apiClient.post(`/api/posts/${postId}/like`),
 
   // 게시글 좋아요 취소
-  unlikePost: (postId: string) =>
-    apiClient.delete(`/api/posts/${postId}/like`),
+  unlikePost: (postId: string) => apiClient.delete(`/api/posts/${postId}/like`),
 
   // presigned-url 발급
   createPresignedUrl: (payload: PresignedUrlPayload) =>

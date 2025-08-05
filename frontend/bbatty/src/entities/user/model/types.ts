@@ -32,3 +32,31 @@ export interface JwtUserInfo {
   age: number;
   gender: string;
 }
+
+// ===================================== 추가 ==========================================
+import { BaseEntity } from '../../../shared';
+
+export interface User extends BaseEntity {
+  teamId: string;
+  nickname: string;
+  introduction?: string;
+  profileImageURL?: string;
+  gender?: string;
+}
+
+export interface DetailedUser extends User {
+  // 통계 엔티티에서 가져와야함
+}
+
+export interface UserSummary {
+  id: string;
+  nickName: string;
+  profileImage?: string;
+}
+
+// ================================== RequestPayload =======================================
+export interface UpdateProfilePayload {
+  username: string;
+  introduction?: string;
+  profileImageURL?: string;
+}
