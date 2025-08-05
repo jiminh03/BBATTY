@@ -28,13 +28,14 @@ public class WebSocketConfig implements WebSocketConfigurer {
         // 관전 채팅 WebSocket 엔드포인트
         registry.addHandler(watchChatWebSocketHandler, "/ws/watch-chat")
                 .addInterceptors(new WebSocketHandshakeInterceptor()) // 핸드셰이크 인터셉터 추가
-                .setAllowedOrigins("*") // CORS 허용
+                .setAllowedOriginPatterns("*") // 인증정보 + 모든 사이트 요청 가능
                 .withSockJS(); // SockJS 지원
+
 
         // 매칭 채팅 WebSocket 엔드포인트  
         registry.addHandler(matchChatWebSocketHandler, "/ws/match-chat")
                 .addInterceptors(new WebSocketHandshakeInterceptor()) // 핸드셰이크 인터셉터 추가
-                .setAllowedOrigins("*") // CORS 허용
+                .setAllowedOriginPatterns("*") // 인증정보 + 모든 사이트 요청 가능
                 .withSockJS(); // SockJS 지원
 
         log.info("WebSocket 핸들러 등록 완료 - /ws/watch-chat, /ws/match-chat");
