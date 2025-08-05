@@ -3,6 +3,7 @@ package com.ssafy.schedule.service;
 import com.ssafy.schedule.common.GameStatus;
 import com.ssafy.schedule.entity.Game;
 import com.ssafy.schedule.repository.GameRepository;
+import com.ssafy.schedule.scheduler.ChatCreateScheduler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
@@ -22,7 +23,7 @@ import java.util.List;
 public class GameEventStartupService implements ApplicationRunner {
 
     private final GameRepository gameRepository;
-    private final GameEventScheduler gameEventScheduler;
+    private final ChatCreateScheduler gameEventScheduler;
 
     /**
      * 애플리케이션 시작 시 실행되는 메서드

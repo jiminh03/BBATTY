@@ -27,40 +27,45 @@ export const useUserStore = create<UserStore>((set, get) => ({
 
   // Actions
   setCurrentUser: (user) => set({ currentUser: user }),
-  
+
   setSessionInfo: (info) => set({ sessionInfo: info }),
 
-  addUserToRoom: (roomId, user) => set((state) => ({
-    connectedUsers: {
-      ...state.connectedUsers,
-      [roomId]: [...(state.connectedUsers[roomId] || []), user]
-    }
-  })),
+  addUserToRoom: (roomId, user) =>
+    set((state) => ({
+      connectedUsers: {
+        ...state.connectedUsers,
+        [roomId]: [...(state.connectedUsers[roomId] || []), user],
+      },
+    })),
 
-  removeUserFromRoom: (roomId, userId) => set((state) => ({
-    connectedUsers: {
-      ...state.connectedUsers,
-      [roomId]: (state.connectedUsers[roomId] || []).filter(u => u.id !== userId)
-    }
-  })),
+  removeUserFromRoom: (roomId, userId) =>
+    set((state) => ({
+      connectedUsers: {
+        ...state.connectedUsers,
+        [roomId]: (state.connectedUsers[roomId] || []).filter((u) => u.id !== userId),
+      },
+    })),
 
-  setRoomUsers: (roomId, users) => set((state) => ({
-    connectedUsers: {
-      ...state.connectedUsers,
-      [roomId]: users
-    }
-  })),
+  setRoomUsers: (roomId, users) =>
+    set((state) => ({
+      connectedUsers: {
+        ...state.connectedUsers,
+        [roomId]: users,
+      },
+    })),
 
-  clearRoomUsers: (roomId) => set((state) => ({
-    connectedUsers: {
-      ...state.connectedUsers,
-      [roomId]: []
-    }
-  })),
+  clearRoomUsers: (roomId) =>
+    set((state) => ({
+      connectedUsers: {
+        ...state.connectedUsers,
+        [roomId]: [],
+      },
+    })),
 
-  reset: () => set({
-    currentUser: null,
-    sessionInfo: null,
-    connectedUsers: {},
-  }),
+  reset: () =>
+    set({
+      currentUser: null,
+      sessionInfo: null,
+      connectedUsers: {},
+    }),
 }));

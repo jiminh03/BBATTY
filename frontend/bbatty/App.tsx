@@ -1,3 +1,4 @@
+// App.tsx
 import React, { useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { initializeApiClient } from './src/shared';
@@ -5,6 +6,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider } from './src/shared/styles';
 import { AppInitService } from './src/app/services/initService';
+import AppNavigator from './src/navigation/AppNavigator';
 /*
 import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
 import { ToastProvider } from '@/shared/components/ToastProvider';
@@ -24,6 +26,7 @@ const queryClient = new QueryClient({
 });
 
 export default function App() {
+  /*
   const [isAppReady, setIsAppReady] = React.useState(false);
 
   useEffect(() => {
@@ -51,7 +54,7 @@ export default function App() {
     // 스플래쉬 화면 ㄱㄱ
     return null;
   }
-
+*/
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
@@ -60,7 +63,7 @@ export default function App() {
             {/* <ErrorBoundary>
               <LoadingProvider>
                 <ToastProvider> */}
-            <App />
+            <AppNavigator />
             {/* </ToastProvider>
               </LoadingProvider>
             </ErrorBoundary> */}

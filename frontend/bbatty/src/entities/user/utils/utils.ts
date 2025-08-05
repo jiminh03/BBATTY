@@ -1,4 +1,4 @@
-import { UserStatus, ChatUser, JwtUserInfo } from '../model/types';
+import { UserStatus, ChatUser, JwtUserInfo, UserSummary, User } from '../model/types';
 
 export const userUtils = {
   // 사용자 상태 체크
@@ -45,3 +45,12 @@ export const userUtils = {
     return user.nickname || `사용자${user.id.slice(-4)}`;
   },
 };
+
+// ===================================== 추가 ==========================================
+
+// 굳이 변환하는 이유가 뭐임? 걍 user 쓰면 안됨?
+export const toUserSummary = (user: User): UserSummary => ({
+  id: user.id,
+  nickName: user.nickname,
+  profileImage: user.profileImageURL,
+});

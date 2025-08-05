@@ -15,10 +15,8 @@ export const chatRoomApi = {
     apiClient.post<AuthResponse>('/api/watch-chat/join', request),
 
   // 세션 무효화
-  invalidateSession: (sessionToken: string) =>
-    apiClient.delete<void>(`/api/chat/auth/session/${sessionToken}`),
+  invalidateSession: (sessionToken: string) => apiClient.delete<void>(`/api/chat/auth/session/${sessionToken}`),
 
   // 헬스체크
-  healthCheck: () =>
-    apiClient.get<string>('/api/chat/auth/health'),
+  healthCheck: () => apiClient.get<string>('/api/chat/auth/health'),
 };

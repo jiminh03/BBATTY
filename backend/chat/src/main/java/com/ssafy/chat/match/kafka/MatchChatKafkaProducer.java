@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
@@ -69,11 +70,12 @@ public class MatchChatKafkaProducer {
      */
     public void sendUserJoinEvent(String matchId, String userId, String userName){
         Map<String, Object> joinEvent = Map.of(
+                "messageType", "USER_JOIN",
                 "type", "user_join",
                 "userId", userId,
                 "userName", userName,
-                "matchId", matchId,
-                "timestamp", System.currentTimeMillis()
+                "roomId", matchId,
+                "timestamp", LocalDateTime.now()
         );
         sendEvent(matchId, joinEvent);
     }
@@ -83,11 +85,12 @@ public class MatchChatKafkaProducer {
      */
     public void sendUserLeaveEvent(String matchId, String userId, String userName){
         Map<String, Object> leaveEvent = Map.of(
+                "messageType", "USER_LEAVE",
                 "type", "user_leave",
                 "userId", userId,
                 "userName", userName,
-                "matchId", matchId,
-                "timestamp", System.currentTimeMillis()
+                "roomId", matchId,
+                "timestamp", LocalDateTime.now()
         );
         sendEvent(matchId, leaveEvent);
     }
