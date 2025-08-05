@@ -1,7 +1,12 @@
 import React, { useState, useRef } from 'react';
+import { View, Alert } from 'react-native';
+import { Input } from '../../../shared/ui/atoms/Input/Input';
+import { Button } from '../../../shared/ui/atoms/button/button';
+import { Label } from '../../../shared/ui/atoms/Label/Label';
 import { useSendMessage } from '../api/useSendMessage';
 import { messageValidation } from '../utils/validation';
 import { messageFormatter } from '../utils/messageFormatter';
+import { styles } from './SendMessageForm.styles';
 
 interface SendMessageFormProps {
   roomId: string;
@@ -9,7 +14,6 @@ interface SendMessageFormProps {
   maxLength?: number;
   disabled?: boolean;
   onSend?: (message: string) => void;
-  className?: string;
 }
 
 export const SendMessageForm: React.FC<SendMessageFormProps> = ({
@@ -18,12 +22,11 @@ export const SendMessageForm: React.FC<SendMessageFormProps> = ({
   maxLength = 500,
   disabled = false,
   onSend,
-  className = '',
 }) => {
   const [message, setMessage] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  
+  const inputRef = useRef<any>(null);
+
   const sendMessage = useSendMessage({
     onSuccess: () => {
       setMessage('');
@@ -32,18 +35,18 @@ export const SendMessageForm: React.FC<SendMessageFormProps> = ({
     },
     onError: (error) => {
       setErrors([error.message]);
+      Alert.alert('오류', error.message);
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleSend = () => {
     if (disabled || sendMessage.isPending) return;
 
     // 유효성 검증
     const validation = messageValidation.validateMessage(message);
     if (!validation.isValid) {
       setErrors(validation.errors);
+      Alert.alert('입력 오류', validation.errors.join('\n'));
       return;
     }
 
@@ -63,73 +66,72 @@ export const SendMessageForm: React.FC<SendMessageFormProps> = ({
     });
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Ctrl/Cmd + Enter로 전송
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-      e.preventDefault();
-      handleSubmit(e as any);
-      return;
-    }
-
-    // Enter만으로 전송 (Shift + Enter는 줄바꿈)
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit(e as any);
-      return;
-    }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
+  const handleChange = (value: string) => {
     if (value.length <= maxLength) {
       setMessage(value);
       setErrors([]); // 입력 시 에러 클리어
     }
   };
 
+  const isSubmitDisabled = disabled || sendMessage.isPending || message.trim().length === 0;
+
   return (
-    <form onSubmit={handleSubmit} className={`send-message-form ${className}`}>
-      <div className="message-input-container">
-        <textarea
-          ref={textareaRef}
+    <View style={styles.container}>
+      <View style={styles.inputContainer}>
+        <Input
+          ref={inputRef}
           value={message}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
+          onChangeText={handleChange}
           placeholder={placeholder}
-          disabled={disabled || sendMessage.isPending}
-          className={`message-textarea ${errors.length > 0 ? 'error' : ''}`}
-          rows={1}
-          style={{ 
-            resize: 'none',
-            minHeight: '40px',
-            maxHeight: '120px',
-          }}
+          placeholderTextColor="#8e8e93"
+          editable={!disabled && !sendMessage.isPending}
+          multiline={true}
+          numberOfLines={1}
+          maxLength={maxLength}
+          style={[
+            styles.input,
+            errors.length > 0 && styles.inputError
+          ]}
+          onSubmitEditing={handleSend}
+          returnKeyType="send"
+          blurOnSubmit={false}
+          autoCorrect={false}
+          autoCapitalize="none"
+          keyboardType="default"
         />
         
-        <div className="message-actions">
-          <span className="character-count">
-            {message.length}/{maxLength}
-          </span>
-          
-          <button
-            type="submit"
-            disabled={disabled || sendMessage.isPending || message.trim().length === 0}
-            className="send-button"
-          >
-            {sendMessage.isPending ? '전송중...' : '전송'}
-          </button>
-        </div>
-      </div>
+        <View style={styles.actions}>
+            <Label style={styles.characterCount}>
+              {message.length}/{maxLength}
+            </Label>
+            
+            <Button
+              onPress={handleSend}
+              disabled={isSubmitDisabled}
+              style={[
+                styles.sendButton,
+                ...(isSubmitDisabled ? [styles.sendButtonDisabled] : [])
+              ]}
+            >
+              <Label style={[
+                styles.sendButtonText,
+                ...(isSubmitDisabled ? [styles.sendButtonTextDisabled] : [])
+              ]}>
+                {sendMessage.isPending ? '⏳' : '↑'}
+              </Label>
+            </Button>
+        </View>
+      </View>
 
       {errors.length > 0 && (
-        <div className="error-messages">
+        <View style={styles.errorContainer}>
           {errors.map((error, index) => (
-            <span key={index} className="error-message">
+            <Label key={index} style={styles.errorText}>
               {error}
-            </span>
+            </Label>
           ))}
-        </div>
+        </View>
       )}
-    </form>
+    </View>
   );
 };
