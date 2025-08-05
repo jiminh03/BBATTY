@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { devtools, persist, subscribeWithSelector } from 'zustand/middleware';
+import { devtools } from '@csark0812/zustand-expo-devtools';
+import { persist, subscribeWithSelector } from 'zustand/middleware';
 // import { immer } from 'zustand/middleware/immer';
 import { createAsyncStoragePersist } from './middleware';
 
@@ -19,7 +20,7 @@ export const createStore = <T extends object>(
   storeCreator: (set: any, get: any, api: any) => T,
   options: CreateStoreOptions
 ) => {
-  const { name, enableDevtools = __DEV__, enableImmer = false, persist: persistOptions } = options;
+  const { name, enableDevtools = __DEV__, enableImmer = true, persist: persistOptions } = options;
 
   // // Immer 사용
   // if (enableImmer) {
@@ -69,7 +70,7 @@ export const createSlice =
     ...actions(set, get),
   });
 
-// 비동기 액션 생성
+// 비동기 액션 생성 헬퍼
 export const createAsyncAction = <TArgs extends any[], TResult>(
   action: (...args: TArgs) => Promise<TResult>,
   options?: {
@@ -79,7 +80,7 @@ export const createAsyncAction = <TArgs extends any[], TResult>(
     onFinally?: () => void;
   }
 ) => {
-  return async (...args: TArgs): Promise<TResult> => {
+  return async (...args: TArgs): Promise<TResult | null> => {
     try {
       options?.onStart?.();
       const result = await action(...args);
@@ -87,32 +88,7 @@ export const createAsyncAction = <TArgs extends any[], TResult>(
       return result;
     } catch (error) {
       options?.onError?.(error as Error);
-      throw error; // null 대신 에러를 다시 던짐
-    } finally {
-      options?.onFinally?.();
-    }
-  };
-};
-
-// 에러일때 Null을 던지는 비동기 액션 생성
-export const createNullableAsyncAction = <TArgs extends any[], TResult>(
-  action: (...args: TArgs) => Promise<TResult>,
-  options?: {
-    onStart?: () => void;
-    onSuccess?: (result: TResult) => void;
-    onError?: (error: Error) => void;
-    onFinally?: () => void;
-  }
-) => {
-  return async (...args: TArgs): Promise<TResult> => {
-    try {
-      options?.onStart?.();
-      const result = await action(...args);
-      options?.onSuccess?.(result);
-      return result;
-    } catch (error) {
-      options?.onError?.(error as Error);
-      throw null;
+      return null;
     } finally {
       options?.onFinally?.();
     }
