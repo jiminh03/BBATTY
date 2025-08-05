@@ -2,6 +2,8 @@ package com.ssafy.chat.match.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.chat.common.dto.UserSessionInfo;
+import com.ssafy.chat.common.enums.ChatRoomType;
+import com.ssafy.chat.common.enums.MessageType;
 import com.ssafy.chat.match.dto.MatchChatMessage;
 import com.ssafy.chat.match.service.MatchChatService;
 import lombok.RequiredArgsConstructor;
@@ -72,6 +74,7 @@ public class MatchChatWebSocketHandler implements WebSocketHandler {
                 matchChatService.removeSessionFromMatchRoom(matchId, session);
                 
                 // 퇴장 이벤트 발송
+                log.info("매칭 채팅 연결 종료 - leave 이벤트 발송 - userId: {}, status: {}", userInfo.getUserId(), status);
                 matchChatService.sendUserLeaveEvent(matchId, userInfo.getUserId(), userInfo.getUserName());
                 
                 // 로컬 세션 정보 제거
@@ -210,6 +213,7 @@ public class MatchChatWebSocketHandler implements WebSocketHandler {
         Map<String, Object> attributes = session.getAttributes();
 
         MatchChatMessage message = new MatchChatMessage();
+        message.setMessageType(MessageType.CHAT);
         message.setRoomId(userInfo.getRoomId());
         message.setContent(content);
         message.setTimestamp(java.time.LocalDateTime.now());
@@ -218,7 +222,7 @@ public class MatchChatWebSocketHandler implements WebSocketHandler {
         message.setUserId(userInfo.getUserId());
         message.setNickname(userInfo.getUserName());
         message.setProfileImgUrl((String) attributes.get("profileImgUrl"));
-        message.setVictoryFairy((Boolean) attributes.getOrDefault("isVictoryFairy", false));
+        message.setWinFairy((Boolean) attributes.getOrDefault("isWinFairy", false));
 
         return message;
     }

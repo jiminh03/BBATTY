@@ -30,15 +30,12 @@ public class WatchChatAuthServiceImpl implements WatchChatAuthService {
     @Override
     public Map<String, Object> validateAndCreateSession(String jwtToken, WatchChatJoinRequest request) {
         try {
-            if (!jwtProvider.validateAccessToken(jwtToken)) {
-                throw new SecurityException("유효하지 않은 JWT 토큰입니다.");
-            }
-
-            Long teamId = jwtProvider.getTeamId(jwtToken);
+            // TODO: 나중에 Kafka로 bbatty 서버에 인증 요청
+            // 현재는 모든 요청 허용하고 더미 데이터로 세션 생성
             
-            log.info("JWT 토큰 파싱 성공 - teamId: {}", teamId);
-
-            validateWatchRoomAccess(request.getGameId(), teamId, request.isAttendanceVerified());
+            Long teamId = 1L; // 더미 팀 ID
+            
+            log.info("직관 채팅 요청 허용 - 더미 데이터 사용 - teamId: {}", teamId);
 
             Map<String, Object> sessionInfo = createSessionInfo(teamId, request);
 
@@ -58,9 +55,6 @@ public class WatchChatAuthServiceImpl implements WatchChatAuthService {
 
             return response;
 
-        } catch (SecurityException e) {
-            log.error("JWT 토큰 검증 실패", e);
-            throw e;
         } catch (Exception e) {
             log.error("직관 채팅 세션 생성 실패", e);
             throw new RuntimeException("세션 생성에 실패했습니다: " + e.getMessage(), e);
@@ -102,21 +96,8 @@ public class WatchChatAuthServiceImpl implements WatchChatAuthService {
         }
     }
 
-    private void validateWatchRoomAccess(String gameId, Long teamId, boolean isAttendanceVerified) {
-        if (gameId == null || gameId.trim().isEmpty()) {
-            throw new IllegalArgumentException("유효하지 않은 게임 ID입니다.");
-        }
-        
-        if (teamId == null) {
-            throw new SecurityException("팀 정보가 유효하지 않습니다.");
-        }
-        
-        if (!isAttendanceVerified) {
-            throw new SecurityException("직관 인증이 필요합니다.");
-        }
-        
-        log.info("직관방 입장 조건 검증 통과 - gameId: {}, teamId: {}", gameId, teamId);
-    }
+    // 더 이상 사용하지 않음 - 모든 요청 허용
+    // private void validateWatchRoomAccess(...) { ... }
 
     private Map<String, Object> createSessionInfo(Long teamId, WatchChatJoinRequest request) {
         Map<String, Object> sessionInfo = new HashMap<>();

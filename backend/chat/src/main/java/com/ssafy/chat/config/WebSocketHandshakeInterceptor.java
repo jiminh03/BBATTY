@@ -76,15 +76,8 @@ public class WebSocketHandshakeInterceptor implements HandshakeInterceptor {
     
     private boolean handleMatchChat(String sessionToken, String matchId, Map<String, Object> attributes) {
         try {
-            // Redis에서 세션 토큰으로 사용자 정보 조회
+            // Redis에서 세션 토큰으로 사용자 정보 조회 (인증은 이미 완료된 상태)
             Map<String, Object> userInfo = matchChatAuthService.getUserInfoByToken(sessionToken);
-            
-            // 세션의 matchId와 쿼리 파라미터의 matchId 일치 확인
-            String sessionMatchId = (String) userInfo.get("matchId");
-            if (!matchId.equals(sessionMatchId)) {
-                log.warn("매칭 ID 불일치 - query: {}, session: {}", matchId, sessionMatchId);
-                return false;
-            }
             
             // WebSocket 세션 속성에 사용자 정보 저장 (개인화된 채팅)
             attributes.put("chatType", "match");
@@ -94,7 +87,7 @@ public class WebSocketHandshakeInterceptor implements HandshakeInterceptor {
             attributes.put("nickname", userInfo.get("nickname"));
             attributes.put("winRate", userInfo.get("winRate"));
             attributes.put("profileImgUrl", userInfo.get("profileImgUrl"));
-            attributes.put("isVictoryFairy", userInfo.get("isVictoryFairy"));
+            attributes.put("isWinFairy", userInfo.get("isWinFairy"));
             attributes.put("gender", userInfo.get("gender"));
             attributes.put("age", userInfo.get("age"));
             attributes.put("teamId", userInfo.get("teamId"));
@@ -112,15 +105,8 @@ public class WebSocketHandshakeInterceptor implements HandshakeInterceptor {
     
     private boolean handleWatchChat(String sessionToken, String gameId, Map<String, Object> attributes) {
         try {
-            // Redis에서 세션 토큰으로 무명 사용자 정보 조회
+            // Redis에서 세션 토큰으로 무명 사용자 정보 조회 (인증은 이미 완료된 상태)
             Map<String, Object> userInfo = watchChatAuthService.getUserInfoByToken(sessionToken);
-            
-            // 세션의 gameId와 쿼리 파라미터의 gameId 일치 확인
-            String sessionGameId = (String) userInfo.get("gameId");
-            if (!gameId.equals(sessionGameId)) {
-                log.warn("게임 ID 불일치 - query: {}, session: {}", gameId, sessionGameId);
-                return false;
-            }
             
             // WebSocket 세션 속성에 무명 정보만 저장 (완전 익명 채팅)
             attributes.put("chatType", "watch");

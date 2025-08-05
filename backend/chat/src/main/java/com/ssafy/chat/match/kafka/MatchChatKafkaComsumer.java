@@ -50,10 +50,12 @@ public class MatchChatKafkaComsumer {
         try {
             // 토픽에서 matchId 추출
             String matchId = extractMatchIdFromTopic(topic);
-            log.debug("kafka 메시지 수신 - topic: {}, matchId: {}", topic, matchId);
+            log.info("🔥 실시간 Kafka 메시지 수신 - topic: {}, matchId: {}", topic, matchId);
             // json은 Map으로 파싱
             Map<String, Object> messageData = objectMapper.readValue(messageJson, Map.class);
+            log.info("🔥 메시지 파싱 완료 - messageType: {}, content: {}", messageData.get("messageType"), messageData.get("content"));
             broadcastToMatchChatRoom(matchId, messageData);
+            log.info("🔥 브로드캐스트 완료 - matchId: {}", matchId);
         } catch (Exception e) {
             log.error("Kafka 메시지 처리 실패 - topic: {}", topic, e);
         }
@@ -104,7 +106,8 @@ public class MatchChatKafkaComsumer {
      */
     public void addSessionToMatchChatRoom(String matchId, WebSocketSession session) {
         matchChatSessions.computeIfAbsent(matchId, k -> ConcurrentHashMap.newKeySet()).add(session);
-        log.debug("세션 추가 - matchId: {}, sessionId: {}, 총 세션 수: {}", matchId, session.getId(), matchChatSessions.size());
+        log.info("🔥 세션 추가 - matchId: {}, sessionId: {}, 해당 방 세션 수: {}, 전체 활성 방: {}", 
+                matchId, session.getId(), matchChatSessions.get(matchId).size(), matchChatSessions.keySet());
         // 새 세션에게 최근 메시지 히스토리 전송
         sendRecentmessagesToSession(matchId, session);
     }
@@ -112,14 +115,21 @@ public class MatchChatKafkaComsumer {
     private void sendRecentmessagesToSession(String matchId, WebSocketSession session) {
         try {
             List<Map<String, Object>> recentMessages = getRecentMessages(matchId, 50);
+            log.info("🔥 히스토리 조회 - matchId: {}, sessionId: {}, 조회된 메시지 수: {}", matchId, session.getId(), recentMessages.size());
+            
             if (!recentMessages.isEmpty()) {
-                log.debug("새 세션에게 히스토리 전송 - matchId: {}, sessionId: {}, 메시지 수: {}", matchId, session.getId(), recentMessages.size());
+                // 처음 몇 개 메시지의 roomId 확인
+                for (int i = 0; i < Math.min(3, recentMessages.size()); i++) {
+                    Map<String, Object> msg = recentMessages.get(i);
+                    log.info("🔥 히스토리 메시지 샘플 {} - roomId: {}, content: {}", i+1, msg.get("roomId"), msg.get("content"));
+                }
+                
                 for (Map<String, Object> recentMessage : recentMessages) {
                     if (session.isOpen()) {
                         String messageJson = objectMapper.writeValueAsString(recentMessage);
                         session.sendMessage(new TextMessage(messageJson));
                     } else {
-                        log.warn("세션이 닫혀 있어 히스토리 전송 중닫ㄴ - matchId: {}, sessionId: {}", matchId, session.getId());
+                        log.warn("세션이 닫혀 있어 히스토리 전송 중단 - matchId: {}, sessionId: {}", matchId, session.getId());
                         break;
                     }
                 }
@@ -170,7 +180,7 @@ public class MatchChatKafkaComsumer {
         }
         
         String topicName = TOPIC_PREFIX + matchId;
-        log.debug("최근 메시지 조회 시작 - topic: {}, limit: {}", topicName, limit);
+        log.info("🔥 Kafka 토픽 조회 시작 - matchId: {}, topic: {}, limit: {}", matchId, topicName, limit);
         
         List<Map<String, Object>> messages = new ArrayList<>();
         
@@ -218,7 +228,13 @@ public class MatchChatKafkaComsumer {
                 return ts2.compareTo(ts1);
             });
             
-            log.debug("최근 메시지 조회 완료 - topic: {}, 조회된 메시지 수: {}", topicName, messages.size());
+            log.info("🔥 Kafka 조회 완료 - topic: {}, 조회된 메시지 수: {}", topicName, messages.size());
+            
+            // 조회된 메시지들의 roomId 확인
+            for (int i = 0; i < Math.min(3, messages.size()); i++) {
+                Map<String, Object> msg = messages.get(i);
+                log.info("🔥 Kafka 메시지 샘플 {} - roomId: {}, content: {}", i+1, msg.get("roomId"), msg.get("content"));
+            }
             
         } catch (Exception e) {
             log.error("최근 메시지 조회 실패 - topic: {}", topicName, e);

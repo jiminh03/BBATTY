@@ -29,19 +29,17 @@ public class MatchChatAuthServiceImpl implements MatchChatAuthService {
     @Override
     public Map<String, Object> validateAndCreateSession(String jwtToken, MatchChatJoinRequest request) {
         try {
-            if (!jwtProvider.validateAccessToken(jwtToken)) {
-                throw new SecurityException("유효하지 않은 JWT 토큰입니다.");
-            }
+            // TODO: 나중에 Kafka로 bbatty 서버에 인증 요청
+            // 현재는 모든 요청 허용하고 더미 데이터로 세션 생성
+            
+            // 닉네임과 matchId 기반으로 고유한 더미 데이터 생성
+            Long userId = (long) Math.abs((request.getNickname() + request.getMatchId()).hashCode() % 10000 + 1);
+            String gender = userId % 2 == 0 ? "M" : "F"; // 짝수면 남성, 홀수면 여성
+            Integer age = (int) (userId % 30 + 20); // 20-49세
+            Long teamId = (long) (userId % 2 + 1); // 1팀 또는 2팀
 
-            Long userId = jwtProvider.getUserId(jwtToken);
-            String gender = jwtProvider.getGender(jwtToken);
-            Integer age = jwtProvider.getAge(jwtToken);
-            Long teamId = jwtProvider.getTeamId(jwtToken);
-
-            log.info("JWT 토큰 파싱 성공 - userId: {}, gender: {}, age: {}, teamId: {}", 
+            log.info("매칭 채팅 요청 허용 - 더미 데이터 사용 - userId: {}, gender: {}, age: {}, teamId: {}", 
                     userId, gender, age, teamId);
-
-            validateMatchRoomAccess(request.getMatchId(), userId, gender, age, teamId);
 
             Map<String, Object> sessionInfo = createSessionInfo(userId, request, gender, age, teamId);
 
@@ -61,9 +59,6 @@ public class MatchChatAuthServiceImpl implements MatchChatAuthService {
 
             return response;
 
-        } catch (SecurityException e) {
-            log.error("JWT 토큰 검증 실패", e);
-            throw e;
         } catch (Exception e) {
             log.error("매칭 채팅 세션 생성 실패", e);
             throw new RuntimeException("세션 생성에 실패했습니다: " + e.getMessage(), e);
@@ -105,21 +100,8 @@ public class MatchChatAuthServiceImpl implements MatchChatAuthService {
         }
     }
 
-    private void validateMatchRoomAccess(String matchId, Long userId, String gender, Integer age, Long teamId) {
-        if (matchId == null || matchId.trim().isEmpty()) {
-            throw new IllegalArgumentException("유효하지 않은 매칭 ID입니다.");
-        }
-        
-        if (userId == null) {
-            throw new SecurityException("사용자 정보가 유효하지 않습니다.");
-        }
-        
-        if (age == null || age < 10 || age > 100) {
-            throw new IllegalArgumentException("유효하지 않은 연령입니다.");
-        }
-        
-        log.info("매칭방 입장 조건 검증 통과 - matchId: {}, userId: {}", matchId, userId);
-    }
+    // 더 이상 사용하지 않음 - 모든 요청 허용
+    // private void validateMatchRoomAccess(...) { ... }
 
     private Map<String, Object> createSessionInfo(Long userId, MatchChatJoinRequest request, 
                                                 String gender, Integer age, Long teamId) {
@@ -135,7 +117,7 @@ public class MatchChatAuthServiceImpl implements MatchChatAuthService {
         sessionInfo.put("nickname", request.getNickname());
         sessionInfo.put("winRate", request.getWinRate());
         sessionInfo.put("profileImgUrl", request.getProfileImgUrl());
-        sessionInfo.put("isVictoryFairy", request.isVictoryFairy());
+        sessionInfo.put("isWinFairy", request.isWinFairy());
         
         sessionInfo.put("createdAt", System.currentTimeMillis());
         

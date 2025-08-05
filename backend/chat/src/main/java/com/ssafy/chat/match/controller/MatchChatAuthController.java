@@ -1,12 +1,14 @@
 package com.ssafy.chat.match.controller;
 
 import com.ssafy.chat.match.dto.MatchChatJoinRequest;
+import com.ssafy.chat.match.dto.MatchChatJoinResponse;
 import com.ssafy.chat.match.service.MatchChatAuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
 import java.util.Map;
 
 /**
@@ -26,43 +28,54 @@ public class MatchChatAuthController {
      * JWT 토큰 + 클라이언트 정보로 입장 조건 검증 후 세션 토큰 발급
      */
     @PostMapping("/join")
-    public ResponseEntity<Map<String, Object>> joinMatchChat(
-            @RequestHeader("Authorization") String authHeader,
-            @RequestBody MatchChatJoinRequest request) {
+    public ResponseEntity<MatchChatJoinResponse> joinMatchChat(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @Valid @RequestBody MatchChatJoinRequest request) {
         
         try {
             log.info("매칭 채팅방 입장 요청 - matchId: {}, nickname: {}, winRate: {}%", 
                     request.getMatchId(), request.getNickname(), request.getWinRate());
             
-            // JWT 토큰 추출 (Bearer 제거)
-            String jwtToken = authHeader.startsWith("Bearer ") 
-                    ? authHeader.substring(7) 
-                    : authHeader;
+            // JWT 토큰 추출 (현재는 사용하지 않음 - 더미로 처리)
+            String jwtToken = null;
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                jwtToken = authHeader.substring(7);
+            }
             
             // 입장 검증 및 세션 토큰 발급
-            Map<String, Object> response = matchChatAuthService.validateAndCreateSession(jwtToken, request);
+            Map<String, Object> sessionData = matchChatAuthService.validateAndCreateSession(jwtToken, request);
+            
+            // WebSocket 접속 링크 생성
+            String websocketUrl = String.format("ws://localhost:8084/ws/match-chat/websocket?token=%s&matchId=%s", 
+                    sessionData.get("sessionToken"), request.getMatchId());
+            
+            // 응답 DTO 생성
+            MatchChatJoinResponse response = MatchChatJoinResponse.builder()
+                    .sessionToken((String) sessionData.get("sessionToken"))
+                    .userId((String) sessionData.get("userId"))
+                    .matchId(request.getMatchId())
+                    .expiresIn((Long) sessionData.get("expiresIn"))
+                    .websocketUrl(websocketUrl)
+                    .build();
             
             log.info("매칭 채팅방 입장 승인 - matchId: {}, userId: {}", 
-                    request.getMatchId(), response.get("userId"));
+                    request.getMatchId(), response.getUserId());
             
             return ResponseEntity.ok(response);
             
         } catch (IllegalArgumentException e) {
             log.warn("매칭 채팅방 입장 거부 - matchId: {}, reason: {}", 
                     request.getMatchId(), e.getMessage());
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "INVALID_REQUEST", "message", e.getMessage()));
+            return ResponseEntity.badRequest().body(null);
             
         } catch (SecurityException e) {
             log.warn("매칭 채팅방 입장 인증 실패 - matchId: {}, reason: {}", 
                     request.getMatchId(), e.getMessage());
-            return ResponseEntity.status(403)
-                    .body(Map.of("error", "ACCESS_DENIED", "message", e.getMessage()));
+            return ResponseEntity.status(403).body(null);
             
         } catch (Exception e) {
             log.error("매칭 채팅방 입장 처리 실패 - matchId: {}", request.getMatchId(), e);
-            return ResponseEntity.status(500)
-                    .body(Map.of("error", "INTERNAL_ERROR", "message", "서버 오류가 발생했습니다."));
+            return ResponseEntity.status(500).body(null);
         }
     }
 

@@ -1,6 +1,6 @@
 package com.ssafy.chat.watch.service;
 
-import com.ssafy.chat.common.utils.JsonUtils;
+import com.ssafy.chat.common.util.JsonUtils;
 import com.ssafy.chat.watch.dto.WatchChatMessage;
 import com.ssafy.chat.watch.redis.WatchChatRedisPub;
 import com.ssafy.chat.watch.redis.WatchChatRedisSub;
@@ -171,16 +171,10 @@ public class WatchChatServiceImpl implements WatchChatService {
      */
     private Map<String, Object> createMessageMap(WatchChatMessage message) {
         Map<String, Object> messageMap = new HashMap<>();
-        messageMap.put("type", "message");
+        messageMap.put("messageType", message.getMessageType());
         messageMap.put("roomId", message.getRoomId());
         messageMap.put("content", message.getContent());
         messageMap.put("timestamp", message.getTimestamp().toString());
-        messageMap.put("messageType", message.getMessageType());
-        
-        // 관전 채팅 특화 정보
-        if (message.getTrafficTimestamp() != null) {
-            messageMap.put("trafficTimestamp", message.getTrafficTimestamp());
-        }
         
         return messageMap;
     }

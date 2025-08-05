@@ -3,6 +3,7 @@ package com.ssafy.chat.watch.redis;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -16,7 +17,8 @@ import java.util.Map;
 @Slf4j
 public class WatchChatRedisPub {
     
-    private final RedisTemplate<String, Object> redisTemplate;
+    @Qualifier("redisPubSubTemplate")
+    private final RedisTemplate<String, Object> redisPubSubTemplate;
     private final ObjectMapper objectMapper;
     
     /**
@@ -24,8 +26,8 @@ public class WatchChatRedisPub {
      */
     public void publishMessage(String roomId, Map<String, Object> message) {
         try {
-            String messageJson = objectMapper.writeValueAsString(message);
-            redisTemplate.convertAndSend(getChannelName(roomId), messageJson);
+            // Map 객체를 직접 발행 (PubSub 전용 템플릿 사용)
+            redisPubSubTemplate.convertAndSend(getChannelName(roomId), message);
             log.debug("관전 채팅 메시지 발행 - roomId: {}", roomId);
         } catch (Exception e) {
             log.error("관전 채팅 메시지 발행 실패 - roomId: {}", roomId, e);

@@ -1,13 +1,13 @@
 package com.ssafy.chat.config;
 
-import io.jsonwebtoken.*;
-import io.jsonwebtoken.security.Keys;
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.JWTVerifier;
+import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.interfaces.DecodedJWT;
+import com.auth0.jwt.exceptions.JWTVerificationException;
 import org.springframework.beans.factory.annotation.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-
-import javax.crypto.SecretKey;
-import java.util.Date;
 
 /**
  * JWT 토큰 검증 및 사용자 정보 추출을 담당하는 클래스
@@ -17,37 +17,27 @@ import java.util.Date;
 @Component
 public class JwtProvider {
 
-    private final SecretKey secretKey;
+    private final Algorithm algorithm;
+    private final JWTVerifier verifier;
     private final String issuer;
 
     public JwtProvider(
             @Value("${jwt.secret}") String secret,
             @Value("${jwt.issuer}") String issuer
     ) {
-        this.secretKey = Keys.hmacShaKeyFor(secret.getBytes());
+        this.algorithm = Algorithm.HMAC256(secret);
         this.issuer = issuer;
+        this.verifier = JWT.require(algorithm)
+                .withIssuer(issuer)
+                .build();
     }
 
-    public Claims getClaims(String token) {
+    public DecodedJWT getClaims(String token) {
         try {
-            return Jwts.parser()
-                    .verifyWith(secretKey)
-                    .requireIssuer(issuer)
-                    .build()
-                    .parseSignedClaims(token)
-                    .getPayload();
-        } catch (SecurityException | MalformedJwtException | io.jsonwebtoken.security.SignatureException e) {
-            log.warn("잘못된 JWT 서명입니다: {}", e.getMessage());
+            return verifier.verify(token);
+        } catch (JWTVerificationException e) {
+            log.warn("JWT 토큰 검증 실패: {}", e.getMessage());
             throw new SecurityException("유효하지 않은 JWT 토큰입니다.");
-        } catch (ExpiredJwtException e) {
-            log.warn("만료된 JWT 토큰입니다: {}", e.getMessage());
-            throw new SecurityException("만료된 JWT 토큰입니다.");
-        } catch (UnsupportedJwtException e) {
-            log.warn("지원되지 않는 JWT 토큰입니다: {}", e.getMessage());
-            throw new SecurityException("지원되지 않는 JWT 토큰입니다.");
-        } catch (IllegalArgumentException e) {
-            log.warn("JWT 토큰이 잘못되었습니다: {}", e.getMessage());
-            throw new SecurityException("잘못된 JWT 토큰입니다.");
         }
     }
 
@@ -55,32 +45,32 @@ public class JwtProvider {
      * 토큰에서 사용자 ID 추출
      */
     public Long getUserId(String token) {
-        Claims claims = getClaims(token);
-        return Long.valueOf(claims.getSubject());
+        DecodedJWT jwt = getClaims(token);
+        return Long.valueOf(jwt.getSubject());
     }
 
     /**
      * 토큰에서 사용자 나이 추출
      */
-    public int getAge(String token) {
-        Claims claims = getClaims(token);
-        return claims.get("age", Integer.class);
+    public Integer getAge(String token) {
+        DecodedJWT jwt = getClaims(token);
+        return jwt.getClaim("age").asInt();
     }
 
     /**
      * 토큰에서 사용자 성별 추출
      */
     public String getGender(String token) {
-        Claims claims = getClaims(token);
-        return claims.get("gender", String.class);
+        DecodedJWT jwt = getClaims(token);
+        return jwt.getClaim("gender").asString();
     }
 
     /**
      * 토큰에서 팀 ID 추출
      */
     public Long getTeamId(String token) {
-        Claims claims = getClaims(token);
-        return claims.get("teamId", Long.class);
+        DecodedJWT jwt = getClaims(token);
+        return jwt.getClaim("teamId").asLong();
     }
 
     /**
@@ -88,9 +78,9 @@ public class JwtProvider {
      */
     public boolean validateAccessToken(String token) {
         try {
-            Claims claims = getClaims(token);
+            DecodedJWT jwt = getClaims(token);
             // Refresh Token이 아닌지 확인
-            if (claims.get("tokenType") != null) {
+            if (jwt.getClaim("tokenType").asString() != null) {
                 return false;
             }
             return true;

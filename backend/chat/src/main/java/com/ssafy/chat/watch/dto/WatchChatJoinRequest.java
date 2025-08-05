@@ -1,5 +1,6 @@
 package com.ssafy.chat.watch.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,6 +19,7 @@ import jakarta.validation.constraints.NotBlank;
 public class WatchChatJoinRequest {
     
     // 직관 인증 여부 (클라이언트에서 제공)
+    @JsonProperty("isAttendanceVerified")
     private boolean isAttendanceVerified;
     
     // gameId 추가 (어떤 경기의 채팅방인지 구분)

@@ -59,6 +59,7 @@ public class WatchChatRedisSub implements MessageListener {
             log.debug("관전 채팅 메시지 수신 - channel: {}, roomId: {}", channel, roomId);
             
             // JSON 메시지를 Map으로 파싱
+            @SuppressWarnings("unchecked")
             Map<String, Object> messageData = objectMapper.readValue(messageBody, Map.class);
             
             // 해당 채팅방의 모든 세션에 브로드캐스트

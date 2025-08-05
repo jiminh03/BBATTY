@@ -2,6 +2,7 @@ package com.ssafy.chat.watch.handler;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.chat.common.dto.UserSessionInfo;
+import com.ssafy.chat.common.enums.ChatRoomType;
 import com.ssafy.chat.common.enums.MessageType;
 import com.ssafy.chat.watch.dto.WatchChatMessage;
 import com.ssafy.chat.watch.service.WatchChatService;
@@ -150,52 +151,32 @@ public class WatchChatWebSocketHandler implements WebSocketHandler {
      */
     private UserSessionInfo createUserSessionInfo(WebSocketSession session) {
         try {
-            // Query parameter에서 세션 토큰 추출
-            URI uri = session.getUri();
-            if (uri == null) {
-                throw new IllegalArgumentException("WebSocket URI is null");
-            }
-
-            String query = uri.getQuery();
-            Map<String, String> params = UriComponentsBuilder.fromUriString("?" + query)
-                    .build()
-                    .getQueryParams()
-                    .toSingleValueMap();
-
-            String sessionToken = params.get("token");
-            if (sessionToken == null || sessionToken.trim().isEmpty()) {
-                throw new IllegalArgumentException("Session token is required");
-            }
-
-            // 세션 토큰 검증
-            if (!watchChatService.validateUserSession(sessionToken)) {
-                throw new IllegalArgumentException("Invalid or expired session token");
-            }
-
-            // 세션에서 사용자 정보 조회
-            Map<String, Object> sessionData = watchChatService.getUserInfoFromSession(sessionToken);
-            if (sessionData.isEmpty()) {
-                throw new IllegalArgumentException("Session data not found");
-            }
-
-            String userId = (String) sessionData.get("userId");
-            String userName = (String) sessionData.get("userName");
-            String userTeamId = (String) sessionData.get("userTeamId");
-            String teamId = params.get("teamId"); // 채팅방 팀 ID는 query parameter에서
-
-            if (userId == null || userName == null || userTeamId == null || teamId == null) {
-                throw new IllegalArgumentException("Missing required session data");
-            }
-
-            // 세션에 필요한 정보 저장
+            // HandshakeInterceptor에서 설정한 세션 속성 사용
             Map<String, Object> attributes = session.getAttributes();
-            attributes.put("userId", userId);
-            attributes.put("userName", userName);
-            attributes.put("userTeamId", userTeamId);
-            attributes.put("teamId", teamId);
-            attributes.put("sessionToken", sessionToken);
+            
+            // 채팅 타입 확인
+            String chatType = (String) attributes.get("chatType");
+            if (!"watch".equals(chatType)) {
+                throw new IllegalArgumentException("Invalid chat type for watch chat: " + chatType);
+            }
 
-            return new UserSessionInfo(userId, userName, teamId);
+            // HandshakeInterceptor에서 설정한 속성들 추출
+            Long teamId = (Long) attributes.get("teamId");
+            String gameId = (String) attributes.get("gameId");
+            Boolean isAttendanceVerified = (Boolean) attributes.get("isAttendanceVerified");
+
+            if (teamId == null || gameId == null) {
+                throw new IllegalArgumentException("Required session attributes missing");
+            }
+
+            // 직관 채팅은 완전 무명이므로 더미 사용자 정보 생성
+            String userId = "anonymous_" + session.getId(); // 세션별 고유 ID
+            String userName = "익명_" + teamId; // 팀 기반 익명 이름
+
+            log.info("직관 채팅 사용자 세션 생성 - userId: {}, teamId: {}, gameId: {}", 
+                    userId, teamId, gameId);
+
+            return new UserSessionInfo(userId, userName, teamId.toString());
 
         } catch (Exception e) {
             log.error("관전 채팅 세션 정보 생성 실패", e);
@@ -208,19 +189,13 @@ public class WatchChatWebSocketHandler implements WebSocketHandler {
      */
     private boolean canJoinChatRoom(WebSocketSession session, UserSessionInfo userInfo) {
         try {
-            String teamId = userInfo.getRoomId(); // 채팅방 팀 ID
-            String userTeamId = (String) session.getAttributes().get("userTeamId"); // 사용자 응원팀
+            // HandshakeInterceptor에서 이미 인증 완료했으므로 항상 허용
+            // 직관 채팅은 팀별로 분리되어 있고, 이미 올바른 채팅방에 입장한 상태
+            Long userTeamId = (Long) session.getAttributes().get("teamId");
+            String gameId = (String) session.getAttributes().get("gameId");
             
-            log.info("관전 채팅방 입장 검증 - 채팅방팀: {}, 사용자팀: {}", teamId, userTeamId);
-            
-            // 같은 팀인지 확인
-            if (teamId != null && teamId.equals(userTeamId)) {
-                log.info("팀 일치 - 입장 허용");
-                return true;
-            }
-            
-            log.warn("팀 불일치 - 채팅방팀: {}, 사용자팀: {}", teamId, userTeamId);
-            return false;
+            log.info("직관 채팅방 입장 허용 - 사용자팀: {}, 게임: {}", userTeamId, gameId);
+            return true;
             
         } catch (Exception e) {
             log.error("관전 채팅방 입장 검증 실패 - userId: {}", userInfo.getUserId(), e);
@@ -293,9 +268,6 @@ public class WatchChatWebSocketHandler implements WebSocketHandler {
         message.setRoomId(userInfo.getRoomId());
         message.setContent(content);
         message.setTimestamp(LocalDateTime.now());
-        
-        // 관전 채팅 특화 정보
-        message.setTrafficTimestamp(System.currentTimeMillis());
         
         return message;
     }

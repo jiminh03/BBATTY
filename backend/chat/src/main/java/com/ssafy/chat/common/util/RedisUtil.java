@@ -70,8 +70,9 @@ public class RedisUtil {
         return redisTemplate.opsForHash().get(key, hashKey);
     }
     
+    @SuppressWarnings("unchecked")
     public java.util.Map<String, Object> getHashEntries(String key) {
-        return redisTemplate.opsForHash().entries(key);
+        return (java.util.Map<String, Object>) (java.util.Map<?, ?>) redisTemplate.opsForHash().entries(key);
     }
 
     public void deleteHashKey(String key, String hashKey) {

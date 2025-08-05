@@ -20,6 +20,6 @@ public class MatchChatMessage extends ChatMessage {
     // 사용자 프로필 이미지
     private String profileImgUrl;
 
-    // 승리요정 여부
-    private boolean isVictoryFairy;
+    // 승리 요정 여부
+    private boolean isWinFairy;
 }

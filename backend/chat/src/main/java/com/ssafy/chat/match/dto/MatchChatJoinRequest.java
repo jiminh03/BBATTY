@@ -1,5 +1,6 @@
 package com.ssafy.chat.match.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -31,6 +32,7 @@ public class MatchChatJoinRequest {
     // 프로필 이미지 URL
     private String profileImgUrl;
     
-    // 승리 요정 여부
-    private boolean isVictoryFairy;
+    // 승요정 여부
+    @JsonProperty("isWinFairy")
+    private boolean isWinFairy;
 }

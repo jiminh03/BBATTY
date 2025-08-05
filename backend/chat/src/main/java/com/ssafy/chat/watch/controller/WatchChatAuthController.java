@@ -1,13 +1,13 @@
 package com.ssafy.chat.watch.controller;
 
 import com.ssafy.chat.watch.dto.WatchChatJoinRequest;
+import com.ssafy.chat.watch.dto.WatchChatJoinResponse;
 import com.ssafy.chat.watch.service.WatchChatAuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.validation.Valid;
 import java.util.Map;
 
 /**
@@ -27,41 +27,46 @@ public class WatchChatAuthController {
      * JWT에서 teamId 추출, 직관 인증 여부 확인 후 세션 토큰 생성
      */
     @PostMapping("/join")
-    public ResponseEntity<Map<String, Object>> joinWatchChat(
-            @RequestHeader("Authorization") String authHeader,
-            @Valid @RequestBody WatchChatJoinRequest request) {
+    public ResponseEntity<WatchChatJoinResponse> joinWatchChat(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody WatchChatJoinRequest request) {
         
         try {
             log.info("직관 채팅방 입장 요청 - gameId: {}, 직관인증: {}", 
                     request.getGameId(), request.isAttendanceVerified());
 
-            String jwtToken = extractTokenFromHeader(authHeader);
+            // 현재는 JWT 토큰 사용하지 않음 - 더미로 처리
+            String jwtToken = null;
             
-            Map<String, Object> response = watchChatAuthService.validateAndCreateSession(jwtToken, request);
+            Map<String, Object> sessionData = watchChatAuthService.validateAndCreateSession(jwtToken, request);
+            
+            // WebSocket 접속 링크 생성
+            String websocketUrl = String.format("ws://localhost:8084/ws/watch-chat/websocket?token=%s&gameId=%s", 
+                    sessionData.get("sessionToken"), request.getGameId());
+            
+            // 응답 DTO 생성
+            WatchChatJoinResponse response = WatchChatJoinResponse.builder()
+                    .sessionToken((String) sessionData.get("sessionToken"))
+                    .teamId((String) sessionData.get("teamId"))
+                    .gameId(request.getGameId())
+                    .expiresIn((Long) sessionData.get("expiresIn"))
+                    .websocketUrl(websocketUrl)
+                    .build();
             
             log.info("직관 채팅방 입장 성공 - gameId: {}, teamId: {}", 
-                    request.getGameId(), response.get("teamId"));
+                    request.getGameId(), response.getTeamId());
             
             return ResponseEntity.ok(response);
             
         } catch (SecurityException e) {
             log.warn("직관 채팅방 입장 인증 실패: {}", e.getMessage());
-            return ResponseEntity.status(401).body(Map.of(
-                "error", "UNAUTHORIZED",
-                "message", e.getMessage()
-            ));
+            return ResponseEntity.status(401).body(null);
         } catch (IllegalArgumentException e) {
             log.warn("직관 채팅방 입장 요청 오류: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(Map.of(
-                "error", "BAD_REQUEST", 
-                "message", e.getMessage()
-            ));
+            return ResponseEntity.badRequest().body(null);
         } catch (Exception e) {
             log.error("직관 채팅방 입장 처리 중 오류 발생", e);
-            return ResponseEntity.internalServerError().body(Map.of(
-                "error", "INTERNAL_ERROR",
-                "message", "서버 오류가 발생했습니다."
-            ));
+            return ResponseEntity.internalServerError().body(null);
         }
     }
 
