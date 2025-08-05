@@ -29,11 +29,11 @@ public class AuthResponse {
      * - 프로필 화면, 닉네임 표시, 팀 브랜딩 등에 활용
      * - JWT 토큰과는 별개로 관리 (토큰에는 최소 정보만 포함)
      */
-    private final UserInfo userInfo;
+    private final UserProfile userProfile;
 
     @Getter
     @Builder
-    public static class UserInfo {
+    public static class UserProfile {
         /**
          * 사용자 고유 ID
          * 🔹 JWT 토큰에도 포함됨 (sub 클레임)
@@ -94,13 +94,13 @@ public class AuthResponse {
      * 로그인 성공 응답 생성
      * 📝 프론트 처리:
      * 1. tokens를 SecureStore/KeyChain에 안전하게 저장
-     * 2. userInfo를 AsyncStorage에 저장 (빠른 UI 로딩용)
+     * 2. userProfile AsyncStorage에 저장 (빠른 UI 로딩용)
      * 3. 홈 화면으로 네비게이션
      */
-    public static AuthResponse ofLogin(TokenPair tokens, UserInfo userInfo) {
+    public static AuthResponse ofLogin(TokenPair tokens, UserProfile userProfile) {
         return AuthResponse.builder()
                 .tokens(tokens)
-                .userInfo(userInfo)
+                .userProfile(userProfile)
                 .build();
     }
 
@@ -108,13 +108,13 @@ public class AuthResponse {
      * 회원가입 성공 응답 생성
      * 📝 프론트 처리:
      * 1. tokens를 SecureStore/KeyChain에 안전하게 저장
-     * 2. userInfo를 AsyncStorage에 저장
+     * 2. userProfile AsyncStorage에 저장
      * 3. 온보딩 완료 화면 또는 홈 화면으로 네비게이션
      */
-    public static AuthResponse ofSignup(TokenPair tokens, UserInfo userInfo) {
+    public static AuthResponse ofSignup(TokenPair tokens, UserProfile userProfile) {
         return AuthResponse.builder()
                 .tokens(tokens)
-                .userInfo(userInfo)
+                .userProfile(userProfile)
                 .build();
     }
 }

@@ -24,14 +24,14 @@ import org.springframework.web.bind.annotation.*;
  * - 로그아웃
  *
  * 📱 프론트엔드 개발자를 위한 API 가이드:
- * 1. POST /auth/login - 카카오 로그인 (기존 사용자)
- * 2. POST /auth/signup - 회원가입 (신규 사용자)
- * 3. POST /auth/refresh - 토큰 갱신
- * 4. POST /auth/logout - 로그아웃
+ * 1. POST /api/auth/login - 카카오 로그인 (기존 사용자)
+ * 2. POST /api/auth/signup - 회원가입 (신규 사용자)
+ * 3. POST /api/auth/refresh - 토큰 갱신
+ * 4. POST /api/auth/logout - 로그아웃
  */
 @Slf4j
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class AuthController {
 

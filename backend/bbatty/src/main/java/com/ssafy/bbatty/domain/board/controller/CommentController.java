@@ -29,7 +29,7 @@ public class CommentController {
                 ApiResponse.success(SuccessCode.SUCCESS_CREATED));
     }
 
-    // 4. 댓글 수정
+    // 2. 댓글 수정
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> updateComment(
             @PathVariable Long id,
@@ -56,7 +56,7 @@ public class CommentController {
         return ResponseEntity.ok(response);
     }
 
-    // 5. 댓글 삭제
+    // 6. 댓글 삭제
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteComment(@PathVariable Long id) {
         commentService.deleteComment(id);
