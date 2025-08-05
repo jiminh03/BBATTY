@@ -10,27 +10,15 @@ export type RootStackParamList = {
   // 메인 탭
   MainTabs: NavigatorScreenParams<MainTabParamList>;
   // 모달 스크린
-  TeamSelectModal: undefined;
-  ImageViewerModal: {
-    images: string[];
-    initialIndex?: number;
-  };
-  ReportModal: {
-    targetType: 'user' | 'post' | 'comment' | 'chat';
-    targetId: string;
-  };
+  //TeamSelectModal: undefined;
 };
 
 // 인증 스택 파라미터
 export type AuthStackParamList = {
   Landing: undefined;
   Login: undefined;
+  TeamSelect: undefined;
   SignUp: undefined;
-  TeamSelect: {
-    isInitialSetup: boolean;
-  };
-  TermsAgreement: undefined;
-  FindPassword: undefined;
 };
 
 // 메인 탭 파라미터
@@ -44,6 +32,15 @@ export type MainTabParamList = {
 // 홈 스택 파라미터
 export type HomeStackParamList = {
   Home: undefined;
+  PostList: {
+    teamId?: string;
+  };
+  PostDetail: {
+    postId: string;
+  };
+  PostCreate: {
+    category?: string;
+  };
   Notifications: undefined;
   Search: {
     initialQuery?: string;
@@ -54,16 +51,6 @@ export type HomeStackParamList = {
 export type ExploreStackParamList = {
   CommunityHome: {
     teamId?: string;
-  };
-  PostList: {
-    category?: string;
-    teamId?: string;
-  };
-  PostDetail: {
-    postId: string;
-  };
-  PostCreate: {
-    category?: string;
   };
   PostEdit: {
     postId: string;

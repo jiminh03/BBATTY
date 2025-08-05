@@ -46,7 +46,7 @@ interface ApiConfig {
 }
 
 export const API_CONFIG: ApiConfig = {
-  baseURL: '--', //API_URLS[getCurrentEnvironment()],
+  baseURL: 'http://',
 
   timeout: {
     default: 3000, // 3초
