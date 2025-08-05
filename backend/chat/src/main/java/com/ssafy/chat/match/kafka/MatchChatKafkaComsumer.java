@@ -42,7 +42,7 @@ public class MatchChatKafkaComsumer {
      */
     @KafkaListener(
             topicPattern = "match-chat-.*",
-            groupId = "match-chat-service"
+            groupId = "match-chat-broadcast-group"
     )
     public void handleMatchChatMessage(
             @Payload String messageJson,
