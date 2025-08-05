@@ -1,23 +1,23 @@
-# BBATTY ?? ?? ???? ??? ?? (?? properties ??)
+# BBATTY 애플리케이션 설정 파일 (기존 properties 대체)
 spring:
   application:
     name: bbatty
 
-  # ?????? ??
+  # 데이터베이스 설정
   datasource:
     url: ${SPRING_DATASOURCE_URL}
     username: ${SPRING_DATASOURCE_USERNAME}
     password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
-  # JPA/Hibernate ??
+  # JPA/Hibernate 설정
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: true
     database-platform: org.hibernate.dialect.MySQL8Dialect
 
-  # Redis ??
+  # Redis 설정
   data:
     redis:
       host: ${SPRING_DATA_REDIS_HOST:localhost}
@@ -25,7 +25,7 @@ spring:
       password: ${REDIS_PASSWORD}
       timeout: 2000ms
 
-# AWS S3 ??
+# AWS S3 설정
 cloud:
   aws:
     credentials:
@@ -38,13 +38,13 @@ cloud:
     stack:
       auto: false
 
-# WebSocket ??
+# WebSocket 설정
 websocket:
   allowed-origins: "*"
   sockjs:
     enabled: false
 
-# WebSocket - Chatting ??
+# WebSocket - Chatting 설정
 chat:
   game:
     enable-spam-filter: false
@@ -52,7 +52,7 @@ chat:
   match:
     auto-create-room: true
 
-# Kakao OAuth ??
+# Kakao OAuth 설정
 kakao:
   client-id: ${KAKAO_CLIENT_ID}
   client-secret: ${KAKAO_CLIENT_SECRET}
@@ -61,7 +61,7 @@ kakao:
   timeout-seconds: 10
   scope: account_email,birthday,gender
 
-# JWT ??
+# JWT 설정
 jwt:
   secret: bbatty-super-secret-jwt-key-for-baseball-community-application-2024-ssafy-minimum-256-bits
   issuer: bbatty
@@ -71,7 +71,7 @@ jwt:
   refresh-token-validity-days: 30
   refresh-threshold-minutes: 5
 
-# ?? ??
+# 로깅 설정
 logging:
   level:
     com.ssafy.bbatty.domain.chat: DEBUG
