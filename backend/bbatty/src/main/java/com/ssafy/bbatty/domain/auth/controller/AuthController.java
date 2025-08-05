@@ -87,6 +87,21 @@ public class AuthController {
     }
 
     /**
+     * 닉네임 중복 확인
+     * 
+     * 📝 프론트 처리:
+     * - 닉네임 입력 후 중복 확인 버튼 클릭 시 호출
+     * - 사용 가능하면 true, 중복이면 false 반환
+     */
+    @GetMapping("/check-nickname")
+    public ResponseEntity<ApiResponse<Boolean>> checkNickname(
+            @RequestParam String nickname
+    ) {
+        boolean isAvailable = authService.isNicknameAvailable(nickname);
+        return ResponseEntity.ok(ApiResponse.success(isAvailable));
+    }
+
+    /**
      * 로그아웃
      *
      * 📝 프론트 처리:
