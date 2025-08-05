@@ -4,7 +4,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { StatusBar } from 'react-native';
 import { useTheme } from '../shared/styles';
 import { tokenManager } from '../shared';
-import { RootStackParamList } from '../shared';
+import { RootStackParamList } from './types';
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
 // import TeamSelectModal from '@/screens/modals/TeamSelectModal';
