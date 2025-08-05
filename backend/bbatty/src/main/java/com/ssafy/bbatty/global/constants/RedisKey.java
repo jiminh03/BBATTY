@@ -19,8 +19,11 @@ public class RedisKey {
     // ATTENDANCE 도메인 - 직관 인증 관련
     // ===========================================
 
-    /** 일일 직관 인증 여부: attendance:daily:{date}:{user_id} */
-    public static final String ATTENDANCE_DAILY = "attendance:daily:";
+    /** 경기별 직관 인증 여부: attendance:game:{game_id}:{user_id} */
+    public static final String ATTENDANCE_GAME = "attendance:game:";
+    
+    /** 당일 직관 인증한 전체 사용자 목록: attendance:daily:attendees:{date} (Set) */
+    public static final String ATTENDANCE_DAILY_ATTENDEES = "attendance:daily:attendees:";
 
     /** 활성 경기 목록: attendance:active:games:{date} */
     public static final String ATTENDANCE_ACTIVE_GAMES = "attendance:active:games:";
@@ -77,6 +80,4 @@ public class RedisKey {
     // STATISTICS 도메인 - 통계 업데이트용
     // ===========================================
 
-    /** 당일 직관 인증한 전체 사용자 목록: stats:daily:attendees:{date} (Set) */
-    public static final String STATS_DAILY_ATTENDEES = "stats:daily:attendees:";
 }

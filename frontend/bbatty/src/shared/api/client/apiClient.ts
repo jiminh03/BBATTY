@@ -114,8 +114,8 @@ export const tokenManager: TokenManager = {
 export const initializeApiClient = async (): Promise<void> => {
   await tokenManager.restoreToken();
 
-  setupInterceptors(apiClient);
-  setupInterceptors(uploadClient);
+  setupInterceptors(apiClient, tokenManager);
+  setupInterceptors(uploadClient, tokenManager);
   // setupInterceptors(downloadClient);
 
   /*
