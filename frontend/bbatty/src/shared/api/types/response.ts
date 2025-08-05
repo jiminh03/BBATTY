@@ -11,12 +11,6 @@ export interface ApiErrorResponse {
   error: {
     code: string; // 에러 식별자 ex) AUTH_TOKEN_EXPIRED
     details?: unknown;
-    /*
-      fields: [
-        { field: "email", message: "이메일 형식이 올바르지 않습니다" },
-        { field: "password", message: "비밀번호는 8자 이상이어야 합니다" }
-      ]
-     */
   };
   timestamp: string;
 }
@@ -46,20 +40,19 @@ export class ResponseBuilder {
   }
 }
 
-export const isSuccessResponse = <T>(response: ApiResponse<T>): response is ApiSuccessResponse<T> => {
-  return response.success === true;
-};
-
-export const isErrorResponse = (response: ApiResponse): response is ApiErrorResponse => {
-  return response.success === false;
-};
-
+//null 및 데이터 반환
 export const extractData = <T>(response: ApiResponse<T>): T | null => {
-  return isSuccessResponse(response) ? response.data : null;
+  return response.success ? response.data : null;
 };
+
+//에러 및 데이터 반환
+// export const safeExtractData = <T>(response: ApiResponse<T>): T => {
+//   if (!isSuccessResponse(response)) throw new Error(`${response.error.code} ${response.error.details}`);
+//   return response.data;
+// };
 
 export const extractError = (response: ApiResponse): { message: string; code: string; details?: unknown } | null => {
-  return isErrorResponse(response)
+  return !response.success
     ? {
         message: response.message,
         code: response.error.code,

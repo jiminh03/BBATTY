@@ -37,11 +37,12 @@ export interface JwtUserInfo {
 import { BaseEntity } from '../../../shared';
 
 export interface User extends BaseEntity {
-  teamId: string;
   nickname: string;
-  introduction?: string;
   profileImageURL?: string;
+  introduction?: string;
+  age: number;
   gender?: string;
+  teamId: string;
 }
 
 export interface DetailedUser extends User {
