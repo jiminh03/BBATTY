@@ -6,7 +6,7 @@ export type {
   ChatRoomType 
 } from './model/types';
 
-export type { AuthRequest, AuthResponse } from './api/types';
+export type { AuthRequest, AuthResponse, MatchChatJoinRequest, WatchChatJoinRequest } from './api/types';
 
 export { chatRoomApi } from './api/api';
 
