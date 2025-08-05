@@ -11,7 +11,7 @@ import java.util.Map;
 @Getter
 public enum ChatRoomType {
 
-    GAME("game", "게임 채팅"),
+    WATCH("watch", "관전 채팅"),
     MATCH("match", "매칭 채팅");
 
     private final String code;

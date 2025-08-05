@@ -1,5 +1,5 @@
 import { createNavigationContainerRef } from '@react-navigation/native';
-import { RootStackParamList } from '../shared';
+import { RootStackParamList } from './types';
 
 // 네비게이션 참조 생성 - 컴포넌트 외부에서 네비게이션 사용하기 위함
 export const navigationRef = createNavigationContainerRef<RootStackParamList>();

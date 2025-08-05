@@ -61,7 +61,7 @@ public enum ErrorCode {
 
     // ATTENDANCE
     NO_GAME_TODAY(HttpStatus.NOT_FOUND, "오늘은 우리 팀 경기가 없어요."),
-    ALREADY_ATTENDED_TODAY(HttpStatus.CONFLICT, "오늘 이미 직관 인증을 완료했어요."),
+    ALREADY_ATTENDED_GAME(HttpStatus.CONFLICT, "이미 해당 경기에 대해 직관 인증이 완료되었어요."),
     NOT_IN_STADIUM(HttpStatus.BAD_REQUEST, "경기장 근처에서만 인증할 수 있어요."),
     NOT_ATTENDANCE_TIME(HttpStatus.BAD_REQUEST, "경기 시간에만 인증할 수 있어요."),
     GAME_NOT_STARTED(HttpStatus.BAD_REQUEST, "아직 경기가 시작되지 않았어요."),
