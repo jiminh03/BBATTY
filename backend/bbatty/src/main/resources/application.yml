@@ -63,7 +63,7 @@ kakao:
 
 # JWT 설정
 jwt:
-  secret: bbatty-super-secret-jwt-key-for-baseball-community-application-2024-ssafy-minimum-256-bits
+  secret: ${JWT_SECRET}
   issuer: bbatty
   header: Authorization
   prefix: Bearer
