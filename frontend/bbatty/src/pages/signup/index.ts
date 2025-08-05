@@ -1,1 +1,1 @@
-export { default } from './ui/SignUpScreen';
+export { default } from './SignUpScreen';
