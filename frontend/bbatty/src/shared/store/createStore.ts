@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { devtools, persist, subscribeWithSelector } from 'zustand/middleware';
-import { immer } from 'zustand/middleware/immer';
+// import { immer } from 'zustand/middleware/immer';
 import { createAsyncStoragePersist } from './middleware';
 
 interface CreateStoreOptions {
@@ -19,30 +19,30 @@ export const createStore = <T extends object>(
   storeCreator: (set: any, get: any, api: any) => T,
   options: CreateStoreOptions
 ) => {
-  const { name, enableDevtools = __DEV__, enableImmer = true, persist: persistOptions } = options;
+  const { name, enableDevtools = __DEV__, enableImmer = false, persist: persistOptions } = options;
 
-  // Immer 사용
-  if (enableImmer) {
-    if (persistOptions?.enabled) {
-      return create<T>()(
-        devtools(
-          persist(subscribeWithSelector(immer<T>((set, get, api) => storeCreator(set, get, api))), {
-            ...createAsyncStoragePersist(name),
-            partialize: persistOptions.partialize,
-            version: persistOptions.version || 1,
-          }),
-          enableDevtools ? { name } : undefined
-        )
-      );
-    }
+  // // Immer 사용
+  // if (enableImmer) {
+  //   if (persistOptions?.enabled) {
+  //     return create<T>()(
+  //       devtools(
+  //         persist(subscribeWithSelector(immer<T>((set, get, api) => storeCreator(set, get, api))), {
+  //           ...createAsyncStoragePersist(name),
+  //           partialize: persistOptions.partialize,
+  //           version: persistOptions.version || 1,
+  //         }),
+  //         enableDevtools ? { name } : undefined
+  //       )
+  //     );
+  //   }
 
-    return create<T>()(
-      devtools(
-        subscribeWithSelector(immer<T>((set, get, api) => storeCreator(set, get, api))),
-        enableDevtools ? { name } : undefined
-      )
-    );
-  }
+  //   return create<T>()(
+  //     devtools(
+  //       subscribeWithSelector(immer<T>((set, get, api) => storeCreator(set, get, api))),
+  //       enableDevtools ? { name } : undefined
+  //     )
+  //   );
+  // }
 
   // Immer 미사용
   if (persistOptions?.enabled) {
@@ -69,7 +69,7 @@ export const createSlice =
     ...actions(set, get),
   });
 
-// 비동기 액션 생성 헬퍼
+// 비동기 액션 생성
 export const createAsyncAction = <TArgs extends any[], TResult>(
   action: (...args: TArgs) => Promise<TResult>,
   options?: {
@@ -79,7 +79,7 @@ export const createAsyncAction = <TArgs extends any[], TResult>(
     onFinally?: () => void;
   }
 ) => {
-  return async (...args: TArgs): Promise<TResult | null> => {
+  return async (...args: TArgs): Promise<TResult> => {
     try {
       options?.onStart?.();
       const result = await action(...args);
@@ -87,7 +87,32 @@ export const createAsyncAction = <TArgs extends any[], TResult>(
       return result;
     } catch (error) {
       options?.onError?.(error as Error);
-      return null;
+      throw error; // null 대신 에러를 다시 던짐
+    } finally {
+      options?.onFinally?.();
+    }
+  };
+};
+
+// 에러일때 Null을 던지는 비동기 액션 생성
+export const createNullableAsyncAction = <TArgs extends any[], TResult>(
+  action: (...args: TArgs) => Promise<TResult>,
+  options?: {
+    onStart?: () => void;
+    onSuccess?: (result: TResult) => void;
+    onError?: (error: Error) => void;
+    onFinally?: () => void;
+  }
+) => {
+  return async (...args: TArgs): Promise<TResult> => {
+    try {
+      options?.onStart?.();
+      const result = await action(...args);
+      options?.onSuccess?.(result);
+      return result;
+    } catch (error) {
+      options?.onError?.(error as Error);
+      throw null;
     } finally {
       options?.onFinally?.();
     }

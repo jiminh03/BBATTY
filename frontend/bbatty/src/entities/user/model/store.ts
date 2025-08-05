@@ -1,14 +1,14 @@
 import { create } from 'zustand';
-import { ChatUser, UserSessionInfo } from './types';
+import { ChatUser, User, UserSessionInfo } from './types';
 
 interface UserState {
-  currentUser: ChatUser | null;
+  currentUser: User | null;
   sessionInfo: UserSessionInfo | null;
   connectedUsers: Record<string, ChatUser[]>; // roomId -> users
 }
 
 interface UserActions {
-  setCurrentUser: (user: ChatUser | null) => void;
+  setCurrentUser: (user: User | null) => void;
   setSessionInfo: (info: UserSessionInfo | null) => void;
   addUserToRoom: (roomId: string, user: ChatUser) => void;
   removeUserFromRoom: (roomId: string, userId: string) => void;

@@ -1,7 +1,7 @@
 import { useQuery, useMutation, UseQueryOptions, UseMutationOptions } from '@tanstack/react-query';
 import { AxiosResponse } from 'axios';
 import { type QueryKey } from '../lib/tanstack/queryKeys';
-import { extractData, isSuccessResponse, type ApiResponse, type ApiSuccessResponse } from '../types/response';
+import { extractData, type ApiResponse } from '../types/response';
 
 type ApiFunction<TData, TVariables = void> = (variablese: TVariables) => Promise<AxiosResponse<ApiResponse<TData>>>;
 
@@ -11,6 +11,8 @@ interface UseApiOptions<TData, TError = Error, TVariables = void>
   queryKey: QueryKey;
   apiFunction: ApiFunction<TData, TVariables>;
   variables?: TVariables;
+  cacheTime?: any;
+  gcTime?: any;
 }
 
 export const useApi = <TData, TError = Error, TVariables = void>({
