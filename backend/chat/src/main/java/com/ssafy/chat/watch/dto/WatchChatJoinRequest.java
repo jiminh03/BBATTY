@@ -9,7 +9,7 @@ import jakarta.validation.constraints.NotBlank;
 
 /**
  * 직관(Watch) 채팅방 입장 요청 DTO
- * JWT는 Authorization 헤더로 별도 전송
+ * JWT에서 teamId 추출, 완전 무명 채팅 (닉네임 없음)
  */
 @Data
 @Builder
@@ -17,14 +17,10 @@ import jakarta.validation.constraints.NotBlank;
 @AllArgsConstructor
 public class WatchChatJoinRequest {
     
-    // 클라이언트에서 제공하는 기본 데이터
-    @NotBlank(message = "닉네임은 필수입니다.")
-    private String nickname;
+    // 직관 인증 여부 (클라이언트에서 제공)
+    private boolean isAttendanceVerified;
     
-    // 직관 인증 정보
-    private Boolean attendanceAuth;
-    
-    // 직관 채팅방 ID (팀별로 분리된 채팅방)
-    @NotBlank(message = "채팅방 ID는 필수입니다.")
-    private String watchChatRoomId; // 예: "watch_game_001_teamA"
+    // gameId 추가 (어떤 경기의 채팅방인지 구분)
+    @NotBlank(message = "게임 ID는 필수입니다.")
+    private String gameId;
 }
