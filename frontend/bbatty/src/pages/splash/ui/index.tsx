@@ -1,15 +1,17 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Animated, Dimensions, TouchableOpacity, AppState } from 'react-native';
+import { View, Text, Animated, Dimensions, TouchableOpacity, AppState, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { styles } from './styles';
+import { screen } from '../../../shared';
 
 interface SplashScreenProps {
   onAnimationComplete?: () => void;
+  onLoginSuccess?: (userInfo: any) => void;
 }
 
-const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete }) => {
+const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLoginSuccess }) => {
   const insets = useSafeAreaInsets();
-  const { width } = Dimensions.get('window');
+  const { width } = screen;
 
   // 애니메이션 값들
   const ballPosition = useRef(new Animated.Value(-100)).current;
@@ -20,30 +22,30 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete }) => {
   const buttonTranslateY = useRef(new Animated.Value(20)).current;
 
   useEffect(() => {
-    const initKakao = async () => {
-      try {
-        console.log('앱 시작 시 카카오 SDK 초기화...');
-        const { initializeKakaoSDK } = await import('@react-native-kakao/core');
-        await initializeKakaoSDK('f3cdad34b10d9d1bcb6b42cde54d015d');
-        console.log('카카오 SDK 초기화 완료');
-      } catch (error) {
-        console.error('카카오 초기화 실패:', error);
-      }
-    };
+    initializeKakao();
+    startAnimation();
+  }, []);
 
-    initKakao();
+  const initializeKakao = async () => {
+    try {
+      const { initializeKakaoSDK } = await import('@react-native-kakao/core');
+      await initializeKakaoSDK('f3cdad34b10d9d1bcb6b42cde54d015d');
+    } catch (error) {
+      console.error('카카오 초기화 실패:', error);
+    }
+  };
 
-    // 애니메이션 시퀀스
+  const startAnimation = () => {
     const animationSequence = Animated.sequence([
       // 1. 야구공이 날아오면서 회전
       Animated.parallel([
         Animated.timing(ballPosition, {
-          toValue: width / 2 + 20, // 티 글자 위치
+          toValue: width / 2 + 20,
           duration: 1500,
           useNativeDriver: true,
         }),
         Animated.timing(ballRotation, {
-          toValue: 3, // 3바퀴 회전
+          toValue: 3,
           duration: 1500,
           useNativeDriver: true,
         }),
@@ -81,31 +83,20 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete }) => {
       ]),
     ]);
 
-    // 애니메이션 시작
-    animationSequence.start(() => {
-      // 애니메이션 완료 후 1초 대기
-      setTimeout(() => {
-        onAnimationComplete?.();
-      }, 1000);
-    });
+    animationSequence.start();
+  };
 
-    const handleAppStateChange = (nextAppState: any) => {
-      console.log('앱 상태 변화:', nextAppState);
-      if (nextAppState === 'active') {
-        console.log('앱이 다시 활성화됨 - 카카오 로그인 결과 확인');
-      }
-    };
+  // 야구공 회전 보간
+  const ballRotate = ballRotation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
-    const subscription = AppState.addEventListener('change', handleAppStateChange);
-    return () => subscription?.remove();
-  }, []);
-  const handleKakaoPress = async () => {
-    console.log('=== 카카오 로그인 디버깅 시작 ===');
-    // const { handleKakaoLogin } = useKakaoLogin();
-
+  const handleKakaoLoginPress = async () => {
     try {
       const { login } = await import('@react-native-kakao/user');
       const kakaoData = await login();
+
       const response = await fetch('https://kapi.kakao.com/v2/user/me', {
         method: 'GET',
         headers: {
@@ -114,39 +105,24 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete }) => {
         },
       });
 
+      if (!response.ok) {
+        throw new Error('사용자 정보를 가져올 수 없습니다.');
+      }
       const userInfo = await response.json();
-      console.log('카카오 사용자 정보:', userInfo);
-      /*
-      // 1. 모듈 로드 확인
-      console.log('1. 카카오 모듈 로드 시도...');
-      const { login, me } = await import('@react-native-kakao/user');
-      console.log('2. 모듈 로드 성공');
-
-      // 3. 로그인 시도
-      console.log('3. 로그인 요청 시작...');
-      const kakaoData = await login();
-      console.log('4. 로그인 성공! : ', kakaoData);
-
-      // 3. 사용자 정보 조회 (me 함수 사용!)
-      console.log('5. 사용자 정보 조회 시작...');
-      const userInfo = await me();
-      console.log('6. 사용자 정보:', userInfo);
-
-      // 4. 토큰 확인
-      if (kakaoData?.accessToken) {
-        console.log('5. 액세스 토큰:', kakaoData.accessToken);
-        
-      }*/
-    } catch (error) {
-      console.error('=== 카카오 로그인 상세 에러 ===');
-      console.error('전체 에러 객체:', JSON.stringify(error, null, 2));
+      // 로그인 성공 콜백 호출
+      if (onLoginSuccess) {
+        onLoginSuccess(userInfo);
+      } else {
+        // 애니메이션 완료 콜백 호출
+        onAnimationComplete?.();
+      }
+    } catch (error: any) {
+      // 사용자에게 에러 메시지 표시
+      Alert.alert('로그인 실패', error.message || '카카오 로그인에 실패했습니다. 다시 시도해주세요.', [
+        { text: '확인' },
+      ]);
     }
   };
-  // 야구공 회전 보간
-  const ballRotate = ballRotation.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -208,7 +184,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete }) => {
           },
         ]}
       >
-        <TouchableOpacity style={styles.loginButton} onPress={handleKakaoPress}>
+        <TouchableOpacity style={styles.loginButton} onPress={handleKakaoLoginPress}>
           <Text style={styles.kakaoIcon}>💬</Text>
           <Text style={styles.loginButtonText}>카카오 로그인</Text>
         </TouchableOpacity>
