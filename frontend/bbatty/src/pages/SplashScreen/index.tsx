@@ -104,9 +104,22 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete }) => {
     // const { handleKakaoLogin } = useKakaoLogin();
 
     try {
+      const { login } = await import('@react-native-kakao/user');
+      const kakaoData = await login();
+      const response = await fetch('https://kapi.kakao.com/v2/user/me', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${kakaoData.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const userInfo = await response.json();
+      console.log('카카오 사용자 정보:', userInfo);
+      /*
       // 1. 모듈 로드 확인
       console.log('1. 카카오 모듈 로드 시도...');
-      const { login } = await import('@react-native-kakao/user');
+      const { login, me } = await import('@react-native-kakao/user');
       console.log('2. 모듈 로드 성공');
 
       // 3. 로그인 시도
@@ -114,10 +127,16 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete }) => {
       const kakaoData = await login();
       console.log('4. 로그인 성공! : ', kakaoData);
 
+      // 3. 사용자 정보 조회 (me 함수 사용!)
+      console.log('5. 사용자 정보 조회 시작...');
+      const userInfo = await me();
+      console.log('6. 사용자 정보:', userInfo);
+
       // 4. 토큰 확인
       if (kakaoData?.accessToken) {
         console.log('5. 액세스 토큰:', kakaoData.accessToken);
-      }
+        
+      }*/
     } catch (error) {
       console.error('=== 카카오 로그인 상세 에러 ===');
       console.error('전체 에러 객체:', JSON.stringify(error, null, 2));

@@ -14,7 +14,7 @@ import MainNavigator from './MainNavigator';
 // import { SplashS }
 import { navigationRef } from './naviagtionRefs';
 import { linking } from './linking';
-import SplashScreen from '../widgets/SplashScreen';
+import SplashScreen from '../pages/SplashScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
