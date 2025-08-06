@@ -1,24 +1,30 @@
 export interface ConnectionConfig {
   url: string;
-  sessionToken: string;
-  roomId: string;
-  userId: string;
-  teamId?: string;
+  options?: {
+    auth?: { 
+      sessionToken?: string;
+      userId?: string;
+    };
+    query?: Record<string, any>;
+    timeout?: number;
+    reconnect?: boolean;
+  };
 }
 
-export interface ConnectionEvents {
-  onConnect?: () => void;
-  onDisconnect?: (reason: string) => void;
-  onError?: (error: Error) => void;
-  onMessage?: (message: any) => void;
-  onReconnect?: () => void;
-  onMaxReconnectFailed?: () => void;
-}
+export type ConnectionStatus = 
+  | 'DISCONNECTED' 
+  | 'CONNECTING' 
+  | 'CONNECTED' 
+  | 'RECONNECTING' 
+  | 'ERROR';
 
-export interface ConnectionMetrics {
-  connectedAt: string | null;
-  disconnectedAt: string | null;
-  reconnectAttempts: number;
-  totalMessages: number;
-  lastMessageAt: string | null;
+export interface SocketClient {
+  connect(): Promise<void>;
+  disconnect(): void;
+  getConnectionStatus(): boolean;
+  on(event: string, callback: Function): void;
+  emit(event: string, data?: any): void;
+  sendChatMessage(content: string): void;
+  joinRoom(roomId: string, userData?: any): void;
+  leaveRoom(roomId: string): void;
 }
