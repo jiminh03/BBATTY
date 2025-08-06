@@ -2,6 +2,8 @@ package com.ssafy.chat.match.service;
 
 import com.ssafy.chat.config.JwtProvider;
 import com.ssafy.chat.common.util.RedisUtil;
+import com.ssafy.chat.global.constants.ErrorCode;
+import com.ssafy.chat.global.exception.ApiException;
 import com.ssafy.chat.match.dto.MatchChatJoinRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +24,7 @@ public class MatchChatAuthServiceImpl implements MatchChatAuthService {
 
     private final JwtProvider jwtProvider;
     private final RedisUtil redisUtil;
+    private final MatchChatRoomService matchChatRoomService;
 
     private static final String SESSION_KEY_PREFIX = "match_chat_session:";
     private static final Duration SESSION_EXPIRE_TIME = Duration.ofHours(2);
@@ -29,7 +32,10 @@ public class MatchChatAuthServiceImpl implements MatchChatAuthService {
     @Override
     public Map<String, Object> validateAndCreateSession(String jwtToken, MatchChatJoinRequest request) {
         try {
-            // TODO: 나중에 Kafka로 bbatty 서버에 인증 요청
+            // 1. matchId 유효성 검증
+            validateMatchId(request.getMatchId());
+            
+            // 2. TODO: 나중에 Kafka로 bbatty 서버에 인증 요청
             // 현재는 모든 요청 허용하고 더미 데이터로 세션 생성
             
             // 닉네임과 matchId 기반으로 고유한 더미 데이터 생성
@@ -59,9 +65,11 @@ public class MatchChatAuthServiceImpl implements MatchChatAuthService {
 
             return response;
 
+        } catch (ApiException e) {
+            throw e; // ApiException은 그대로 다시 던지기
         } catch (Exception e) {
             log.error("매칭 채팅 세션 생성 실패", e);
-            throw new RuntimeException("세션 생성에 실패했습니다: " + e.getMessage(), e);
+            throw new ApiException(ErrorCode.SERVER_ERROR, "세션 생성에 실패했습니다.");
         }
     }
 
@@ -73,7 +81,7 @@ public class MatchChatAuthServiceImpl implements MatchChatAuthService {
             Object sessionData = redisUtil.getValue(sessionKey);
             
             if (sessionData == null) {
-                throw new SecurityException("유효하지 않은 세션 토큰입니다.");
+                throw new ApiException(ErrorCode.INVALID_SESSION_TOKEN, "유효하지 않은 세션 토큰입니다.");
             }
 
             Map<String, Object> userInfo = (Map<String, Object>) sessionData;
@@ -83,9 +91,11 @@ public class MatchChatAuthServiceImpl implements MatchChatAuthService {
             
             return userInfo;
 
+        } catch (ApiException e) {
+            throw e;
         } catch (Exception e) {
             log.warn("세션 토큰 검증 실패 - token: {}", sessionToken, e);
-            throw new SecurityException("세션 검증에 실패했습니다: " + e.getMessage());
+            throw new ApiException(ErrorCode.INVALID_SESSION_TOKEN, "세션 검증에 실패했습니다.");
         }
     }
 
@@ -126,5 +136,35 @@ public class MatchChatAuthServiceImpl implements MatchChatAuthService {
 
     private String generateSessionToken() {
         return UUID.randomUUID().toString().replace("-", "");
+    }
+    
+    /**
+     * matchId 유효성 검증
+     */
+    private void validateMatchId(String matchId) {
+        if (matchId == null || matchId.trim().isEmpty()) {
+            throw new ApiException(ErrorCode.BAD_REQUEST, "matchId가 비어있습니다.");
+        }
+        
+        // Redis에서 매칭 채팅방 존재 여부 확인
+        try {
+            var matchRoom = matchChatRoomService.getMatchChatRoom(matchId);
+            if (matchRoom == null) {
+                throw new ApiException(ErrorCode.MATCH_CHAT_ROOM_NOT_FOUND, "존재하지 않는 매칭 채팅방입니다.");
+            }
+            
+            // 채팅방 상태 검증
+            if (!"ACTIVE".equals(matchRoom.getStatus())) {
+                throw new ApiException(ErrorCode.MATCH_CHAT_ROOM_CLOSED, "비활성 상태의 매칭 채팅방입니다.");
+            }
+            
+            log.debug("매칭 채팅방 유효성 검증 성공 - matchId: {}, gameId: {}", matchId, matchRoom.getGameId());
+            
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("매칭 채팅방 유효성 검증 중 오류 - matchId: {}", matchId, e);
+            throw new ApiException(ErrorCode.SERVER_ERROR, "매칭 채팅방 검증에 실패했습니다.");
+        }
     }
 }

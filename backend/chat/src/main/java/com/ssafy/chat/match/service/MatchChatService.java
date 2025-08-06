@@ -52,5 +52,10 @@ public interface MatchChatService {
      * 특정 매칭 채팅방의 활성 세션 수 반환
      */
     int getActiveSessionCount(String matchId);
+    
+    /**
+     * Kafka에서 받은 메시지를 처리
+     */
+    void handleKafkaMessage(String matchId, java.util.Map<String, Object> messageData);
 
 }
