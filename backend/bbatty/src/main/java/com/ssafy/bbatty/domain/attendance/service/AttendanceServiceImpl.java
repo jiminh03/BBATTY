@@ -128,6 +128,8 @@ public class AttendanceServiceImpl implements AttendanceService {
      */
     private Game findEligibleGame(List<Game> games, AttendanceVerifyRequest request) {
         LocalDateTime now = LocalDateTime.now();
+        boolean hasTimeValidGame = false;
+        boolean hasLocationValidGame = false;
         
         for (Game game : games) {
             // 시간 검증: 경기 시작 2시간 전부터 당일 자정까지
@@ -138,26 +140,41 @@ public class AttendanceServiceImpl implements AttendanceService {
                            Attendance.ATTENDANCE_DEADLINE_MINUTE, 
                            Attendance.ATTENDANCE_DEADLINE_SECOND);
             
-            if (now.isBefore(verifyStart) || now.isAfter(verifyEnd)) {
-                continue; // 시간 범위 밖
-            }
+            boolean timeValid = !now.isBefore(verifyStart) && !now.isAfter(verifyEnd);
             
-            // 위치 검증: 경기장 150m 내
-            try {
-                Stadium stadium = Stadium.findByName(game.getStadium());
-                LocationUtil.LocationValidationResult locationResult = 
-                        LocationUtil.validateStadiumLocation(request.latitude(), request.longitude(), stadium);
+            if (timeValid) {
+                hasTimeValidGame = true;
                 
-                if (locationResult.withinRange()) {
-                    return game; // 조건 만족하는 경기 발견
+                // 위치 검증: 경기장 150m 내
+                try {
+                    Stadium stadium = Stadium.findByName(game.getStadium());
+                    LocationUtil.LocationValidationResult locationResult = 
+                            LocationUtil.validateStadiumLocation(request.latitude(), request.longitude(), stadium);
+                    
+                    if (locationResult.withinRange()) {
+                        return game; // 시간 + 위치 조건 모두 만족
+                    } else {
+                        hasLocationValidGame = false;
+                        log.info("위치 검증 실패 - 경기장에서 {}m 떨어져 있음", locationResult.getDistanceMeters());
+                    }
+                } catch (ApiException e) {
+                    log.warn("경기장 정보 없음: {}", game.getStadium());
+                    continue;
                 }
-            } catch (ApiException e) {
-                log.warn("경기장 정보 없음: {}", game.getStadium());
-                continue;
+            } else {
+                log.info("시간 검증 실패 - 현재: {}, 인증가능시간: {} ~ {}", now, verifyStart, verifyEnd);
             }
         }
         
-        // 조건 만족하는 경기가 없음
+        // 구체적인 실패 원인에 따른 에러 코드 반환
+        if (!hasTimeValidGame) {
+            throw new ApiException(ErrorCode.NOT_ATTENDANCE_TIME);
+        }
+        if (hasTimeValidGame && !hasLocationValidGame) {
+            throw new ApiException(ErrorCode.NOT_IN_STADIUM);
+        }
+        
+        // 일반적인 검증 실패
         throw new ApiException(ErrorCode.ATTENDANCE_VALIDATION_FAILED);
     }
     

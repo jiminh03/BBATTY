@@ -71,11 +71,11 @@ public class MatchChatKafkaProducer {
     public void sendUserJoinEvent(String matchId, String userId, String userName){
         Map<String, Object> joinEvent = Map.of(
                 "messageType", "USER_JOIN",
-                "type", "user_join",
+                "roomId", matchId,
+                "timestamp", LocalDateTime.now().toString(),
                 "userId", userId,
                 "userName", userName,
-                "roomId", matchId,
-                "timestamp", LocalDateTime.now()
+                "content", userName + "님이 입장하셨습니다."
         );
         sendEvent(matchId, joinEvent);
     }
@@ -86,11 +86,11 @@ public class MatchChatKafkaProducer {
     public void sendUserLeaveEvent(String matchId, String userId, String userName){
         Map<String, Object> leaveEvent = Map.of(
                 "messageType", "USER_LEAVE",
-                "type", "user_leave",
+                "roomId", matchId,
+                "timestamp", LocalDateTime.now().toString(),
                 "userId", userId,
                 "userName", userName,
-                "roomId", matchId,
-                "timestamp", LocalDateTime.now()
+                "content", userName + "님이 퇴장하셨습니다."
         );
         sendEvent(matchId, leaveEvent);
     }
