@@ -1,5 +1,7 @@
 package com.ssafy.chat.match.controller;
 
+import com.ssafy.chat.global.constants.SuccessCode;
+import com.ssafy.chat.global.response.ApiResponse;
 import com.ssafy.chat.match.dto.*;
 import com.ssafy.chat.match.service.MatchChatRoomService;
 import lombok.RequiredArgsConstructor;
@@ -21,31 +23,34 @@ public class MatchChatRoomController {
      * 매칭 채팅방 생성
      */
     @PostMapping
-    public ResponseEntity<MatchChatRoomCreateResponse> createMatchChatRoom(
+    public ResponseEntity<ApiResponse<MatchChatRoomCreateResponse>> createMatchChatRoom(
             @Valid @RequestBody MatchChatRoomCreateRequest request) {
         
         MatchChatRoomCreateResponse response = matchChatRoomService.createMatchChatRoom(request);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success(SuccessCode.SUCCESS_CREATED, response));
     }
 
     /**
      * 매칭 채팅방 목록 조회 (무한 스크롤)
      */
     @GetMapping
-    public ResponseEntity<MatchChatRoomListResponse> getMatchChatRoomList(
+    public ResponseEntity<ApiResponse<MatchChatRoomListResponse>> getMatchChatRoomList(
             @Valid MatchChatRoomListRequest request) {
         
         MatchChatRoomListResponse response = matchChatRoomService.getMatchChatRoomList(request);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     /**
      * 특정 매칭 채팅방 조회
      */
     @GetMapping("/{matchId}")
-    public ResponseEntity<MatchChatRoomCreateResponse> getMatchChatRoom(@PathVariable String matchId) {
+    public ResponseEntity<ApiResponse<MatchChatRoomCreateResponse>> getMatchChatRoom(@PathVariable String matchId) {
         
         MatchChatRoomCreateResponse response = matchChatRoomService.getMatchChatRoom(matchId);
-        return ResponseEntity.ok(response);
+        if (response == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 }
