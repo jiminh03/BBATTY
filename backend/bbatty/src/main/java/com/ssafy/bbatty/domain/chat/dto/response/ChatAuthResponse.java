@@ -59,6 +59,6 @@ public class ChatAuthResponse {
     }
     
     public static ApiResponse<ChatAuthResponse> failure(String requestId, String errorMessage) {
-        return ApiResponse.error(errorMessage);
+        return ApiResponse.fail();
     }
 }
