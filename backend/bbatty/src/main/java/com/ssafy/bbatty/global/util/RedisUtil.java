@@ -3,6 +3,8 @@ package com.ssafy.bbatty.global.util;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
 
@@ -11,6 +13,7 @@ import java.time.Duration;
 public class RedisUtil {
 
     private final RedisTemplate<String, Object> redisTemplate;
+    private final ObjectMapper objectMapper;
 
     public void setValue(String key, Object value) {
         redisTemplate.opsForValue().set(key, value);
@@ -26,6 +29,21 @@ public class RedisUtil {
             return null;
         }
         return type.cast(value);
+    }
+    
+    /**
+     * TypeReference를 사용한 제네릭 타입 안전 조회
+     */
+    public <T> T getValue(String key, TypeReference<T> typeReference) {
+        Object value = redisTemplate.opsForValue().get(key);
+        if (value == null) {
+            return null;
+        }
+        try {
+            return objectMapper.convertValue(value, typeReference);
+        } catch (Exception e) {
+            throw new RuntimeException("Redis 값 변환 실패: " + e.getMessage(), e);
+        }
     }
 
     public boolean hasKey(String key) {

@@ -13,7 +13,7 @@ import type {
 export const authApi = {
   // 카카오 로그인
   async kakaoLogin(data: string) {
-    return apiClient.post<LoginResponse>('/api/auth/login', data);
+    return apiClient.post<LoginResponse>('/api/auth/signup', data);
   },
 
   // 현재 사용자 정보 조회
@@ -28,7 +28,7 @@ export const authApi = {
 
   // 회원가입
   async register(data: RegisterRequest) {
-    return apiClient.post<LoginResponse>('/auth/register', data);
+    return apiClient.post<Token>('/auth/register', data);
   },
 
   // 로그아웃

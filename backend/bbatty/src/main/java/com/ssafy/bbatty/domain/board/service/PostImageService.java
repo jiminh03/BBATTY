@@ -44,8 +44,7 @@ public class PostImageService {
     }
 
     /*
-    게시글 내용에 포함된 이미지들을 해당 게시글과 연결하는 메서드
-    postId가 null인 이미지들을 찾아서 post와 연결
+    게시글 내용에 포함된 이미지를 DB에 연결한다.
      */
     @Transactional
     public void processImagesInContent(String content, Post post) {
@@ -84,6 +83,19 @@ public class PostImageService {
             });
             log.info("Soft deleted {} images for post {}", postImages.size(), postId);
         }
+    }
+    
+    /*
+    특정 게시글의 특정 이미지를 소프트 삭제하는 메서드
+    */
+    @Transactional
+    public void softDeleteImageByPostAndUrl(Long postId, String imageUrl) {
+        PostImage postImage = postImageRepository.findByPostIdAndImageUrlAndIsDeletedFalse(postId, imageUrl)
+                .orElseThrow(() -> new RuntimeException("해당 게시글에서 이미지를 찾을 수 없습니다."));
+        
+        postImage.setIsDeleted(true);
+        postImageRepository.save(postImage);
+        log.info("Soft deleted image {} for post {}", imageUrl, postId);
     }
     
     /*
