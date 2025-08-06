@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import { devtools, persist, subscribeWithSelector } from 'zustand/middleware';
-import { immer } from 'zustand/middleware/immer';
+import { devtools } from '@csark0812/zustand-expo-devtools';
+import { persist, subscribeWithSelector } from 'zustand/middleware';
+// import { immer } from 'zustand/middleware/immer';
 import { createAsyncStoragePersist } from './middleware';
 
 interface CreateStoreOptions {
@@ -21,28 +22,28 @@ export const createStore = <T extends object>(
 ) => {
   const { name, enableDevtools = __DEV__, enableImmer = true, persist: persistOptions } = options;
 
-  // Immer 사용
-  if (enableImmer) {
-    if (persistOptions?.enabled) {
-      return create<T>()(
-        devtools(
-          persist(subscribeWithSelector(immer<T>((set, get, api) => storeCreator(set, get, api))), {
-            ...createAsyncStoragePersist(name),
-            partialize: persistOptions.partialize,
-            version: persistOptions.version || 1,
-          }),
-          enableDevtools ? { name } : undefined
-        )
-      );
-    }
+  // // Immer 사용
+  // if (enableImmer) {
+  //   if (persistOptions?.enabled) {
+  //     return create<T>()(
+  //       devtools(
+  //         persist(subscribeWithSelector(immer<T>((set, get, api) => storeCreator(set, get, api))), {
+  //           ...createAsyncStoragePersist(name),
+  //           partialize: persistOptions.partialize,
+  //           version: persistOptions.version || 1,
+  //         }),
+  //         enableDevtools ? { name } : undefined
+  //       )
+  //     );
+  //   }
 
-    return create<T>()(
-      devtools(
-        subscribeWithSelector(immer<T>((set, get, api) => storeCreator(set, get, api))),
-        enableDevtools ? { name } : undefined
-      )
-    );
-  }
+  //   return create<T>()(
+  //     devtools(
+  //       subscribeWithSelector(immer<T>((set, get, api) => storeCreator(set, get, api))),
+  //       enableDevtools ? { name } : undefined
+  //     )
+  //   );
+  // }
 
   // Immer 미사용
   if (persistOptions?.enabled) {

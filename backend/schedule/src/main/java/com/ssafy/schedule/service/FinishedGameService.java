@@ -28,11 +28,14 @@ import java.util.List;
 public class FinishedGameService extends BaseCrawlerService {
 
     private final GameRepository gameRepository;
+    private final TeamRankingService teamRankingService;
 
     public FinishedGameService(TeamRepository teamRepository,
-                              GameRepository gameRepository) {
+                              GameRepository gameRepository,
+                              TeamRankingService teamRankingService) {
         super(teamRepository);
         this.gameRepository = gameRepository;
+        this.teamRankingService = teamRankingService;
     }
 
     /**
@@ -58,6 +61,18 @@ public class FinishedGameService extends BaseCrawlerService {
         }
         
         log.info("{}개의 경기 결과 업데이트 완료", updatedCount);
+        
+        // 경기 결과가 업데이트되었으면 순위 캐시 갱신
+        if (updatedCount > 0) {
+            try {
+                log.info("🏆 경기 결과 업데이트 완료 - 순위 캐시 갱신 시작");
+                teamRankingService.cacheCurrentRanking();
+                log.info("✅ 순위 캐시 갱신 완료");
+            } catch (Exception e) {
+                log.error("순위 캐시 갱신 실패: {}", e.getMessage(), e);
+            }
+        }
+        
         return updatedCount;
     }
 
@@ -308,10 +323,10 @@ public class FinishedGameService extends BaseCrawlerService {
             // 날짜/시간 파싱
             LocalDateTime gameDateTime = parseGameDateTime(dateStr, gameData.gameTime);
 
-            // 중복 확인 (같은 날짜에 같은 팀들의 경기가 이미 있는지)
-            if (gameRepository.existsByHomeTeamAndAwayTeamAndDate(homeTeam, awayTeam, gameDateTime)) {
-                log.debug("이미 존재하는 경기 - 건너뛰기: {} vs {} on {}", 
-                        gameData.awayTeamName, gameData.homeTeamName, dateStr);
+            // 중복 확인 (같은 날짜/시간에 같은 팀들의 경기가 이미 있는지 - 더블헤더 고려)
+            if (gameRepository.existsByHomeTeamAndAwayTeamAndDateTime(homeTeam, awayTeam, gameDateTime)) {
+                log.debug("이미 존재하는 경기 - 건너뛰기: {} vs {} at {}", 
+                        gameData.awayTeamName, gameData.homeTeamName, gameDateTime);
                 return false;
             }
 

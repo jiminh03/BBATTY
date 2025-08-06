@@ -1,12 +1,12 @@
 # BBATTY 야구 직관 커뮤니티 백엔드 설정 (테스트용)
 spring:
   application:
-    name: bbatty
+    name: schedule
 
-  # H2 메모리 데이터베이스 설정 (테스트용)
+  # H2 메모리 데이터베이스 설정
   datasource:
-    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-    username: sa
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;REFERENTIAL_INTEGRITY=FALSE
+    username: test
     password:
     driver-class-name: org.h2.Driver
 
@@ -25,59 +25,7 @@ spring:
       password:
       timeout: 2000ms
 
-# AWS S3 설정 (테스트용)
-cloud:
-  aws:
-    credentials:
-      access-key: test-access-key
-      secret-key: test-secret-key
-    s3:
-      bucket: test-bucket
-    region:
-      static: ap-northeast-2
-    stack:
-      auto: false
-
-# WebSocket 설정
-websocket:
-  allowed-origins: "*"
-  sockjs:
-    enabled: false
-
-# WebSocket - Chatting 설정
-chat:
-  game:
-    enable-spam-filter: false
-    enable-profanity-filter: false
-  match:
-    auto-create-room: true
-
-# Kakao OAuth 설정 (테스트용)
-kakao:
-  client-id: test-client-id
-  client-secret: test-client-secret
-  user-info-url: https://kapi.kakao.com/v2/user/me
-  redirect-uri: http://localhost:3000/auth/callback
-  timeout-seconds: 10
-  scope: account_email,birthday,gender
-
-# JWT 설정 (테스트용)
-jwt:
-  secret: bbatty-test-secret-key-for-testing-purpose-need-at-least-256-bits
-  issuer: bbatty-test
-  header: Authorization
-  prefix: Bearer
-  access-token-validity-hours: 1
-  refresh-token-validity-days: 14
-  refresh-threshold-minutes: 5
-
-# 로깅 설정
-logging:
-  level:
-    com.ssafy.bbatty.domain.chat: DEBUG
-    org.springframework.web.socket: DEBUG
-    
-    # H2 콘솔 활성화 (테스트용)
+    # H2 콘솔 활성화
   h2:
     console:
       enabled: true
