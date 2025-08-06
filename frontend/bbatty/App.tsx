@@ -55,6 +55,10 @@ export default function App() {
     return null;
   }
 */
+  useEffect(() => {
+      initializeApiClient();
+    }, []);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>

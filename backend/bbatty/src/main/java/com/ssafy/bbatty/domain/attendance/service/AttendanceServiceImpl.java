@@ -54,7 +54,7 @@ public class AttendanceServiceImpl implements AttendanceService {
                 .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
         
         Long teamId = user.getTeamId();
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(java.time.ZoneId.of("Asia/Seoul"));
         
         // 2. 사용자 팀의 당일 예정 경기 조회 (캐시 우선)
         List<Game> todayGames = getTeamGamesToday(teamId, today);
@@ -127,7 +127,8 @@ public class AttendanceServiceImpl implements AttendanceService {
      * 직관 인증 (시간 + 위치 검증)
      */
     private Game verifyAttendance(List<Game> games, AttendanceVerifyRequest request) {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(java.time.ZoneId.of("Asia/Seoul"));
+
         boolean hasTimeValidGame = false;
         boolean hasLocationValidGame = false;
         
@@ -176,7 +177,7 @@ public class AttendanceServiceImpl implements AttendanceService {
      * 인증 ID 생성
      */
     private String generateAttendanceId(Long userId, Long gameId) {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(java.time.ZoneId.of("Asia/Seoul"));
         return String.format("%s_USER%d_GAME%d", 
                 today.toString().replace("-", ""), userId, gameId);
     }
