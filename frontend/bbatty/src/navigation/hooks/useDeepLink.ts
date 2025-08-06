@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import * as Linking from 'expo-linking';
-import { navigationRef } from '../../navigation/naviagtionRefs';
+import { navigationRef } from '../navigationRefs';
 
 export const useDeepLink = () => {
   useEffect(() => {
