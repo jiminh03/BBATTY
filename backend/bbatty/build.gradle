@@ -53,6 +53,9 @@ dependencies {
 	// JSON Processing
 	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 
+	// Kafka
+	implementation 'org.springframework.kafka:spring-kafka'
+
 	// Lombok
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
