@@ -3,12 +3,17 @@ package com.ssafy.chat.match.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.chat.match.dto.*;
+import com.ssafy.chat.global.exception.ApiException;
+import com.ssafy.chat.global.constants.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -22,6 +27,7 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
     
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper;
+    private final GameInfoService gameInfoService;
     
     private static final String MATCH_ROOM_PREFIX = "match_room:";
     private static final String MATCH_ROOM_LIST_KEY = "match_rooms:list";
@@ -29,7 +35,13 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
     @Override
     public MatchChatRoomCreateResponse createMatchChatRoom(MatchChatRoomCreateRequest request) {
         try {
-            // 경기 ID 기반으로 매칭 채팅방 ID 자동 생성
+            // 1. gameId 유효성 검증
+            GameInfo gameInfo = validateGameId(request.getGameId());
+            if (gameInfo == null) {
+                throw new ApiException(ErrorCode.NOT_FOUND, "존재하지 않는 경기입니다.");
+            }
+            
+            // 2. 경기 ID 기반으로 매칭 채팅방 ID 자동 생성
             String matchId = generateMatchId(request.getGameId());
             
             // 매칭방 생성
@@ -50,22 +62,31 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
                     .ownerId("dummy_user_123") // TODO: 실제 사용자 ID로 변경
                     .build();
             
-            // Redis에 저장
+            // 3. TTL 계산 (경기 날짜 자정까지)
+            Duration ttl = calculateTTL(gameInfo.getDateTime());
+            
+            // 4. Redis에 TTL과 함께 저장
             String roomKey = MATCH_ROOM_PREFIX + matchId;
             String roomJson = objectMapper.writeValueAsString(matchRoom);
-            redisTemplate.opsForValue().set(roomKey, roomJson);
+            redisTemplate.opsForValue().set(roomKey, roomJson, ttl);
             
-            // 매칭방 목록에도 추가 (생성시간을 점수로 사용하여 시간순 정렬)
+            // 5. 매칭방 목록에도 TTL과 함께 추가
             long score = System.currentTimeMillis();
             redisTemplate.opsForZSet().add(MATCH_ROOM_LIST_KEY, matchId, score);
+            redisTemplate.expire(MATCH_ROOM_LIST_KEY, ttl);
             
             log.info("매칭 채팅방 생성 완료 - gameId: {}, matchId: {}", request.getGameId(), matchId);
             
             return convertToResponse(matchRoom);
             
+        } catch (ApiException e) {
+            throw e; // ApiException은 그대로 다시 던지기
         } catch (JsonProcessingException e) {
             log.error("매칭 채팅방 직렬화 실패 - gameId: {}", request.getGameId(), e);
-            throw new RuntimeException("매칭 채팅방 생성에 실패했습니다.", e);
+            throw new ApiException(ErrorCode.SERVER_ERROR, "매칭 채팅방 생성에 실패했습니다.");
+        } catch (Exception e) {
+            log.error("매칭 채팅방 생성 실패 - gameId: {}", request.getGameId(), e);
+            throw new ApiException(ErrorCode.SERVER_ERROR, "매칭 채팅방 생성에 실패했습니다.");
         }
     }
     
@@ -211,5 +232,52 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
             log.warn("타임스탬프 파싱 실패 - timestamp: {}", timestamp, e);
             return System.currentTimeMillis();
         }
+    }
+    
+    /**
+     * gameId 유효성 검증
+     */
+    private GameInfo validateGameId(String gameId) {
+        try {
+            Long gameIdLong = Long.parseLong(gameId);
+            
+            // 모든 가능한 날짜에서 해당 gameId 검색 (2주간)
+            LocalDate startDate = LocalDate.now().minusDays(1);
+            LocalDate endDate = LocalDate.now().plusDays(14);
+            
+            for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
+                String dateStr = date.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+                List<GameInfo> games = gameInfoService.getGameInfosByDate(dateStr);
+                
+                for (GameInfo game : games) {
+                    if (game.getGameId().equals(gameIdLong)) {
+                        return game;
+                    }
+                }
+            }
+            
+            return null; // 찾지 못함
+        } catch (NumberFormatException e) {
+            log.warn("잘못된 gameId 형식: {}", gameId);
+            return null;
+        }
+    }
+    
+    /**
+     * 경기 날짜를 기준으로 TTL 계산 (경기 날짜 자정까지)
+     */
+    private Duration calculateTTL(LocalDateTime gameDateTime) {
+        LocalDate gameDate = gameDateTime.toLocalDate();
+        LocalDateTime midnightAfterGame = gameDate.plusDays(1).atTime(LocalTime.MIDNIGHT);
+        
+        Duration ttl = Duration.between(LocalDateTime.now(), midnightAfterGame);
+        
+        // TTL이 음수이거나 0에 가깝다면 기본 1시간 설정
+        if (ttl.isNegative() || ttl.toMinutes() < 10) {
+            ttl = Duration.ofHours(1);
+        }
+        
+        log.info("경기 날짜: {}, TTL: {}시간", gameDate, ttl.toHours());
+        return ttl;
     }
 }
