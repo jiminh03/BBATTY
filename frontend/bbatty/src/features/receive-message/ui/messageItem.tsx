@@ -114,7 +114,7 @@ const ProfileImage: React.FC<{ message: MatchChatMessage }> = ({ message }) => {
         <Image
           source={{ uri: message.profileImgUrl }}
           style={styles.profileImage}
-          defaultSource={require('../../../shared/assets/images/default-profile.png')}
+          defaultSource={require('../../../../assets/default-profile.png')}
         />
       ) : (
         <View style={styles.defaultProfileImage}>

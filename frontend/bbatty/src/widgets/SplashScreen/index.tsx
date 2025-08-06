@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Animated, Dimensions, TouchableOpacity } from 'react-native';
+import { View, Text, Animated, Dimensions, TouchableOpacity, AppState } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useKakaoLogin } from '../../entities/auth/hooks/useKakaoLogin';
 import { styles } from './styles';
 
 interface SplashScreenProps {
@@ -12,8 +11,6 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete }) => {
   const insets = useSafeAreaInsets();
   const { width } = Dimensions.get('window');
 
-  console.log('???');
-
   // 애니메이션 값들
   const ballPosition = useRef(new Animated.Value(-100)).current;
   const ballRotation = useRef(new Animated.Value(0)).current;
@@ -23,6 +20,19 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete }) => {
   const buttonTranslateY = useRef(new Animated.Value(20)).current;
 
   useEffect(() => {
+    const initKakao = async () => {
+      try {
+        console.log('앱 시작 시 카카오 SDK 초기화...');
+        const { initializeKakaoSDK } = await import('@react-native-kakao/core');
+        await initializeKakaoSDK('f3cdad34b10d9d1bcb6b42cde54d015d');
+        console.log('카카오 SDK 초기화 완료');
+      } catch (error) {
+        console.error('카카오 초기화 실패:', error);
+      }
+    };
+
+    initKakao();
+
     // 애니메이션 시퀀스
     const animationSequence = Animated.sequence([
       // 1. 야구공이 날아오면서 회전
@@ -78,23 +88,41 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete }) => {
         onAnimationComplete?.();
       }, 1000);
     });
+
+    const handleAppStateChange = (nextAppState: any) => {
+      console.log('앱 상태 변화:', nextAppState);
+      if (nextAppState === 'active') {
+        console.log('앱이 다시 활성화됨 - 카카오 로그인 결과 확인');
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription?.remove();
   }, []);
-
   const handleKakaoPress = async () => {
+    console.log('=== 카카오 로그인 디버깅 시작 ===');
+    // const { handleKakaoLogin } = useKakaoLogin();
+
     try {
-      //  카카오 SDK를 통한 카카오 로그인
+      // 1. 모듈 로드 확인
+      console.log('1. 카카오 모듈 로드 시도...');
       const { login } = await import('@react-native-kakao/user');
+      console.log('2. 모듈 로드 성공');
 
-      const token = await login();
-      const kakaoAccessToken = token.accessToken;
+      // 3. 로그인 시도
+      console.log('3. 로그인 요청 시작...');
+      const kakaoData = await login();
+      console.log('4. 로그인 성공! : ', kakaoData);
 
-      // 2단계: 받은 카카오 토큰을 우리 서버로 전송
-      await useKakaoLogin(kakaoAccessToken);
+      // 4. 토큰 확인
+      if (kakaoData?.accessToken) {
+        console.log('5. 액세스 토큰:', kakaoData.accessToken);
+      }
     } catch (error) {
-      console.error('카카오 로그인 실패:', error);
+      console.error('=== 카카오 로그인 상세 에러 ===');
+      console.error('전체 에러 객체:', JSON.stringify(error, null, 2));
     }
   };
-
   // 야구공 회전 보간
   const ballRotate = ballRotation.interpolate({
     inputRange: [0, 1],

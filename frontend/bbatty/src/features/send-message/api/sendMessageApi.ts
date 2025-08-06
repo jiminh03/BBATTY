@@ -2,24 +2,23 @@ import { useConnectionStore } from '../../chat-connection/model/store';
 import { SendMessageRequest } from '../model/types';
 
 export const sendMessageApi = {
-  // WebSocket을 통한 메시지 전송
   sendChatMessage: async (request: SendMessageRequest): Promise<void> => {
-    const { client } = useConnectionStore.getState();
+    const { client, isConnected, roomId } = useConnectionStore.getState();
     
-    if (!client || !client.getConnectionStatus()) {
+    if (!client || !isConnected) {
       throw new Error('채팅 서버에 연결되지 않았습니다.');
     }
 
     try {
-      // 단순 텍스트 메시지 전송
       if (request.messageType === 'CHAT' || !request.messageType) {
+        // 일반 채팅 메시지: 순수 텍스트로 전송
         client.sendChatMessage(request.content);
       } else {
-        // 구조화된 메시지 전송 (시스템 메시지 등)
+        // 시스템 메시지: 구조화된 데이터로 전송
         client.emit('message', {
           type: request.messageType,
           content: request.content,
-          roomId: request.roomId,
+          roomId: roomId || request.roomId,
           metadata: request.metadata,
         });
       }
@@ -28,22 +27,20 @@ export const sendMessageApi = {
     }
   },
 
-  // 방 입장 메시지
   sendJoinRoom: async (roomId: string, userData?: any): Promise<void> => {
-    const { client } = useConnectionStore.getState();
+    const { client, isConnected } = useConnectionStore.getState();
     
-    if (!client || !client.getConnectionStatus()) {
+    if (!client || !isConnected) {
       throw new Error('채팅 서버에 연결되지 않았습니다.');
     }
 
     client.joinRoom(roomId, userData);
   },
 
-  // 방 퇴장 메시지
   sendLeaveRoom: async (roomId: string): Promise<void> => {
-    const { client } = useConnectionStore.getState();
+    const { client, isConnected } = useConnectionStore.getState();
     
-    if (!client || !client.getConnectionStatus()) {
+    if (!client || !isConnected) {
       throw new Error('채팅 서버에 연결되지 않았습니다.');
     }
 
