@@ -1,5 +1,10 @@
-export { useChatConnection } from './hooks/useChatConnection';
-export { useConnectionStatus } from './hooks/useConnectionStatus';
 export { useConnectionStore } from './model/store';
-export { ChatConnectionManager } from './lib/chatConnection';
-export type { ConnectionConfig, ConnectionEvents, ConnectionMetrics } from './model/types';
+
+// Hooks
+export { useConnectionStatus } from './hooks/useConnectionStatus';
+
+// Types
+export type { 
+  ConnectionConfig, 
+  ConnectionStatus 
+} from './model/types';
