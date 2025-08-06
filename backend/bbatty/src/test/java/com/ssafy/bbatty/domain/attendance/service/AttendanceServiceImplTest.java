@@ -211,7 +211,7 @@ class AttendanceServiceImplTest {
         // when & then
         assertThatThrownBy(() -> attendanceService.verifyAttendance(userId, request))
                 .isInstanceOf(ApiException.class)
-                .hasMessageContaining(ErrorCode.ATTENDANCE_VALIDATION_FAILED.getMessage());
+                .hasMessageContaining(ErrorCode.NOT_IN_STADIUM.getMessage());
         
         // verify that game stadium was called for validation
         verify(mockGame, atLeastOnce()).getStadium();
