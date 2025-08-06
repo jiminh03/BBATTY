@@ -46,7 +46,7 @@ interface ApiConfig {
 }
 
 export const API_CONFIG: ApiConfig = {
-  baseURL: 'http://localhost:8080',
+  baseURL: 'http://i13a403.p.ssafy.io:8080/',
 
   timeout: {
     default: 3000, // 3초
