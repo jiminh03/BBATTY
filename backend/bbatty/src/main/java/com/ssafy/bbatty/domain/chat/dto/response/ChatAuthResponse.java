@@ -59,6 +59,9 @@ public class ChatAuthResponse {
     }
     
     public static ApiResponse<ChatAuthResponse> failure(String requestId, String errorMessage) {
-        return ApiResponse.fail();
+        ChatAuthResponse data = ChatAuthResponse.builder()
+                .requestId(requestId)
+                .build();
+        return ApiResponse.fail(com.ssafy.bbatty.global.constants.ErrorCode.UNAUTHORIZED, data);
     }
 }
