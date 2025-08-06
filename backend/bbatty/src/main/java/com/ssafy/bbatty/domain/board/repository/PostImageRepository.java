@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface PostImageRepository extends JpaRepository<PostImage, Long> {
@@ -19,4 +20,6 @@ public interface PostImageRepository extends JpaRepository<PostImage, Long> {
     List<String> findImageUrlsByPostId(@Param("postId") Long postId);
     
     List<PostImage> findByPostId(Long postId);
+    
+    Optional<PostImage> findByPostIdAndImageUrlAndIsDeletedFalse(Long postId, String imageUrl);
 }

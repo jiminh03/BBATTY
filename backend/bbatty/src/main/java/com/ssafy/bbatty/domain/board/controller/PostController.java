@@ -30,6 +30,7 @@ public class PostController {
     private final PostService postService;
     private final S3Service s3Service;
     private final PostCountService postCountService;
+    private final PostImageService postImageService;
 
     // 게시물 생성
     @PostMapping
@@ -133,6 +134,25 @@ public class PostController {
                     .body(ApiResponse.success(SuccessCode.SUCCESS_DEFAULT, response));
         } catch (IllegalArgumentException e) {
             throw new ApiException(ErrorCode.INVALID_FILE_PATH);
+        }
+    }
+
+    /**
+     * 게시글의 특정 이미지 삭제 (소프트 삭제)
+     */
+    @DeleteMapping("/{postId}/images")
+    public ResponseEntity<ApiResponse<Void>> deletePostImage(
+            @PathVariable Long postId,
+            @RequestParam String imageUrl,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        
+        try {
+            postImageService.softDeleteImageByPostAndUrl(postId, imageUrl);
+            
+            return ResponseEntity.status(SuccessCode.SUCCESS_DELETED.getStatus())
+                    .body(ApiResponse.success(SuccessCode.SUCCESS_DELETED));
+        } catch (RuntimeException e) {
+            throw new ApiException(ErrorCode.NOT_FOUND);
         }
     }
 
