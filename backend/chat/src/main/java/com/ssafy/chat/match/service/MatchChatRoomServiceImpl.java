@@ -1,0 +1,215 @@
+package com.ssafy.chat.match.service;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ssafy.chat.match.dto.*;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * 매칭 채팅방 서비스 구현체
+ */
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class MatchChatRoomServiceImpl implements MatchChatRoomService {
+    
+    private final RedisTemplate<String, String> redisTemplate;
+    private final ObjectMapper objectMapper;
+    
+    private static final String MATCH_ROOM_PREFIX = "match_room:";
+    private static final String MATCH_ROOM_LIST_KEY = "match_rooms:list";
+    
+    @Override
+    public MatchChatRoomCreateResponse createMatchChatRoom(MatchChatRoomCreateRequest request) {
+        try {
+            // 경기 ID 기반으로 매칭 채팅방 ID 자동 생성
+            String matchId = generateMatchId(request.getGameId());
+            
+            // 매칭방 생성
+            MatchChatRoom matchRoom = MatchChatRoom.builder()
+                    .matchId(matchId)
+                    .gameId(request.getGameId())
+                    .matchTitle(request.getMatchTitle())
+                    .matchDescription(request.getMatchDescription())
+                    .teamId(request.getTeamId())
+                    .minAge(request.getMinAge())
+                    .maxAge(request.getMaxAge())
+                    .genderCondition(request.getGenderCondition())
+                    .maxParticipants(request.getMaxParticipants())
+                    .currentParticipants(0)
+                    .createdAt(LocalDateTime.now().toString())
+                    .lastActivityAt(LocalDateTime.now().toString())
+                    .status("ACTIVE")
+                    .ownerId("dummy_user_123") // TODO: 실제 사용자 ID로 변경
+                    .build();
+            
+            // Redis에 저장
+            String roomKey = MATCH_ROOM_PREFIX + matchId;
+            String roomJson = objectMapper.writeValueAsString(matchRoom);
+            redisTemplate.opsForValue().set(roomKey, roomJson);
+            
+            // 매칭방 목록에도 추가 (생성시간을 점수로 사용하여 시간순 정렬)
+            long score = System.currentTimeMillis();
+            redisTemplate.opsForZSet().add(MATCH_ROOM_LIST_KEY, matchId, score);
+            
+            log.info("매칭 채팅방 생성 완료 - gameId: {}, matchId: {}", request.getGameId(), matchId);
+            
+            return convertToResponse(matchRoom);
+            
+        } catch (JsonProcessingException e) {
+            log.error("매칭 채팅방 직렬화 실패 - gameId: {}", request.getGameId(), e);
+            throw new RuntimeException("매칭 채팅방 생성에 실패했습니다.", e);
+        }
+    }
+    
+    @Override
+    public MatchChatRoomListResponse getMatchChatRoomList(MatchChatRoomListRequest request) {
+        try {
+            // 클라이언트가 제공한 cursor(마지막으로 받은 생성시간) 이전 데이터 조회
+            long maxScore = Long.MAX_VALUE;
+            if (request.getLastCreatedAt() != null) {
+                maxScore = parseTimestampToScore(request.getLastCreatedAt()) - 1; // 이전 데이터만 가져오기 위해 -1
+            }
+            
+            // Redis sorted set에서 최신순으로 데이터 조회
+            Set<String> matchIds = redisTemplate.opsForZSet()
+                    .reverseRangeByScore(MATCH_ROOM_LIST_KEY, 0, maxScore, 0, request.getLimit() + 10); // 필터링을 위해 여유분 추가
+            
+            if (matchIds == null || matchIds.isEmpty()) {
+                return MatchChatRoomListResponse.builder()
+                        .rooms(new ArrayList<>())
+                        .nextCursor(null)
+                        .hasMore(false)
+                        .count(0)
+                        .build();
+            }
+            
+            // 각 매칭방 정보 조회 및 필터링
+            List<MatchChatRoomCreateResponse> rooms = new ArrayList<>();
+            String nextCursor = null;
+            
+            for (String matchId : matchIds) {
+                // limit에 도달하면 중단
+                if (rooms.size() >= request.getLimit()) {
+                    break;
+                }
+                
+                String roomKey = MATCH_ROOM_PREFIX + matchId;
+                String roomJson = redisTemplate.opsForValue().get(roomKey);
+                
+                if (roomJson != null) {
+                    MatchChatRoom matchRoom = objectMapper.readValue(roomJson, MatchChatRoom.class);
+                    
+                    // 검색 키워드 필터링
+                    if (matchesKeyword(matchRoom, request.getKeyword())) {
+                        rooms.add(convertToResponse(matchRoom));
+                        nextCursor = matchRoom.getCreatedAt(); // 마지막 항목의 생성시간
+                    }
+                }
+            }
+            
+            // 더 가져올 데이터가 있는지 체크
+            boolean hasMore = false;
+            if (rooms.size() == request.getLimit()) {
+                // 다음 페이지 데이터가 있는지 확인
+                long nextMaxScore = nextCursor != null ? parseTimestampToScore(nextCursor) - 1 : 0;
+                Set<String> nextPageCheck = redisTemplate.opsForZSet()
+                        .reverseRangeByScore(MATCH_ROOM_LIST_KEY, 0, nextMaxScore, 0, 1);
+                hasMore = nextPageCheck != null && !nextPageCheck.isEmpty();
+            }
+            
+            return MatchChatRoomListResponse.builder()
+                    .rooms(rooms)
+                    .nextCursor(hasMore ? nextCursor : null)
+                    .hasMore(hasMore)
+                    .count(rooms.size())
+                    .build();
+            
+        } catch (Exception e) {
+            log.error("매칭 채팅방 목록 조회 실패", e);
+            throw new RuntimeException("매칭 채팅방 목록 조회에 실패했습니다.", e);
+        }
+    }
+    
+    @Override
+    public MatchChatRoomCreateResponse getMatchChatRoom(String matchId) {
+        try {
+            String roomKey = MATCH_ROOM_PREFIX + matchId;
+            String roomJson = redisTemplate.opsForValue().get(roomKey);
+            
+            if (roomJson == null) {
+                return null;
+            }
+            
+            MatchChatRoom matchRoom = objectMapper.readValue(roomJson, MatchChatRoom.class);
+            return convertToResponse(matchRoom);
+            
+        } catch (Exception e) {
+            log.error("매칭 채팅방 조회 실패 - matchId: {}", matchId, e);
+            throw new RuntimeException("매칭 채팅방 조회에 실패했습니다.", e);
+        }
+    }
+    
+    /**
+     * MatchChatRoom을 MatchChatRoomResponse로 변환
+     */
+    private MatchChatRoomCreateResponse convertToResponse(MatchChatRoom matchRoom) {
+        return MatchChatRoomCreateResponse.builder()
+                .matchId(matchRoom.getMatchId())
+                .gameId(matchRoom.getGameId())
+                .matchTitle(matchRoom.getMatchTitle())
+                .matchDescription(matchRoom.getMatchDescription())
+                .teamId(matchRoom.getTeamId())
+                .minAge(matchRoom.getMinAge())
+                .maxAge(matchRoom.getMaxAge())
+                .genderCondition(matchRoom.getGenderCondition())
+                .maxParticipants(matchRoom.getMaxParticipants())
+                .currentParticipants(matchRoom.getCurrentParticipants())
+                .createdAt(matchRoom.getCreatedAt())
+                .status(matchRoom.getStatus())
+                .websocketUrl(String.format("ws://localhost:8084/ws/match-chat/websocket?matchId=%s", matchRoom.getMatchId()))
+                .build();
+    }
+    
+    /**
+     * 키워드 매칭 검사
+     */
+    private boolean matchesKeyword(MatchChatRoom room, String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return true;
+        }
+        
+        String lowerKeyword = keyword.toLowerCase();
+        return (room.getMatchTitle() != null && room.getMatchTitle().toLowerCase().contains(lowerKeyword)) ||
+               (room.getMatchDescription() != null && room.getMatchDescription().toLowerCase().contains(lowerKeyword));
+    }
+    
+    /**
+     * 경기 ID 기반으로 매칭 채팅방 ID 생성
+     */
+    private String generateMatchId(String gameId) {
+        // UUID를 사용해서 고유한 매칭 ID 생성
+        String uniqueId = java.util.UUID.randomUUID().toString().substring(0, 8);
+        return String.format("match_%s_%s", gameId, uniqueId);
+    }
+    
+    /**
+     * 타임스탬프 문자열을 점수(long)로 변환
+     */
+    private long parseTimestampToScore(String timestamp) {
+        try {
+            LocalDateTime dateTime = LocalDateTime.parse(timestamp);
+            return dateTime.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+        } catch (Exception e) {
+            log.warn("타임스탬프 파싱 실패 - timestamp: {}", timestamp, e);
+            return System.currentTimeMillis();
+        }
+    }
+}

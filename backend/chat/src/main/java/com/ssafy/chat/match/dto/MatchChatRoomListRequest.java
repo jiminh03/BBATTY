@@ -25,5 +25,6 @@ public class MatchChatRoomListRequest {
     // 한 번에 가져올 개수 (기본 50개)
     @Min(value = 1, message = "최소 1개 이상이어야 합니다")
     @Max(value = 100, message = "최대 100개까지 가능합니다") 
+    @Builder.Default
     private int limit = 50;
 }

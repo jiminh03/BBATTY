@@ -14,9 +14,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MatchChatRoomCreateRequest {
-    @NotBlank (message = "매칭 Id는 필수입니다.")
-    @Size (max = 50, message = "매칭 Id는 50자를 초과할 수 없습니다.")
-    private String id;
+    @NotBlank(message = "경기 Id는 필수입니다.")
+    @Size(max = 50, message = "경기 Id는 50자를 초과할 수 없습니다.")
+    private String gameId;
 
     @NotBlank(message = "매칭방 제목은 필수입니다.")
     @Size(max = 20, message = "매칭 제목은 20자를 초과할 수 없습니다.")
@@ -24,6 +24,10 @@ public class MatchChatRoomCreateRequest {
 
     @Size(max=50, message = "매칭 설명은 50자를 초과할 수 없습니다.")
     private String matchDescription;
+
+    // 팀 조건
+    @NotBlank(message = "팀 정보는 필수입니다")
+    private String teamId;
 
     // 나이
     @Min(value = 10, message = "최소 나이는 20세 입니다. (미성년자 불가)")

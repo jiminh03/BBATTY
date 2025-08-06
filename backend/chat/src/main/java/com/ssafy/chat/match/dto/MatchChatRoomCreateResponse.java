@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class MatchChatRoomCreateResponse {
         private String matchId;
+        private String gameId;
         private String matchTitle;
         private String matchDescription;
         private String teamId;

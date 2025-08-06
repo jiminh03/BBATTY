@@ -21,10 +21,10 @@ public class MatchChatRoomController {
      * 매칭 채팅방 생성
      */
     @PostMapping
-    public ResponseEntity<MatchChatRoomResponse> createMatchChatRoom(
+    public ResponseEntity<MatchChatRoomCreateResponse> createMatchChatRoom(
             @Valid @RequestBody MatchChatRoomCreateRequest request) {
         
-        MatchChatRoomResponse response = matchChatRoomService.createMatchChatRoom(request);
+        MatchChatRoomCreateResponse response = matchChatRoomService.createMatchChatRoom(request);
         return ResponseEntity.ok(response);
     }
 
@@ -43,9 +43,9 @@ public class MatchChatRoomController {
      * 특정 매칭 채팅방 조회
      */
     @GetMapping("/{matchId}")
-    public ResponseEntity<MatchChatRoomResponse> getMatchChatRoom(@PathVariable String matchId) {
+    public ResponseEntity<MatchChatRoomCreateResponse> getMatchChatRoom(@PathVariable String matchId) {
         
-        MatchChatRoomResponse response = matchChatRoomService.getMatchChatRoom(matchId);
+        MatchChatRoomCreateResponse response = matchChatRoomService.getMatchChatRoom(matchId);
         return ResponseEntity.ok(response);
     }
 }
