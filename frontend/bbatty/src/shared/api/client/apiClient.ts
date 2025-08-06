@@ -66,8 +66,8 @@ const handleUnauthorized = async () => {
 };
 
 export const initializeApiClient = async (): Promise<void> => {
-  const token = await tokenManager.getToken();
-  applyTokenToClients(token);
+  const hardcodedtoken = 'JWT토큰';
+  applyTokenToClients(hardcodedtoken);
 
   setupInterceptors(apiClient, handleUnauthorized);
   setupInterceptors(uploadClient, handleUnauthorized);
