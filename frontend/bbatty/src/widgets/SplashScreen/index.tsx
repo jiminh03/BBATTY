@@ -2,7 +2,6 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, Animated, Dimensions, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useKakaoLogin } from '../../entities/auth/hooks/useKakaoLogin';
-import { login } from '@react-native-seoul/kakao-login';
 import { styles } from './styles';
 
 interface SplashScreenProps {
@@ -84,6 +83,8 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete }) => {
   const handleKakaoPress = async () => {
     try {
       //  카카오 SDK를 통한 카카오 로그인
+      const { login } = await import('@react-native-kakao/user');
+
       const token = await login();
       const kakaoAccessToken = token.accessToken;
 
