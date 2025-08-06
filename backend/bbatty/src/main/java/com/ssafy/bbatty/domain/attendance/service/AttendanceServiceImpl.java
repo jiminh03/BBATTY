@@ -63,22 +63,22 @@ public class AttendanceServiceImpl implements AttendanceService {
             log.info("직관 인증 실패 - 당일 경기 없음: userId={}, teamId={}", userId, teamId);
             throw new ApiException(ErrorCode.NO_GAME_TODAY);
         }
-        
-        // 3. 인증 가능한 경기 찾기 (시간 + 위치 검증) 
-        Game eligibleGame = findEligibleGame(todayGames, request);
-        
+
+        // 3. 직관 인증 (시간 + 위치 검증)
+        Game verifiedGame = verifyAttendance(todayGames, request);
+
         // 4. 중복 인증 확인 (경기별 개별 검증)
-        String redisKey = RedisKey.ATTENDANCE_GAME + eligibleGame.getId() + ":" + userId;
+        String redisKey = RedisKey.ATTENDANCE_GAME + verifiedGame.getId() + ":" + userId;
         boolean alreadyAttendedRedis = redisUtil.hasKey(redisKey);
-        boolean alreadyAttendedDB = userAttendedRepository.existsByUserIdAndGameId(userId, eligibleGame.getId());
+        boolean alreadyAttendedDB = userAttendedRepository.existsByUserIdAndGameId(userId, verifiedGame.getId());
         
         if (alreadyAttendedRedis || alreadyAttendedDB) {
-            log.info("직관 인증 실패 - 이미 인증함: userId={}, gameId={}", userId, eligibleGame.getId());
+            log.info("직관 인증 실패 - 이미 인증함: userId={}, gameId={}", userId, verifiedGame.getId());
             throw new ApiException(ErrorCode.ALREADY_ATTENDED_GAME);
         }
         
         // 5. 직관 기록 저장 (DB + Redis)
-        UserAttended userAttended = UserAttended.of(userId, eligibleGame.getId());
+        UserAttended userAttended = UserAttended.of(userId, verifiedGame.getId());
         userAttendedRepository.save(userAttended);
         
         // Redis에 인증 정보 저장 (당일 자정까지 TTL)
@@ -92,20 +92,20 @@ public class AttendanceServiceImpl implements AttendanceService {
         redisUtil.expire(dailyAttendeesKey, weekTTL);
         
         log.info("Redis에 직관 인증 저장: key={}, gameId={}, TTL={}초", 
-                redisKey, eligibleGame.getId(), ttlUntilMidnight.getSeconds());
+                redisKey, verifiedGame.getId(), ttlUntilMidnight.getSeconds());
         log.info("당일 인증자 목록 업데이트: key={}, userId={}", dailyAttendeesKey, userId);
         
         // 6. 응답 생성
-        Stadium stadium = Stadium.findByName(eligibleGame.getStadium());
+        Stadium stadium = Stadium.findByName(verifiedGame.getStadium());
         LocationUtil.LocationValidationResult locationResult = 
                 LocationUtil.validateStadiumLocation(request.latitude(), request.longitude(), stadium);
         
         AttendanceVerifyResponse.GameInfo gameInfo = AttendanceVerifyResponse.GameInfo.builder()
-                .gameId(eligibleGame.getId())
-                .homeTeam(eligibleGame.getHomeTeam().getName())
-                .awayTeam(eligibleGame.getAwayTeam().getName())
-                .gameDateTime(eligibleGame.getDateTime())
-                .status(eligibleGame.getStatus().name())
+                .gameId(verifiedGame.getId())
+                .homeTeam(verifiedGame.getHomeTeam().getName())
+                .awayTeam(verifiedGame.getAwayTeam().getName())
+                .gameDateTime(verifiedGame.getDateTime())
+                .status(verifiedGame.getStatus().name())
                 .build();
         
         AttendanceVerifyResponse.StadiumInfo stadiumInfo = AttendanceVerifyResponse.StadiumInfo.builder()
@@ -115,24 +115,24 @@ public class AttendanceServiceImpl implements AttendanceService {
                 .distanceFromUser(locationResult.getDistanceMeters())
                 .build();
         
-        String attendanceId = generateAttendanceId(userId, eligibleGame.getId());
+        String attendanceId = generateAttendanceId(userId, verifiedGame.getId());
         
         log.info("직관 인증 성공 - userId: {}, gameId: {}, stadium: {}", 
-                userId, eligibleGame.getId(), eligibleGame.getStadium());
+                userId, verifiedGame.getId(), verifiedGame.getStadium());
         
         return AttendanceVerifyResponse.success(attendanceId, gameInfo, stadiumInfo);
     }
     
     /**
-     * 인증 가능한 경기 찾기 (시간 + 위치 검증)
+     * 직관 인증 (시간 + 위치 검증)
      */
-    private Game findEligibleGame(List<Game> games, AttendanceVerifyRequest request) {
+    private Game verifyAttendance(List<Game> games, AttendanceVerifyRequest request) {
         LocalDateTime now = LocalDateTime.now();
         boolean hasTimeValidGame = false;
         boolean hasLocationValidGame = false;
         
         for (Game game : games) {
-            // 시간 검증: 경기 시작 2시간 전부터 당일 자정까지
+            // 1. 시간 검증: 경기 시작 2시간 전부터 당일 자정까지
             LocalDateTime gameStart = game.getDateTime();
             LocalDateTime verifyStart = gameStart.minusHours(Attendance.ATTENDANCE_START_HOURS_BEFORE);
             LocalDateTime verifyEnd = gameStart.toLocalDate()
@@ -145,17 +145,18 @@ public class AttendanceServiceImpl implements AttendanceService {
             if (timeValid) {
                 hasTimeValidGame = true;
                 
-                // 위치 검증: 경기장 150m 내
+                // 2. (시간 검증 통과 시) 위치 검증: 경기장 150m 내
                 try {
                     Stadium stadium = Stadium.findByName(game.getStadium());
                     LocationUtil.LocationValidationResult locationResult = 
                             LocationUtil.validateStadiumLocation(request.latitude(), request.longitude(), stadium);
                     
                     if (locationResult.withinRange()) {
+                        hasLocationValidGame = true;
                         return game; // 시간 + 위치 조건 모두 만족
                     } else {
-                        hasLocationValidGame = false;
                         log.info("위치 검증 실패 - 경기장에서 {}m 떨어져 있음", locationResult.getDistanceMeters());
+                        throw new ApiException(ErrorCode.NOT_IN_STADIUM);
                     }
                 } catch (ApiException e) {
                     log.warn("경기장 정보 없음: {}", game.getStadium());
@@ -163,15 +164,8 @@ public class AttendanceServiceImpl implements AttendanceService {
                 }
             } else {
                 log.info("시간 검증 실패 - 현재: {}, 인증가능시간: {} ~ {}", now, verifyStart, verifyEnd);
+                throw new ApiException(ErrorCode.NOT_ATTENDANCE_TIME);
             }
-        }
-        
-        // 구체적인 실패 원인에 따른 에러 코드 반환
-        if (!hasTimeValidGame) {
-            throw new ApiException(ErrorCode.NOT_ATTENDANCE_TIME);
-        }
-        if (hasTimeValidGame && !hasLocationValidGame) {
-            throw new ApiException(ErrorCode.NOT_IN_STADIUM);
         }
         
         // 일반적인 검증 실패
