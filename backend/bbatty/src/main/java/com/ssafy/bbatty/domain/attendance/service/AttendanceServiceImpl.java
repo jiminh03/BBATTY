@@ -127,7 +127,8 @@ public class AttendanceServiceImpl implements AttendanceService {
      * 직관 인증 (시간 + 위치 검증)
      */
     private Game verifyAttendance(List<Game> games, AttendanceVerifyRequest request) {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(java.time.ZoneId.of("Asia/Seoul"));
+
         boolean hasTimeValidGame = false;
         boolean hasLocationValidGame = false;
         
