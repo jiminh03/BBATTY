@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { tokenManager } from '../../shared';
-import { resetToAuth, resetToMain } from '../../navigation/naviagtionRefs';
+import { resetToAuth, resetToMain } from '../../navigation/navigationRefs';
 
 export const useAuth = () => {
   const logout = async () => {

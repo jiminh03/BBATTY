@@ -47,9 +47,9 @@ export const linking: LinkingOptions<RootStackParamList> = {
           },
         },
       },
-      TeamSelectModal: 'modal/team-select',
-      ImageViewerModal: 'modal/image-viewer',
-      ReportModal: 'modal/report',
+      // TeamSelectModal: 'modal/team-select',
+      // ImageViewerModal: 'modal/image-viewer',
+      // ReportModal: 'modal/report',
     },
   },
 

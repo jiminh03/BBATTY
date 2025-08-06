@@ -1,14 +1,15 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import { AuthStackParamList } from './types';
-import LandingScreen from '../pages/landing';
-import LoginScreen from '../pages/login';
 import SignUpScreen from '../pages/signup';
-import TeamSelectScreen from '../pages/team-select';
+import TeamSelectScreen from '../pages/teamSelect/ui/TeamSelectScreen';
 
 const Stack = createStackNavigator<AuthStackParamList>();
+interface AuthNavigatorProps {
+  userInfo: any;
+}
 
-export default function AuthNavigator() {
+export default function AuthNavigator({ userInfo }: AuthNavigatorProps) {
   return (
     <Stack.Navigator
       screenOptions={{
@@ -17,10 +18,13 @@ export default function AuthNavigator() {
         headerTitleStyle: { fontWeight: 'bold' },
       }}
     >
-      <Stack.Screen name='Landing' component={LandingScreen} options={{ headerShown: false }} />
-      <Stack.Screen name='Login' component={LoginScreen} options={{ title: '로그인' }} />
+      <Stack.Screen
+        name='TeamSelect'
+        component={TeamSelectScreen}
+        initialParams={{ nickname: userInfo?.kakao_account?.email }}
+        options={{ title: '팀 선택' }}
+      />
       <Stack.Screen name='SignUp' component={SignUpScreen} options={{ title: '회원가입' }} />
-      <Stack.Screen name='TeamSelect' component={TeamSelectScreen} options={{ title: '팀 선택' }} />
     </Stack.Navigator>
   );
 }
