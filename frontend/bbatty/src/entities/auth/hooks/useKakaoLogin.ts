@@ -6,18 +6,21 @@ import { useUserStore } from '../../user';
 import { authApi } from '../api/authApi';
 import { navigationRef } from '../../../navigation/naviagtionRefs';
 
-export const useKakaoLogin = (kakaoAccessToken: string) => {
+export const useKakaoLogin = () => {
   const navigation = useNavigation();
   const setCurrentUser = useUserStore((state) => state.setCurrentUser);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleKakaoLogin = async () => {
+  const handleKakaoLogin = async (kakaoAccessToken: string) => {
     setIsLoading(true);
 
     try {
       // 서버에 카카오 토큰 전송
+      console.log('WAS에 전송');
       const response = await authApi.kakaoLogin(kakaoAccessToken);
+      console.log(`response : ${response} `);
       const data = extractData(response.data);
+      console.log(`data : ${data} `);
       if (!data) return;
 
       // 액세스 토큰 저장
@@ -35,12 +38,16 @@ export const useKakaoLogin = (kakaoAccessToken: string) => {
         updateAt: new Date().toISOString(),
         createdAt: new Date().toISOString(),
       });
+
+      console.log('성공');
+      console.log(user);
       navigationRef.navigate('AuthStack', {
         screen: 'TeamSelect',
         params: {
           nickname: user.nickname,
         },
       });
+
       /*
       // 팀 선택 여부에 따라 화면 이동
       if (data.teamId) {
