@@ -7,6 +7,7 @@ import com.ssafy.bbatty.global.util.RedisUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 import java.time.Duration;
 import java.time.LocalDate;
@@ -27,12 +28,11 @@ public class ActiveGameRepository {
     /**
      * 팀의 당일 활성 경기 목록 캐시에서 조회
      */
-    @SuppressWarnings("unchecked")
     public Optional<List<ActiveGame>> findTeamGamesToday(Long teamId, LocalDate date) {
         String key = RedisKey.ATTENDANCE_ACTIVE_GAMES + date + ":" + teamId;
         
         try {
-            List<ActiveGame> games = redisUtil.getValue(key, List.class);
+            List<ActiveGame> games = redisUtil.getValue(key, new TypeReference<List<ActiveGame>>() {});
             if (games != null && !games.isEmpty()) {
                 log.info("Redis 캐시에서 당일 경기 조회 성공: teamId={}, date={}, count={}", 
                         teamId, date, games.size());

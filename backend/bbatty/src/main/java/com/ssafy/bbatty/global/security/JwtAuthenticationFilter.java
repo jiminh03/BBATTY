@@ -46,7 +46,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 } else {
                     // 토큰에서 사용자 정보 추출
                     Long userId = jwtProvider.getUserId(token);
-                    log.info("디버깅용 : {}", userId);
                     int age = jwtProvider.getAge(token);
                     String gender = jwtProvider.getGender(token);
                     Long teamId = jwtProvider.getTeamId(token);
