@@ -75,7 +75,16 @@ public enum ErrorCode {
 
     // GAME
     GAME_NOT_FOUND(HttpStatus.NOT_FOUND, "경기 정보를 찾을 수 없어요."),
-    INVALID_GAME_STATUS(HttpStatus.BAD_REQUEST, "유효하지 않은 경기 상태예요.");
+    INVALID_GAME_STATUS(HttpStatus.BAD_REQUEST, "유효하지 않은 경기 상태예요."),
+
+    // CHAT
+    INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "입력값이 올바르지 않습니다"),
+    GAME_FINISHED(HttpStatus.BAD_REQUEST, "경기가 종료되었습니다"),
+    GAME_NOT_LIVE(HttpStatus.BAD_REQUEST, "경기가 진행 중이 아닙니다"),
+    TEAM_NOT_IN_GAME(HttpStatus.BAD_REQUEST, "해당 팀이 경기에 참여하지 않습니다"),
+    UNAUTHORIZED_TEAM_ACCESS(HttpStatus.FORBIDDEN, "팀에 대한 접근 권한이 없습니다");
+
+
 
     private final HttpStatus status;
     private final String message;
