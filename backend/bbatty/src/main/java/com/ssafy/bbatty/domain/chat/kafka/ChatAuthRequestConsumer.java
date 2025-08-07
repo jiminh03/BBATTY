@@ -16,7 +16,9 @@ import java.util.Map;
 
 /**
  * 채팅 인증 요청을 수신하는 Kafka Consumer
+ * @deprecated 이제 MatchChatRequestConsumer와 WatchChatRequestConsumer를 사용합니다.
  */
+@Deprecated
 @Component
 @RequiredArgsConstructor
 @Slf4j
