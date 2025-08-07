@@ -4,6 +4,7 @@ import com.ssafy.bbatty.domain.board.common.LikeAction;
 import com.ssafy.bbatty.domain.board.entity.Post;
 import com.ssafy.bbatty.domain.board.entity.PostLike;
 import com.ssafy.bbatty.domain.board.entity.PostView;
+import com.ssafy.bbatty.domain.board.kafka.PostEventKafkaProducer;
 import com.ssafy.bbatty.domain.board.repository.CommentRepository;
 import com.ssafy.bbatty.domain.board.repository.PostLikeRepository;
 import com.ssafy.bbatty.domain.board.repository.PostRepository;
@@ -15,6 +16,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
 public class PostCountServiceImpl implements PostCountService {
@@ -25,6 +28,7 @@ public class PostCountServiceImpl implements PostCountService {
     private final CommentRepository commentRepository;
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+    private final PostEventKafkaProducer postEventKafkaProducer;
     
     private static final String VIEW_COUNT_KEY = "post:view:";
     private static final String LIKE_COUNT_KEY = "post:like:";
@@ -102,6 +106,11 @@ public class PostCountServiceImpl implements PostCountService {
         if (post != null && user != null) {
             PostLike postLike = new PostLike(user, post, LikeAction.LIKE);
             postLikeRepository.save(postLike);
+            
+            // 3일 이내 작성된 글인지 확인 후 Kafka 이벤트 전송
+            if (post.getCreatedAt().isAfter(LocalDateTime.now().minusDays(3))) {
+                postEventKafkaProducer.sendLikeEvent(postId, userId, post.getTeamId());
+            }
         }
 
         // 2. Redis 좋아요 카운트 증가

@@ -1,5 +1,6 @@
 package com.ssafy.bbatty.global.security;
 
+import com.ssafy.bbatty.global.constants.RedisKey;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -78,7 +79,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
      * 토큰이 블랙리스트에 등록되어 있는지 확인
      */
     private boolean isTokenBlacklisted(String token) {
-        String key = "blacklist:token:" + token;
+        String key = RedisKey.AUTH_TOKEN_BLACKLIST + token;
         return redisTemplate.hasKey(key);
     }
 

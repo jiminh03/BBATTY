@@ -14,7 +14,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
 import java.util.Map;
 
@@ -32,22 +35,17 @@ public class ChatAuthServiceImpl implements ChatAuthService {
     private final JwtProvider jwtProvider;
     
     @Override
-    public ApiResponse<ChatAuthResponse> authorizeChatAccess(Long userId, ChatAuthRequest request) {
+    public ApiResponse<ChatAuthResponse> authorizeChatAccess(Long userId, Long userTeamId, String userGender, 
+                                                           int userAge, String userNickname, ChatAuthRequest request) {
         try {
-            // 1. JWT 토큰에서 사용자 정보 파싱 (SecurityContext에서 이미 파싱된 정보 사용)
-            String token = getCurrentJwtToken();
-            Long userTeamId = jwtProvider.getTeamId(token);
-            String userGender = jwtProvider.getGender(token);
-            int userAge = jwtProvider.getAge(token);
-            
-            // 2. 채팅 유형별 권한 검증
+            // 1. 채팅 유형별 권한 검증
             validateChatPermission(userId, userTeamId, request);
             
-            // 3. 채팅방 정보 생성
+            // 2. 채팅방 정보 생성
             ChatAuthResponse.ChatRoomInfo chatRoomInfo = createChatRoomInfo(request);
             
-            // 4. 사용자 정보 생성 (JWT에서 파싱한 정보 사용)
-            ChatAuthResponse.UserInfo userInfo = createUserInfoFromJwt(userId, userTeamId, userGender, userAge);
+            // 3. 사용자 정보 생성 (전달받은 정보 사용)
+            ChatAuthResponse.UserInfo userInfo = createUserInfo(userId, userTeamId, userGender, userAge, userNickname);
             
             // 5. Kafka로 인증 성공 결과 전송
             sendAuthSuccessToKafka(request.getRequestId(), userInfo, chatRoomInfo);
@@ -71,9 +69,23 @@ public class ChatAuthServiceImpl implements ChatAuthService {
      * 현재 JWT 토큰 가져오기
      */
     private String getCurrentJwtToken() {
-        // SecurityContext에서 토큰 추출 로직 구현
-        // 실제 구현에서는 HttpServletRequest에서 Authorization 헤더 파싱
-        return ""; // TODO: 실제 토큰 추출 로직 구현
+        try {
+            ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.currentRequestAttributes();
+            HttpServletRequest request = attrs.getRequest();
+            
+            String authHeader = request.getHeader("Authorization");
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                return authHeader.substring(7); // "Bearer " 제거
+            }
+            
+            log.warn("Authorization 헤더가 없거나 Bearer 토큰이 아닙니다");
+            throw new ApiException(ErrorCode.UNAUTHORIZED);
+            
+        } catch (IllegalStateException e) {
+            // Kafka 요청인 경우 HTTP 컨텍스트가 없을 수 있음
+            log.warn("HTTP 요청 컨텍스트를 가져올 수 없습니다 - Kafka 요청일 가능성");
+            return null; // Kafka Consumer에서 직접 토큰을 처리하므로 null 반환
+        }
     }
     
     /**
@@ -113,9 +125,13 @@ public class ChatAuthServiceImpl implements ChatAuthService {
      * 직관 채팅 권한 검증 (사용자 팀 == 응원 팀)
      */
     private void validateWatchChatPermission(Long userTeamId, ChatAuthRequest request) {
-        if (request.getMatchId() == null || request.getTeamId() == null) {
+        if (request.getMatchId() == null || request.getRoomInfo() == null) {
             throw new ApiException(ErrorCode.INVALID_INPUT_VALUE);
         }
+        
+        // roomInfo에서 응원할 팀 정보 추출
+        Map<String, Object> roomInfo = request.getRoomInfo();
+        Long supportTeamId = ((Number) roomInfo.get("teamId")).longValue();
         
         Game game = gameRepository.findById(request.getMatchId())
                 .orElseThrow(() -> new ApiException(ErrorCode.GAME_NOT_FOUND));
@@ -126,7 +142,6 @@ public class ChatAuthServiceImpl implements ChatAuthService {
         }
         
         // 응원할 팀이 경기에 참여하는지 확인
-        Long supportTeamId = request.getTeamId();
         if (!game.getHomeTeamId().equals(supportTeamId) && !game.getAwayTeamId().equals(supportTeamId)) {
             throw new ApiException(ErrorCode.TEAM_NOT_IN_GAME);
         }
@@ -141,52 +156,31 @@ public class ChatAuthServiceImpl implements ChatAuthService {
      * 채팅방 정보 생성
      */
     private ChatAuthResponse.ChatRoomInfo createChatRoomInfo(ChatAuthRequest request) {
-        String roomId;
-        boolean isNewRoom = false;
-        
-        if ("CREATE".equals(request.getAction())) {
-            roomId = generateRoomId(request);
-            isNewRoom = true;
-        } else {
-            roomId = request.getRoomId();
-        }
-        
+        // roomId는 chat 서버에서 생성하므로 여기서는 기본 정보만 설정
         return ChatAuthResponse.ChatRoomInfo.builder()
-                .roomId(roomId)
+                .roomId(request.getRoomId()) // chat 서버에서 생성된 roomId 사용
                 .chatType(request.getChatType())
                 .matchId(request.getMatchId())
                 .roomName("채팅방")
-                .isNewRoom(isNewRoom)
+                .isNewRoom("CREATE".equals(request.getAction()))
                 .build();
     }
     
     /**
-     * JWT에서 파싱한 사용자 정보로 UserInfo 생성
+     * 전달받은 정보로 UserInfo 생성
      */
-    private ChatAuthResponse.UserInfo createUserInfoFromJwt(Long userId, Long teamId, String gender, int age) {
+    private ChatAuthResponse.UserInfo createUserInfo(Long userId, Long teamId, String gender, int age, String nickname) {
         return ChatAuthResponse.UserInfo.builder()
                 .userId(userId)
-                .nickname("") // JWT에 없는 정보는 빈 값으로
-                .profileImg("")
+                .nickname(nickname)
+                .profileImg("") // 프로필 이미지는 별도로 관리
                 .teamId(teamId)
-                .teamName("")
+                .teamName("") // 팀명은 별도 조회 필요
                 .age(age)
                 .gender(gender)
                 .build();
     }
     
-    /**
-     * 채팅방 ID 생성
-     */
-    private String generateRoomId(ChatAuthRequest request) {
-        if ("WATCH".equals(request.getChatType())) {
-            // 직관 채팅: 경기ID + 팀ID 조합
-            return "watch-" + request.getMatchId() + "-" + request.getTeamId();
-        } else {
-            // 매칭 채팅: 경기ID + 타임스탬프
-            return "match-" + request.getMatchId() + "-" + System.currentTimeMillis();
-        }
-    }
     
     /**
      * Kafka로 인증 성공 결과 전송

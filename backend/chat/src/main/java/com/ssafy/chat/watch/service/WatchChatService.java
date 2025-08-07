@@ -65,4 +65,9 @@ public interface WatchChatService {
      * 세션 토큰에서 사용자 정보 조회
      */
     Map<String, Object> getUserInfoFromSession(String sessionToken);
+    
+    /**
+     * 직관 채팅방 생성 (Redis에 방 정보 저장)
+     */
+    void createWatchChatRoom(String roomId, Long gameId, Long teamId, String teamName);
 }

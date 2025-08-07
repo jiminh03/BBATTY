@@ -32,7 +32,7 @@ public class ChatAuthKafkaConsumer {
     @KafkaListener(topics = "chat-auth-result", groupId = "chat-service-auth")
     public void handleAuthResult(
             @Payload String message,
-            @Header(KafkaHeaders.RECEIVED_MESSAGE_KEY) String requestId) {
+            @Header(KafkaHeaders.RECEIVED_KEY) String requestId) {
         
         try {
             log.debug("채팅 인증 결과 수신: requestId={}", requestId);

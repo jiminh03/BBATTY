@@ -1,15 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { createStackNavigator } from '@react-navigation/stack';
-import { createNavigationContainerRef, NavigationContainer } from '@react-navigation/native';
-import { StatusBar } from 'react-native';
-import { useTheme } from '../shared/styles';
-import { tokenManager } from '../shared';
-import { RootStackParamList } from './types';
-import AuthNavigator from './AuthNavigator';
-import MainNavigator from './MainNavigator';
-import { linking } from './linking';
-import SplashScreen from '../pages/splash/ui';
-import { navigationRef } from './navigationRefs';
+// 예시: app/appNavigator.tsx 또는 app/navigation/index.tsx 등
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { PostListScreen } from '../pages/home/PostListScreen'; // 네 경로에 맞게 조정
 
 const Stack = createStackNavigator();
 
@@ -27,10 +18,13 @@ export default function AppNavigator() {
   const checkAuthState = async () => {
     try {
       const token = await tokenManager.getToken();
-      setIsAuthenticated(!!token);
+      // 개발 중에는 항상 인증된 상태로 설정 (테스트 목적)
+      setIsAuthenticated(true);
+      // setIsAuthenticated(!!token);
     } catch (error) {
       console.error('Auth check error ', error);
-      setIsAuthenticated(false);
+      setIsAuthenticated(true); // 개발 중 우회
+      // setIsAuthenticated(false);
     } finally {
       setIsLoading(false);
     }
@@ -61,12 +55,17 @@ export default function AppNavigator() {
     );
   }
 
+export const AppNavigator = () => {
   return (
     <NavigationContainer ref={navigationRef} linking={linking}>
       {/* <StatusBar barStyle='light-content' backgroundColor={theme.colors.background} /> */}
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name='AuthStack' children={() => <AuthNavigator userInfo={userInfo} />} />
+        {isAuthenticated ? (
+          <Stack.Screen name='MainTabs' component={MainNavigator} />
+        ) : (
+          <Stack.Screen name='AuthStack' children={() => <AuthNavigator userInfo={userInfo} />} />
+        )}
       </Stack.Navigator>
     </NavigationContainer>
   );
-}
+};
