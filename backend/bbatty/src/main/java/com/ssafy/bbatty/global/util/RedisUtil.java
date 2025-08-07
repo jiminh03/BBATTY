@@ -7,6 +7,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
+import java.util.Objects;
 
 @Component
 @RequiredArgsConstructor
@@ -47,29 +48,20 @@ public class RedisUtil {
     }
 
     public boolean hasKey(String key) {
-        return Boolean.TRUE.equals(redisTemplate.hasKey(key));
+        return redisTemplate.hasKey(key);
     }
 
-    public void deleteKey(String key) {
-        redisTemplate.delete(key);
+    /**
+     * 키에 TTL 설정
+     */
+    public void expire(String key, Duration timeout) {
+        redisTemplate.expire(key, timeout);
     }
 
-    public void increment(String key) {
-        redisTemplate.opsForValue().increment(key);
-    }
+    // ===========================================
+    // SET 관련 메서드들
+    // ===========================================
 
-    public void increment(String key, long delta) {
-        redisTemplate.opsForValue().increment(key, delta);
-    }
-
-    public void decrement(String key) {
-        redisTemplate.opsForValue().decrement(key);
-    }
-
-    public void decrement(String key, long delta) {
-        redisTemplate.opsForValue().decrement(key, delta);
-    }
-    
     /**
      * Set에 값 추가
      */
@@ -77,31 +69,57 @@ public class RedisUtil {
         redisTemplate.opsForSet().add(key, value);
     }
     
+    
+    // ===========================================
+    // HASH 관련 메서드들
+    // ===========================================
+    
     /**
-     * Set에서 값 제거
+     * Hash의 모든 필드와 값 조회
      */
-    public void removeFromSet(String key, Object value) {
-        redisTemplate.opsForSet().remove(key, value);
+    public java.util.Map<String, String> getHashAll(String key) {
+        return redisTemplate.opsForHash().entries(key).entrySet().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                    entry -> String.valueOf(entry.getKey()),
+                    entry -> String.valueOf(entry.getValue())
+                ));
+    }
+    
+    
+    // ===========================================
+    // SORTED SET 관련 메서드들
+    // ===========================================
+    
+    /**
+     * Sorted Set에서 역순으로 범위 조회 (최신순)
+     */
+    public java.util.Set<String> reverseRange(String key, long start, long end) {
+        return Objects.requireNonNull(redisTemplate.opsForZSet().reverseRange(key, start, end)).stream()
+                .map(String::valueOf)
+                .collect(java.util.LinkedHashSet::new, java.util.Set::add, java.util.Set::addAll);
     }
     
     /**
-     * Set에 값이 있는지 확인
+     * Sorted Set에서 스코어 기준 역순 범위 조회
      */
-    public boolean isMemberOfSet(String key, Object value) {
-        return Boolean.TRUE.equals(redisTemplate.opsForSet().isMember(key, value));
+    public java.util.Set<String> reverseRangeByScore(String key, double min, double max, long count) {
+        return Objects.requireNonNull(redisTemplate.opsForZSet().reverseRangeByScore(key, min, max, 0, count)).stream()
+                .map(String::valueOf)
+                .collect(java.util.LinkedHashSet::new, java.util.Set::add, java.util.Set::addAll);
     }
     
     /**
-     * Set의 크기 반환
+     * Sorted Set에서 멤버의 스코어 조회
      */
-    public Long getSetSize(String key) {
-        return redisTemplate.opsForSet().size(key);
+    public Long getScore(String key, String member) {
+        Double score = redisTemplate.opsForZSet().score(key, member);
+        return score != null ? score.longValue() : null;
     }
     
     /**
-     * 키에 TTL 설정
+     * Sorted Set에 값 추가
      */
-    public void expire(String key, Duration timeout) {
-        redisTemplate.expire(key, timeout);
+    public void addToSortedSet(String key, String value, double score) {
+        redisTemplate.opsForZSet().add(key, value, score);
     }
 }
