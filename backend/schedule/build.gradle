@@ -37,6 +37,9 @@ dependencies {
 
 	// Redis Client
 	implementation 'redis.clients:jedis'
+	
+	// Kafka
+	implementation 'org.springframework.kafka:spring-kafka'
 
 	// Test Dependencies
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
