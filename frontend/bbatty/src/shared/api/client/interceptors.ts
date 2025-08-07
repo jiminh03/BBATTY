@@ -82,7 +82,7 @@ export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnaut
       }
         */
       if (response.data && typeof response.data === 'object') {
-        if (!('success' in response.data)) {
+        if (!('SUCCESS' in response.data)) {
           console.warn(`잘못된 api 형식 [${requestId}]:`, response.data);
         }
       }

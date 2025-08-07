@@ -56,8 +56,8 @@ export default function App() {
   }
 */
   useEffect(() => {
-      initializeApiClient();
-    }, []);
+    initializeApiClient();
+  }, []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

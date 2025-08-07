@@ -13,18 +13,19 @@ export default function AuthNavigator({ userInfo }: AuthNavigatorProps) {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: '#fff' },
-        headerTintColor: '#000',
-        headerTitleStyle: { fontWeight: 'bold' },
+        headerShown: false,
+        // headerStyle: { backgroundColor: '#fff' },
+        // headerTintColor: '#000',
+        // headerTitleStyle: { fontWeight: 'bold' },
       }}
     >
       <Stack.Screen
         name='TeamSelect'
         component={TeamSelectScreen}
         initialParams={{ nickname: userInfo?.kakao_account?.email }}
-        options={{ title: '팀 선택' }}
+        // options={{ title: '팀 선택' }}
       />
-      <Stack.Screen name='SignUp' component={SignUpScreen} options={{ title: '회원가입' }} />
+      <Stack.Screen name='SignUp' component={SignUpScreen} /*options={{ title: '회원가입' }}*/ />
     </Stack.Navigator>
   );
 }

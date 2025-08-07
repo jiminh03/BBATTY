@@ -47,7 +47,7 @@ export interface RegisterRequest {
   gender: string;
   teamId: number;
   nickname: string;
-  profileImg?: number;
+  profileImg?: string;
   introduction?: string;
 }
 
