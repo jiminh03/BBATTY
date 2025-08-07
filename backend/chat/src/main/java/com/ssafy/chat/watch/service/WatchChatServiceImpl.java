@@ -178,4 +178,33 @@ public class WatchChatServiceImpl implements WatchChatService {
         
         return messageMap;
     }
+    
+    @Override
+    public void createWatchChatRoom(String roomId, Long gameId, Long teamId, String teamName) {
+        try {
+            // Redis에 직관 채팅방 정보 저장
+            Map<String, Object> roomInfo = new HashMap<>();
+            roomInfo.put("roomId", roomId);
+            roomInfo.put("gameId", gameId);
+            roomInfo.put("teamId", teamId);
+            roomInfo.put("teamName", teamName);
+            roomInfo.put("roomType", "WATCH");
+            roomInfo.put("createdAt", System.currentTimeMillis());
+            roomInfo.put("status", "ACTIVE");
+            
+            // Redis에 저장 (키: watch_room:{roomId})
+            String redisKey = "watch_room:" + roomId;
+            redisTemplate.opsForHash().putAll(redisKey, roomInfo);
+            
+            // TTL 설정 (7일)
+            redisTemplate.expire(redisKey, java.time.Duration.ofDays(7));
+            
+            log.info("직관 채팅방 생성됨: roomId={}, gameId={}, teamId={}, teamName={}", 
+                    roomId, gameId, teamId, teamName);
+                    
+        } catch (Exception e) {
+            log.error("직관 채팅방 생성 실패: roomId={}", roomId, e);
+            throw new RuntimeException("직관 채팅방 생성 실패", e);
+        }
+    }
 }

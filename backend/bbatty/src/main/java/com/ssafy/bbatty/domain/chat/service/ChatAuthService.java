@@ -12,5 +12,6 @@ public interface ChatAuthService {
     /**
      * 채팅방 생성/참여 권한 확인 및 Kafka로 결과 전송
      */
-    ApiResponse<ChatAuthResponse> authorizeChatAccess(Long userId, ChatAuthRequest request);
+    ApiResponse<ChatAuthResponse> authorizeChatAccess(Long userId, Long userTeamId, String userGender, 
+                                                     int userAge, String userNickname, ChatAuthRequest request);
 }

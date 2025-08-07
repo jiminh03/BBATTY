@@ -215,7 +215,7 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
     /**
      * 경기 ID 기반으로 매칭 채팅방 ID 생성
      */
-    private String generateMatchId(String gameId) {
+    private String generateMatchId(Long gameId) {
         // UUID를 사용해서 고유한 매칭 ID 생성
         String uniqueId = java.util.UUID.randomUUID().toString().substring(0, 8);
         return String.format("match_%s_%s", gameId, uniqueId);
@@ -237,9 +237,8 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
     /**
      * gameId 유효성 검증
      */
-    private GameInfo validateGameId(String gameId) {
+    private GameInfo validateGameId(Long gameId) {
         try {
-            Long gameIdLong = Long.parseLong(gameId);
             
             // 모든 가능한 날짜에서 해당 gameId 검색 (2주간)
             LocalDate startDate = LocalDate.now().minusDays(1);
@@ -250,15 +249,15 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
                 List<GameInfo> games = gameInfoService.getGameInfosByDate(dateStr);
                 
                 for (GameInfo game : games) {
-                    if (game.getGameId().equals(gameIdLong)) {
+                    if (game.getGameId().equals(gameId)) {
                         return game;
                     }
                 }
             }
             
             return null; // 찾지 못함
-        } catch (NumberFormatException e) {
-            log.warn("잘못된 gameId 형식: {}", gameId);
+        } catch (Exception e) {
+            log.warn("gameId 검증 중 오류: {}", gameId, e);
             return null;
         }
     }

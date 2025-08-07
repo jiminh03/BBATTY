@@ -1,5 +1,7 @@
 package com.ssafy.chat.match.service;
 
+import com.ssafy.chat.auth.kafka.ChatAuthRequestProducer;
+import com.ssafy.chat.auth.service.ChatAuthResultService;
 import com.ssafy.chat.config.JwtProvider;
 import com.ssafy.chat.common.util.RedisUtil;
 import com.ssafy.chat.global.constants.ErrorCode;
@@ -25,52 +27,73 @@ public class MatchChatAuthServiceImpl implements MatchChatAuthService {
     private final JwtProvider jwtProvider;
     private final RedisUtil redisUtil;
     private final MatchChatRoomService matchChatRoomService;
+    private final ChatAuthRequestProducer chatAuthRequestProducer;
+    private final ChatAuthResultService chatAuthResultService;
 
     private static final String SESSION_KEY_PREFIX = "match_chat_session:";
     private static final Duration SESSION_EXPIRE_TIME = Duration.ofHours(2);
 
     @Override
     public Map<String, Object> validateAndCreateSession(String jwtToken, MatchChatJoinRequest request) {
-        try {
-            // 1. matchId 유효성 검증
-            validateMatchId(request.getMatchId());
-            
-            // 2. TODO: 나중에 Kafka로 bbatty 서버에 인증 요청
-            // 현재는 모든 요청 허용하고 더미 데이터로 세션 생성
-            
-            // 닉네임과 matchId 기반으로 고유한 더미 데이터 생성
-            Long userId = (long) Math.abs((request.getNickname() + request.getMatchId()).hashCode() % 10000 + 1);
-            String gender = userId % 2 == 0 ? "M" : "F"; // 짝수면 남성, 홀수면 여성
-            Integer age = (int) (userId % 30 + 20); // 20-49세
-            Long teamId = (long) (userId % 2 + 1); // 1팀 또는 2팀
-
-            log.info("매칭 채팅 요청 허용 - 더미 데이터 사용 - userId: {}, gender: {}, age: {}, teamId: {}", 
-                    userId, gender, age, teamId);
-
-            Map<String, Object> sessionInfo = createSessionInfo(userId, request, gender, age, teamId);
-
-            String sessionToken = generateSessionToken();
-            String sessionKey = SESSION_KEY_PREFIX + sessionToken;
-            
-            redisUtil.setValue(sessionKey, sessionInfo, SESSION_EXPIRE_TIME);
-            
-            log.info("매칭 채팅 세션 생성 완료 - userId: {}, matchId: {}, sessionToken: {}", 
-                    userId, request.getMatchId(), sessionToken);
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("sessionToken", sessionToken);
-            response.put("userId", userId.toString());
-            response.put("matchId", request.getMatchId());
-            response.put("expiresIn", SESSION_EXPIRE_TIME.getSeconds());
-
-            return response;
-
-        } catch (ApiException e) {
-            throw e; // ApiException은 그대로 다시 던지기
-        } catch (Exception e) {
-            log.error("매칭 채팅 세션 생성 실패", e);
-            throw new ApiException(ErrorCode.SERVER_ERROR, "세션 생성에 실패했습니다.");
+        // 1. matchId 유효성 검증
+        validateMatchId(String.valueOf(request.getMatchId()));
+        
+        // 2. 채팅방 정보 생성
+        Map<String, Object> roomInfo = createRoomInfo(request);
+        
+        // 3. bbatty 서버에 인증 요청 전송
+        String requestId = chatAuthRequestProducer.sendAuthRequest(
+            jwtToken, 
+            "MATCH", 
+            "JOIN", 
+            request.getMatchId(), 
+            roomInfo,
+            request.getNickname()
+        );
+        
+        if (requestId == null) {
+            throw new ApiException(ErrorCode.KAFKA_MESSAGE_SEND_FAILED, "bbatty 서버 인증 요청 전송 실패");
         }
+        
+        log.info("bbatty 서버 인증 요청 완료: requestId={}, matchId={}", requestId, request.getMatchId());
+        
+        // 4. 인증 결과 대기 및 폴링 (최대 10초)
+        Map<String, Object> authResult = chatAuthResultService.waitForAuthResult(requestId, 10000);
+        
+        if (authResult == null) {
+            throw new ApiException(ErrorCode.SERVER_ERROR, "인증 응답 타임아웃");
+        }
+        
+        Boolean success = (Boolean) authResult.get("success");
+        if (!success) {
+            String errorMessage = (String) authResult.get("errorMessage");
+            throw new ApiException(ErrorCode.UNAUTHORIZED, "인증 실패: " + errorMessage);
+        }
+        
+        // 5. 인증 성공 시 세션 생성
+        @SuppressWarnings("unchecked")
+        Map<String, Object> userInfo = (Map<String, Object>) authResult.get("userInfo");
+        
+        String sessionToken = generateSessionToken();
+        String sessionKey = SESSION_KEY_PREFIX + sessionToken;
+        
+        Map<String, Object> sessionInfo = createSessionInfoFromAuth(userInfo, request);
+        redisUtil.setValue(sessionKey, sessionInfo, SESSION_EXPIRE_TIME);
+        
+        log.info("매칭 채팅 세션 생성 완료 - userId: {}, matchId: {}, sessionToken: {}", 
+                userInfo.get("userId"), request.getMatchId(), sessionToken);
+
+        // 6. 응답 생성
+        Map<String, Object> response = new HashMap<>();
+        response.put("sessionToken", sessionToken);
+        response.put("userId", userInfo.get("userId"));
+        response.put("nickname", userInfo.get("nickname"));
+        response.put("teamId", userInfo.get("teamId"));
+        response.put("teamName", userInfo.get("teamName"));
+        response.put("matchId", request.getMatchId());
+        response.put("expiresIn", SESSION_EXPIRE_TIME.getSeconds());
+
+        return response;
     }
 
     @Override
@@ -136,6 +159,41 @@ public class MatchChatAuthServiceImpl implements MatchChatAuthService {
 
     private String generateSessionToken() {
         return UUID.randomUUID().toString().replace("-", "");
+    }
+    
+    /**
+     * 채팅방 정보 생성
+     */
+    private Map<String, Object> createRoomInfo(MatchChatJoinRequest request) {
+        Map<String, Object> roomInfo = new HashMap<>();
+        roomInfo.put("matchId", request.getMatchId());
+        roomInfo.put("nickname", request.getNickname());
+        roomInfo.put("roomType", "MATCH");
+        return roomInfo;
+    }
+    
+    
+    /**
+     * 인증 결과로부터 세션 정보 생성
+     */
+    private Map<String, Object> createSessionInfoFromAuth(Map<String, Object> userInfo, MatchChatJoinRequest request) {
+        Map<String, Object> sessionInfo = new HashMap<>();
+        sessionInfo.put("userId", userInfo.get("userId"));
+        sessionInfo.put("nickname", userInfo.get("nickname"));
+        sessionInfo.put("teamId", userInfo.get("teamId"));
+        sessionInfo.put("teamName", userInfo.get("teamName"));
+        sessionInfo.put("age", userInfo.get("age"));
+        sessionInfo.put("gender", userInfo.get("gender"));
+        sessionInfo.put("matchId", request.getMatchId());
+        sessionInfo.put("chatType", "MATCH");
+        sessionInfo.put("createdAt", System.currentTimeMillis());
+        
+        // 매칭 채팅 특정 정보
+        sessionInfo.put("winRate", request.getWinRate());
+        sessionInfo.put("profileImgUrl", request.getProfileImgUrl());
+        sessionInfo.put("isWinFairy", request.isWinFairy());
+        
+        return sessionInfo;
     }
     
     /**
