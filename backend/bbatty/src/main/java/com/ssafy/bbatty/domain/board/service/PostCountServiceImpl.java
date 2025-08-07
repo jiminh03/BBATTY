@@ -16,6 +16,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
 public class PostCountServiceImpl implements PostCountService {
@@ -105,8 +107,10 @@ public class PostCountServiceImpl implements PostCountService {
             PostLike postLike = new PostLike(user, post, LikeAction.LIKE);
             postLikeRepository.save(postLike);
             
-            // 좋아요 이벤트를 Kafka로 전송 (실시간 처리)
-            postEventKafkaProducer.sendLikeEvent(postId, userId, post.getTeamId());
+            // 3일 이내 작성된 글인지 확인 후 Kafka 이벤트 전송
+            if (post.getCreatedAt().isAfter(LocalDateTime.now().minusDays(3))) {
+                postEventKafkaProducer.sendLikeEvent(postId, userId, post.getTeamId());
+            }
         }
 
         // 2. Redis 좋아요 카운트 증가

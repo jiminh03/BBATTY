@@ -15,10 +15,10 @@ import lombok.NoArgsConstructor;
 public class MatchChatRoom {
     
     private String matchId;
-    private String gameId;
+    private Long gameId;
     private String matchTitle;
     private String matchDescription;
-    private String teamId;
+    private Long teamId;
     private int minAge;
     private int maxAge;
     private String genderCondition;

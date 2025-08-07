@@ -21,6 +21,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -173,8 +174,10 @@ public class PostServiceImpl implements PostService {
 
         postCountService.incrementViewCount(postId, userId);
         
-        // 조회 이벤트를 Kafka로 전송
-        postEventKafkaProducer.sendViewEvent(postId, userId, post.getTeamId());
+        // 3일 이내 작성된 글인지 확인 후 Kafka 이벤트 전송
+        if (post.getCreatedAt().isAfter(LocalDateTime.now().minusDays(3))) {
+            postEventKafkaProducer.sendViewEvent(postId, userId, post.getTeamId());
+        }
 
         return PostDetailResponse.builder()
                 .postId(post.getId())

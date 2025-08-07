@@ -1,5 +1,6 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
 import { MainTabParamList } from './types';
 import { useTheme } from '../shared/styles';
 import HomeNavigator from './stacks/HomeNavgator';
@@ -24,10 +25,62 @@ export default function MainNavigator() {
         },
       }}
     >
-      <BottomTab.Screen name='HomeStack' component={HomeNavigator} options={{ tabBarLabel: '홈' }} />
-      <BottomTab.Screen name='ExploreStack' component={ExploreNavigator} options={{ tabBarLabel: '탐색' }} />
-      <BottomTab.Screen name='ChatStack' component={ChatNavigator} options={{ tabBarLabel: '채팅' }} />
-      <BottomTab.Screen name='MyPageStack' component={MyPageNavigator} options={{ tabBarLabel: 'My' }} />
+      <BottomTab.Screen 
+        name='HomeStack' 
+        component={HomeNavigator} 
+        options={{ 
+          tabBarLabel: '홈',
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons 
+              name={focused ? 'home' : 'home-outline'} 
+              size={size} 
+              color={color} 
+            />
+          ),
+        }} 
+      />
+      <BottomTab.Screen 
+        name='ExploreStack' 
+        component={ExploreNavigator} 
+        options={{ 
+          tabBarLabel: '탐색',
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons 
+              name={focused ? 'search' : 'search-outline'} 
+              size={size} 
+              color={color} 
+            />
+          ),
+        }} 
+      />
+      <BottomTab.Screen 
+        name='ChatStack' 
+        component={ChatNavigator} 
+        options={{ 
+          tabBarLabel: '채팅',
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons 
+              name={focused ? 'chatbubbles' : 'chatbubbles-outline'} 
+              size={size} 
+              color={color} 
+            />
+          ),
+        }} 
+      />
+      <BottomTab.Screen 
+        name='MyPageStack' 
+        component={MyPageNavigator} 
+        options={{ 
+          tabBarLabel: 'My',
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons 
+              name={focused ? 'person' : 'person-outline'} 
+              size={size} 
+              color={color} 
+            />
+          ),
+        }} 
+      />
     </BottomTab.Navigator>
   );
 }
