@@ -128,7 +128,7 @@ public class WatchChatAuthServiceImpl implements WatchChatAuthService {
             Object sessionData = redisUtil.getValue(sessionKey);
             
             if (sessionData == null) {
-                throw new SecurityException("유효하지 않은 세션 토큰입니다.");
+                throw new ApiException(ErrorCode.INVALID_SESSION_TOKEN, "유효하지 않은 세션 토큰입니다.");
             }
 
             Map<String, Object> userInfo = (Map<String, Object>) sessionData;
@@ -138,9 +138,11 @@ public class WatchChatAuthServiceImpl implements WatchChatAuthService {
             
             return userInfo;
 
+        } catch (ApiException e) {
+            throw e;
         } catch (Exception e) {
             log.warn("세션 토큰 검증 실패 - token: {}", sessionToken, e);
-            throw new SecurityException("세션 검증에 실패했습니다: " + e.getMessage());
+            throw new ApiException(ErrorCode.SERVER_ERROR, "세션 검증에 실패했습니다.");
         }
     }
 

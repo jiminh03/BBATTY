@@ -9,6 +9,7 @@ import com.ssafy.bbatty.domain.game.entity.Game;
 import com.ssafy.bbatty.domain.game.repository.GameRepository;
 import com.ssafy.bbatty.global.constants.ErrorCode;
 import com.ssafy.bbatty.global.constants.GameStatus;
+import com.ssafy.bbatty.global.constants.Status;
 import com.ssafy.bbatty.global.exception.ApiException;
 import com.ssafy.bbatty.global.security.JwtProvider;
 import lombok.RequiredArgsConstructor;
@@ -49,12 +50,17 @@ public class MatchChatRequestConsumer {
                     requestId, action, gameId);
             
             // JWT 토큰에서 사용자 정보 추출
-            var claims = jwtProvider.extractAllClaims(jwtToken);
-            Long userId = claims.get("userId", Long.class);
+            var claims = jwtProvider.getClaims(jwtToken);
+            Long userId = Long.valueOf(claims.getSubject()); // subject에서 userId 추출
             Long userTeamId = claims.get("teamId", Long.class);
             String userGender = claims.get("gender", String.class);
             Integer userAge = claims.get("age", Integer.class);
-            String userNickname = claims.get("nickname", String.class);
+            
+            // nickname은 요청에서 전달 (Match 채팅의 경우)
+            String userNickname = null;
+            if (requestNode.has("nickname")) {
+                userNickname = requestNode.get("nickname").asText();
+            }
             
             if ("CREATE".equals(action)) {
                 handleMatchChatRoomCreate(requestId, userId, userTeamId, userGender, userAge, userNickname, requestNode);
@@ -126,7 +132,7 @@ public class MatchChatRequestConsumer {
             ChatAuthRequest chatAuthRequest = createChatAuthRequestFromNode(requestNode);
             var response = chatAuthService.authorizeChatAccess(userId, userTeamId, userGender, userAge, userNickname, chatAuthRequest);
             
-            log.info("Match 채팅방 입장 처리 완료: requestId={}, success={}", requestId, response.isSuccess());
+            log.info("Match 채팅방 입장 처리 완료: requestId={}, success={}", requestId, response.status() == Status.SUCCESS);
             
         } catch (ApiException e) {
             log.warn("Match 채팅방 입장 처리 실패: requestId={}, error={}", requestId, e.getMessage());

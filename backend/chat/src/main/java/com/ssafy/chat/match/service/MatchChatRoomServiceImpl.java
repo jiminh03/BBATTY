@@ -171,20 +171,33 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
     
     @Override
     public MatchChatRoomCreateResponse getMatchChatRoom(String matchId) {
+        // 1. matchId 유효성 검증
+        if (matchId == null || matchId.trim().isEmpty()) {
+            throw new ApiException(ErrorCode.BAD_REQUEST, "매칭 채팅방 ID가 비어있습니다.");
+        }
+        
         try {
             String roomKey = MATCH_ROOM_PREFIX + matchId;
             String roomJson = redisTemplate.opsForValue().get(roomKey);
             
             if (roomJson == null) {
-                return null;
+                return null; // Controller에서 ApiException으로 변환
             }
             
             MatchChatRoom matchRoom = objectMapper.readValue(roomJson, MatchChatRoom.class);
+            
+            // 2. 채팅방 상태 검증
+            if (!"ACTIVE".equals(matchRoom.getStatus())) {
+                throw new ApiException(ErrorCode.MATCH_CHAT_ROOM_CLOSED, "비활성 상태의 매칭 채팅방입니다.");
+            }
+            
             return convertToResponse(matchRoom);
             
+        } catch (ApiException e) {
+            throw e;
         } catch (Exception e) {
             log.error("매칭 채팅방 조회 실패 - matchId: {}", matchId, e);
-            throw new RuntimeException("매칭 채팅방 조회에 실패했습니다.", e);
+            throw new ApiException(ErrorCode.SERVER_ERROR, "매칭 채팅방 조회에 실패했습니다.");
         }
     }
     
