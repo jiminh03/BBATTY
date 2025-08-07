@@ -112,4 +112,18 @@ public class Game extends BaseEntity {
     public boolean isAwayTeam(Long teamId) {
         return awayTeam.getId().equals(teamId);
     }
+
+    /**
+     * 홈팀 ID 반환
+     */
+    public Long getHomeTeamId() {
+        return homeTeam.getId();
+    }
+
+    /**
+     * 어웨이팀 ID 반환
+     */
+    public Long getAwayTeamId() {
+        return awayTeam.getId();
+    }
 }
