@@ -21,7 +21,8 @@ public class ChatAuthRequestProducer {
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
     
-    private static final String CHAT_AUTH_REQUEST_TOPIC = "chat-auth-request";
+    private static final String MATCH_CHAT_REQUEST_TOPIC = "match-chat-request";
+    private static final String WATCH_CHAT_REQUEST_TOPIC = "watch-chat-request";
     
     /**
      * bbatty 서버에 채팅 인증 요청 전송
@@ -30,6 +31,7 @@ public class ChatAuthRequestProducer {
                                  Long gameId, Map<String, Object> roomInfo, String nickname) {
 
         String requestId = UUID.randomUUID().toString();
+        String topic = "MATCH".equals(chatType) ? MATCH_CHAT_REQUEST_TOPIC : WATCH_CHAT_REQUEST_TOPIC;
 
         try {
             // 인증 요청 메시지 생성
@@ -39,7 +41,7 @@ public class ChatAuthRequestProducer {
             authRequest.put("chatType", chatType);
             authRequest.put("action", action);
             authRequest.put("gameId", gameId);
-            authRequest.put("roomInfo", roomInfo); // 채팅방 정보 포함
+            authRequest.put("roomInfo", roomInfo);
             authRequest.put("timestamp", System.currentTimeMillis());
             
             // nickname은 MATCH 채팅에만 필요
@@ -49,16 +51,47 @@ public class ChatAuthRequestProducer {
             
             String message = objectMapper.writeValueAsString(authRequest);
             
-            // Kafka로 메시지 전송
-            kafkaTemplate.send(CHAT_AUTH_REQUEST_TOPIC, requestId, message);
+            // 채팅 타입에 따라 다른 topic으로 전송
+            kafkaTemplate.send(topic, requestId, message);
             
-            log.info("채팅 인증 요청 전송: requestId={}, chatType={}, action={}, gameId={}", 
-                    requestId, chatType, action, gameId);
+            log.info("채팅 인증 요청 전송: requestId={}, chatType={}, action={}, gameId={}, topic={}", 
+                    requestId, chatType, action, gameId, topic);
             
-            return requestId; // 결과 폴링용 요청 ID 반환
+            return requestId;
             
         } catch (Exception e) {
             log.error("채팅 인증 요청 전송 실패: requestId={}", requestId, e);
+            return null;
+        }
+    }
+    
+    /**
+     * Match 채팅방 생성 요청 전송
+     */
+    public String sendMatchChatCreateRequest(String jwtToken, Long gameId, 
+                                           Map<String, Object> roomCreateInfo, String nickname) {
+        String requestId = UUID.randomUUID().toString();
+
+        try {
+            Map<String, Object> createRequest = new HashMap<>();
+            createRequest.put("requestId", requestId);
+            createRequest.put("jwtToken", jwtToken);
+            createRequest.put("chatType", "MATCH");
+            createRequest.put("action", "CREATE");
+            createRequest.put("gameId", gameId);
+            createRequest.put("roomCreateInfo", roomCreateInfo); // 방 생성 조건들
+            createRequest.put("nickname", nickname);
+            createRequest.put("timestamp", System.currentTimeMillis());
+            
+            String message = objectMapper.writeValueAsString(createRequest);
+            kafkaTemplate.send(MATCH_CHAT_REQUEST_TOPIC, requestId, message);
+            
+            log.info("Match 채팅방 생성 요청 전송: requestId={}, gameId={}", requestId, gameId);
+            
+            return requestId;
+            
+        } catch (Exception e) {
+            log.error("Match 채팅방 생성 요청 전송 실패: requestId={}", requestId, e);
             return null;
         }
     }
