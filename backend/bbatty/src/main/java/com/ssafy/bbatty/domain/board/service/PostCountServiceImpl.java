@@ -13,11 +13,13 @@ import com.ssafy.bbatty.domain.user.entity.User;
 import com.ssafy.bbatty.domain.user.repository.UserRepository;
 import com.ssafy.bbatty.global.util.RedisUtil;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PostCountServiceImpl implements PostCountService {
@@ -106,9 +108,12 @@ public class PostCountServiceImpl implements PostCountService {
         if (post != null && user != null) {
             PostLike postLike = new PostLike(user, post, LikeAction.LIKE);
             postLikeRepository.save(postLike);
-            
+
+            log.info("카프카 메세지 디버깅1");
+
             // 3일 이내 작성된 글인지 확인 후 Kafka 이벤트 전송
             if (post.getCreatedAt().isAfter(LocalDateTime.now().minusDays(3))) {
+                log.info("카프카 메세지 디버깅2");
                 postEventKafkaProducer.sendLikeEvent(postId, userId, post.getTeamId());
             }
         }
