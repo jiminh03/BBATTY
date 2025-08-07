@@ -37,8 +37,8 @@ spring:
 # 로깅 설정
 logging:
   level:
-    com.ssafy.bbatty.domain.chat: DEBUG
-    org.springframework.web.socket: DEBUG
+    com.ssafy.schedule.domain.bestpost: DEBUG
+    org.springframework.kafka: INFO
 
 server:
   port: 8082
