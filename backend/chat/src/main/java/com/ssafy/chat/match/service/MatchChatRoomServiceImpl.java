@@ -5,10 +5,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.chat.match.dto.*;
 import com.ssafy.chat.global.exception.ApiException;
 import com.ssafy.chat.global.constants.ErrorCode;
+import com.ssafy.chat.auth.kafka.ChatAuthRequestProducer;
+import com.ssafy.chat.auth.service.ChatAuthResultService;
+import com.ssafy.chat.config.JwtProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.time.Duration;
 import java.time.LocalDate;
@@ -28,6 +35,9 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
     private final RedisTemplate<String, String> redisTemplate;
     private final ObjectMapper objectMapper;
     private final GameInfoService gameInfoService;
+    private final ChatAuthRequestProducer chatAuthRequestProducer;
+    private final ChatAuthResultService chatAuthResultService;
+    private final JwtProvider jwtProvider;
     
     private static final String MATCH_ROOM_PREFIX = "match_room:";
     private static final String MATCH_ROOM_LIST_KEY = "match_rooms:list";

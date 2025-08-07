@@ -53,7 +53,7 @@ public class PostController {
                 .body(ApiResponse.success(SuccessCode.SUCCESS_DELETED));
     }
 
-    // 전체 게시물 목록 조회
+    // 전체 게시물 목록 조회 - 응답 형식
     @GetMapping
     public ResponseEntity<ApiResponse<PostListPageResponse>> getPostList(
             @RequestParam(required = false) Long cursor) {
