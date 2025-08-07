@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Animated, Dimensions, TouchableOpacity, AppState, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { styles } from './styles';
+import { styles } from './SplashScreen.styles';
 import { screen } from '../../../shared';
 
 interface SplashScreenProps {
