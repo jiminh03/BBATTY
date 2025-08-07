@@ -26,9 +26,9 @@ public class PopularPostScheduler {
     private static final double COMMENT_WEIGHT = 10.0; // 댓글 10점
     
     /**
-     * 조회수 이벤트 배치 처리 - 10분마다 실행
+     * 조회수 이벤트 배치 처리 - 1분마다 실행 (우선 1분)
      */
-    @Scheduled(fixedRate = 600000) // 10분 = 600,000ms
+    @Scheduled(fixedRate = 60000) // 10분 = 600,000ms
     public void processViewEvents() {
         ConcurrentLinkedQueue<PostEventDto> viewEvents = kafkaConsumer.getViewEvents();
         
@@ -56,7 +56,7 @@ public class PopularPostScheduler {
             Long teamId = Long.valueOf(parts[0]);
             Long postId = Long.valueOf(parts[1]);
             int viewCount = entry.getValue();
-            
+
             double score = viewCount * VIEW_WEIGHT;
             rankingService.updatePostScore(teamId, postId, score);
         }
@@ -66,9 +66,9 @@ public class PopularPostScheduler {
     }
     
     /**
-     * 좋아요 이벤트 배치 처리 - 30분마다 실행
+     * 좋아요 이벤트 배치 처리 - 30분마다 실행(우선 2분)
      */
-    @Scheduled(fixedRate = 1800000) // 30분 = 1,800,000ms
+    @Scheduled(fixedRate = 60000*2) // 30분 = 1,800,000ms
     public void processLikeEvents() {
         ConcurrentLinkedQueue<PostEventDto> likeEvents = kafkaConsumer.getLikeEvents();
         
@@ -97,6 +97,7 @@ public class PopularPostScheduler {
             int likeCount = entry.getValue();
             
             double score = likeCount * LIKE_WEIGHT;
+            log.info("{}에 {}를 처리 : {}", teamId, postId, score);
             rankingService.updatePostScore(teamId, postId, score);
         }
         
@@ -105,9 +106,9 @@ public class PopularPostScheduler {
     }
     
     /**
-     * 댓글 이벤트 배치 처리 - 1시간마다 실행
+     * 댓글 이벤트 배치 처리 - 1시간마다 실행 (우선 3분)
      */
-    @Scheduled(fixedRate = 3600000) // 1시간 = 3,600,000ms
+    @Scheduled(fixedRate = 60000*3) // 1시간 = 3,600,000ms
     public void processCommentEvents() {
         ConcurrentLinkedQueue<PostEventDto> commentEvents = kafkaConsumer.getCommentEvents();
         
