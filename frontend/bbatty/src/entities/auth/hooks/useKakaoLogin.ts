@@ -4,7 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { extractData, tokenManager } from '../../../shared';
 import { useUserStore } from '../../user';
 import { authApi } from '../api/authApi';
-import { navigationRef } from '../../../navigation/naviagtionRefs';
+import { navigationRef } from '../../../navigation/navigationRefs';
 
 export const useKakaoLogin = () => {
   const navigation = useNavigation();

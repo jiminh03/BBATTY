@@ -28,7 +28,7 @@ export const authApi = {
 
   // 회원가입
   async register(data: RegisterRequest) {
-    return apiClient.post<LoginResponse>('/auth/register', data);
+    return apiClient.post<Token>('/auth/register', data);
   },
 
   // 로그아웃

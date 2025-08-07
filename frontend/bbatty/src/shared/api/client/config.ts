@@ -36,6 +36,7 @@ interface ErrorConfig {
 
 interface ApiConfig {
   baseURL: string;
+  socketUrl: string;
   timeout: TimeoutConfig;
   retry: RetryConfig;
   headers: AxiosRequestConfig['headers']; // 이렇게
@@ -46,7 +47,8 @@ interface ApiConfig {
 }
 
 export const API_CONFIG: ApiConfig = {
-  baseURL: 'http://localhost:8080',
+  baseURL: 'http://localhost:8080', //'http://i13a403.p.ssafy.io:8080/',
+  socketUrl: '',
 
   timeout: {
     default: 3000, // 3초

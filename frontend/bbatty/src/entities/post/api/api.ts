@@ -5,9 +5,9 @@ import {
   PresignedUrlPayload,
   PresignedUrlResponse,
   GetPostsParams,
-  Post,
 } from './types';
 import { AxiosHeaders, AxiosResponse } from 'axios';
+import { Post } from '../model/types';
 
 export const postApi = {
   // 게시글 생성
@@ -46,4 +46,9 @@ export const postApi = {
   // presigned-url 발급
   createPresignedUrl: (payload: PresignedUrlPayload) =>
     apiClient.post<PresignedUrlResponse>('/api/posts/presigned-url', payload),
+
+  // // 이미지 삭제
+  // deleteImage: (imageId: string) => apiClient.delete(`/api/images/${imageId}`),
+
 };
+

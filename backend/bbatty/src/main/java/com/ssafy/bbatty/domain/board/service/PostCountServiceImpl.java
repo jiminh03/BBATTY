@@ -4,6 +4,7 @@ import com.ssafy.bbatty.domain.board.common.LikeAction;
 import com.ssafy.bbatty.domain.board.entity.Post;
 import com.ssafy.bbatty.domain.board.entity.PostLike;
 import com.ssafy.bbatty.domain.board.entity.PostView;
+import com.ssafy.bbatty.domain.board.kafka.PostEventKafkaProducer;
 import com.ssafy.bbatty.domain.board.repository.CommentRepository;
 import com.ssafy.bbatty.domain.board.repository.PostLikeRepository;
 import com.ssafy.bbatty.domain.board.repository.PostRepository;
@@ -25,6 +26,7 @@ public class PostCountServiceImpl implements PostCountService {
     private final CommentRepository commentRepository;
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+    private final PostEventKafkaProducer postEventKafkaProducer;
     
     private static final String VIEW_COUNT_KEY = "post:view:";
     private static final String LIKE_COUNT_KEY = "post:like:";
@@ -102,6 +104,9 @@ public class PostCountServiceImpl implements PostCountService {
         if (post != null && user != null) {
             PostLike postLike = new PostLike(user, post, LikeAction.LIKE);
             postLikeRepository.save(postLike);
+            
+            // 좋아요 이벤트를 Kafka로 전송 (실시간 처리)
+            postEventKafkaProducer.sendLikeEvent(postId, userId, post.getTeamId());
         }
 
         // 2. Redis 좋아요 카운트 증가

@@ -7,6 +7,7 @@ import com.ssafy.bbatty.domain.board.dto.response.PostListPageResponse;
 import com.ssafy.bbatty.domain.board.dto.response.PostListResponse;
 import com.ssafy.bbatty.domain.board.entity.Post;
 import com.ssafy.bbatty.domain.board.entity.PostImage;
+import com.ssafy.bbatty.domain.board.kafka.PostEventKafkaProducer;
 import com.ssafy.bbatty.domain.board.repository.PostRepository;
 import com.ssafy.bbatty.domain.user.entity.User;
 import com.ssafy.bbatty.domain.user.repository.UserRepository;
@@ -33,6 +34,7 @@ public class PostServiceImpl implements PostService {
     private final UserRepository userRepository;
     private final PostImageService postImageService;
     private final PostCountService postCountService;
+    private final PostEventKafkaProducer postEventKafkaProducer;
     private static final int PAGE_SIZE = 5; // 한 번에 가져올 게시글 수
 
     /*
@@ -170,6 +172,9 @@ public class PostServiceImpl implements PostService {
         }
 
         postCountService.incrementViewCount(postId, userId);
+        
+        // 조회 이벤트를 Kafka로 전송
+        postEventKafkaProducer.sendViewEvent(postId, userId, post.getTeamId());
 
         return PostDetailResponse.builder()
                 .postId(post.getId())
