@@ -32,7 +32,8 @@ public class ChatAuthController {
         log.info("채팅 인증 요청: userId={}, chatType={}, action={}, requestId={}", 
                 userId, request.getChatType(), request.getAction(), request.getRequestId());
         
-        ApiResponse<ChatAuthResponse> response = chatAuthService.authorizeChatAccess(userId, request);
+        // 컨트롤러에서는 기본값으로 처리 (실제로는 Kafka Consumer를 통해 호출됨)
+        ApiResponse<ChatAuthResponse> response = chatAuthService.authorizeChatAccess(userId, null, null, 0, null, request);
         return ResponseEntity.ok(response);
     }
 }
