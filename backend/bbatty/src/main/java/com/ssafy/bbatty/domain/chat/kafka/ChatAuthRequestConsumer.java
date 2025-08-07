@@ -71,7 +71,7 @@ public class ChatAuthRequestConsumer {
                     .requestId(requestId)
                     .chatType((String) authRequestData.get("chatType"))
                     .action((String) authRequestData.get("action"))
-                    .matchId(matchId)
+                    .gameId(matchId)
                     .teamId(teamId)
                     .roomInfo(roomInfo)
                     .build();
