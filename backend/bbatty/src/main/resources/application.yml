@@ -84,8 +84,7 @@ jwt:
   refresh-threshold-minutes: 5
 
 
-# 로깅 설정
 logging:
   level:
-    com.ssafy.bbatty.domain.chat: DEBUG
-    org.springframework.web.socket: DEBUG
+    root: INFO
+    com.ssafy: DEBUG
