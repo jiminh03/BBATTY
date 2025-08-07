@@ -19,48 +19,43 @@ public class RedisKey {
     // ATTENDANCE 도메인 - 직관 인증 관련
     // ===========================================
 
-    /** 경기별 직관 인증 여부: attendance:game:{game_id}:{user_id} */
-    public static final String ATTENDANCE_GAME = "attendance:game:";
-    
     /** 당일 직관 인증한 전체 사용자 목록: attendance:daily:attendees:{date} (Set) */
     public static final String ATTENDANCE_DAILY_ATTENDEES = "attendance:daily:attendees:";
 
     /** 활성 경기 목록: attendance:active:games:{date} */
     public static final String ATTENDANCE_ACTIVE_GAMES = "attendance:active:games:";
 
-    /** 경기장 위치 정보: attendance:stadium:{stadium_name} */
-    public static final String ATTENDANCE_STADIUM_INFO = "attendance:stadium:";
-
     /** 동시성 제어 락: attendance:lock:{user_id}:{game_id} */
     public static final String ATTENDANCE_LOCK = "attendance:lock:";
 
     // ===========================================
-    // USER 도메인 - 사용자 통계 관련
+    // USER 도메인 - 사용자 기본 정보
     // ===========================================
 
-    /** 사용자 승률 캐시: user:stats:winrate:{user_id} */
-    public static final String USER_STATS_WINRATE = "user:stats:winrate:";
+    /** 사용자별 경기 직관 인증 여부: user:attendance:{user_id}:{game_id} */
+    public static final String USER_ATTENDANCE_GAME = "user:attendance:";
 
-    /** 사용자 현재 직관 연승: user:stats:win_streak:{user_id} */
-    public static final String USER_STATS_WIN_STREAK = "user:stats:win_streak:";
-
-    /** 사용자 최장 직관 연승: user:stats:max_streak:{user_id} */
-    public static final String USER_STATS_MAX_STREAK = "user:stats:max_streak:";
-
-    /** 전체 순위에서 내 순위: user:rank:global:{user_id} */
-    public static final String USER_RANK_GLOBAL = "user:rank:global:";
-
-    /** 팀내 순위에서 내 순위: user:rank:team:{team_id}:{user_id} */
-    public static final String USER_RANK_TEAM = "user:rank:team:";
-
-    /** 전체 백분위: user:percentile:global:{user_id} */
-    public static final String USER_PERCENTILE_GLOBAL = "user:percentile:global:";
-
-    /** 팀내 백분위: user:percentile:team:{team_id}:{user_id} */
-    public static final String USER_PERCENTILE_TEAM = "user:percentile:team:";
+    /** 사용자 직관 기록 목록: user:attendance:{user_id}:{season} (Sorted Set - score는 타임스탬프) */
+    public static final String USER_ATTENDANCE_RECORDS = "user:attendance:";
 
     // ===========================================
-    // RANKING 도메인 - 랭킹 전용
+    // STATS 도메인 - 모든 통계 데이터 통합
+    // ===========================================
+
+    /** 사용자 승률 캐시: stats:user:winrate:{user_id} */
+    public static final String STATS_USER_WINRATE = "stats:user:winrate:";
+
+    /** 사용자 현재 직관 연승: stats:user:win_streak:{user_id} */
+    public static final String STATS_USER_WIN_STREAK = "stats:user:win_streak:";
+
+    /** 사용자 최장 직관 연승: stats:user:max_streak:{user_id} */
+    public static final String STATS_USER_MAX_STREAK = "stats:user:max_streak:";
+
+    /** 사용자 세부 통계: stats:user:detailed:{user_id}:{season} (Hash) */
+    public static final String STATS_USER_DETAILED = "stats:user:detailed:";
+
+    // ===========================================
+    // RANKING 도메인 - 모든 순위 데이터 통합
     // ===========================================
 
     /** 전체 상위 10명: ranking:global:top10 (Sorted Set) */
@@ -69,15 +64,15 @@ public class RedisKey {
     /** 팀별 상위 10명: ranking:team:{team_id}:top10 (Sorted Set) */
     public static final String RANKING_TEAM_TOP10 = "ranking:team:";
 
-    // ===========================================
-    // GAME 도메인 - 경기 관련
-    // ===========================================
+    /** 전체 순위에서 내 순위: ranking:user:global:{user_id} */
+    public static final String RANKING_USER_GLOBAL = "ranking:user:global:";
 
-    /** 경기 정보 캐시: game:info:{game_id} */
-    public static final String GAME_INFO_CACHE = "game:info:";
+    /** 팀내 순위에서 내 순위: ranking:user:team:{team_id}:{user_id} */
+    public static final String RANKING_USER_TEAM = "ranking:user:team:";
 
-    // ===========================================
-    // STATISTICS 도메인 - 통계 업데이트용
-    // ===========================================
+    /** 전체 백분위: ranking:percentile:global:{user_id} */
+    public static final String RANKING_PERCENTILE_GLOBAL = "ranking:percentile:global:";
 
+    /** 팀내 백분위: ranking:percentile:team:{team_id}:{user_id} */
+    public static final String RANKING_PERCENTILE_TEAM = "ranking:percentile:team:";
 }

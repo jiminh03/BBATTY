@@ -68,7 +68,7 @@ public class AttendanceServiceImpl implements AttendanceService {
         Game verifiedGame = verifyAttendance(todayGames, request);
 
         // 4. 중복 인증 확인 (경기별 개별 검증)
-        String redisKey = RedisKey.ATTENDANCE_GAME + verifiedGame.getId() + ":" + userId;
+        String redisKey = RedisKey.USER_ATTENDANCE_GAME + userId + ":" + verifiedGame.getId();
         boolean alreadyAttendedRedis = redisUtil.hasKey(redisKey);
         boolean alreadyAttendedDB = userAttendedRepository.existsByUserIdAndGameId(userId, verifiedGame.getId());
         
