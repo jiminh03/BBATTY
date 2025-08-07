@@ -75,7 +75,7 @@ const handleUnauthorized = async () => {
 };
 
 export const initializeApiClient = async (): Promise<void> => {
-  const hardcodedtoken = 'JWT토큰';
+  const hardcodedtoken = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJzdWIiOiIxIiwiaXNzIjoiYmJhdHR5IiwiaWF0IjoxNzU0NDAzNzgyLCJleHAiOjE3NTU2MTMzODIsImFnZSI6MjgsImdlbmRlciI6IkZFTUFMRSIsInRlYW1JZCI6MX0.2EQSS7gllsBQyVSAVyqQOkBhz-d5g7UNePyfFUWjswaayMtvfLWIZ_okwb_br54C-za4a670of62KHbxl8hyOw';
   applyTokenToClients(hardcodedtoken);
 
   setupInterceptors(apiClient, handleUnauthorized);
