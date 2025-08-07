@@ -55,21 +55,23 @@ public class PostController {
 
     // 전체 게시물 목록 조회
     @GetMapping
-    public ResponseEntity<PostListPageResponse> getPostList(
+    public ResponseEntity<ApiResponse<PostListPageResponse>> getPostList(
             @RequestParam(required = false) Long cursor) {
 
         PostListPageResponse response = postService.getPostList(cursor);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.status(SuccessCode.SUCCESS_DEFAULT.getStatus()).body(
+                ApiResponse.success(SuccessCode.SUCCESS_DEFAULT, response));
     }
 
     // 팀 별 게시글 목록 조회
     @GetMapping("/team/{teamId}")
-    public ResponseEntity<PostListPageResponse> getPostListByTeam(
+    public ResponseEntity<ApiResponse<PostListPageResponse>> getPostListByTeam(
             @PathVariable Long teamId,
             @RequestParam(required = false) Long cursor) {
 
         PostListPageResponse response = postService.getPostListByTeam(teamId, cursor);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.status(SuccessCode.SUCCESS_DEFAULT.getStatus()).body(
+                ApiResponse.success(SuccessCode.SUCCESS_DEFAULT, response));
     }
 
     // 게시글 상세 조회

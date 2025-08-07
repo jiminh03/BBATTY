@@ -25,7 +25,7 @@ public class CommentController {
     public ResponseEntity<ApiResponse<Void>> createComment(@Valid @RequestBody CommentCreateRequest request) {
         Comment created = commentService.createComment(request);
 
-        return ResponseEntity.status(SuccessCode.SUCCESS_DELETED.getStatus()).body(
+        return ResponseEntity.status(SuccessCode.SUCCESS_CREATED.getStatus()).body(
                 ApiResponse.success(SuccessCode.SUCCESS_CREATED));
     }
 
@@ -40,20 +40,14 @@ public class CommentController {
                 ApiResponse.success(SuccessCode.SUCCESS_UPDATED));
     }
 
-    // 2. 게시글의 댓글 목록 조회 (대댓글 포함)
-    @GetMapping("/post/{postId}")
-    public ResponseEntity<ApiResponse<CommentListResponse>> getCommentsByPostId(@PathVariable Long postId) {
-        CommentListResponse response = commentService.getCommentsWithRepliesByPostId(postId);
-        return ResponseEntity.ok(ApiResponse.success(SuccessCode.SUCCESS_DEFAULT, response));
-    }
-
     // 3. 게시글의 댓글 목록 페이지네이션 조회 (대댓글 포함)
     @GetMapping("/post/{postId}/page")
-    public ResponseEntity<CommentListPageResponse> getCommentsByPostIdWithPagination(
+    public ResponseEntity<ApiResponse<CommentListPageResponse>> getCommentsByPostIdWithPagination(
             @PathVariable Long postId,
             @RequestParam(required = false) Long cursor) {
         CommentListPageResponse response = commentService.getCommentsWithRepliesByPostIdWithPagination(postId, cursor);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.status(SuccessCode.SUCCESS_DEFAULT.getStatus()).body(
+                ApiResponse.success(SuccessCode.SUCCESS_DEFAULT, response));
     }
 
     // 6. 댓글 삭제
