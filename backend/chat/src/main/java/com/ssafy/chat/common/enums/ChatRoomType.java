@@ -36,7 +36,7 @@ public enum ChatRoomType {
     public static ChatRoomType fromCode(String code) {
         ChatRoomType type = BY_CODE.get(code);
         if (type == null) {
-            throw new ApiException(ErrorCode.BAD_REQUEST, "알 수 없는 채팅방 타입 코드: " + code);
+            throw new ApiException(ErrorCode.BAD_REQUEST);
         }
         return type;
     }

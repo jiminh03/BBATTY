@@ -135,9 +135,12 @@ public class WatchChatRequestConsumer {
 
             return ChatAuthRequest.builder()
                     .requestId(node.get("requestId").asText())
-                    .chatType(node.has("chatType") ? node.get("chatType").asText() : "MATCH")
+                    .chatType(node.has("chatType") ? node.get("chatType").asText() : "WATCH")
                     .action(action)
                     .roomId(getRoomIdByAction(node, action))  // matchId 대신 roomId 사용
+                    .gameId(node.has("gameId") ? node.get("gameId").asLong() : null)
+                    .teamId(roomInfo != null && roomInfo.containsKey("teamId") ? 
+                        ((Number) roomInfo.get("teamId")).longValue() : null)
                     .roomInfo(roomInfo)
                     .build();
 

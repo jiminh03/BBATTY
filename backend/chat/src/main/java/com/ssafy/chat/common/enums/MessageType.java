@@ -42,7 +42,7 @@ public enum MessageType {
                 return type;
             }
         }
-        throw new ApiException(ErrorCode.BAD_REQUEST, "알 수 없는 메시지 타입 코드: " + code);
+        throw new ApiException(ErrorCode.BAD_REQUEST);
     }
 
     /**

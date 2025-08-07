@@ -41,7 +41,7 @@ public class GameInfoServiceImpl implements GameInfoService {
             log.info("Successfully processed {} game infos", gameInfoList.getGames().size());
         } catch (Exception e) {
             log.error("Failed to process game info message: {}", message, e);
-            throw new ApiException(ErrorCode.SERVER_ERROR, "게임 정보 메시지 처리에 실패했습니다.");
+            throw new ApiException(ErrorCode.SERVER_ERROR);
         }
     }
 

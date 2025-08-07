@@ -49,7 +49,7 @@ public class ChatRoomRedisManager {
             
         } catch (Exception e) {
             log.error("채팅방 사용자 추가 실패 - roomId: {}, sessionId: {}", roomId, sessionId, e);
-            throw new ApiException(ErrorCode.SERVER_ERROR, "채팅방 입장에 실패했습니다.");
+            throw new ApiException(ErrorCode.SERVER_ERROR);
         }
     }
 

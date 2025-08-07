@@ -41,7 +41,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
                     
         } catch (Exception e) {
             log.error("채팅방 입장 처리 실패 - roomId: {}, sessionId: {}", roomId, sessionId, e);
-            throw new ApiException(ErrorCode.SERVER_ERROR, "채팅방 입장에 실패했습니다.");
+            throw new ApiException(ErrorCode.SERVER_ERROR);
         }
     }
 
@@ -67,7 +67,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
             return chatRoomRedisManager.getRoomUsers(roomId);
         } catch (Exception e) {
             log.error("채팅방 사용자 목록 조회 실패 - roomId: {}", roomId, e);
-            throw new ApiException(ErrorCode.SERVER_ERROR, "사용자 목록 조회에 실패했습니다.");
+            throw new ApiException(ErrorCode.SERVER_ERROR);
         }
     }
 
@@ -111,7 +111,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
             
         } catch (Exception e) {
             log.error("채팅방 생성 실패 - roomId: {}, roomType: {}", roomId, roomType, e);
-            throw new ApiException(ErrorCode.SERVER_ERROR, "채팅방 생성에 실패했습니다.");
+            throw new ApiException(ErrorCode.SERVER_ERROR);
         }
     }
 }

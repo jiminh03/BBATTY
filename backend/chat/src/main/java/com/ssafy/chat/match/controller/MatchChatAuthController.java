@@ -51,11 +51,11 @@ public class MatchChatAuthController {
             // WebSocket 접속 링크 생성
             String websocketUrl = String.format("ws://localhost:8084/ws/match-chat/websocket?token=%s&matchId=%s", 
                     sessionData.get("sessionToken"), request.getMatchId());
-            
+
             // 응답 DTO 생성
             MatchChatJoinResponse response = MatchChatJoinResponse.builder()
                     .sessionToken((String) sessionData.get("sessionToken"))
-                    .userId((String) sessionData.get("userId"))
+                    .userId(((Number) sessionData.get("userId")).longValue())
                     .matchId(String.valueOf(request.getMatchId()))
                     .expiresIn((Long) sessionData.get("expiresIn"))
                     .websocketUrl(websocketUrl)
@@ -69,12 +69,12 @@ public class MatchChatAuthController {
         } catch (IllegalArgumentException e) {
             log.warn("매칭 채팅방 입장 거부 - matchId: {}, reason: {}", 
                     request.getMatchId(), e.getMessage());
-            throw new ApiException(ErrorCode.BAD_REQUEST, e.getMessage());
+            throw new ApiException(ErrorCode.BAD_REQUEST);
             
         } catch (SecurityException e) {
             log.warn("매칭 채팅방 입장 인증 실패 - matchId: {}, reason: {}", 
                     request.getMatchId(), e.getMessage());
-            throw new ApiException(ErrorCode.UNAUTHORIZED, e.getMessage());
+            throw new ApiException(ErrorCode.UNAUTHORIZED);
         }
     }
 
@@ -88,7 +88,7 @@ public class MatchChatAuthController {
             return ResponseEntity.ok(ApiResponse.success(userInfo));
         } catch (Exception e) {
             log.warn("세션 토큰 검증 실패 - token: {}", token, e);
-            throw new ApiException(ErrorCode.INVALID_SESSION_TOKEN, "유효하지 않은 토큰입니다.");
+            throw new ApiException(ErrorCode.INVALID_SESSION_TOKEN);
         }
     }
 }

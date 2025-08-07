@@ -45,7 +45,7 @@ public class MatchChatRoomController {
             log.info("Extracted JWT token: [{}...]", jwtToken.substring(0, Math.min(20, jwtToken.length())));
         } else {
             log.error("Invalid Authorization header format: [{}]", authHeader);
-            throw new ApiException(ErrorCode.UNAUTHORIZED, "JWT 토큰이 필요합니다.");
+            throw new ApiException(ErrorCode.UNAUTHORIZED);
         }
 
         // 서비스 호출

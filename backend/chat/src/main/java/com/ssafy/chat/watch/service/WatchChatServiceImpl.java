@@ -177,6 +177,7 @@ public class WatchChatServiceImpl implements WatchChatService {
         messageMap.put("roomId", message.getRoomId());
         messageMap.put("content", message.getContent());
         messageMap.put("timestamp", message.getTimestamp().toString());
+        messageMap.put("userId", message.getUserId()); // userId 추가!
         
         return messageMap;
     }
@@ -206,7 +207,135 @@ public class WatchChatServiceImpl implements WatchChatService {
                     
         } catch (Exception e) {
             log.error("직관 채팅방 생성 실패: roomId={}", roomId, e);
-            throw new ApiException(ErrorCode.SERVER_ERROR, "직관 채팅방 생성에 실패했습니다.");
+            throw new ApiException(ErrorCode.WATCH_CHAT_ROOM_CREATE_FAILED);
+        }
+    }
+    
+    @Override
+    public Map<String, Object> getWatchChatRooms() {
+        try {
+            log.debug("관전 채팅방 목록 조회 시작");
+            
+            // Redis에서 모든 관전 채팅방 조회
+            String pattern = "watch_room:*";
+            var keys = redisTemplate.keys(pattern);
+            
+            Map<String, Object> result = new HashMap<>();
+            result.put("rooms", new HashMap<>());
+            result.put("totalCount", 0);
+            
+            if (keys == null || keys.isEmpty()) {
+                log.info("활성화된 관전 채팅방이 없습니다");
+                return result;
+            }
+            
+            Map<String, Object> rooms = new HashMap<>();
+            int successCount = 0;
+            
+            for (String key : keys) {
+                try {
+                    Map<Object, Object> roomData = redisTemplate.opsForHash().entries(key);
+                    if (roomData.isEmpty()) {
+                        log.warn("빈 채팅방 데이터: key={}", key);
+                        continue;
+                    }
+                    
+                    Object roomIdObj = roomData.get("roomId");
+                    if (roomIdObj == null) {
+                        log.warn("roomId가 없는 채팅방 데이터: key={}", key);
+                        continue;
+                    }
+                    
+                    String roomId = roomIdObj.toString();
+                    
+                    Map<String, Object> roomInfo = new HashMap<>();
+                    roomData.forEach((k, v) -> {
+                        if (k != null && v != null) {
+                            roomInfo.put(k.toString(), v);
+                        }
+                    });
+                    
+                    // 현재 활성 세션 수 추가
+                    try {
+                        int sessionCount = getActiveSessionCount(roomId);
+                        roomInfo.put("currentUsers", sessionCount);
+                    } catch (Exception e) {
+                        log.warn("세션 수 조회 실패: roomId={}", roomId, e);
+                        roomInfo.put("currentUsers", 0);
+                    }
+                    
+                    rooms.put(roomId, roomInfo);
+                    successCount++;
+                    
+                } catch (Exception e) {
+                    log.warn("채팅방 정보 처리 실패: key={}", key, e);
+                }
+            }
+            
+            result.put("rooms", rooms);
+            result.put("totalCount", successCount);
+            
+            log.info("관전 채팅방 목록 조회 완료: 총 {}개", successCount);
+            return result;
+            
+        } catch (Exception e) {
+            log.error("관전 채팅방 목록 조회 중 오류 발생", e);
+            throw new ApiException(ErrorCode.WATCH_CHAT_ROOM_LIST_FAILED);
+        }
+    }
+    
+    @Override
+    public Map<String, Object> getWatchChatRoom(String roomId) {
+        if (roomId == null || roomId.trim().isEmpty()) {
+            log.warn("유효하지 않은 roomId: {}", roomId);
+            throw new ApiException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+        
+        try {
+            log.debug("관전 채팅방 조회 시작: roomId={}", roomId);
+            
+            String redisKey = "watch_room:" + roomId;
+            Map<Object, Object> roomData = redisTemplate.opsForHash().entries(redisKey);
+            
+            if (roomData == null || roomData.isEmpty()) {
+                log.warn("관전 채팅방을 찾을 수 없습니다: roomId={}", roomId);
+                throw new ApiException(ErrorCode.WATCH_CHAT_ROOM_NOT_FOUND);
+            }
+            
+            // 필수 필드 검증
+            Object roomIdObj = roomData.get("roomId");
+            Object gameIdObj = roomData.get("gameId");
+            Object teamIdObj = roomData.get("teamId");
+            
+            if (roomIdObj == null || gameIdObj == null || teamIdObj == null) {
+                log.error("관전 채팅방 필수 정보 누락: roomId={}, roomData={}", roomId, roomData);
+                throw new ApiException(ErrorCode.WATCH_CHAT_ROOM_INFO_INVALID);
+            }
+            
+            Map<String, Object> roomInfo = new HashMap<>();
+            roomData.forEach((k, v) -> {
+                if (k != null && v != null) {
+                    roomInfo.put(k.toString(), v);
+                }
+            });
+            
+            // 현재 활성 세션 수 추가
+            try {
+                int sessionCount = getActiveSessionCount(roomId);
+                roomInfo.put("currentUsers", sessionCount);
+            } catch (Exception e) {
+                log.warn("세션 수 조회 실패: roomId={}", roomId, e);
+                roomInfo.put("currentUsers", 0);
+            }
+            
+            log.debug("관전 채팅방 조회 완료: roomId={}", roomId);
+            return roomInfo;
+            
+        } catch (ApiException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("관전 채팅방 조회 중 오류 발생: roomId={}", roomId, e);
+            throw new ApiException(ErrorCode.REDIS_OPERATION_FAILED);
         }
     }
 }
