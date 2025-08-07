@@ -50,7 +50,7 @@ public class WatchChatAuthController {
             // 응답 DTO 생성
             WatchChatJoinResponse response = WatchChatJoinResponse.builder()
                     .sessionToken((String) sessionData.get("sessionToken"))
-                    .teamId((String) sessionData.get("teamId"))
+                    .teamId((Long) sessionData.get("teamId"))
                     .gameId(request.getGameId())
                     .expiresIn((Long) sessionData.get("expiresIn"))
                     .websocketUrl(websocketUrl)

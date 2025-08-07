@@ -56,7 +56,7 @@ public class MatchChatAuthController {
             MatchChatJoinResponse response = MatchChatJoinResponse.builder()
                     .sessionToken((String) sessionData.get("sessionToken"))
                     .userId((String) sessionData.get("userId"))
-                    .matchId(request.getMatchId())
+                    .matchId(String.valueOf(request.getMatchId()))
                     .expiresIn((Long) sessionData.get("expiresIn"))
                     .websocketUrl(websocketUrl)
                     .build();
