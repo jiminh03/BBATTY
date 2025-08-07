@@ -19,6 +19,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -54,8 +55,10 @@ public class CommentServiceImpl implements CommentService{
 
         Comment savedComment = commentRepository.save(comment);
         
-        // 댓글 이벤트를 Kafka로 전송
-        postEventKafkaProducer.sendCommentEvent(post.getId(), request.getUserId(), post.getTeamId(), savedComment.getId());
+        // 3일 이내 작성된 글인지 확인 후 Kafka 이벤트 전송
+        if (post.getCreatedAt().isAfter(LocalDateTime.now().minusDays(3))) {
+            postEventKafkaProducer.sendCommentEvent(post.getId(), request.getUserId(), post.getTeamId(), savedComment.getId());
+        }
         
         return savedComment;
     }
