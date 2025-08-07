@@ -27,10 +27,13 @@ export default function AppNavigator() {
   const checkAuthState = async () => {
     try {
       const token = await tokenManager.getToken();
-      setIsAuthenticated(!!token);
+      // 개발 중에는 항상 인증된 상태로 설정 (테스트 목적)
+      setIsAuthenticated(true);
+      // setIsAuthenticated(!!token);
     } catch (error) {
       console.error('Auth check error ', error);
-      setIsAuthenticated(false);
+      setIsAuthenticated(true); // 개발 중 우회
+      // setIsAuthenticated(false);
     } finally {
       setIsLoading(false);
     }
@@ -65,7 +68,11 @@ export default function AppNavigator() {
     <NavigationContainer ref={navigationRef} linking={linking}>
       {/* <StatusBar barStyle='light-content' backgroundColor={theme.colors.background} /> */}
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name='AuthStack' children={() => <AuthNavigator userInfo={userInfo} />} />
+        {isAuthenticated ? (
+          <Stack.Screen name='MainTabs' component={MainNavigator} />
+        ) : (
+          <Stack.Screen name='AuthStack' children={() => <AuthNavigator userInfo={userInfo} />} />
+        )}
       </Stack.Navigator>
     </NavigationContainer>
   );

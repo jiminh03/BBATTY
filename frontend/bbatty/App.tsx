@@ -5,7 +5,6 @@ import { initializeApiClient } from './src/shared';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider } from './src/shared/styles';
-import { AppInitService } from './src/app/services/initService';
 import AppNavigator from './src/navigation/AppNavigator';
 /*
 import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
@@ -56,8 +55,8 @@ export default function App() {
   }
 */
   useEffect(() => {
-      initializeApiClient();
-    }, []);
+    initializeApiClient();
+  }, []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
