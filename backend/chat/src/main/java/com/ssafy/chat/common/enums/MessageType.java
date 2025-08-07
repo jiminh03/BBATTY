@@ -1,5 +1,7 @@
 package com.ssafy.chat.common.enums;
 
+import com.ssafy.chat.global.constants.ErrorCode;
+import com.ssafy.chat.global.exception.ApiException;
 import lombok.Getter;
 
 @Getter
@@ -40,7 +42,7 @@ public enum MessageType {
                 return type;
             }
         }
-        throw new IllegalArgumentException("Unknown message type code: " + code);
+        throw new ApiException(ErrorCode.BAD_REQUEST, "알 수 없는 메시지 타입 코드: " + code);
     }
 
     /**

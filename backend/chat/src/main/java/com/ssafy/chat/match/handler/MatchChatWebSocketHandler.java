@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.chat.common.dto.UserSessionInfo;
 import com.ssafy.chat.common.enums.ChatRoomType;
 import com.ssafy.chat.common.enums.MessageType;
+import com.ssafy.chat.global.constants.ErrorCode;
+import com.ssafy.chat.global.exception.ApiException;
 import com.ssafy.chat.match.dto.MatchChatMessage;
 import com.ssafy.chat.match.service.MatchChatService;
 import lombok.RequiredArgsConstructor;
@@ -154,7 +156,7 @@ public class MatchChatWebSocketHandler implements WebSocketHandler {
         String matchId = (String) attributes.get("matchId");
 
         if (userId == null || userName == null || matchId == null) {
-            throw new IllegalArgumentException("필수 세션 정보 누락");
+            throw new ApiException(ErrorCode.BAD_REQUEST, "필수 세션 정보가 누락되었습니다.");
         }
 
         return new UserSessionInfo(userId, userName, matchId);

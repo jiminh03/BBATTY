@@ -89,7 +89,7 @@ public class WatchChatAuthController {
 
     private String extractTokenFromHeader(String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new SecurityException("Authorization 헤더가 누락되었거나 형식이 올바르지 않습니다.");
+            throw new ApiException(ErrorCode.UNAUTHORIZED, "Authorization 헤더가 누락되었거나 형식이 올바르지 않습니다.");
         }
         return authHeader.substring(7);
     }

@@ -1,6 +1,8 @@
 package com.ssafy.chat.watch.service;
 
 import com.ssafy.chat.common.util.JsonUtils;
+import com.ssafy.chat.global.constants.ErrorCode;
+import com.ssafy.chat.global.exception.ApiException;
 import com.ssafy.chat.watch.dto.WatchChatMessage;
 import com.ssafy.chat.watch.redis.WatchChatRedisPub;
 import com.ssafy.chat.watch.redis.WatchChatRedisSub;
@@ -204,7 +206,7 @@ public class WatchChatServiceImpl implements WatchChatService {
                     
         } catch (Exception e) {
             log.error("직관 채팅방 생성 실패: roomId={}", roomId, e);
-            throw new RuntimeException("직관 채팅방 생성 실패", e);
+            throw new ApiException(ErrorCode.SERVER_ERROR, "직관 채팅방 생성에 실패했습니다.");
         }
     }
 }

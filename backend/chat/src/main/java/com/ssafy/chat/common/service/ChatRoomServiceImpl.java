@@ -1,6 +1,8 @@
 package com.ssafy.chat.common.service;
 
 import com.ssafy.chat.common.infrastructure.ChatRoomRedisManager;
+import com.ssafy.chat.global.constants.ErrorCode;
+import com.ssafy.chat.global.exception.ApiException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -39,7 +41,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
                     
         } catch (Exception e) {
             log.error("채팅방 입장 처리 실패 - roomId: {}, sessionId: {}", roomId, sessionId, e);
-            throw new RuntimeException("채팅방 입장에 실패했습니다.", e);
+            throw new ApiException(ErrorCode.SERVER_ERROR, "채팅방 입장에 실패했습니다.");
         }
     }
 
@@ -65,7 +67,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
             return chatRoomRedisManager.getRoomUsers(roomId);
         } catch (Exception e) {
             log.error("채팅방 사용자 목록 조회 실패 - roomId: {}", roomId, e);
-            throw new RuntimeException("사용자 목록 조회에 실패했습니다.", e);
+            throw new ApiException(ErrorCode.SERVER_ERROR, "사용자 목록 조회에 실패했습니다.");
         }
     }
 
@@ -109,7 +111,7 @@ public class ChatRoomServiceImpl implements ChatRoomService {
             
         } catch (Exception e) {
             log.error("채팅방 생성 실패 - roomId: {}, roomType: {}", roomId, roomType, e);
-            throw new RuntimeException("채팅방 생성에 실패했습니다.", e);
+            throw new ApiException(ErrorCode.SERVER_ERROR, "채팅방 생성에 실패했습니다.");
         }
     }
 }

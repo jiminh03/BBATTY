@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.chat.common.dto.UserSessionInfo;
 import com.ssafy.chat.common.enums.ChatRoomType;
 import com.ssafy.chat.common.enums.MessageType;
+import com.ssafy.chat.global.constants.ErrorCode;
+import com.ssafy.chat.global.exception.ApiException;
 import com.ssafy.chat.watch.dto.WatchChatMessage;
 import com.ssafy.chat.watch.service.WatchChatService;
 import lombok.RequiredArgsConstructor;
@@ -157,7 +159,7 @@ public class WatchChatWebSocketHandler implements WebSocketHandler {
             // 채팅 타입 확인
             String chatType = (String) attributes.get("chatType");
             if (!"watch".equals(chatType)) {
-                throw new IllegalArgumentException("Invalid chat type for watch chat: " + chatType);
+                throw new ApiException(ErrorCode.BAD_REQUEST, "잘못된 채팅 타입입니다: " + chatType);
             }
 
             // HandshakeInterceptor에서 설정한 속성들 추출
@@ -166,7 +168,7 @@ public class WatchChatWebSocketHandler implements WebSocketHandler {
             Boolean isAttendanceVerified = (Boolean) attributes.get("isAttendanceVerified");
 
             if (teamId == null || gameId == null) {
-                throw new IllegalArgumentException("Required session attributes missing");
+                throw new ApiException(ErrorCode.BAD_REQUEST, "필수 세션 정보가 누락되었습니다.");
             }
 
             // 직관 채팅은 완전 무명이므로 더미 사용자 정보 생성
@@ -180,7 +182,7 @@ public class WatchChatWebSocketHandler implements WebSocketHandler {
 
         } catch (Exception e) {
             log.error("관전 채팅 세션 정보 생성 실패", e);
-            throw new IllegalArgumentException("Failed to create user session info: " + e.getMessage());
+            throw new ApiException(ErrorCode.SERVER_ERROR, "사용자 세션 생성 실패: " + e.getMessage());
         }
     }
 

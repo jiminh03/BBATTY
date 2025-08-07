@@ -165,7 +165,7 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
             
         } catch (Exception e) {
             log.error("매칭 채팅방 목록 조회 실패", e);
-            throw new RuntimeException("매칭 채팅방 목록 조회에 실패했습니다.", e);
+            throw new ApiException(ErrorCode.SERVER_ERROR, "매칭 채팅방 목록 조회에 실패했습니다.");
         }
     }
     

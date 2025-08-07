@@ -91,7 +91,7 @@ class MatchChatRoomControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(validCreateRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.matchId").value("match_1"))
                 .andExpect(jsonPath("$.data.matchTitle").value("테스트 매칭방"))
                 .andExpect(jsonPath("$.data.gameId").value(1))
@@ -150,7 +150,7 @@ class MatchChatRoomControllerTest {
                         .param("limit", "10")
                         .param("keyword", "테스트"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.rooms").isArray())
                 .andExpect(jsonPath("$.data.rooms[0].matchId").value("match_1"))
                 .andExpect(jsonPath("$.data.count").value(1))
@@ -176,7 +176,7 @@ class MatchChatRoomControllerTest {
         mockMvc.perform(get("/api/match-chat-rooms")
                         .param("limit", "10"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.rooms").isEmpty())
                 .andExpect(jsonPath("$.data.count").value(0))
                 .andExpect(jsonPath("$.data.hasMore").value(false));
@@ -192,7 +192,7 @@ class MatchChatRoomControllerTest {
         // when & then
         mockMvc.perform(get("/api/match-chat-rooms/{matchId}", matchId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.matchId").value(matchId))
                 .andExpect(jsonPath("$.data.matchTitle").value("테스트 매칭방"))
                 .andExpect(jsonPath("$.data.status").value("ACTIVE"));
