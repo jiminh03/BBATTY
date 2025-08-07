@@ -15,12 +15,12 @@ import java.util.Map;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ChatAuthRequest {
-    
+
     private String chatType;        // "MATCH" or "WATCH"
     private String action;          // "CREATE" or "JOIN"
     private String roomId;          // 채팅방 ID (참여 시)
-    private Long matchId;           // 경기 ID
-    private Long teamId;            // 팀 ID (모든 채팅 유형에서 필요)
-    private String requestId;       // 요청 추적용 고유 ID
-    private Map<String, Object> roomInfo; // 채팅방 정보 (chat 서버에서 전달)
+    private Long gameId;           // 게임 ID (matchId 대신)
+    private Long teamId;           // 팀 ID
+    private String requestId;      // 요청 추적용 고유 ID
+    private Map<String, Object> roomInfo; // 채팅방 정보
 }

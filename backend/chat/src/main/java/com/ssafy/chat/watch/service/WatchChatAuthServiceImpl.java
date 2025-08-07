@@ -39,13 +39,10 @@ public class WatchChatAuthServiceImpl implements WatchChatAuthService {
         Map<String, Object> roomInfo = createRoomInfo(request);
         
         // 2. bbatty 서버에 인증 요청 전송
-        String requestId = chatAuthRequestProducer.sendAuthRequest(
+        String requestId = chatAuthRequestProducer.sendWatchChatJoinRequest(
             jwtToken, 
-            "WATCH", 
-            "JOIN", 
             request.getGameId(), 
-            roomInfo,
-            null // 익명 채팅이므로 nickname 없음
+            roomInfo
         );
         
         if (requestId == null) {

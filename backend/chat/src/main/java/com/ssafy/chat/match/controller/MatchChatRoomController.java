@@ -7,6 +7,8 @@ import com.ssafy.chat.global.response.ApiResponse;
 import com.ssafy.chat.match.dto.*;
 import com.ssafy.chat.match.service.MatchChatRoomService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
@@ -17,6 +19,7 @@ import jakarta.validation.Valid;
 @RestController
 @RequestMapping("/api/match-chat-rooms")
 @RequiredArgsConstructor
+@Slf4j
 public class MatchChatRoomController {
 
     private final MatchChatRoomService matchChatRoomService;
@@ -26,9 +29,27 @@ public class MatchChatRoomController {
      */
     @PostMapping
     public ResponseEntity<ApiResponse<MatchChatRoomCreateResponse>> createMatchChatRoom(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
             @Valid @RequestBody MatchChatRoomCreateRequest request) {
-        
-        MatchChatRoomCreateResponse response = matchChatRoomService.createMatchChatRoom(request);
+
+        // 디버깅 로그 추가
+        log.info("=== 매칭 채팅방 생성 요청 ===");
+        log.info("Authorization header: [{}]", authHeader);
+        log.info("Authorization header length: {}", authHeader != null ? authHeader.length() : "null");
+        log.info("Request body: {}", request);
+
+        // JWT 토큰 추출
+        String jwtToken = null;
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            jwtToken = authHeader.substring(7);
+            log.info("Extracted JWT token: [{}...]", jwtToken.substring(0, Math.min(20, jwtToken.length())));
+        } else {
+            log.error("Invalid Authorization header format: [{}]", authHeader);
+            throw new ApiException(ErrorCode.UNAUTHORIZED, "JWT 토큰이 필요합니다.");
+        }
+
+        // 서비스 호출
+        MatchChatRoomCreateResponse response = matchChatRoomService.createMatchChatRoom(request, jwtToken);
         return ResponseEntity.ok(ApiResponse.success(SuccessCode.SUCCESS_CREATED, response));
     }
 

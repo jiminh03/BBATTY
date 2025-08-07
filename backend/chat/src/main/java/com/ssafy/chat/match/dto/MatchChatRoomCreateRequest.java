@@ -46,4 +46,9 @@ public class MatchChatRoomCreateRequest {
     @Max(value = 16, message = "최대 16명 이하여야 합니다.")
     private int maxParticipants;
 
+    // 방장 닉네임
+    @NotBlank(message = "닉네임은 필수입니다.")
+    @Size(max = 10, message = "닉네임은 10자를 초과할 수 없습니다.")
+    private String nickname;
+
 }

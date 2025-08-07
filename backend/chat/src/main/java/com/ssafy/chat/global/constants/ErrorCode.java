@@ -28,8 +28,13 @@ public enum ErrorCode {
 
     // KAFKA
     KAFKA_MESSAGE_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "메시지 전송에 실패했어요."),
-    KAFKA_MESSAGE_CONSUME_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "메시지 수신에 실패했어요.");
-
+    KAFKA_MESSAGE_CONSUME_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "메시지 수신에 실패했어요."),
+    // 누락된 것들 추가
+    GAME_NOT_FOUND(HttpStatus.NOT_FOUND, "경기 정보를 찾을 수 없어요."),
+    GAME_FINISHED(HttpStatus.BAD_REQUEST, "이미 종료된 경기예요."),
+    GAME_NOT_LIVE(HttpStatus.BAD_REQUEST, "라이브 중인 경기가 아니에요."),
+    UNAUTHORIZED_TEAM_ACCESS(HttpStatus.FORBIDDEN, "해당 팀에 대한 권한이 없어요."),
+    TEAM_NOT_IN_GAME(HttpStatus.BAD_REQUEST, "해당 팀이 경기에 참여하지 않아요.");
     private final HttpStatus status;
     private final String message;
 }

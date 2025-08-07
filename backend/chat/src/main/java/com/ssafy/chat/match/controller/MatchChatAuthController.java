@@ -30,9 +30,9 @@ public class MatchChatAuthController {
      * 매칭 채팅방 입장 요청
      * JWT 토큰 + 클라이언트 정보로 입장 조건 검증 후 세션 토큰 발급
      */
-    @PostMapping("/join")
+    @PostMapping("/auth/join")
     public ResponseEntity<ApiResponse<MatchChatJoinResponse>> joinMatchChat(
-            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestHeader(value = "Authorization", required = true) String authHeader,
             @Valid @RequestBody MatchChatJoinRequest request) {
         
         log.info("매칭 채팅방 입장 요청 - matchId: {}, nickname: {}, winRate: {}%", 

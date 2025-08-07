@@ -43,7 +43,7 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
     private static final String MATCH_ROOM_LIST_KEY = "match_rooms:list";
     
     @Override
-    public MatchChatRoomCreateResponse createMatchChatRoom(MatchChatRoomCreateRequest request) {
+    public MatchChatRoomCreateResponse createMatchChatRoom(MatchChatRoomCreateRequest request, String jwtToken) {
         try {
             // 1. gameId 유효성 검증
             GameInfo gameInfo = validateGameId(request.getGameId());
@@ -51,10 +51,34 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
                 throw new ApiException(ErrorCode.NOT_FOUND, "존재하지 않는 경기입니다.");
             }
             
-            // 2. 경기 ID 기반으로 매칭 채팅방 ID 자동 생성
+            // 2. bbatty 서버에 방 생성 인증 요청
+            Map<String, Object> roomCreateInfo = new HashMap<>();
+            roomCreateInfo.put("matchTitle", request.getMatchTitle());
+            roomCreateInfo.put("matchDescription", request.getMatchDescription());
+            roomCreateInfo.put("teamId", request.getTeamId());
+            roomCreateInfo.put("minAge", request.getMinAge());
+            roomCreateInfo.put("maxAge", request.getMaxAge());
+            roomCreateInfo.put("genderCondition", request.getGenderCondition());
+            roomCreateInfo.put("maxParticipants", request.getMaxParticipants());
+            
+            String requestId = chatAuthRequestProducer.sendMatchChatCreateRequest(
+                jwtToken, request.getGameId(), roomCreateInfo, request.getNickname());
+            
+            if (requestId == null) {
+                throw new ApiException(ErrorCode.SERVER_ERROR, "bbatty 서버 인증 요청 전송 실패");
+            }
+            
+            // 3. bbatty 서버 응답 대기
+            Map<String, Object> authResult = chatAuthResultService.waitForAuthResult(requestId, 10000);
+            if (authResult == null || !(Boolean) authResult.get("success")) {
+                String errorMessage = (String) authResult.get("errorMessage");
+                throw new ApiException(ErrorCode.UNAUTHORIZED, "방 생성 인증 실패: " + errorMessage);
+            }
+            
+            // 4. 경기 ID 기반으로 매칭 채팅방 ID 자동 생성
             String matchId = generateMatchId(request.getGameId());
             
-            // 매칭방 생성
+            // 5. 매칭방 생성
             MatchChatRoom matchRoom = MatchChatRoom.builder()
                     .matchId(matchId)
                     .gameId(request.getGameId())
@@ -72,15 +96,15 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
                     .ownerId("dummy_user_123") // TODO: 실제 사용자 ID로 변경
                     .build();
             
-            // 3. TTL 계산 (경기 날짜 자정까지)
+            // 6. TTL 계산 (경기 날짜 자정까지)
             Duration ttl = calculateTTL(gameInfo.getDateTime());
             
-            // 4. Redis에 TTL과 함께 저장
+            // 7. Redis에 TTL과 함께 저장
             String roomKey = MATCH_ROOM_PREFIX + matchId;
             String roomJson = objectMapper.writeValueAsString(matchRoom);
             redisTemplate.opsForValue().set(roomKey, roomJson, ttl);
             
-            // 5. 매칭방 목록에도 TTL과 함께 추가
+            // 8. 매칭방 목록에도 TTL과 함께 추가
             long score = System.currentTimeMillis();
             redisTemplate.opsForZSet().add(MATCH_ROOM_LIST_KEY, matchId, score);
             redisTemplate.expire(MATCH_ROOM_LIST_KEY, ttl);

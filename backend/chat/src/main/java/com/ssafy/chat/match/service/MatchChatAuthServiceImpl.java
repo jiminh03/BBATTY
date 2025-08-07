@@ -42,10 +42,8 @@ public class MatchChatAuthServiceImpl implements MatchChatAuthService {
         Map<String, Object> roomInfo = createRoomInfo(request);
         
         // 3. bbatty 서버에 인증 요청 전송
-        String requestId = chatAuthRequestProducer.sendAuthRequest(
+        String requestId = chatAuthRequestProducer.sendMatchChatJoinRequest(
             jwtToken, 
-            "MATCH", 
-            "JOIN", 
             request.getMatchId(), 
             roomInfo,
             request.getNickname()
@@ -67,7 +65,25 @@ public class MatchChatAuthServiceImpl implements MatchChatAuthService {
         Boolean success = (Boolean) authResult.get("success");
         if (!success) {
             String errorMessage = (String) authResult.get("errorMessage");
-            throw new ApiException(ErrorCode.UNAUTHORIZED, "인증 실패: " + errorMessage);
+
+            // ✅ 실제 오류 내용에 따라 적절한 ErrorCode 사용
+            if (errorMessage.contains("경기 정보를 찾을 수 없어요") ||
+                    errorMessage.contains("GAME_NOT_FOUND")) {
+                throw new ApiException(ErrorCode.GAME_NOT_FOUND, errorMessage);
+            } else if (errorMessage.contains("경기가 종료") ||
+                    errorMessage.contains("GAME_FINISHED")) {
+                throw new ApiException(ErrorCode.GAME_FINISHED, errorMessage);
+            } else if (errorMessage.contains("토큰") ||
+                    errorMessage.contains("인증") ||
+                    errorMessage.contains("UNAUTHORIZED")) {
+                throw new ApiException(ErrorCode.UNAUTHORIZED, errorMessage);
+            } else if (errorMessage.contains("팀") ||
+                    errorMessage.contains("TEAM")) {
+                throw new ApiException(ErrorCode.UNAUTHORIZED_TEAM_ACCESS, errorMessage);
+            } else {
+                // 알 수 없는 오류는 서버 오류로 처리
+                throw new ApiException(ErrorCode.SERVER_ERROR, "인증 실패: " + errorMessage);
+            }
         }
         
         // 5. 인증 성공 시 세션 생성

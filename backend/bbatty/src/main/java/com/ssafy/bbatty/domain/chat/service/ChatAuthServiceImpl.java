@@ -102,19 +102,19 @@ public class ChatAuthServiceImpl implements ChatAuthService {
             throw new ApiException(ErrorCode.INVALID_INPUT_VALUE);
         }
     }
-    
+
     /**
      * 매칭 채팅 권한 검증 (간단한 검증만, 상세 로직은 chat 서비스에서 처리)
      */
     private void validateMatchChatPermission(ChatAuthRequest request) {
-        if (request.getMatchId() == null) {
+        if (request.getGameId() == null) {  // ⭐ getMatchId() → getGameId()
             throw new ApiException(ErrorCode.INVALID_INPUT_VALUE);
         }
-        
+
         // 경기 존재 여부만 확인
-        Game game = gameRepository.findById(request.getMatchId())
+        Game game = gameRepository.findById(request.getGameId())
                 .orElseThrow(() -> new ApiException(ErrorCode.GAME_NOT_FOUND));
-        
+
         // 기본적인 경기 상태 확인
         if (game.getStatus() == GameStatus.FINISHED) {
             throw new ApiException(ErrorCode.GAME_FINISHED);
@@ -124,48 +124,43 @@ public class ChatAuthServiceImpl implements ChatAuthService {
     /**
      * 직관 채팅 권한 검증 (사용자 팀 == 응원 팀)
      */
-    private void validateWatchChatPermission(Long userTeamId, ChatAuthRequest request) {
-        if (request.getMatchId() == null || request.getRoomInfo() == null) {
+    private void validateWatchChatPermission(Long userTeamId, ChatAuthRequest request){
+        if (request.getGameId() == null || request.getRoomInfo() == null) {  // getMatchId() → getGameId()
             throw new ApiException(ErrorCode.INVALID_INPUT_VALUE);
         }
-        
+
         // roomInfo에서 응원할 팀 정보 추출
         Map<String, Object> roomInfo = request.getRoomInfo();
         Long supportTeamId = ((Number) roomInfo.get("teamId")).longValue();
-        
-        Game game = gameRepository.findById(request.getMatchId())
+
+        Game game = gameRepository.findById(request.getGameId())  // ⭐ getMatchId() → getGameId()
                 .orElseThrow(() -> new ApiException(ErrorCode.GAME_NOT_FOUND));
-        
-        // 경기 상태 확인 (라이브 경기만 직관 가능)
-        if (game.getStatus() != GameStatus.LIVE) {
-            throw new ApiException(ErrorCode.GAME_NOT_LIVE);
-        }
-        
+
         // 응원할 팀이 경기에 참여하는지 확인
         if (!game.getHomeTeamId().equals(supportTeamId) && !game.getAwayTeamId().equals(supportTeamId)) {
             throw new ApiException(ErrorCode.TEAM_NOT_IN_GAME);
         }
-        
+
         // 사용자 팀과 응원 팀이 같은지 확인
         if (!userTeamId.equals(supportTeamId)) {
             throw new ApiException(ErrorCode.UNAUTHORIZED_TEAM_ACCESS);
         }
     }
-    
+
     /**
      * 채팅방 정보 생성
      */
     private ChatAuthResponse.ChatRoomInfo createChatRoomInfo(ChatAuthRequest request) {
         // roomId는 chat 서버에서 생성하므로 여기서는 기본 정보만 설정
         return ChatAuthResponse.ChatRoomInfo.builder()
-                .roomId(request.getRoomId()) // chat 서버에서 생성된 roomId 사용
+                .roomId(request.getRoomId())         // roomId 사용 (최상위 개념)
                 .chatType(request.getChatType())
-                .matchId(request.getMatchId())
+                .gameId(request.getGameId())         // matchId → gameId로 변경
                 .roomName("채팅방")
                 .isNewRoom("CREATE".equals(request.getAction()))
                 .build();
     }
-    
+
     /**
      * 전달받은 정보로 UserInfo 생성
      */
