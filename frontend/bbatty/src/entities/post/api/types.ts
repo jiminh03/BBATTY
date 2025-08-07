@@ -1,5 +1,6 @@
 // entities/post/api/types.ts
 import { PostSortType } from '../../post/model/types'
+import { Post } from '../../post/model/types'
 
 export interface CreatePostPayload {
   title: string
@@ -41,3 +42,20 @@ export interface GetPostsParams {
   size?: number
   teamId?: string
 }
+
+export interface PostListItem {
+  id: number;
+  title: string;
+  nickname: string; // authorNickname 대신 nickname으로 옴
+  createdAt: string;
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
+}
+
+export interface CursorPostListResponse {
+  posts: PostListItem[];
+  hasNext: boolean;
+  nextCursor: number;
+}
+

@@ -1,8 +1,11 @@
+// comment/ui/CommentList.tsx
 import React from 'react'
+import { View, Text, FlatList, Pressable, ActivityIndicator } from 'react-native'
 import { useComments, useDeleteComment } from '../queries/useCommentQueries'
-import { Comment } from '../model/types'
 import { useCommentStore } from '../model/store'
 import { CommentEditForm } from './commentEditForm'
+import { CommentForm } from './CommentForm'
+import { Comment } from '../model/types'
 
 interface CommentListProps {
   postId: string
@@ -11,50 +14,52 @@ interface CommentListProps {
 export const CommentList: React.FC<CommentListProps> = ({ postId }) => {
   const { data, isLoading, isError } = useComments({ postId, page: 0, size: 10 })
   const deleteComment = useDeleteComment()
-  const { editingCommentId, setEditingCommentId } = useCommentStore() // ✅ 컴포넌트 안에서 사용
+  const { editingCommentId, setEditingCommentId } = useCommentStore()
 
-  if (isLoading) return <p>댓글 불러오는 중...</p>
-  if (isError || !data) return <p>댓글을 불러오는 데 실패했습니다.</p>
+  if (isLoading) return <ActivityIndicator size="large" />
+  if (isError || !data) return <Text>댓글을 불러오는 데 실패했습니다.</Text>
+
+  const renderItem = ({ item }: { item: Comment }) => {
+    return (
+      <View style={{ marginBottom: 16 }}>
+        <Text style={{ fontWeight: 'bold' }}>{item.authorNickname}</Text>
+        <Text style={{ color: 'gray', fontSize: 12 }}>
+          {new Date(item.createdAt).toLocaleString()}
+        </Text>
+
+        {editingCommentId === item.id ? (
+          <CommentEditForm
+            commentId={item.id}
+            initialContent={item.content}
+          />
+        ) : (
+          <View style={{ marginTop: 4 }}>
+            <Text>{item.isDeleted ? '(삭제된 댓글입니다)' : item.content}</Text>
+            {item.isMine && !item.isDeleted && (
+              <View style={{ flexDirection: 'row', marginTop: 4 }}>
+                <Pressable onPress={() => setEditingCommentId(item.id)} style={{ marginRight: 12 }}>
+                  <Text style={{ color: 'blue' }}>수정</Text>
+                </Pressable>
+                <Pressable onPress={() => deleteComment.mutate({ commentId: item.id })}>
+                  <Text style={{ color: 'red' }}>삭제</Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
+        )}
+      </View>
+    )
+  }
 
   return (
-    <ul>
-      {data.comments.map((comment: Comment) => (
-        <li key={comment.id}>
-          <div style={{ marginBottom: '4px' }}>
-            <strong>{comment.authorNickname}</strong>
-            <span style={{ marginLeft: '8px', color: '#888' }}>
-              {new Date(comment.createdAt).toLocaleString()}
-            </span>
-          </div>
+    <View style={{ padding: 16 }}>
+      <CommentForm postId={postId} />
 
-          {editingCommentId === comment.id ? (
-            <CommentEditForm
-              commentId={comment.id}
-              initialContent={comment.content}
-            />
-          ) : (
-            <>
-              <div>{comment.content}</div>
-              {comment.isMine && (
-                <div style={{ marginTop: '4px' }}>
-                  <button
-                    onClick={() => setEditingCommentId(comment.id)}
-                    style={{ marginRight: '8px' }}
-                  >
-                    수정
-                  </button>
-                  <button
-                    onClick={() => deleteComment.mutate({ commentId: comment.id })}
-                    style={{ color: 'red' }}
-                  >
-                    삭제
-                  </button>
-                </div>
-              )}
-            </>
-          )}
-        </li>
-      ))}
-    </ul>
+      <FlatList
+        data={data.comments}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+      />
+    </View>
   )
 }

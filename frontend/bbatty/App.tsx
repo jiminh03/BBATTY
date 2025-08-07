@@ -6,7 +6,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider } from './src/shared/styles';
 import { AppInitService } from './src/app/services/initService';
-import AppNavigator from './src/navigation/AppNavigator';
+import { AppNavigator } from './src/navigation/AppNavigator';
+import { NavigationContainer } from '@react-navigation/native';
 /*
 import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
 import { ToastProvider } from '@/shared/components/ToastProvider';
@@ -64,10 +65,12 @@ export default function App() {
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider>
+            <NavigationContainer>
+                <AppNavigator />
+            </NavigationContainer>
             {/* <ErrorBoundary>
               <LoadingProvider>
                 <ToastProvider> */}
-            <AppNavigator />
             {/* </ToastProvider>
               </LoadingProvider>
             </ErrorBoundary> */}
