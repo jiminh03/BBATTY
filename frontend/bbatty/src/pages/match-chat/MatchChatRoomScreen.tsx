@@ -138,7 +138,11 @@ export const MatchChatRoomScreen = () => {
           Alert.alert(
             '채팅 서버 연결 실패', 
             'WebSocket 서버(8084 포트)가 실행되지 않았습니다.\n\n백엔드 채팅 서버를 먼저 실행해주세요.',
-            [{ text: '확인', onPress: () => navigation.goBack() }]
+            [{ text: '확인', onPress: () => {
+              if (navigation.canGoBack()) {
+                navigation.goBack();
+              }
+            }}]
           );
         }, 1000);
       };
@@ -277,7 +281,11 @@ export const MatchChatRoomScreen = () => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
+          <TouchableOpacity onPress={() => {
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            }
+          }}>
             <Text style={styles.backButton}>← 나가기</Text>
           </TouchableOpacity>
           <Text style={styles.title}>{room.matchTitle}</Text>

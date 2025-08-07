@@ -131,7 +131,9 @@ export const CreateMatchChatRoomScreen = () => {
             {
               text: '확인',
               onPress: () => {
-                navigation.goBack();
+                if (navigation.canGoBack()) {
+                  navigation.goBack();
+                }
                 // 필요시 생성된 방으로 바로 이동
                 // navigation.navigate('MatchChatRoomDetail', { room: response.data.data });
               },
@@ -160,7 +162,11 @@ export const CreateMatchChatRoomScreen = () => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
+          <TouchableOpacity onPress={() => {
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            }
+          }}>
             <Text style={styles.cancelButton}>취소</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>채팅방 만들기</Text>

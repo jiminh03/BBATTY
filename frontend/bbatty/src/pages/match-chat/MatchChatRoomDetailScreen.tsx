@@ -101,7 +101,11 @@ export const MatchChatRoomDetailScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => {
+          if (navigation.canGoBack()) {
+            navigation.goBack();
+          }
+        }}>
           <Text style={styles.backButton}>← 뒤로</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>채팅방 정보</Text>

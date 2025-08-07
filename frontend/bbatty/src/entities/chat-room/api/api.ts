@@ -5,7 +5,8 @@ import {
   WatchChatJoinRequest,
   MatchChatRoomsResponse,
   CreateMatchChatRoomRequest,
-  CreateMatchChatRoomResponse
+  CreateMatchChatRoomResponse,
+  MatchChatRoom
 } from './types';
 
 // 임시 목 데이터
