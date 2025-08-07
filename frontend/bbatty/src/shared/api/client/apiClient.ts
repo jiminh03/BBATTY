@@ -28,9 +28,16 @@ interface CustomAxiosInstance extends AxiosInstance {
   ): Promise<R>;
 }
 
-// 메인 클라
+// 메인 클라 (일반 API용 - 8080 포트)
 const apiClient: CustomAxiosInstance = axios.create({
   baseURL: API_CONFIG.baseURL,
+  timeout: API_CONFIG.timeout.default,
+  headers: API_CONFIG.headers,
+}) as CustomAxiosInstance;
+
+// 채팅 API용 클라 (8084 포트)
+const chatApiClient: CustomAxiosInstance = axios.create({
+  baseURL: API_CONFIG.chatBaseURL,
   timeout: API_CONFIG.timeout.default,
   headers: API_CONFIG.headers,
 }) as CustomAxiosInstance;
@@ -52,9 +59,11 @@ const applyTokenToClients = (token: string | null) => {
   if (token) {
     const authHeader = `Bearer ${token}`;
     apiClient.defaults.headers.common[AUTHORIZATION] = authHeader;
+    chatApiClient.defaults.headers.common[AUTHORIZATION] = authHeader;
     uploadClient.defaults.headers.common[AUTHORIZATION] = authHeader;
   } else {
     delete apiClient.defaults.headers.common[AUTHORIZATION];
+    delete chatApiClient.defaults.headers.common[AUTHORIZATION];
     delete uploadClient.defaults.headers.common[AUTHORIZATION];
   }
 };
@@ -66,10 +75,11 @@ const handleUnauthorized = async () => {
 };
 
 export const initializeApiClient = async (): Promise<void> => {
-  const hardcodedtoken = 'JWT토큰';
+  const hardcodedtoken = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJzdWIiOiIxIiwiaXNzIjoiYmJhdHR5IiwiaWF0IjoxNzU0NDAzNzgyLCJleHAiOjE3NTU2MTMzODIsImFnZSI6MjgsImdlbmRlciI6IkZFTUFMRSIsInRlYW1JZCI6MX0.2EQSS7gllsBQyVSAVyqQOkBhz-d5g7UNePyfFUWjswaayMtvfLWIZ_okwb_br54C-za4a670of62KHbxl8hyOw';
   applyTokenToClients(hardcodedtoken);
 
   setupInterceptors(apiClient, handleUnauthorized);
+  setupInterceptors(chatApiClient, handleUnauthorized);
   setupInterceptors(uploadClient, handleUnauthorized);
 
   /*
@@ -85,4 +95,4 @@ export const updateClientsToken = async (token: string | null) => {
   applyTokenToClients(token);
 };
 
-export { apiClient, uploadClient };
+export { apiClient, chatApiClient, uploadClient };

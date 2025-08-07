@@ -16,12 +16,12 @@ export type RootStackParamList = {
 // 인증 스택 파라미터
 export type AuthStackParamList = {
   userInfo: any;
-  Landing: undefined;
-  Login: undefined;
   TeamSelect: {
     nickname: string;
   };
-  SignUp: undefined;
+  SignUp: {
+    teamId: number;
+  };
 };
 
 // 메인 탭 파라미터
@@ -73,6 +73,45 @@ export type ChatStackParamList = {
   };
   MatchingDetail: {
     matchingId: string;
+  };
+  // 매치 채팅 관련
+  MatchChatRoomList: undefined;
+  CreateMatchChatRoom: undefined;
+  MatchChatRoomDetail: {
+    room: {
+      matchId: string;
+      gameId: string | null;
+      matchTitle: string;
+      matchDescription: string;
+      teamId: string;
+      minAge: number;
+      maxAge: number;
+      genderCondition: 'ALL' | 'MALE' | 'FEMALE';
+      maxParticipants: number;
+      currentParticipants: number;
+      createdAt: string;
+      status: 'ACTIVE' | 'INACTIVE';
+      websocketUrl: string;
+    };
+  };
+  MatchChatRoom: {
+    room: {
+      matchId: string;
+      gameId: string | null;
+      matchTitle: string;
+      matchDescription: string;
+      teamId: string;
+      minAge: number;
+      maxAge: number;
+      genderCondition: 'ALL' | 'MALE' | 'FEMALE';
+      maxParticipants: number;
+      currentParticipants: number;
+      createdAt: string;
+      status: 'ACTIVE' | 'INACTIVE';
+      websocketUrl: string;
+    };
+    websocketUrl: string;
+    sessionToken: string;
   };
 };
 

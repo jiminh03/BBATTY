@@ -1,15 +1,45 @@
-import { FlatList, View } from 'react-native';
-import { PostItem } from '../../entities/post/ui/PostItem'; // 경로는 네 프로젝트에 맞게
-import { Post } from '../../entities/post/model/types';
-import { dummyPosts } from './dummyPosts';
+import { FlatList, View, ActivityIndicator, Text } from 'react-native';
+import { PostItem } from '../../entities/post/ui/PostItem';
+import { usePostListQuery } from '../../entities/post/queries/usePostQueries';
 
 export const PostListScreen = () => {
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isLoading,
+    isError,
+    error,
+  } = usePostListQuery();
+
+  const posts = data?.pages.flatMap((page) => page.posts) ?? [];
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  if (isError) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>오류 발생: {(error as Error).message}</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1 }}>
       <FlatList
-        data={dummyPosts}
-        keyExtractor={(item) => item.id}
+        data={posts}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => <PostItem post={item} />}
+        onEndReached={() => {
+          if (hasNextPage) fetchNextPage();
+        }}
+        onEndReachedThreshold={0.5}
       />
     </View>
   );
