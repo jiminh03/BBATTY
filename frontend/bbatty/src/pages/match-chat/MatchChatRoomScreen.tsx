@@ -18,6 +18,7 @@ import { useMatchChatWebSocket } from '../../features/match-chat';
 import type { MatchChatRoom } from '../../entities/chat-room/api/types';
 import type { ChatMessage, MatchChatMessage, SystemMessage } from '../../features/match-chat';
 import type { ChatStackParamList } from '../../navigation/types';
+import { useUserStore } from '../../entities/user/model/userStore';
 
 type NavigationProp = StackNavigationProp<ChatStackParamList>;
 type RoutePropType = RouteProp<ChatStackParamList, 'MatchChatRoom'>;
@@ -28,7 +29,8 @@ export const MatchChatRoomScreen = () => {
   const { room, websocketUrl, sessionToken } = route.params;
   
   const [currentMessage, setCurrentMessage] = useState('');
-  const [currentUserId] = useState<string>('3658'); // 테스트용 고정 ID
+  const { currentUser } = useUserStore();
+  const currentUserId = currentUser?.id || '3658'; // fallback to test ID
   
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -93,6 +95,18 @@ export const MatchChatRoomScreen = () => {
       websocket.onopen = () => {
         setConnectionStatus('CONNECTED');
         console.log('웹소켓 연결 성공');
+        
+        // 서버에 사용자 인증 정보 전송
+        const authData = {
+          matchId: room.matchId,
+          nickname: currentUser?.nickname || 'Anonymous',
+          winRate: 75, // TODO: 실제 승률 데이터로 대체
+          profileImgUrl: currentUser?.profileImg || '',
+          isWinFairy: false // TODO: 실제 승부요정 여부로 대체
+        };
+        
+        websocket.send(JSON.stringify(authData));
+        console.log('사용자 인증 정보 전송:', authData);
       };
 
       websocket.onmessage = (event) => {

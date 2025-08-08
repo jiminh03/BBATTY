@@ -18,6 +18,8 @@ export type AuthStackParamList = {
   TeamSelect: undefined;
   SignUp: {
     teamId: number;
+    //추가
+    onSignUpComplete?: () => void;
   };
 };
 
@@ -34,7 +36,7 @@ export type HomeStackParamList = {
   Home: undefined;
   PostForm: undefined;
   PostList: {
-    teamId?: number;
+    teamId: number;
   };
   PostDetail: {
     postId: number;

@@ -60,8 +60,8 @@ export const CreateMatchChatRoomScreen = () => {
     try {
       setGamesLoading(true);
       const response = await gameApi.getGames();
-      if (response.data.status === 'SUCCESS') {
-        setGamesByDate(response.data.data);
+      if (response.status === 'SUCCESS') {
+        setGamesByDate(response.data);
       }
     } catch (error) {
       console.error('경기 목록 로드 실패:', error);
@@ -123,7 +123,7 @@ export const CreateMatchChatRoomScreen = () => {
       setLoading(true);
       const response = await chatRoomApi.createMatchChatRoom(formData);
       
-      if (response.data.status === 'SUCCESS') {
+      if (response.status === 'SUCCESS') {
         Alert.alert(
           '성공',
           '채팅방이 생성되었습니다!',
@@ -135,13 +135,13 @@ export const CreateMatchChatRoomScreen = () => {
                   navigation.goBack();
                 }
                 // 필요시 생성된 방으로 바로 이동
-                // navigation.navigate('MatchChatRoomDetail', { room: response.data.data });
+                // navigation.navigate('MatchChatRoomDetail', { room: response.data });
               },
             },
           ]
         );
       } else {
-        Alert.alert('오류', response.data.message || '채팅방 생성에 실패했습니다.');
+        Alert.alert('오류', response.message || '채팅방 생성에 실패했습니다.');
       }
     } catch (error) {
       console.error('채팅방 생성 실패:', error);

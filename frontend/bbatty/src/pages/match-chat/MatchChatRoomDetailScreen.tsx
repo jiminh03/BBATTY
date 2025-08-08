@@ -68,14 +68,14 @@ export const MatchChatRoomDetailScreen = () => {
       setShowJoinModal(false);
       
       // 채팅방으로 이동
-      if (response.data.status === 'SUCCESS') {
+      if (response.status === 'SUCCESS') {
         navigation.navigate('MatchChatRoom', { 
           room,
           websocketUrl: response.data.websocketUrl,
           sessionToken: response.data.sessionToken
         });
       } else {
-        Alert.alert('오류', response.data.message || '채팅방 참여에 실패했습니다.');
+        Alert.alert('오류', response.message || '채팅방 참여에 실패했습니다.');
       }
       
     } catch (error) {

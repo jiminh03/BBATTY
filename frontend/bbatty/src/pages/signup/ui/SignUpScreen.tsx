@@ -8,20 +8,25 @@ import { ProfileForm, NicknameConflictModal } from '../../../features/user-profi
 import { styles } from './SignUpScreen.style';
 import { extractData, tokenManager } from '../../../shared';
 import { useAuthStore } from '../../../entities/auth/model/authStore';
+import { useUserStore } from '../../../entities/user/model/userStore';
 import { ProfileFormData } from '../../../features/user-profile/model/profileTypes';
 import { RegisterRequest } from '../../../entities/auth';
 import { navigationRef } from '../../../navigation/navigationRefs';
 import { MainTabParamList } from '../../../navigation/types';
 
-type Props = AuthStackScreenProps<'SignUp'>;
+type Props = AuthStackScreenProps<'SignUp'> & {
+  //추가
+  onSignUpComplete?: () => void;
+};
 
-export default function SignUpScreen({ route }: Props) {
+export default function SignUpScreen({ route, onSignUpComplete }: Props) {
   const navigation = useNavigation<AuthStackScreenProps<'SignUp'>['navigation']>();
   const insets = useSafeAreaInsets();
   const [showConflictModal, setShowConflictModal] = useState(false);
 
   const teamId = route.params?.teamId;
   const { kakaoUserInfo, kakaoAccessToken } = useAuthStore();
+  const { setCurrentUser } = useUserStore();
 
   // 회원가입 완료
   const handleSubmit = async (data: ProfileFormData) => {
@@ -50,22 +55,33 @@ export default function SignUpScreen({ route }: Props) {
       const response = await authApi.signup(registerData);
         console.log(JSON.stringify(response));
         
-        if(response.status !== 'SUCCESS') return;
+        if(response.data.status !== 'SUCCESS') return;
         
 
       // 토큰들 저장
       await Promise.all([
-        tokenManager.setToken(response.data.tokens.accessToken),
-        tokenManager.setRefreshToken(response.data.tokens.refreshToken),
+        tokenManager.setToken(response.data.data.tokens.accessToken),
+        tokenManager.setRefreshToken(response.data.data.tokens.refreshToken),
       ]);
+
+      // 사용자 정보 저장
+      setCurrentUser({
+        id: response.data.data.userProfile.userId.toString(),
+        nickname: response.data.data.userProfile.nickname,
+        profileImg: response.data.data.userProfile.profileImg || '',
+        teamId: response.data.data.userProfile.teamId,
+        teamName: response.data.data.userProfile.teamName,
+        introduction: response.data.data.userProfile.introduction || '',
+        age: response.data.data.userProfile.age,
+        gender: response.data.data.userProfile.gender,
+      });
 
       Alert.alert('성공', '회원가입이 완료되었습니다');
 
-      // 루트 네비게이터 레벨에서 리셋
-      navigationRef.reset({
-        index: 0,
-        routes: [{ name: 'MainTabs' }],
-      });
+      // onSignUpComplete 콜백 호출하여 인증 상태 변경
+      if (onSignUpComplete) {
+        onSignUpComplete();
+      }
     } catch (error: any) {
       console.log(error);
       // // 닉네임 중복 에러 처리 <= 이부분수정해야함
