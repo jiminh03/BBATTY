@@ -19,9 +19,9 @@ public class PostEventKafkaProducer {
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
     
-    private static final String POST_LIKE_TOPIC = "post-like-event";
-    private static final String POST_VIEW_TOPIC = "post-view-event"; 
-    private static final String POST_COMMENT_TOPIC = "post-comment-event";
+    private static final String POST_LIKE_TOPIC = "post-like-events";
+    private static final String POST_VIEW_TOPIC = "post-view-events"; 
+    private static final String POST_COMMENT_TOPIC = "post-comment-events";
     
     /**
      * 게시물 조회 이벤트를 Kafka로 전송
