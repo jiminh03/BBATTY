@@ -48,7 +48,7 @@ interface ApiConfig {
 }
 
 export const API_CONFIG: ApiConfig = {
-  baseURL: Platform.OS === 'android' ? 'http://10.0.2.2:8080' : 'http://localhost:8080', // 일반 API 포트
+  baseURL:'http://i13a403.p.ssafy.io:8080/',// Platform.OS === 'android' ? 'http://10.0.2.2:8080' : 'http://localhost:8080', // 일반 API 포트
   chatBaseURL: Platform.OS === 'android' ? 'http://10.0.2.2:8084' : 'http://localhost:8084', // 채팅 API 포트
   socketUrl: Platform.OS === 'android' ? 'ws://10.0.2.2:8084' : 'ws://localhost:8084',
 

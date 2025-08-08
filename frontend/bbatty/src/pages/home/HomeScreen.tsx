@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
 import { HomeStackScreenProps } from '../../navigation/types';
+import { MaterialIcons } from '@expo/vector-icons';
 
 type Props = HomeStackScreenProps<'Home'>;
 
@@ -10,6 +11,14 @@ export default function HomeScreen({ navigation, route }: Props) {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>BBATTY</Text>
         <Text style={styles.headerSubtitle}>야구 팬들의 소통 공간</Text>
+      
+      <TouchableOpacity
+          style={styles.penButton}
+          onPress={() => navigation.navigate('PostForm')}
+        >
+          <MaterialIcons name="edit" size={24} color="#fff" />
+        </TouchableOpacity>
+      
       </View>
       
       <ScrollView style={styles.content}>
@@ -142,5 +151,13 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+   penButton: {
+    position: 'absolute',
+    right: 20,
+    top: 20,
+    backgroundColor: '#005BBB',
+    padding: 8,
+    borderRadius: 20,
   },
 });
