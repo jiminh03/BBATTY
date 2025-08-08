@@ -45,11 +45,8 @@ public class RedisKey {
     /** 사용자 승률 캐시: stats:user:winrate:{user_id} */
     public static final String STATS_USER_WINRATE = "stats:user:winrate:";
 
-    /** 사용자 현재 직관 연승: stats:user:win_streak:{user_id} */
-    public static final String STATS_USER_WIN_STREAK = "stats:user:win_streak:";
-
-    /** 사용자 최장 직관 연승: stats:user:max_streak:{user_id} */
-    public static final String STATS_USER_MAX_STREAK = "stats:user:max_streak:";
+    /** 사용자 연승 통계 (현재/최장/시즌별): stats:user:streak:{user_id} */
+    public static final String STATS_USER_STREAK = "stats:user:streak:";
 
     /** 사용자 세부 통계: stats:user:detailed:{user_id}:{season} (Hash) */
     public static final String STATS_USER_DETAILED = "stats:user:detailed:";
