@@ -70,4 +70,14 @@ public interface WatchChatService {
      * 직관 채팅방 생성 (Redis에 방 정보 저장)
      */
     void createWatchChatRoom(String roomId, Long gameId, Long teamId, String teamName);
+    
+    /**
+     * 관전 채팅방 목록 조회
+     */
+    Map<String, Object> getWatchChatRooms();
+    
+    /**
+     * 특정 관전 채팅방 정보 조회
+     */
+    Map<String, Object> getWatchChatRoom(String roomId);
 }

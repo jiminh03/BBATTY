@@ -68,7 +68,7 @@ public class MatchChatKafkaProducer {
     /**
      * 사용자 입장 이벤트 발송
      */
-    public void sendUserJoinEvent(String matchId, String userId, String userName){
+    public void sendUserJoinEvent(String matchId, Long userId, String userName){
         Map<String, Object> joinEvent = Map.of(
                 "messageType", "USER_JOIN",
                 "roomId", matchId,
@@ -83,7 +83,7 @@ public class MatchChatKafkaProducer {
     /**
      * 사용자 퇴장 이벤트 발송
      */
-    public void sendUserLeaveEvent(String matchId, String userId, String userName){
+    public void sendUserLeaveEvent(String matchId, Long userId, String userName){
         Map<String, Object> leaveEvent = Map.of(
                 "messageType", "USER_LEAVE",
                 "roomId", matchId,

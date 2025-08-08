@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.chat.common.dto.UserSessionInfo;
 import com.ssafy.chat.common.enums.ChatRoomType;
 import com.ssafy.chat.common.enums.MessageType;
+import com.ssafy.chat.global.constants.ErrorCode;
+import com.ssafy.chat.global.exception.ApiException;
 import com.ssafy.chat.match.dto.MatchChatMessage;
 import com.ssafy.chat.match.service.MatchChatService;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +30,7 @@ public class MatchChatWebSocketHandler implements WebSocketHandler {
     private final MatchChatService matchChatService;
     
     // 로컬 세션 관리 (Kafka Consumer와 별도)
-    private final Map<String, Set<WebSocketSession>> connectedUsers = new ConcurrentHashMap<>();
+    private final Map<Long, Set<WebSocketSession>> connectedUsers = new ConcurrentHashMap<>();
     private final Map<WebSocketSession, UserSessionInfo> sessionToUser = new ConcurrentHashMap<>();
 
     @Override
@@ -52,7 +54,7 @@ public class MatchChatWebSocketHandler implements WebSocketHandler {
             matchChatService.addSessionToMatchRoom(userInfo.getRoomId(), session);
 
             // 입장 이벤트 발송
-            matchChatService.sendUserJoinEvent(userInfo.getRoomId(), userInfo.getUserId(), userInfo.getUserName());
+            matchChatService.sendUserJoinEvent(userInfo.getRoomId(), userInfo.getUserId(), userInfo.getNickname());
 
             log.info("매칭 채팅 WebSocket 연결 성공 - userId: {}, matchId: {}, sessionId: {}",
                     userInfo.getUserId(), userInfo.getRoomId(), session.getId());
@@ -75,7 +77,7 @@ public class MatchChatWebSocketHandler implements WebSocketHandler {
                 
                 // 퇴장 이벤트 발송
                 log.info("매칭 채팅 연결 종료 - leave 이벤트 발송 - userId: {}, status: {}", userInfo.getUserId(), status);
-                matchChatService.sendUserLeaveEvent(matchId, userInfo.getUserId(), userInfo.getUserName());
+                matchChatService.sendUserLeaveEvent(matchId, userInfo.getUserId(), userInfo.getNickname());
                 
                 // 로컬 세션 정보 제거
                 Set<WebSocketSession> userSessions = connectedUsers.get(userInfo.getUserId());
@@ -132,7 +134,7 @@ public class MatchChatWebSocketHandler implements WebSocketHandler {
         UserSessionInfo userInfo = sessionToUser.get(session);
         if (userInfo != null) {
             matchChatService.removeSessionFromMatchRoom(userInfo.getRoomId(), session);
-            matchChatService.sendUserLeaveEvent(userInfo.getRoomId(), userInfo.getUserId(), userInfo.getUserName());
+            matchChatService.sendUserLeaveEvent(userInfo.getRoomId(), userInfo.getUserId(), userInfo.getNickname());
         }
 
         session.close(CloseStatus.SERVER_ERROR);
@@ -144,20 +146,31 @@ public class MatchChatWebSocketHandler implements WebSocketHandler {
     }
 
     /**
-     * 사용자 세션 정보 생성
+     * 사용자 세션 정보 생성 (수정된 버전)
      */
     private UserSessionInfo createUserSessionInfo(WebSocketSession session) {
         Map<String, Object> attributes = session.getAttributes();
 
-        String userId = (String) attributes.get("userId");
-        String userName = (String) attributes.get("userName");
-        String matchId = (String) attributes.get("matchId");
+        Object userIdObj = attributes.get("userId");
+        Object nicknameObj = attributes.get("nickname");  // ✅ userName → nickname으로 변경
+        Object matchIdObj = attributes.get("matchId");
 
-        if (userId == null || userName == null || matchId == null) {
-            throw new IllegalArgumentException("필수 세션 정보 누락");
+        // null 체크 후 안전한 변환
+        if (userIdObj == null || nicknameObj == null || matchIdObj == null) {
+            // ✅ 디버깅을 위한 상세 로그
+            log.error("필수 세션 정보 누락 상세:");
+            log.error("- userId: {} (존재: {})", userIdObj, userIdObj != null);
+            log.error("- nickname: {} (존재: {})", nicknameObj, nicknameObj != null);
+            log.error("- matchId: {} (존재: {})", matchIdObj, matchIdObj != null);
+
+            throw new ApiException(ErrorCode.BAD_REQUEST);
         }
 
-        return new UserSessionInfo(userId, userName, matchId);
+        Long userId = (Long) userIdObj;
+        String nickname = String.valueOf(nicknameObj);  //nickname 변수명으로 변경
+        String matchId = String.valueOf(matchIdObj);
+
+        return new UserSessionInfo(userId, nickname, matchId);  // nickname 전달
     }
 
     /**
@@ -166,7 +179,7 @@ public class MatchChatWebSocketHandler implements WebSocketHandler {
     private boolean canJoinChatRoom(WebSocketSession session, UserSessionInfo userInfo) {
         try {
             String matchId = userInfo.getRoomId();
-            String userId = userInfo.getUserId();
+            Long userId = userInfo.getUserId();
 
             log.info("매칭 채팅방 입장 검증 - matchId: {}, userId: {}", matchId, userId);
 
@@ -220,7 +233,7 @@ public class MatchChatWebSocketHandler implements WebSocketHandler {
         
         // 매칭 채팅 특화 정보
         message.setUserId(userInfo.getUserId());
-        message.setNickname(userInfo.getUserName());
+        message.setNickname(userInfo.getNickname());
         message.setProfileImgUrl((String) attributes.get("profileImgUrl"));
         message.setWinFairy((Boolean) attributes.getOrDefault("isWinFairy", false));
 

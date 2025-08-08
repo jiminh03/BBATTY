@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.chat.common.dto.UserSessionInfo;
 import com.ssafy.chat.common.enums.ChatRoomType;
 import com.ssafy.chat.common.enums.MessageType;
+import com.ssafy.chat.global.constants.ErrorCode;
+import com.ssafy.chat.global.exception.ApiException;
 import com.ssafy.chat.watch.dto.WatchChatMessage;
 import com.ssafy.chat.watch.service.WatchChatService;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +33,7 @@ public class WatchChatWebSocketHandler implements WebSocketHandler {
     private final WatchChatService watchChatService;
     
     // 로컬 세션 관리 (Redis Subscriber와 별도)
-    private final Map<String, Set<WebSocketSession>> connectedUsers = new ConcurrentHashMap<>();
+    private final Map<Long, Set<WebSocketSession>> connectedUsers = new ConcurrentHashMap<>();
     private final Map<WebSocketSession, UserSessionInfo> sessionToUser = new ConcurrentHashMap<>();
 
     @Override
@@ -150,37 +152,52 @@ public class WatchChatWebSocketHandler implements WebSocketHandler {
      * 사용자 세션 정보 생성
      */
     private UserSessionInfo createUserSessionInfo(WebSocketSession session) {
+        // HandshakeInterceptor에서 설정한 세션 속성 사용
+        Map<String, Object> attributes = session.getAttributes();
+        
         try {
-            // HandshakeInterceptor에서 설정한 세션 속성 사용
-            Map<String, Object> attributes = session.getAttributes();
             
             // 채팅 타입 확인
             String chatType = (String) attributes.get("chatType");
             if (!"watch".equals(chatType)) {
-                throw new IllegalArgumentException("Invalid chat type for watch chat: " + chatType);
+                throw new ApiException(ErrorCode.BAD_REQUEST);
             }
 
             // HandshakeInterceptor에서 설정한 속성들 추출
-            Long teamId = (Long) attributes.get("teamId");
-            String gameId = (String) attributes.get("gameId");
+            log.info("attributes 내용 확인: {}", attributes);
+            
+            Object userIdObj = attributes.get("userId");
+            Object teamIdObj = attributes.get("teamId");
+            Object gameIdObj = attributes.get("gameId");
             Boolean isAttendanceVerified = (Boolean) attributes.get("isAttendanceVerified");
+            
+            log.info("userIdObj: {} ({}), teamIdObj: {} ({}), gameIdObj: {} ({})", 
+                userIdObj, userIdObj != null ? userIdObj.getClass().getSimpleName() : "null",
+                teamIdObj, teamIdObj != null ? teamIdObj.getClass().getSimpleName() : "null",
+                gameIdObj, gameIdObj != null ? gameIdObj.getClass().getSimpleName() : "null");
+            
+            Long userId = userIdObj != null ? ((Number) userIdObj).longValue() : null;
+            Long teamId = teamIdObj != null ? ((Number) teamIdObj).longValue() : null;
+            Long gameId = gameIdObj != null ? ((Number) gameIdObj).longValue() : null;
 
-            if (teamId == null || gameId == null) {
-                throw new IllegalArgumentException("Required session attributes missing");
+            if (userId == null || teamId == null || gameId == null) {
+                throw new ApiException(ErrorCode.BAD_REQUEST);
             }
 
-            // 직관 채팅은 완전 무명이므로 더미 사용자 정보 생성
-            String userId = "anonymous_" + session.getId(); // 세션별 고유 ID
+            // 직관 채팅은 실제 userId 사용하지만 닉네임은 익명 처리
             String userName = "익명_" + teamId; // 팀 기반 익명 이름
+            
+            // 채팅방 ID = "watch-{gameId}-{teamId}" 형식으로 경기별, 팀별 구분
+            String roomId = String.format("watch-%d-%d", gameId, teamId);
 
-            log.info("직관 채팅 사용자 세션 생성 - userId: {}, teamId: {}, gameId: {}", 
-                    userId, teamId, gameId);
+            log.info("직관 채팅 사용자 세션 생성 - userId: {}, teamId: {}, gameId: {}, roomId: {}", 
+                    userId, teamId, gameId, roomId);
 
-            return new UserSessionInfo(userId, userName, teamId.toString());
+            return new UserSessionInfo(userId, userName, roomId);
 
         } catch (Exception e) {
-            log.error("관전 채팅 세션 정보 생성 실패", e);
-            throw new IllegalArgumentException("Failed to create user session info: " + e.getMessage());
+            log.error("관전 채팅 세션 정보 생성 실패 - attributes: {}", attributes, e);
+            throw new ApiException(ErrorCode.SERVER_ERROR);
         }
     }
 
@@ -191,8 +208,8 @@ public class WatchChatWebSocketHandler implements WebSocketHandler {
         try {
             // HandshakeInterceptor에서 이미 인증 완료했으므로 항상 허용
             // 직관 채팅은 팀별로 분리되어 있고, 이미 올바른 채팅방에 입장한 상태
-            Long userTeamId = (Long) session.getAttributes().get("teamId");
-            String gameId = (String) session.getAttributes().get("gameId");
+            Long userTeamId = ((Number) session.getAttributes().get("teamId")).longValue();
+            Long gameId = ((Number) session.getAttributes().get("gameId")).longValue();
             
             log.info("직관 채팅방 입장 허용 - 사용자팀: {}, 게임: {}", userTeamId, gameId);
             return true;
@@ -208,7 +225,7 @@ public class WatchChatWebSocketHandler implements WebSocketHandler {
      */
     private void handleConnectionManagement(WebSocketSession session, UserSessionInfo userInfo) {
         try {
-            String userId = userInfo.getUserId();
+            Long userId = userInfo.getUserId();
             
             // 기존 연결이 있는지 확인
             Set<WebSocketSession> existingSessions = connectedUsers.get(userId);
@@ -259,7 +276,7 @@ public class WatchChatWebSocketHandler implements WebSocketHandler {
     }
 
     /**
-     * 관전 채팅 메시지 생성 (익명 채팅)
+     * 관전 채팅 메시지 생성 (익명 채팅 - 신고 기능을 위해 실제 userId 포함)
      */
     private WatchChatMessage createWatchChatMessage(UserSessionInfo userInfo, String content) {
         WatchChatMessage message = new WatchChatMessage();
@@ -268,6 +285,10 @@ public class WatchChatWebSocketHandler implements WebSocketHandler {
         message.setRoomId(userInfo.getRoomId());
         message.setContent(content);
         message.setTimestamp(LocalDateTime.now());
+        message.setUserId(userInfo.getUserId()); // 실제 사용자 ID 포함 (신고 기능 등을 위해)
+        
+        log.info("Watch 채팅 메시지 생성 - userId: {}, roomId: {}, content: {}", 
+                message.getUserId(), message.getRoomId(), message.getContent());
         
         return message;
     }

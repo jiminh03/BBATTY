@@ -1,5 +1,7 @@
 package com.ssafy.chat.common.enums;
 
+import com.ssafy.chat.global.constants.ErrorCode;
+import com.ssafy.chat.global.exception.ApiException;
 import lombok.Getter;
 
 import java.util.HashMap;
@@ -34,7 +36,7 @@ public enum ChatRoomType {
     public static ChatRoomType fromCode(String code) {
         ChatRoomType type = BY_CODE.get(code);
         if (type == null) {
-            throw new IllegalArgumentException("Unknown chat room type code: " + code);
+            throw new ApiException(ErrorCode.BAD_REQUEST);
         }
         return type;
     }

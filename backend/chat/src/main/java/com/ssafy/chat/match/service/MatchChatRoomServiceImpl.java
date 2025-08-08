@@ -37,24 +37,52 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
     private final GameInfoService gameInfoService;
     private final ChatAuthRequestProducer chatAuthRequestProducer;
     private final ChatAuthResultService chatAuthResultService;
-    private final JwtProvider jwtProvider;
     
     private static final String MATCH_ROOM_PREFIX = "match_room:";
     private static final String MATCH_ROOM_LIST_KEY = "match_rooms:list";
     
     @Override
-    public MatchChatRoomCreateResponse createMatchChatRoom(MatchChatRoomCreateRequest request) {
+    public MatchChatRoomCreateResponse createMatchChatRoom(MatchChatRoomCreateRequest request, String jwtToken) {
         try {
             // 1. gameId 유효성 검증
             GameInfo gameInfo = validateGameId(request.getGameId());
             if (gameInfo == null) {
-                throw new ApiException(ErrorCode.NOT_FOUND, "존재하지 않는 경기입니다.");
+                throw new ApiException(ErrorCode.NOT_FOUND);
             }
             
-            // 2. 경기 ID 기반으로 매칭 채팅방 ID 자동 생성
+            // 2. bbatty 서버에 방 생성 인증 요청
+            Map<String, Object> roomCreateInfo = new HashMap<>();
+            roomCreateInfo.put("matchTitle", request.getMatchTitle());
+            roomCreateInfo.put("matchDescription", request.getMatchDescription());
+            roomCreateInfo.put("teamId", request.getTeamId());
+            roomCreateInfo.put("minAge", request.getMinAge());
+            roomCreateInfo.put("maxAge", request.getMaxAge());
+            roomCreateInfo.put("genderCondition", request.getGenderCondition());
+            roomCreateInfo.put("maxParticipants", request.getMaxParticipants());
+            
+            String requestId = chatAuthRequestProducer.sendMatchChatCreateRequest(
+                jwtToken, request.getGameId(), roomCreateInfo, request.getNickname());
+            
+            if (requestId == null) {
+                throw new ApiException(ErrorCode.SERVER_ERROR);
+            }
+            
+            // 3. bbatty 서버 응답 대기
+            Map<String, Object> authResult = chatAuthResultService.waitForAuthResult(requestId, 10000);
+            if (authResult == null || !(Boolean) authResult.get("success")) {
+                String errorMessage = (String) authResult.get("errorMessage");
+                throw new ApiException(ErrorCode.UNAUTHORIZED);
+            }
+            
+            // 4. bbatty 서버에서 인증된 사용자 정보 추출
+            @SuppressWarnings("unchecked")
+            Map<String, Object> userInfo = (Map<String, Object>) authResult.get("userInfo");
+            Long userId = (Long) userInfo.get("userId");
+            
+            // 5. 경기 ID 기반으로 매칭 채팅방 ID 자동 생성
             String matchId = generateMatchId(request.getGameId());
             
-            // 매칭방 생성
+            // 6. 매칭방 생성
             MatchChatRoom matchRoom = MatchChatRoom.builder()
                     .matchId(matchId)
                     .gameId(request.getGameId())
@@ -69,18 +97,18 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
                     .createdAt(LocalDateTime.now().toString())
                     .lastActivityAt(LocalDateTime.now().toString())
                     .status("ACTIVE")
-                    .ownerId("dummy_user_123") // TODO: 실제 사용자 ID로 변경
+                    .ownerId(userId.toString()) // bbatty 서버에서 인증된 실제 사용자 ID
                     .build();
             
-            // 3. TTL 계산 (경기 날짜 자정까지)
+            // 6. TTL 계산 (경기 날짜 자정까지)
             Duration ttl = calculateTTL(gameInfo.getDateTime());
             
-            // 4. Redis에 TTL과 함께 저장
+            // 7. Redis에 TTL과 함께 저장
             String roomKey = MATCH_ROOM_PREFIX + matchId;
             String roomJson = objectMapper.writeValueAsString(matchRoom);
             redisTemplate.opsForValue().set(roomKey, roomJson, ttl);
             
-            // 5. 매칭방 목록에도 TTL과 함께 추가
+            // 8. 매칭방 목록에도 TTL과 함께 추가
             long score = System.currentTimeMillis();
             redisTemplate.opsForZSet().add(MATCH_ROOM_LIST_KEY, matchId, score);
             redisTemplate.expire(MATCH_ROOM_LIST_KEY, ttl);
@@ -93,10 +121,10 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
             throw e; // ApiException은 그대로 다시 던지기
         } catch (JsonProcessingException e) {
             log.error("매칭 채팅방 직렬화 실패 - gameId: {}", request.getGameId(), e);
-            throw new ApiException(ErrorCode.SERVER_ERROR, "매칭 채팅방 생성에 실패했습니다.");
+            throw new ApiException(ErrorCode.SERVER_ERROR);
         } catch (Exception e) {
             log.error("매칭 채팅방 생성 실패 - gameId: {}", request.getGameId(), e);
-            throw new ApiException(ErrorCode.SERVER_ERROR, "매칭 채팅방 생성에 실패했습니다.");
+            throw new ApiException(ErrorCode.SERVER_ERROR);
         }
     }
     
@@ -165,7 +193,7 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
             
         } catch (Exception e) {
             log.error("매칭 채팅방 목록 조회 실패", e);
-            throw new RuntimeException("매칭 채팅방 목록 조회에 실패했습니다.", e);
+            throw new ApiException(ErrorCode.SERVER_ERROR);
         }
     }
     
@@ -173,7 +201,7 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
     public MatchChatRoomCreateResponse getMatchChatRoom(String matchId) {
         // 1. matchId 유효성 검증
         if (matchId == null || matchId.trim().isEmpty()) {
-            throw new ApiException(ErrorCode.BAD_REQUEST, "매칭 채팅방 ID가 비어있습니다.");
+            throw new ApiException(ErrorCode.BAD_REQUEST);
         }
         
         try {
@@ -188,7 +216,7 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
             
             // 2. 채팅방 상태 검증
             if (!"ACTIVE".equals(matchRoom.getStatus())) {
-                throw new ApiException(ErrorCode.MATCH_CHAT_ROOM_CLOSED, "비활성 상태의 매칭 채팅방입니다.");
+                throw new ApiException(ErrorCode.MATCH_CHAT_ROOM_CLOSED);
             }
             
             return convertToResponse(matchRoom);
@@ -197,7 +225,7 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
             throw e;
         } catch (Exception e) {
             log.error("매칭 채팅방 조회 실패 - matchId: {}", matchId, e);
-            throw new ApiException(ErrorCode.SERVER_ERROR, "매칭 채팅방 조회에 실패했습니다.");
+            throw new ApiException(ErrorCode.SERVER_ERROR);
         }
     }
     

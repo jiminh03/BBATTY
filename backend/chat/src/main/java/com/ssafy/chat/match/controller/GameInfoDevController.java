@@ -231,7 +231,7 @@ public class GameInfoDevController {
                     .build();
             
             try {
-                matchChatRoomService.createMatchChatRoom(request);
+                matchChatRoomService.createMatchChatRoom(request, "dummy-jwt-token");
                 log.debug("매칭 채팅방 생성 - gameId: {}, teamId: {}, title: {}", 
                          game.getGameId(), teamId, request.getMatchTitle());
             } catch (Exception e) {
