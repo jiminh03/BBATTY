@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 /**
  * 내부 처리용 직관 기록 DTO
  * - Redis에서 조회한 직관 기록과 DB에서 조회한 경기 결과를 결합
- * - 통계 계산을 위한 완전한 데이터 구조
+ * - 통계 계산을 위한 데이터 구조
  */
 @Getter
 @Builder
@@ -26,7 +26,7 @@ public class AttendanceRecord {
     private LocalDateTime gameDateTime;
 
     // 시즌 정보 (통산/시즌별 구분용)
-    private String season; // "all" 또는 "2025" 등
+    private String season; // "total" 또는 "2025" 등
     
     // 경기 정보 (DB에서 조회)
     private String homeTeam;

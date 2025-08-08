@@ -1,14 +1,14 @@
 package com.ssafy.schedule.domain.statistics.service;
 
-import com.ssafy.schedule.global.entity.Game;
-import com.ssafy.schedule.global.repository.GameRepository;
 import com.ssafy.schedule.domain.statistics.dto.internal.AttendanceRecord;
 import com.ssafy.schedule.domain.statistics.dto.response.UserBasicStatsResponse;
 import com.ssafy.schedule.domain.statistics.dto.response.UserDetailedStatsResponse;
 import com.ssafy.schedule.domain.statistics.dto.response.UserStreakStatsResponse;
 import com.ssafy.schedule.domain.statistics.repository.StatisticsRedisRepository;
-import com.ssafy.schedule.global.constant.RedisKey;
 import com.ssafy.schedule.global.constant.GameResult;
+import com.ssafy.schedule.global.constant.RedisKey;
+import com.ssafy.schedule.global.entity.Game;
+import com.ssafy.schedule.global.repository.GameRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -17,7 +17,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * 통계 서비스 구현체
@@ -86,8 +85,8 @@ public class StatisticsServiceImpl implements StatisticsService {
             return (UserStreakStatsResponse) cached;
         }
         
-        // 전체 직관 기록 조회 (연승 계산을 위해)
-        List<AttendanceRecord> allRecords = getAttendanceRecords(userId, "all", userTeam);
+        // 통산 직관 기록 조회 (연승 계산을 위해)
+        List<AttendanceRecord> allRecords = getAttendanceRecords(userId, "total", userTeam);
         
         UserStreakStatsResponse response = buildStreakStats(userId, allRecords);
         
@@ -102,11 +101,13 @@ public class StatisticsServiceImpl implements StatisticsService {
     public void recalculateUserStats(Long userId) {
         log.info("사용자 통계 재계산 시작: userId={}", userId);
         
-        // 캐시 삭제
-        statisticsRedisRepository.clearUserStats(userId);
+        // 현재 시즌 가져오기
+        String currentSeason = getCurrentSeason();
         
-        // 모든 시즌별 캐시 삭제만 수행
-        // userTeam은 클라이언트에서 파라미터로 전달받아 사용
+        // 현재 시즌과 통산 통계 캐시만 삭제
+        statisticsRedisRepository.clearCurrentSeasonAndTotalStats(userId, currentSeason);
+        
+        log.info("사용자 통계 재계산 완료: userId={}, currentSeason={}", userId, currentSeason);
     }
     
     // ===========================================
@@ -114,57 +115,36 @@ public class StatisticsServiceImpl implements StatisticsService {
     // ===========================================
     
     /**
-     * 사용자의 직관 기록을 Redis와 DB에서 조회하여 결합
+     * 사용자의 직관 기록을 Redis USER_ATTENDANCE_RECORDS 키에서 조회
      */
     private List<AttendanceRecord> getAttendanceRecords(Long userId, String season, String userTeam) {
         List<AttendanceRecord> records = new ArrayList<>();
         
-        // Redis에서 직관 인증 기록 조회
-        Set<String> attendanceKeys = redisTemplate.keys(RedisKey.USER_ATTENDANCE_GAME + userId + ":*");
+        // Redis 키 구성 (시즌별 또는 통산)
+        String redisKey = RedisKey.USER_ATTENDANCE_RECORDS + userId + ":" + season;
         
-        if (attendanceKeys == null || attendanceKeys.isEmpty()) {
+        // Redis에서 직관 기록 조회 (Sorted Set - 최신순)
+        Set<Object> attendanceRecords = redisTemplate.opsForZSet().reverseRange(redisKey, 0, -1);
+        
+        if (attendanceRecords == null || attendanceRecords.isEmpty()) {
+            log.info("Redis에서 직관 기록 없음: userId={}, season={}", userId, season);
             return records;
         }
         
-        // 게임 ID 추출
-        Set<Long> gameIds = attendanceKeys.stream()
-                .map(key -> key.substring(key.lastIndexOf(':') + 1))
-                .map(Long::valueOf)
-                .collect(Collectors.toSet());
+        log.info("Redis에서 직관 기록 조회: userId={}, season={}, count={}", userId, season, attendanceRecords.size());
         
-        // DB에서 게임 정보 조회
-        List<Game> games = gameRepository.findAllById(gameIds);
-        Map<Long, Game> gameMap = games.stream()
-                .collect(Collectors.toMap(Game::getId, game -> game));
-        
-        // AttendanceRecord 생성
-        for (Long gameId : gameIds) {
-            Game game = gameMap.get(gameId);
-            if (game == null) continue;
-            
-            // 시즌 필터링
-            if (!season.equals("all") && !isInSeason(game.getDateTime(), season)) {
-                continue;
+        // JSON 레코드들을 AttendanceRecord로 변환
+        for (Object recordObj : attendanceRecords) {
+            try {
+                String recordJson = String.valueOf(recordObj);
+                AttendanceRecord record = parseAttendanceRecord(recordJson, userTeam);
+                if (record != null) {
+                    records.add(record);
+                }
+            } catch (Exception e) {
+                log.warn("직관 기록 파싱 실패: userId={}, record={}", userId, recordObj, e);
             }
-            
-            AttendanceRecord record = AttendanceRecord.builder()
-                    .userId(userId)
-                    .gameId(gameId)
-                    .gameDateTime(game.getDateTime())
-                    .season(extractSeason(game.getDateTime()))
-                    .homeTeam(game.getHomeTeam().getName())
-                    .awayTeam(game.getAwayTeam().getName())
-                    .userTeam(userTeam)
-                    .gameResult(game.getResult())
-                    .stadium(game.getStadium())
-                    .userGameResult(calculateUserGameResult(game.getResult(), userTeam, game.getHomeTeam().getName(), game.getAwayTeam().getName()))
-                    .build();
-            
-            records.add(record);
         }
-        
-        // 시간순 정렬
-        records.sort(Comparator.comparing(AttendanceRecord::getGameDateTime));
         
         return records;
     }
@@ -406,5 +386,118 @@ public class StatisticsServiceImpl implements StatisticsService {
                                (!isUserTeamHome && gameResult == GameResult.AWAY_WIN);
         
         return isUserTeamWin ? AttendanceRecord.UserGameResult.WIN : AttendanceRecord.UserGameResult.LOSS;
+    }
+    
+    /**
+     * JSON 문자열을 AttendanceRecord로 변환
+     * JSON 예시: {"gameId":123,"homeTeam":"KIA","awayTeam":"두산","dateTime":"2024-01-01T14:00:00","stadium":"광주","status":"FINISHED"}
+     */
+    private AttendanceRecord parseAttendanceRecord(String recordJson, String userTeam) {
+        try {
+            // gameId 추출
+            Long gameId = extractJsonLong(recordJson, "gameId");
+            if (gameId == null) {
+                log.warn("JSON에서 gameId를 찾을 수 없음: {}", recordJson);
+                return null;
+            }
+            
+            // 기본 정보 추출 (JSON에서)
+            String homeTeam = extractJsonString(recordJson, "homeTeam");
+            String awayTeam = extractJsonString(recordJson, "awayTeam");
+            String dateTimeStr = extractJsonString(recordJson, "dateTime");
+            String stadium = extractJsonString(recordJson, "stadium");
+            
+            if (homeTeam == null || awayTeam == null || dateTimeStr == null || stadium == null) {
+                log.warn("JSON에서 필수 필드를 찾을 수 없음: {}", recordJson);
+                return null;
+            }
+            
+            // 경기 시간 파싱
+            LocalDateTime gameDateTime = LocalDateTime.parse(dateTimeStr);
+            
+            // DB에서 최신 경기 결과 조회 (경기 결과는 실시간으로 변할 수 있음)
+            Optional<Game> gameOpt = gameRepository.findById(gameId);
+            if (gameOpt.isEmpty()) {
+                log.warn("DB에서 게임을 찾을 수 없음: gameId={}", gameId);
+                return null;
+            }
+            
+            Game game = gameOpt.get();
+            
+            return AttendanceRecord.builder()
+                    .userId(null) // 통계 계산에서는 불필요
+                    .gameId(gameId)
+                    .gameDateTime(gameDateTime)
+                    .season(extractSeason(gameDateTime))
+                    .homeTeam(homeTeam)
+                    .awayTeam(awayTeam)
+                    .userTeam(userTeam)
+                    .gameResult(game.getResult()) // DB에서 최신 결과
+                    .stadium(stadium)
+                    .userGameResult(calculateUserGameResult(game.getResult(), userTeam, homeTeam, awayTeam))
+                    .build();
+                    
+        } catch (Exception e) {
+            log.error("JSON 파싱 실패: {}", recordJson, e);
+            return null;
+        }
+    }
+    
+    /**
+     * JSON에서 Long 값 추출
+     */
+    private Long extractJsonLong(String json, String key) {
+        try {
+            String value = extractJsonValue(json, key);
+            return value != null ? Long.valueOf(value) : null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+    
+    /**
+     * JSON에서 String 값 추출
+     */
+    private String extractJsonString(String json, String key) {
+        return extractJsonValue(json, key);
+    }
+    
+    /**
+     * JSON에서 특정 키의 값 추출 (간단한 파서)
+     */
+    private String extractJsonValue(String json, String key) {
+        try {
+            String pattern = "\"" + key + "\":";
+            int startIndex = json.indexOf(pattern);
+            if (startIndex == -1) return null;
+            
+            startIndex += pattern.length();
+            
+            // 값의 시작 위치 찾기 (공백 제거)
+            while (startIndex < json.length() && Character.isWhitespace(json.charAt(startIndex))) {
+                startIndex++;
+            }
+            
+            // 값의 끝 위치 찾기
+            int endIndex;
+            if (json.charAt(startIndex) == '"') {
+                // 문자열 값인 경우
+                startIndex++; // 시작 따옴표 제거
+                endIndex = json.indexOf('"', startIndex);
+            } else {
+                // 숫자 값인 경우
+                endIndex = json.indexOf(',', startIndex);
+                if (endIndex == -1) {
+                    endIndex = json.indexOf('}', startIndex);
+                }
+            }
+            
+            if (endIndex == -1) return null;
+            
+            return json.substring(startIndex, endIndex).trim();
+        } catch (Exception e) {
+            log.debug("JSON 값 추출 실패: key={}, json={}", key, json, e);
+            return null;
+        }
     }
 }

@@ -17,6 +17,9 @@ public class RedisKey {
     /** 당일 직관 인증한 전체 사용자 목록: attendance:daily:attendees:{date} (Set) */
     public static final String ATTENDANCE_DAILY_ATTENDEES = "attendance:daily:attendees:";
     
+    /** 사용자별 직관 기록: user:attendance:records:{user_id}:{season} (Sorted Set) */
+    public static final String USER_ATTENDANCE_RECORDS = "user:attendance:records:";
+    
     // ===========================================
     // STATS 도메인 - 모든 통계 데이터 통합
     // ===========================================
