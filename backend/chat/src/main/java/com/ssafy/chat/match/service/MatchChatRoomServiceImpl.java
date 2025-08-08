@@ -435,7 +435,7 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
                 .currentParticipants(matchRoom.getCurrentParticipants())
                 .createdAt(matchRoom.getCreatedAt())
                 .status(matchRoom.getStatus())
-                .websocketUrl(String.format("ws://localhost:8084/ws/match-chat/websocket?matchId=%s", matchRoom.getMatchId()))
+                .websocketUrl(String.format("ws://i13a403.p.ssafy.io:8084/ws/match-chat/websocket?matchId=%s", matchRoom.getMatchId()))
                 .build();
     }
     

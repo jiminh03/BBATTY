@@ -46,7 +46,7 @@ public class WatchChatRoomServiceImpl implements WatchChatRoomService {
                     .roomName(roomName)
                     .chatType(chatType)
                     .teamId(teamId)
-                    .gameDate(eventDto.getGameDate())
+                    .gameDate(eventDto.getDateTime().format(DATE_FORMATTER))
                     .stadium(eventDto.getStadium())
                     .homeTeamId(eventDto.getHomeTeamId())
                     .homeTeamName(eventDto.getHomeTeamName())
@@ -63,7 +63,7 @@ public class WatchChatRoomServiceImpl implements WatchChatRoomService {
             String roomJson = objectMapper.writeValueAsString(watchRoom);
 
             // TTL 계산 (경기 날짜 + 1일)
-            Duration ttl = calculateTTLFromGameDate(eventDto.getGameDate());
+            Duration ttl = calculateTTLFromGameDate(eventDto.getDateTime().format(DATE_FORMATTER));
             redisTemplate.opsForValue().set(roomKey, roomJson, ttl);
 
             log.info("관전 채팅방 생성 완료 - roomId: {}, roomName: {}", roomId, roomName);
