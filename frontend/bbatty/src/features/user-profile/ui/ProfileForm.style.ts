@@ -60,11 +60,13 @@ export const styles = StyleSheet.create({
   },
 
   errorText: {
+    color: '#dc4e4eff',
     fontSize: 12,
     marginTop: 4,
   },
 
   successText: {
+    color: '#25d231ff',
     fontSize: 12,
     marginTop: 4,
   },

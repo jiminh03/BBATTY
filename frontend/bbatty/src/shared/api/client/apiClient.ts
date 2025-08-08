@@ -7,7 +7,7 @@ import { tokenManager } from './tokenManager';
 interface CustomAxiosInstance extends AxiosInstance {
   get<T = unknown, R = AxiosResponse<ApiResponse<T>>, D = any>(
     url: string,
-    config?: InternalAxiosRequestConfig<D>
+    config?: Partial<InternalAxiosRequestConfig<D>>
   ): Promise<R>;
 
   post<T = unknown, R = AxiosResponse<ApiResponse<T>>, D = any>(

@@ -1,24 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import { createNavigationContainerRef, NavigationContainer } from '@react-navigation/native';
-import { StatusBar } from 'react-native';
-import { useTheme } from '../shared/styles';
+import { NavigationContainer } from '@react-navigation/native';
 import { tokenManager } from '../shared';
-import { RootStackParamList } from './types';
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
 import { linking } from './linking';
-import SplashScreen from '../pages/splash/ui';
+import SplashScreen from '../pages/splash/ui/SplashScreen';
 import { navigationRef } from './navigationRefs';
+import { useAuthStore } from '../entities/auth/model/authStore';
 
 const Stack = createStackNavigator();
 
 export default function AppNavigator() {
-  const [userInfo, setUserInfo] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showSplash, setShowSplash] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const { theme } = useTheme();
+  const { setKakaoUserInfo, setKakaoAccessToken } = useAuthStore();
 
   useEffect(() => {
     checkAuthState();
@@ -36,18 +33,11 @@ export default function AppNavigator() {
     }
   };
 
-  const handleLoginSuccess = (userInfo: any) => {
+  const handleLoginSuccess = (userInfo: any, accessToken: string) => {
     setIsAuthenticated(true);
     setShowSplash(false);
-    setUserInfo(userInfo);
-
-    // //로그인 성공 시 팀 선택 화면으로 이동
-    // navigationRef.navigate('AuthStack', {
-    //   screen: 'TeamSelect',
-    //   params: {
-    //     nickname: userInfo.properties?.nickname,
-    //   },
-    // });
+    setKakaoUserInfo(userInfo);
+    setKakaoAccessToken(accessToken);
   };
 
   if (showSplash) {
@@ -65,7 +55,7 @@ export default function AppNavigator() {
     <NavigationContainer ref={navigationRef} linking={linking}>
       {/* <StatusBar barStyle='light-content' backgroundColor={theme.colors.background} /> */}
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name='AuthStack' children={() => <AuthNavigator userInfo={userInfo} />} />
+        <Stack.Screen name='AuthStack' component={AuthNavigator} />
       </Stack.Navigator>
     </NavigationContainer>
   );

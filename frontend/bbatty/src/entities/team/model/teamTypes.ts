@@ -1,4 +1,4 @@
-import { TeamName } from '../../shared/styles';
+import { TeamName } from '../../../shared/styles';
 
 export interface Team {
   id: number;
@@ -19,3 +19,16 @@ export const TEAMS: Team[] = [
   { id: 9, key: 'KIWOOM', name: '키움', logo: '🦸' },
   { id: 10, key: 'LOTTE', name: '롯데', logo: '🦆' },
 ];
+
+// 팀 정보
+export interface Teame {
+  id: number;
+  name: string;
+  fullName: string;
+  logo: string;
+  colors: {
+    primary: string;
+    secondary: string;
+    accent: string;
+  };
+}
