@@ -6,7 +6,7 @@ import { screen } from '../../../shared';
 
 interface SplashScreenProps {
   onAnimationComplete?: () => void;
-  onLoginSuccess?: (userInfo: any) => void;
+  onLoginSuccess?: (userInfo: any, accessToken: string) => void;
 }
 
 const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLoginSuccess }) => {
@@ -111,7 +111,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLogi
       const userInfo = await response.json();
       // 로그인 성공 콜백 호출
       if (onLoginSuccess) {
-        onLoginSuccess(userInfo);
+        onLoginSuccess(userInfo, kakaoData.accessToken);
       } else {
         // 애니메이션 완료 콜백 호출
         onAnimationComplete?.();

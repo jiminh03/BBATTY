@@ -71,8 +71,8 @@ export const MatchChatRoomDetailScreen = () => {
       if (response.data.status === 'SUCCESS') {
         navigation.navigate('MatchChatRoom', { 
           room,
-          websocketUrl: response.data.data.websocketUrl,
-          sessionToken: response.data.data.sessionToken
+          websocketUrl: response.data.websocketUrl,
+          sessionToken: response.data.sessionToken
         });
       } else {
         Alert.alert('오류', response.data.message || '채팅방 참여에 실패했습니다.');
