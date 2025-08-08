@@ -2,7 +2,9 @@ package com.ssafy.chat.match.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ssafy.chat.common.util.ChatRoomTTLManager;
 import com.ssafy.chat.common.util.RedisUtil;
+import com.ssafy.chat.global.constants.ChatRedisKey;
 import com.ssafy.chat.global.constants.ErrorCode;
 import com.ssafy.chat.global.exception.ApiException;
 import com.ssafy.chat.match.dto.GameInfo;
@@ -31,9 +33,8 @@ public class GameInfoServiceImpl implements GameInfoService {
     private final MatchChatService matchChatService;
     private final StringRedisTemplate stringRedisTemplate;
     
-    private static final String GAME_KEY_PREFIX = "games:";
-    private static final Duration TTL_DURATION = Duration.ofDays(14); // 2주 자동 삭제
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    // Redis 키와 TTL은 ChatRedisKey와 ChatRoomTTLManager에서 관리
 
     @Override
     public void processGameInfoMessage(String message) {
@@ -57,7 +58,8 @@ public class GameInfoServiceImpl implements GameInfoService {
     private void saveGameInfo(GameInfo gameInfo) {
         try {
             String date = gameInfo.getDateTime().format(DATE_FORMATTER);
-            String key = GAME_KEY_PREFIX + date;
+            String dateListKey = ChatRedisKey.getGameListByDateKey(date);
+            String gameInfoKey = ChatRedisKey.getGameInfoKey(gameInfo.getGameId().toString());
             
             List<GameInfo> existingGames = getGameInfosByDate(date);
             
@@ -65,10 +67,16 @@ public class GameInfoServiceImpl implements GameInfoService {
                     .anyMatch(game -> game.getGameId().equals(gameInfo.getGameId()));
             
             if (!exists) {
+                // 1. 날짜별 게임 목록 업데이트
                 existingGames.add(gameInfo);
                 String jsonValue = objectMapper.writeValueAsString(existingGames);
-                redisUtil.setValue(key, jsonValue, TTL_DURATION);
-                log.info("Game info saved for date: {}, gameId: {}", date, gameInfo.getGameId());
+                redisUtil.setValue(dateListKey, jsonValue, ChatRoomTTLManager.getGameInfoTTL());
+                
+                // 2. 개별 게임 정보 저장
+                String gameInfoJson = objectMapper.writeValueAsString(gameInfo);
+                redisUtil.setValue(gameInfoKey, gameInfoJson, ChatRoomTTLManager.getGameInfoTTL());
+                
+                log.info("Game info saved - date: {}, gameId: {}", date, gameInfo.getGameId());
             }
         } catch (Exception e) {
             log.error("Failed to save game info: {}", gameInfo.getGameId(), e);
@@ -78,7 +86,7 @@ public class GameInfoServiceImpl implements GameInfoService {
     @Override
     public List<GameInfo> getGameInfosByDate(String date) {
         try {
-            String key = GAME_KEY_PREFIX + date;
+            String key = ChatRedisKey.getGameListByDateKey(date);
             
             // StringRedisTemplate으로 순수 문자열 조회
             String jsonValue = stringRedisTemplate.opsForValue().get(key);
