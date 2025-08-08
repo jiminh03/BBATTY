@@ -86,11 +86,7 @@ export const useMatchChatWebSocket = ({
     try {
       updateConnectionStatus('CONNECTING');
       
-      // 안드로이드 에뮬레이터용 URL 변경
       let wsUrl = websocketUrl;
-      if (wsUrl.includes('localhost')) {
-        wsUrl = wsUrl.replace('localhost', '10.0.2.2');
-      }
       
       console.log(`웹소켓 연결: ${wsUrl}`);
 

@@ -49,10 +49,9 @@ export const chatRoomApi = {
   joinMatchChat: async (request: MatchChatJoinRequest): Promise<{ status: string; message: string; data: AuthResponse }> => {
     try {
       const response = await chatApiClient.post('/api/match-chat/join', request);
-      return response as any;
+      return response;
     } catch (error) {
       console.warn('서버 연결 실패, 목 데이터 반환:', error);
-      // 목 응답 반환
       return {
         status: 'SUCCESS',
         message: '채팅방 참여 성공 (목 데이터)',
@@ -68,7 +67,7 @@ export const chatRoomApi = {
   joinWatchChat: async (request: WatchChatJoinRequest) => {
     try {
       const response = await chatApiClient.post('/api/watch-chat/join', request);
-      return response as any;
+      return response;
     } catch (error) {
       console.warn('서버 연결 실패, 목 데이터 반환:', error);
       return {
@@ -76,7 +75,7 @@ export const chatRoomApi = {
         message: '워치 채팅 참여 성공 (목 데이터)',
         data: {
           sessionToken: 'mock_watch_session_' + Date.now(),
-          websocketUrl: 'ws://10.0.2.2:8084/ws/watch-chat/websocket?gameId=' + request.gameId
+          websocketUrl: 'ws://10.0.2.2:8084/ws/watch-chat/websocket?gameId=' + request.gameId + '&teamId=' + request.teamId
         }
       };
     }
@@ -86,7 +85,7 @@ export const chatRoomApi = {
   invalidateSession: async (sessionToken: string) => {
     try {
       const response = await chatApiClient.delete(`/api/chat/auth/session/${sessionToken}`);
-      return response as any;
+      return response;
     } catch (error) {
       console.warn('서버 연결 실패, 목 응답 반환:', error);
       return { status: 'SUCCESS', message: '세션 무효화 완료 (목 데이터)' };
@@ -97,7 +96,7 @@ export const chatRoomApi = {
   healthCheck: async () => {
     try {
       const response = await chatApiClient.get('/api/chat/auth/health');
-      return response as any;
+      return response;
     } catch (error) {
       console.warn('서버 연결 실패, 목 응답 반환:', error);
       return { status: 'SUCCESS', message: 'Health OK (목 데이터)' };
@@ -107,14 +106,10 @@ export const chatRoomApi = {
   // 매치 채팅방 목록 조회 - 직접 타입 정의
   getMatchChatRooms: async (): Promise<MatchChatRoomsResponse> => {
     try {
-      console.log('API 요청 시작: /api/match-chat-rooms');
       const response = await chatApiClient.get('/api/match-chat-rooms');
-      console.log('API 응답 성공:', response.data);
-      return response as any;
+      return response;
     } catch (error: any) {
-      console.warn('API 요청 실패 - URL:', `${chatApiClient.defaults.baseURL}/api/match-chat-rooms`);
-      console.warn('오류 상세:', error.response ? error.response.data : error.message);
-      console.warn('오류 상태:', error.response ? error.response.status : 'Network Error');
+      console.warn('서버 연결 실패, 목 데이터 반환:', error);
       
       // 목 응답 반환
       return {
@@ -133,15 +128,10 @@ export const chatRoomApi = {
   // 매치 채팅방 생성 - 직접 타입 정의
   createMatchChatRoom: async (request: CreateMatchChatRoomRequest): Promise<CreateMatchChatRoomResponse> => {
     try {
-      console.log('채팅방 생성 API 요청:', request);
       const response = await chatApiClient.post('/api/match-chat-rooms', request);
-      console.log('채팅방 생성 API 응답 성공:', response.data);
-      return response as any;
+      return response;
     } catch (error: any) {
-      console.warn('채팅방 생성 API 실패:', error.response ? error.response.data : error.message);
-      
-      // 목 데이터 반환
-      console.log('목 데이터로 채팅방 생성 처리');
+      console.warn('서버 연결 실패, 목 데이터 반환:', error);
       const newRoom: MatchChatRoom = {
         matchId: 'mock_match_' + Date.now(),
         gameId: request.gameId,
@@ -169,9 +159,7 @@ export const chatRoomApi = {
   // 서버 연결 테스트 함수 추가
   testConnection: async () => {
     try {
-      console.log('서버 연결 테스트 시작...');
       const response = await chatApiClient.get('/health');
-      console.log('서버 연결 성공:', response.data);
       return true;
     } catch (error: any) {
       console.warn('서버 연결 실패:', error.message);
