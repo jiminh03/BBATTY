@@ -1,6 +1,8 @@
 package com.ssafy.chat.common.infrastructure;
 
+import com.ssafy.chat.common.util.ChatRoomTTLManager;
 import com.ssafy.chat.common.util.RedisUtil;
+import com.ssafy.chat.global.constants.ChatRedisKey;
 import com.ssafy.chat.global.constants.ErrorCode;
 import com.ssafy.chat.global.exception.ApiException;
 import lombok.RequiredArgsConstructor;
@@ -23,20 +25,17 @@ public class ChatRoomRedisManager {
 
     private final RedisUtil redisUtil;
 
-    // Redis Key 패턴
-    private static final String ROOM_USERS_KEY = "chat_room:users:%s";        // 채팅방별 사용자 목록
-    private static final String SESSION_ROOM_KEY = "chat_session:room:%s";    // 세션별 채팅방 매핑
-    private static final String ROOM_INFO_KEY = "chat_room:info:%s";          // 채팅방 정보
+    // Redis Key 패턴은 ChatRedisKey 클래스에서 관리
 
     /**
      * 채팅방에 사용자 추가
      */
     public void addUserToRoom(String roomId, String sessionId, Map<String, Object> userInfo) {
         try {
-            String roomUsersKey = String.format(ROOM_USERS_KEY, roomId);
-            String sessionRoomKey = String.format(SESSION_ROOM_KEY, sessionId);
+            String roomUsersKey = ChatRedisKey.getChatRoomUsersKey(roomId);
+            String sessionRoomKey = ChatRedisKey.getSessionRoomMappingKey(sessionId);
             
-            Duration expireTime = getExpireTimeUntilMidnight();
+            Duration expireTime = ChatRoomTTLManager.getTTLUntilMidnight();
             
             // 채팅방 사용자 목록에 추가
             redisUtil.setHashValue(roomUsersKey, sessionId, userInfo, expireTime);
@@ -45,7 +44,7 @@ public class ChatRoomRedisManager {
             redisUtil.setValue(sessionRoomKey, roomId, expireTime);
             
             log.info("사용자 채팅방 입장 - roomId: {}, sessionId: {}, userId: {}, 만료시간: {}분", 
-                    roomId, sessionId, userInfo.get("userId"), expireTime.toMinutes());
+                    roomId, sessionId, userInfo.get("userId"), ChatRoomTTLManager.toMinutes(expireTime));
             
         } catch (Exception e) {
             log.error("채팅방 사용자 추가 실패 - roomId: {}, sessionId: {}", roomId, sessionId, e);
@@ -58,8 +57,8 @@ public class ChatRoomRedisManager {
      */
     public void removeUserFromRoom(String roomId, String sessionId) {
         try {
-            String roomUsersKey = String.format(ROOM_USERS_KEY, roomId);
-            String sessionRoomKey = String.format(SESSION_ROOM_KEY, sessionId);
+            String roomUsersKey = ChatRedisKey.getChatRoomUsersKey(roomId);
+            String sessionRoomKey = ChatRedisKey.getSessionRoomMappingKey(sessionId);
             
             // 채팅방 사용자 목록에서 제거
             redisUtil.deleteHashKey(roomUsersKey, sessionId);
@@ -85,7 +84,7 @@ public class ChatRoomRedisManager {
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> getRoomUsers(String roomId) {
         try {
-            String roomUsersKey = String.format(ROOM_USERS_KEY, roomId);
+            String roomUsersKey = ChatRedisKey.getChatRoomUsersKey(roomId);
             Map<String, Object> usersHash = redisUtil.getHashEntries(roomUsersKey);
             
             return usersHash.values().stream()
@@ -103,7 +102,7 @@ public class ChatRoomRedisManager {
      */
     public int getRoomUserCount(String roomId) {
         try {
-            String roomUsersKey = String.format(ROOM_USERS_KEY, roomId);
+            String roomUsersKey = ChatRedisKey.getChatRoomUsersKey(roomId);
             return redisUtil.getHashSize(roomUsersKey);
         } catch (Exception e) {
             log.error("채팅방 사용자 수 조회 실패 - roomId: {}", roomId, e);
@@ -116,7 +115,7 @@ public class ChatRoomRedisManager {
      */
     public String findRoomBySession(String sessionId) {
         try {
-            String sessionRoomKey = String.format(SESSION_ROOM_KEY, sessionId);
+            String sessionRoomKey = ChatRedisKey.getSessionRoomMappingKey(sessionId);
             Object roomId = redisUtil.getValue(sessionRoomKey);
             return roomId != null ? roomId.toString() : null;
         } catch (Exception e) {
@@ -130,10 +129,10 @@ public class ChatRoomRedisManager {
      */
     public void saveRoomInfo(String roomId, Map<String, Object> roomInfo) {
         try {
-            String roomInfoKey = String.format(ROOM_INFO_KEY, roomId);
-            Duration expireTime = getExpireTimeUntilMidnight();
+            String roomInfoKey = ChatRedisKey.getChatRoomInfoKey(roomId);
+            Duration expireTime = ChatRoomTTLManager.getTTLUntilMidnight();
             redisUtil.setValue(roomInfoKey, roomInfo, expireTime);
-            log.debug("채팅방 정보 저장 - roomId: {}, 만료시간: {}분", roomId, expireTime.toMinutes());
+            log.debug("채팅방 정보 저장 - roomId: {}, 만료시간: {}분", roomId, ChatRoomTTLManager.toMinutes(expireTime));
         } catch (Exception e) {
             log.error("채팅방 정보 저장 실패 - roomId: {}", roomId, e);
         }
@@ -145,7 +144,7 @@ public class ChatRoomRedisManager {
     @SuppressWarnings("unchecked")
     public Map<String, Object> getRoomInfo(String roomId) {
         try {
-            String roomInfoKey = String.format(ROOM_INFO_KEY, roomId);
+            String roomInfoKey = ChatRedisKey.getChatRoomInfoKey(roomId);
             Object roomInfo = redisUtil.getValue(roomInfoKey);
             return roomInfo != null ? (Map<String, Object>) roomInfo : new HashMap<>();
         } catch (Exception e) {
@@ -154,26 +153,15 @@ public class ChatRoomRedisManager {
         }
     }
 
-    /**
-     * 당일 자정까지의 만료 시간 계산
-     * 매칭 채팅방과 직관 채팅방 모두 당일 자정에 만료
-     */
-    private Duration getExpireTimeUntilMidnight() {
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime midnight = now.toLocalDate().plusDays(1).atStartOfDay();
-        Duration duration = Duration.between(now, midnight);
-        
-        // 최소 1분은 보장 (자정 직전에 입장하는 경우 대비)
-        return duration.isZero() || duration.isNegative() ? Duration.ofMinutes(1) : duration;
-    }
+    // TTL 계산은 ChatRoomTTLManager에서 처리
 
     /**
      * 빈 채팅방 정리
      */
     private void cleanupEmptyRoom(String roomId) {
         try {
-            String roomUsersKey = String.format(ROOM_USERS_KEY, roomId);
-            String roomInfoKey = String.format(ROOM_INFO_KEY, roomId);
+            String roomUsersKey = ChatRedisKey.getChatRoomUsersKey(roomId);
+            String roomInfoKey = ChatRedisKey.getChatRoomInfoKey(roomId);
             
             redisUtil.deleteKey(roomUsersKey);
             redisUtil.deleteKey(roomInfoKey);
@@ -189,13 +177,13 @@ public class ChatRoomRedisManager {
      */
     public void forceDeleteRoom(String roomId) {
         try {
-            String roomUsersKey = String.format(ROOM_USERS_KEY, roomId);
-            String roomInfoKey = String.format(ROOM_INFO_KEY, roomId);
+            String roomUsersKey = ChatRedisKey.getChatRoomUsersKey(roomId);
+            String roomInfoKey = ChatRedisKey.getChatRoomInfoKey(roomId);
             
             // 모든 세션의 채팅방 매핑도 제거
             Map<String, Object> users = redisUtil.getHashEntries(roomUsersKey);
             for (String sessionId : users.keySet()) {
-                String sessionRoomKey = String.format(SESSION_ROOM_KEY, sessionId);
+                String sessionRoomKey = ChatRedisKey.getSessionRoomMappingKey(sessionId);
                 redisUtil.deleteKey(sessionRoomKey);
             }
             

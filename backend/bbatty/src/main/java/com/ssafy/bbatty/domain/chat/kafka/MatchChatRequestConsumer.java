@@ -21,6 +21,7 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -170,8 +171,6 @@ public class MatchChatRequestConsumer {
         }
     }
 
-
-
     /**
      * Match 채팅방 생성 조건 검증
      */
@@ -223,7 +222,7 @@ public class MatchChatRequestConsumer {
     }
 
     /**
-     * 성공 응답 전송
+     * 성공 응답 전송 (gameInfo 포함 - 수정됨)
      */
     private void sendSuccessResponse(String requestId, ChatAuthResponse.UserInfo userInfo,
                                      ChatAuthResponse.ChatRoomInfo chatRoomInfo, JsonNode roomCreateInfo) {
@@ -235,16 +234,62 @@ public class MatchChatRequestConsumer {
             authResult.put("userInfo", userInfo);
             authResult.put("chatRoomInfo", chatRoomInfo);
 
+            // 🔥 gameInfo 추가 - chat 서버에서 기대하는 필수 데이터
+            Map<String, Object> gameInfo = createGameInfo(chatRoomInfo.getGameId());
+            authResult.put("gameInfo", gameInfo);
+
             // 방 생성 시 추가 정보
             if (roomCreateInfo != null) {
                 authResult.put("roomCreateInfo", roomCreateInfo);
             }
+
+            // 🔍 전송 전 디버깅 로그
+            log.info("🔍 전송할 authResult keys: {}", authResult.keySet());
+            log.info("🔍 gameInfo 포함 여부: {}", authResult.containsKey("gameInfo"));
+            log.debug("🔍 전송할 authResult 전체: {}", authResult);
 
             chatAuthKafkaProducer.sendAuthResult(requestId, authResult);
             log.debug("성공 응답 전송 완료: requestId={}", requestId);
 
         } catch (Exception e) {
             log.error("성공 응답 전송 실패: requestId={}", requestId, e);
+        }
+    }
+
+    /**
+     * gameId로부터 게임 정보 생성 (새로 추가됨)
+     */
+    private Map<String, Object> createGameInfo(Long gameId) {
+        try {
+            Game game = gameRepository.findById(gameId)
+                    .orElseThrow(() -> new ApiException(ErrorCode.GAME_NOT_FOUND));
+
+            Map<String, Object> gameInfo = new HashMap<>();
+            gameInfo.put("gameId", game.getId());
+            gameInfo.put("gameDate", game.getDateTime().toLocalDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+            gameInfo.put("stadium", game.getStadium());
+            gameInfo.put("homeTeamId", game.getHomeTeam().getId());
+            gameInfo.put("awayTeamId", game.getAwayTeam().getId());
+            gameInfo.put("homeScore", game.getHomeScore());
+            gameInfo.put("awayScore", game.getAwayScore());
+            gameInfo.put("status", game.getStatus().toString());
+            gameInfo.put("result", game.getResult());
+
+            log.debug("gameInfo 생성 완료: gameId={}, gameDate={}", gameId, gameInfo.get("gameDate"));
+            return gameInfo;
+
+        } catch (Exception e) {
+            log.error("gameInfo 생성 실패: gameId={}", gameId, e);
+
+            // 최소한의 기본 정보라도 제공
+            Map<String, Object> fallbackGameInfo = new HashMap<>();
+            fallbackGameInfo.put("gameId", gameId);
+            fallbackGameInfo.put("gameDate", LocalDateTime.now().toLocalDate().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+            fallbackGameInfo.put("status", "UNKNOWN");
+            fallbackGameInfo.put("stadium", "정보 없음");
+
+            log.warn("⚠️ fallback gameInfo 사용: gameId={}", gameId);
+            return fallbackGameInfo;
         }
     }
 
@@ -294,7 +339,6 @@ public class MatchChatRequestConsumer {
             throw new ApiException(ErrorCode.INVALID_INPUT_VALUE);
         }
     }
-
 
     /**
      * 액션에 따라 적절한 roomId 반환

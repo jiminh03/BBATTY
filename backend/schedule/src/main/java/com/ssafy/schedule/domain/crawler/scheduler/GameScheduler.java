@@ -3,8 +3,11 @@ package com.ssafy.schedule.domain.crawler.scheduler;
 import com.ssafy.schedule.domain.chat.kafka.ChatEventKafkaProducer;
 import com.ssafy.schedule.domain.crawler.service.FinishedGameService;
 import com.ssafy.schedule.domain.crawler.service.ScheduledGameService;
+import com.ssafy.schedule.domain.statistics.service.StatisticsUpdateService;
+
 import com.ssafy.schedule.global.entity.Game;
 import com.ssafy.schedule.global.repository.GameRepository;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -24,8 +27,10 @@ public class GameScheduler {
     private final ScheduledGameService scheduledGameService;
     private final FinishedGameService finishedGameService;
     private final ChatCreateScheduler gameEventScheduler;
+    private final StatisticsUpdateService statisticsUpdateService;
     private final GameRepository gameRepository;
     private final ChatEventKafkaProducer chatEventKafkaProducer;
+
 
     /**
      * 매일 00:00에 3주뒤의 날짜의 경기 일정을 크롤링하여 저장
@@ -63,6 +68,10 @@ public class GameScheduler {
         try {
             int updatedCount = finishedGameService.crawlAndUpdateFinishedGames(yesterday);
             log.info("========== 어제({}) 경기 결과 업데이트 완료: {}개 업데이트 ==========", yesterday, updatedCount);
+            
+            // 경기 결과 업데이트 완료 후 관련 사용자 통계 재계산
+            statisticsUpdateService.updateUserStatsForDate(yesterday);
+            
         } catch (Exception e) {
             log.error("========== 어제({}) 경기 결과 업데이트 실패: {} ==========", yesterday, e.getMessage(), e);
         }

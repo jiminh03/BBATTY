@@ -1,6 +1,7 @@
 package com.ssafy.chat.watch.redis;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ssafy.chat.global.constants.ChatRedisKey;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.connection.Message;
@@ -109,7 +110,7 @@ public class WatchChatRedisSub implements MessageListener {
      * 채널 구독
      */
     private void subscribeToChannel(String roomId) {
-        String channelName = getChannelName(roomId);
+        String channelName = ChatRedisKey.getWatchPubSubChannel(roomId);
         ChannelTopic topic = new ChannelTopic(channelName);
         
         redisContainer.addMessageListener(this, topic);
@@ -166,17 +167,10 @@ public class WatchChatRedisSub implements MessageListener {
     }
     
     /**
-     * 채널명 생성
-     */
-    private String getChannelName(String roomId) {
-        return "watch-chat:" + roomId;
-    }
-    
-    /**
      * 채널명에서 roomId 추출
      */
     private String extractRoomIdFromChannel(String channel) {
-        return channel.replace("watch-chat:", "");
+        return channel.replace(ChatRedisKey.WATCH_PUBSUB_CHANNEL, "");
     }
     
     /**

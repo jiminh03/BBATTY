@@ -6,3 +6,4 @@ export * from './animation';
 export * from './device';
 export * from './security';
 export * from './location';
+export * from './error';

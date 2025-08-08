@@ -5,27 +5,24 @@ import { setupInterceptors } from './interceptors';
 import { tokenManager } from './tokenManager';
 
 interface CustomAxiosInstance extends AxiosInstance {
-  get<T = unknown, R = AxiosResponse<ApiResponse<T>>, D = any>(
+  get<T = unknown, R = ApiResponse<T>, D = any>(
     url: string,
     config?: Partial<InternalAxiosRequestConfig<D>>
   ): Promise<R>;
 
-  post<T = unknown, R = AxiosResponse<ApiResponse<T>>, D = any>(
+  post<T = unknown, R = ApiResponse<T>, D = any>(
     url: string,
     data?: D,
     config?: InternalAxiosRequestConfig<D>
   ): Promise<R>;
 
-  put<T = unknown, R = AxiosResponse<ApiResponse<T>>, D = any>(
+  put<T = unknown, R = ApiResponse<T>, D = any>(
     url: string,
     data?: D,
     config?: InternalAxiosRequestConfig<D>
   ): Promise<R>;
 
-  delete<T = unknown, R = AxiosResponse<ApiResponse<T>>, D = any>(
-    url: string,
-    config?: InternalAxiosRequestConfig<D>
-  ): Promise<R>;
+  delete<T = unknown, R = ApiResponse<T>, D = any>(url: string, config?: InternalAxiosRequestConfig<D>): Promise<R>;
 }
 
 // 메인 클라 (일반 API용 - 8080 포트)
@@ -75,8 +72,8 @@ const handleUnauthorized = async () => {
 };
 
 export const initializeApiClient = async (): Promise<void> => {
-  const hardcodedtoken = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJzdWIiOiIxIiwiaXNzIjoiYmJhdHR5IiwiaWF0IjoxNzU0NDAzNzgyLCJleHAiOjE3NTU2MTMzODIsImFnZSI6MjgsImdlbmRlciI6IkZFTUFMRSIsInRlYW1JZCI6MX0.2EQSS7gllsBQyVSAVyqQOkBhz-d5g7UNePyfFUWjswaayMtvfLWIZ_okwb_br54C-za4a670of62KHbxl8hyOw';
-  applyTokenToClients(hardcodedtoken);
+  const token = await tokenManager.getToken();
+  applyTokenToClients(token);
 
   setupInterceptors(apiClient, handleUnauthorized);
   setupInterceptors(chatApiClient, handleUnauthorized);

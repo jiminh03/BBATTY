@@ -46,7 +46,7 @@ const MOCK_ROOMS: MatchChatRoom[] = [
 // 실제 서버 응답을 처리하는 API 함수들 (서버 연결 실패시 목 데이터 사용)
 export const chatRoomApi = {
   // 매치 채팅 참여 - 직접 타입 정의
-  joinMatchChat: async (request: MatchChatJoinRequest): Promise<{ data: { status: string; message: string; data: AuthResponse } }> => {
+  joinMatchChat: async (request: MatchChatJoinRequest): Promise<{ status: string; message: string; data: AuthResponse }> => {
     try {
       const response = await chatApiClient.post('/api/match-chat/join', request);
       return response as any;
@@ -54,13 +54,11 @@ export const chatRoomApi = {
       console.warn('서버 연결 실패, 목 데이터 반환:', error);
       // 목 응답 반환
       return {
+        status: 'SUCCESS',
+        message: '채팅방 참여 성공 (목 데이터)',
         data: {
-          status: 'SUCCESS',
-          message: '채팅방 참여 성공 (목 데이터)',
-          data: {
-            sessionToken: 'mock_session_token_' + Date.now(),
-            websocketUrl: 'ws://10.0.2.2:8084/ws/match-chat/websocket?matchId=' + request.matchId
-          }
+          sessionToken: 'mock_session_token_' + Date.now(),
+          websocketUrl: 'ws://10.0.2.2:8084/ws/match-chat/websocket?matchId=' + request.matchId
         }
       };
     }
@@ -74,13 +72,11 @@ export const chatRoomApi = {
     } catch (error) {
       console.warn('서버 연결 실패, 목 데이터 반환:', error);
       return {
+        status: 'SUCCESS',
+        message: '워치 채팅 참여 성공 (목 데이터)',
         data: {
-          status: 'SUCCESS',
-          message: '워치 채팅 참여 성공 (목 데이터)',
-          data: {
-            sessionToken: 'mock_watch_session_' + Date.now(),
-            websocketUrl: 'ws://10.0.2.2:8084/ws/watch-chat/websocket?gameId=' + request.gameId
-          }
+          sessionToken: 'mock_watch_session_' + Date.now(),
+          websocketUrl: 'ws://10.0.2.2:8084/ws/watch-chat/websocket?gameId=' + request.gameId
         }
       };
     }
@@ -93,7 +89,7 @@ export const chatRoomApi = {
       return response as any;
     } catch (error) {
       console.warn('서버 연결 실패, 목 응답 반환:', error);
-      return { data: { status: 'SUCCESS', message: '세션 무효화 완료 (목 데이터)' } };
+      return { status: 'SUCCESS', message: '세션 무효화 완료 (목 데이터)' };
     }
   },
 
@@ -104,12 +100,12 @@ export const chatRoomApi = {
       return response as any;
     } catch (error) {
       console.warn('서버 연결 실패, 목 응답 반환:', error);
-      return { data: { status: 'SUCCESS', message: 'Health OK (목 데이터)' } };
+      return { status: 'SUCCESS', message: 'Health OK (목 데이터)' };
     }
   },
 
   // 매치 채팅방 목록 조회 - 직접 타입 정의
-  getMatchChatRooms: async (): Promise<{ data: MatchChatRoomsResponse }> => {
+  getMatchChatRooms: async (): Promise<MatchChatRoomsResponse> => {
     try {
       console.log('API 요청 시작: /api/match-chat-rooms');
       const response = await chatApiClient.get('/api/match-chat-rooms');
@@ -122,22 +118,20 @@ export const chatRoomApi = {
       
       // 목 응답 반환
       return {
+        status: 'SUCCESS',
+        message: '채팅방 목록 조회 성공 (목 데이터)',
         data: {
-          status: 'SUCCESS',
-          message: '채팅방 목록 조회 성공 (목 데이터)',
-          data: {
-            rooms: MOCK_ROOMS,
-            nextCursor: null,
-            hasMore: false,
-            count: MOCK_ROOMS.length
-          }
+          rooms: MOCK_ROOMS,
+          nextCursor: null,
+          hasMore: false,
+          count: MOCK_ROOMS.length
         }
       };
     }
   },
 
   // 매치 채팅방 생성 - 직접 타입 정의
-  createMatchChatRoom: async (request: CreateMatchChatRoomRequest): Promise<{ data: CreateMatchChatRoomResponse }> => {
+  createMatchChatRoom: async (request: CreateMatchChatRoomRequest): Promise<CreateMatchChatRoomResponse> => {
     try {
       console.log('채팅방 생성 API 요청:', request);
       const response = await chatApiClient.post('/api/match-chat-rooms', request);
@@ -165,11 +159,9 @@ export const chatRoomApi = {
       };
       
       return {
-        data: {
-          status: 'SUCCESS',
-          message: '채팅방 생성 성공 (목 데이터)',
-          data: newRoom
-        }
+        status: 'SUCCESS',
+        message: '채팅방 생성 성공 (목 데이터)',
+        data: newRoom
       };
     }
   },

@@ -59,8 +59,22 @@ export interface CheckNicknameResponse {
 }
 
 export interface RegisterResponse {
-  tokens: TokenInfo;
-  userProfile: UserProfile;
+  tokens: {
+    accessToken: string;
+    refreshToken: string;
+    accessTokenExpiresAt: string;
+    refreshTokenExpiresAt: string;
+  };
+  userProfile: {
+    userId: number;
+    nickname: string;
+    profileImg?: string;
+    teamId: number;
+    teamName: string;
+    introduction?: string;
+    age: number;
+    gender: string;
+  };
 }
 
 export interface RefreshTokenResponse {

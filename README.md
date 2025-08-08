@@ -181,7 +181,7 @@ https://www.erdcloud.com/d/or5ngZvQWRQkWEWX8
 
 ## 🎨 디자인
 
-**Figma**: [BBATTY 디자인 시안](https://www.figma.com/bbatty-design)
+**Figma**: [BBATTY 디자인 시안](https://www.figma.com/design/qhU5f2pm2Sg2tIyHWAvdGn/%EB%B9%A0%EB%9D%A0?node-id=303-7390&t=daq1gq2uM2Wvt8YG-1)
 - 10개 구단별 브랜드 컬러 시스템: 사용자의 응원 팀 선택에 따른 서비스 전체 테마 컬러 적용
 - 야구팬 친화적 UI/UX
 

@@ -23,16 +23,38 @@ export const MatchChatRoomListScreen = () => {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
+  const getTeamColors = (teamId: string) => {
+    const teamColorMap: { [key: string]: string } = {
+      'LG': '#C30452',
+      '두산': '#131230',
+      'KIA': '#EA0029',
+      '삼성': '#074CA1',
+      '롯데': '#041E42',
+      'SSG': '#CE0E2D',
+      'KT': '#000000',
+      '한화': '#FF6600',
+      'NC': '#315288',
+      '키움': '#570514',
+    };
+    return teamColorMap[teamId] || '#007AFF';
+  };
+
   const loadRooms = async () => {
     try {
       setLoading(true);
       const response = await chatRoomApi.getMatchChatRooms();
+      console.log('🔍 MatchChatRoomListScreen - 응답 구조:', JSON.stringify(response, null, 2));
+      console.log('🔍 response.rooms 존재 여부:', !!response.rooms);
+      console.log('🔍 response.rooms 길이:', response.rooms?.length);
       
       // 실제 서버 응답 구조에 맞게 처리
-      if (response.data.status === 'SUCCESS') {
-        setRooms(response.data.data.rooms);
+      if (response.rooms) {
+        console.log('🔍 rooms 설정 전:', rooms.length);
+        setRooms(response.rooms);
+        console.log('🔍 rooms 설정 완료');
       } else {
-        Alert.alert('오류', response.data.message || '채팅방 목록을 불러오는데 실패했습니다.');
+        console.log('🔍 response.rooms가 없음');
+        Alert.alert('오류', '채팅방 목록을 불러오는데 실패했습니다.');
       }
     } catch (error) {
       console.error('채팅방 목록 로드 실패:', error);
@@ -73,10 +95,10 @@ export const MatchChatRoomListScreen = () => {
             currentParticipants: 0,
             createdAt: new Date().toISOString(),
             status: 'ACTIVE',
-            websocketUrl: response.data.data.websocketUrl
+            websocketUrl: response.data.websocketUrl
           },
-          websocketUrl: response.data.data.websocketUrl,
-          sessionToken: response.data.data.sessionToken
+          websocketUrl: response.data.websocketUrl,
+          sessionToken: response.data.sessionToken
         });
       } else {
         Alert.alert('오류', response.data.message || '워치 채팅 참여에 실패했습니다.');
@@ -110,25 +132,25 @@ export const MatchChatRoomListScreen = () => {
       onPress={() => navigation.navigate('MatchChatRoomDetail', { room: item })}
     >
       <View style={styles.roomHeader}>
-        <Text style={styles.roomTitle}>{item.matchTitle}</Text>
-        <View style={styles.teamBadge}>
-          <Text style={styles.teamText}>{item.teamId}</Text>
+        <Text style={styles.roomTitle}>🔥 {item.matchTitle}</Text>
+        <View style={[styles.teamBadge, { backgroundColor: getTeamColors(item.teamId) }]}>
+          <Text style={styles.teamText}>⚾ {item.teamId}</Text>
         </View>
       </View>
       
       <Text style={styles.roomDescription} numberOfLines={2}>
-        {item.matchDescription}
+        🏟️ {item.matchDescription}
       </Text>
       
       <View style={styles.roomInfo}>
         <Text style={styles.ageRange}>
-          {item.minAge}-{item.maxAge}세
+          🎂 {item.minAge}-{item.maxAge}세
         </Text>
         <Text style={styles.participants}>
-          {item.currentParticipants}/{item.maxParticipants}명
+          👥 {item.currentParticipants}/{item.maxParticipants}명
         </Text>
         <Text style={styles.createdAt}>
-          {formatDate(item.createdAt)}
+          ⏰ {formatDate(item.createdAt)}
         </Text>
       </View>
       
@@ -143,12 +165,14 @@ export const MatchChatRoomListScreen = () => {
 
   const EmptyComponent = () => (
     <View style={styles.emptyContainer}>
-      <Text style={styles.emptyText}>아직 생성된 채팅방이 없습니다</Text>
+      <Text style={styles.emptyIcon}>⚾</Text>
+      <Text style={styles.emptyText}>아직 생성된 매치룸이 없습니다</Text>
+      <Text style={styles.emptySubtext}>첫 번째 열정적인 매치룸을 만들어보세요!</Text>
       <TouchableOpacity
         style={styles.createButton}
         onPress={() => navigation.navigate('CreateMatchChatRoom')}
       >
-        <Text style={styles.createButtonText}>첫 채팅방 만들기</Text>
+        <Text style={styles.createButtonText}>🔥 첫 매치룸 개설하기</Text>
       </TouchableOpacity>
     </View>
   );
@@ -156,19 +180,19 @@ export const MatchChatRoomListScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>매치 채팅방</Text>
+        <Text style={styles.headerTitle}>⚾ 매치룸 리그</Text>
         <View style={styles.headerButtons}>
           <TouchableOpacity
             style={styles.watchChatButton}
             onPress={() => handleWatchChatJoin()}
           >
-            <Text style={styles.watchChatButtonText}>📺 워치채팅</Text>
+            <Text style={styles.watchChatButtonText}>📺 워치파티</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.headerButton}
             onPress={() => navigation.navigate('CreateMatchChatRoom')}
           >
-            <Text style={styles.headerButtonText}>+ 방 만들기</Text>
+            <Text style={styles.headerButtonText}>🔥 매치룸 개설</Text>
           </TouchableOpacity>
         </View>
       </View>

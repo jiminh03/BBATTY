@@ -5,7 +5,7 @@ interface ConnectionState {
   client: SocketClient | null;
   isConnecting: boolean;
   isConnected: boolean;
-  connectionStatus: 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'AUTHENTICATING' | 'CLOSING' | 'CLOSED';
+  connectionStatus: 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'RECONNECTING' | 'FAILED' | 'ERROR';
   error: string | null;
   reconnectAttempts: number;
   lastConnectedAt: string | null;
@@ -19,6 +19,7 @@ interface ConnectionActions {
   setError: (error: string | null) => void;
   incrementReconnectAttempts: () => void;
   resetReconnectAttempts: () => void;
+  setReconnectAttempts: (attempts: number) => void;
   setLastConnectedAt: (timestamp: string) => void;
   reset: () => void;
 }
@@ -48,6 +49,7 @@ export const useConnectionStore = create<ConnectionStore>((set) => ({
     reconnectAttempts: state.reconnectAttempts + 1 
   })),
   resetReconnectAttempts: () => set({ reconnectAttempts: 0 }),
+  setReconnectAttempts: (attempts) => set({ reconnectAttempts: attempts }),
   setLastConnectedAt: (timestamp) => set({ lastConnectedAt: timestamp }),
   reset: () => set({
     client: null,
