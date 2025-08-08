@@ -3,6 +3,8 @@ package com.ssafy.chat.match.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.chat.common.util.RedisUtil;
+import com.ssafy.chat.global.constants.ErrorCode;
+import com.ssafy.chat.global.exception.ApiException;
 import com.ssafy.chat.match.dto.GameInfo;
 import com.ssafy.chat.match.dto.GameInfoList;
 import com.ssafy.chat.match.dto.GameListResponse;
@@ -39,7 +41,7 @@ public class GameInfoServiceImpl implements GameInfoService {
             log.info("Successfully processed {} game infos", gameInfoList.getGames().size());
         } catch (Exception e) {
             log.error("Failed to process game info message: {}", message, e);
-            throw new RuntimeException("Failed to process game info message", e);
+            throw new ApiException(ErrorCode.SERVER_ERROR);
         }
     }
 

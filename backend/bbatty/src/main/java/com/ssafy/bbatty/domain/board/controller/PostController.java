@@ -4,9 +4,11 @@ import com.ssafy.bbatty.domain.board.dto.request.PostCreateRequest;
 import com.ssafy.bbatty.domain.board.dto.response.PostCreateResponse;
 import com.ssafy.bbatty.domain.board.dto.response.PostDetailResponse;
 import com.ssafy.bbatty.domain.board.dto.response.PostListPageResponse;
+import com.ssafy.bbatty.domain.board.dto.response.PostListResponse;
 import com.ssafy.bbatty.domain.board.service.PostCountService;
 import com.ssafy.bbatty.domain.board.service.PostService;
 import com.ssafy.bbatty.domain.board.service.PostImageService;
+import com.ssafy.bbatty.domain.board.service.PopularPostService;
 import com.ssafy.bbatty.global.constants.ErrorCode;
 import com.ssafy.bbatty.global.constants.SuccessCode;
 import com.ssafy.bbatty.global.exception.ApiException;
@@ -20,6 +22,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 
 @Slf4j
 @RestController
@@ -31,6 +35,7 @@ public class PostController {
     private final S3Service s3Service;
     private final PostCountService postCountService;
     private final PostImageService postImageService;
+    private final PopularPostService popularPostService;
 
     // 게시물 생성
     @PostMapping
@@ -73,6 +78,17 @@ public class PostController {
         return ResponseEntity.status(SuccessCode.SUCCESS_DEFAULT.getStatus()).body(
                 ApiResponse.success(SuccessCode.SUCCESS_DEFAULT, response));
     }
+    
+    // 팀별 인기글 커서 기반 페이징 조회
+    @GetMapping("/team/{teamId}/popular")
+    public ResponseEntity<ApiResponse<PostListPageResponse>> getPopularPostsByTeam(
+            @PathVariable Long teamId,
+            @RequestParam(required = false) Long cursor) {
+
+        PostListPageResponse response = popularPostService.getPopularPostsByTeam(teamId, cursor);
+        return ResponseEntity.status(SuccessCode.SUCCESS_DEFAULT.getStatus()).body(
+                ApiResponse.success(SuccessCode.SUCCESS_DEFAULT, response));
+    }
 
     // 게시글 상세 조회
     @GetMapping("/{postId}")
@@ -102,6 +118,7 @@ public class PostController {
     public ResponseEntity<?> likePost(@PathVariable Long postId,
                                       @AuthenticationPrincipal UserPrincipal userPrincipal) {
         // 좋아요 수 증가 (Redis에만 증가 되고 나중에 RDB에 반영된다.)
+
         postCountService.incrementLikeCount(postId, userPrincipal.getUserId());
 
         return ResponseEntity.status(SuccessCode.SUCCESS_DEFAULT.getStatus())

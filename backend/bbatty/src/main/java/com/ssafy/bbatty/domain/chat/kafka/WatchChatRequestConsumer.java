@@ -11,6 +11,9 @@ import com.ssafy.bbatty.global.security.JwtProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.handler.annotation.Header;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -31,13 +34,22 @@ public class WatchChatRequestConsumer {
     private final ChatAuthKafkaProducer chatAuthKafkaProducer;
     
     @KafkaListener(topics = "watch-chat-request", groupId = "bbatty-watch-chat-group")
-    public void handleWatchChatRequest(String message) {
+    public void handleWatchChatRequest(@Payload String message,
+                                     @Header("Authorization") String authHeader) {
         String requestId = null;
         
         try {
             JsonNode requestNode = objectMapper.readTree(message);
             requestId = requestNode.get("requestId").asText();
-            String jwtToken = requestNode.get("jwtToken").asText();
+            
+            // Header에서 JWT 토큰 추출
+            String jwtToken = null;
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                jwtToken = authHeader.substring(7);
+            } else {
+                throw new ApiException(ErrorCode.UNAUTHORIZED);
+            }
+            
             String action = requestNode.get("action").asText();
             Long gameId = requestNode.get("gameId").asLong();
             
@@ -114,16 +126,42 @@ public class WatchChatRequestConsumer {
      */
     private ChatAuthRequest createChatAuthRequestFromNode(JsonNode node) {
         try {
+            Map<String, Object> roomInfo = null;
+            if (node.has("roomInfo") && !node.get("roomInfo").isNull()) {
+                roomInfo = objectMapper.convertValue(node.get("roomInfo"), Map.class);
+            }
+
+            String action = node.get("action").asText();
+
             return ChatAuthRequest.builder()
                     .requestId(node.get("requestId").asText())
-                    .chatType(node.get("chatType").asText())
-                    .action(node.get("action").asText())
-                    .matchId(node.get("gameId").asLong())
-                    .roomInfo(objectMapper.convertValue(node.get("roomInfo"), Map.class))
+                    .chatType(node.has("chatType") ? node.get("chatType").asText() : "WATCH")
+                    .action(action)
+                    .roomId(getRoomIdByAction(node, action))  // matchId 대신 roomId 사용
+                    .gameId(node.has("gameId") ? node.get("gameId").asLong() : null)
+                    .teamId(roomInfo != null && roomInfo.containsKey("teamId") ? 
+                        ((Number) roomInfo.get("teamId")).longValue() : null)
+                    .roomInfo(roomInfo)
                     .build();
+
         } catch (Exception e) {
-            log.error("ChatAuthRequest 변환 실패", e);
+            log.error("ChatAuthRequest 변환 실패: {}", node.toString(), e);
             throw new ApiException(ErrorCode.INVALID_INPUT_VALUE);
         }
+    }
+    /**
+     * 액션에 따라 적절한 roomId 반환
+     */
+    private String getRoomIdByAction(JsonNode node, String action) {
+        if ("CREATE".equals(action)) {
+            return String.valueOf(node.get("gameId").asLong());
+        } else if ("JOIN".equals(action)) {
+            if (node.has("roomId") && !node.get("roomId").isNull()) {
+                return node.get("roomId").asText();
+            } else {
+                return String.valueOf(node.get("gameId").asLong());
+            }
+        }
+        return String.valueOf(node.get("gameId").asLong());
     }
 }

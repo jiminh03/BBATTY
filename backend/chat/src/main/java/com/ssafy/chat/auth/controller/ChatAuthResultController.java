@@ -1,6 +1,8 @@
 package com.ssafy.chat.auth.controller;
 
 import com.ssafy.chat.common.util.RedisUtil;
+import com.ssafy.chat.global.constants.ErrorCode;
+import com.ssafy.chat.global.exception.ApiException;
 import com.ssafy.chat.global.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,7 +37,7 @@ public class ChatAuthResultController {
             Object result = redisUtil.getValue(resultKey);
             
             if (result == null) {
-                return ResponseEntity.ok(ApiResponse.<Map<String, Object>>fail(com.ssafy.chat.global.constants.ErrorCode.NOT_FOUND, null));
+                throw new ApiException(ErrorCode.NOT_FOUND);
             }
             
             @SuppressWarnings("unchecked")
@@ -48,7 +50,7 @@ public class ChatAuthResultController {
             
         } catch (Exception e) {
             log.error("인증 결과 조회 실패: requestId={}", requestId, e);
-            return ResponseEntity.ok(ApiResponse.<Map<String, Object>>fail(com.ssafy.chat.global.constants.ErrorCode.SERVER_ERROR, null));
+            throw new ApiException(ErrorCode.UNAUTHORIZED);
         }
     }
 }

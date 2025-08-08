@@ -1,6 +1,8 @@
 package com.ssafy.chat.common.infrastructure;
 
 import com.ssafy.chat.common.util.RedisUtil;
+import com.ssafy.chat.global.constants.ErrorCode;
+import com.ssafy.chat.global.exception.ApiException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -47,7 +49,7 @@ public class ChatRoomRedisManager {
             
         } catch (Exception e) {
             log.error("채팅방 사용자 추가 실패 - roomId: {}, sessionId: {}", roomId, sessionId, e);
-            throw new RuntimeException("채팅방 입장에 실패했습니다.", e);
+            throw new ApiException(ErrorCode.SERVER_ERROR);
         }
     }
 

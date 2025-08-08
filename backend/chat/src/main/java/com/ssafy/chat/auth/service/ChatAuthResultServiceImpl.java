@@ -46,7 +46,7 @@ public class ChatAuthResultServiceImpl implements ChatAuthResultService {
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 log.error("인증 대기 중 인터럽트 발생: requestId={}", requestId);
-                throw new ApiException(ErrorCode.SERVER_ERROR, "인증 대기 중 인터럽트 발생");
+                throw new ApiException(ErrorCode.SERVER_ERROR);
             }
         }
         

@@ -37,50 +37,71 @@ public class MatchChatAuthServiceImpl implements MatchChatAuthService {
     public Map<String, Object> validateAndCreateSession(String jwtToken, MatchChatJoinRequest request) {
         // 1. matchId 유효성 검증
         validateMatchId(String.valueOf(request.getMatchId()));
-        
+
         // 2. 채팅방 정보 생성
         Map<String, Object> roomInfo = createRoomInfo(request);
-        
+
         // 3. bbatty 서버에 인증 요청 전송
-        String requestId = chatAuthRequestProducer.sendAuthRequest(
-            jwtToken, 
-            "MATCH", 
-            "JOIN", 
-            request.getMatchId(), 
-            roomInfo,
-            request.getNickname()
+        String requestId = chatAuthRequestProducer.sendMatchChatJoinRequest(
+                jwtToken,
+                request.getMatchId(),
+                roomInfo,
+                request.getNickname()
         );
-        
+
         if (requestId == null) {
-            throw new ApiException(ErrorCode.KAFKA_MESSAGE_SEND_FAILED, "bbatty 서버 인증 요청 전송 실패");
+            throw new ApiException(ErrorCode.KAFKA_MESSAGE_SEND_FAILED);
         }
-        
+
         log.info("bbatty 서버 인증 요청 완료: requestId={}, matchId={}", requestId, request.getMatchId());
-        
+
         // 4. 인증 결과 대기 및 폴링 (최대 10초)
         Map<String, Object> authResult = chatAuthResultService.waitForAuthResult(requestId, 10000);
-        
+
         if (authResult == null) {
-            throw new ApiException(ErrorCode.SERVER_ERROR, "인증 응답 타임아웃");
+            throw new ApiException(ErrorCode.SERVER_ERROR);
         }
-        
+
         Boolean success = (Boolean) authResult.get("success");
         if (!success) {
             String errorMessage = (String) authResult.get("errorMessage");
-            throw new ApiException(ErrorCode.UNAUTHORIZED, "인증 실패: " + errorMessage);
+
+            // 실제 오류 내용에 따라 적절한 ErrorCode 사용
+            if (errorMessage.contains("경기 정보를 찾을 수 없어요") ||
+                    errorMessage.contains("GAME_NOT_FOUND")) {
+                throw new ApiException(ErrorCode.GAME_NOT_FOUND);
+            } else if (errorMessage.contains("경기가 종료") ||
+                    errorMessage.contains("GAME_FINISHED")) {
+                throw new ApiException(ErrorCode.GAME_FINISHED);
+            } else if (errorMessage.contains("토큰") ||
+                    errorMessage.contains("인증") ||
+                    errorMessage.contains("UNAUTHORIZED")) {
+                throw new ApiException(ErrorCode.UNAUTHORIZED);
+            } else if (errorMessage.contains("팀") ||
+                    errorMessage.contains("TEAM")) {
+                throw new ApiException(ErrorCode.UNAUTHORIZED_TEAM_ACCESS);
+            } else {
+                // 알 수 없는 오류는 서버 오류로 처리
+                throw new ApiException(ErrorCode.SERVER_ERROR);
+            }
         }
-        
+
         // 5. 인증 성공 시 세션 생성
         @SuppressWarnings("unchecked")
         Map<String, Object> userInfo = (Map<String, Object>) authResult.get("userInfo");
-        
+
+        log.info("userInfo 내용: {}", userInfo);  // 디버깅 로그 추가
+
         String sessionToken = generateSessionToken();
         String sessionKey = SESSION_KEY_PREFIX + sessionToken;
-        
+
         Map<String, Object> sessionInfo = createSessionInfoFromAuth(userInfo, request);
+        log.info("sessionInfo 생성 완료: {}", sessionInfo);  // 디버깅 로그 추가
+
         redisUtil.setValue(sessionKey, sessionInfo, SESSION_EXPIRE_TIME);
-        
-        log.info("매칭 채팅 세션 생성 완료 - userId: {}, matchId: {}, sessionToken: {}", 
+        log.info("Redis 저장 완료");  // 디버깅 로그 추가
+
+        log.info("매칭 채팅 세션 생성 완료 - userId: {}, matchId: {}, sessionToken: {}",
                 userInfo.get("userId"), request.getMatchId(), sessionToken);
 
         // 6. 응답 생성
@@ -93,18 +114,19 @@ public class MatchChatAuthServiceImpl implements MatchChatAuthService {
         response.put("matchId", request.getMatchId());
         response.put("expiresIn", SESSION_EXPIRE_TIME.getSeconds());
 
+        log.info("응답 생성 완료: {}", response);  // 디버깅 로그 추가
+
         return response;
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public Map<String, Object> getUserInfoByToken(String sessionToken) {
         try {
             String sessionKey = SESSION_KEY_PREFIX + sessionToken;
             Object sessionData = redisUtil.getValue(sessionKey);
             
             if (sessionData == null) {
-                throw new ApiException(ErrorCode.INVALID_SESSION_TOKEN, "유효하지 않은 세션 토큰입니다.");
+                throw new ApiException(ErrorCode.INVALID_SESSION_TOKEN);
             }
 
             Map<String, Object> userInfo = (Map<String, Object>) sessionData;
@@ -118,7 +140,7 @@ public class MatchChatAuthServiceImpl implements MatchChatAuthService {
             throw e;
         } catch (Exception e) {
             log.warn("세션 토큰 검증 실패 - token: {}", sessionToken, e);
-            throw new ApiException(ErrorCode.INVALID_SESSION_TOKEN, "세션 검증에 실패했습니다.");
+            throw new ApiException(ErrorCode.INVALID_SESSION_TOKEN);
         }
     }
 
@@ -201,19 +223,19 @@ public class MatchChatAuthServiceImpl implements MatchChatAuthService {
      */
     private void validateMatchId(String matchId) {
         if (matchId == null || matchId.trim().isEmpty()) {
-            throw new ApiException(ErrorCode.BAD_REQUEST, "matchId가 비어있습니다.");
+            throw new ApiException(ErrorCode.BAD_REQUEST);
         }
         
         // Redis에서 매칭 채팅방 존재 여부 확인
         try {
             var matchRoom = matchChatRoomService.getMatchChatRoom(matchId);
             if (matchRoom == null) {
-                throw new ApiException(ErrorCode.MATCH_CHAT_ROOM_NOT_FOUND, "존재하지 않는 매칭 채팅방입니다.");
+                throw new ApiException(ErrorCode.MATCH_CHAT_ROOM_NOT_FOUND);
             }
             
             // 채팅방 상태 검증
             if (!"ACTIVE".equals(matchRoom.getStatus())) {
-                throw new ApiException(ErrorCode.MATCH_CHAT_ROOM_CLOSED, "비활성 상태의 매칭 채팅방입니다.");
+                throw new ApiException(ErrorCode.MATCH_CHAT_ROOM_CLOSED);
             }
             
             log.debug("매칭 채팅방 유효성 검증 성공 - matchId: {}, gameId: {}", matchId, matchRoom.getGameId());
@@ -222,7 +244,7 @@ public class MatchChatAuthServiceImpl implements MatchChatAuthService {
             throw e;
         } catch (Exception e) {
             log.error("매칭 채팅방 유효성 검증 중 오류 - matchId: {}", matchId, e);
-            throw new ApiException(ErrorCode.SERVER_ERROR, "매칭 채팅방 검증에 실패했습니다.");
+            throw new ApiException(ErrorCode.SERVER_ERROR);
         }
     }
 }
