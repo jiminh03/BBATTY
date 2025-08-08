@@ -131,6 +131,8 @@
 
 ### ERD
 
+![아키텍처](img/architecture.png)
+
 ![ERD](img/erd.png)
 
 https://www.erdcloud.com/d/or5ngZvQWRQkWEWX8
