@@ -118,9 +118,9 @@ public class TeamChatRoomInfo {
             return 0;
         }
         LocalDateTime nowTime = KSTTimeUtil.now();
-        if (gameDateTime.isBefore(now)) {
+        if (gameDateTime.isBefore(nowTime)) {
             return 0; // 이미 시작됨
         }
-        return java.time.Duration.between(now, gameDateTime).toMinutes();
+        return java.time.Duration.between(nowTime, gameDateTime).toMinutes();
     }
 }
