@@ -45,10 +45,9 @@ export default function SignUpScreen({ route }: Props) {
         introduction: data.introduction || '',
       };
 
-      console.log(registerData);
       const response = await authApi.signup(registerData);
-      const registerResult = extractData(response.data)!;
 
+      const registerResult = extractData(response)!;
       // 토큰들 저장
       await Promise.all([
         tokenManager.setToken(registerResult.tokens.accessToken),
@@ -63,12 +62,13 @@ export default function SignUpScreen({ route }: Props) {
         routes: [{ name: 'MainTabs' as any }],
       });
     } catch (error: any) {
-      // 닉네임 중복 에러 처리 <= 이부분수정해야함
-      if (error.response?.data?.error?.code === 'NICKNAME_CONFLICT') {
-        setShowConflictModal(true);
-      } else {
-        Alert.alert('오류', '회원가입에 실패했습니다');
-      }
+      console.log(error);
+      // // 닉네임 중복 에러 처리 <= 이부분수정해야함
+      // if (error.response?.data?.error?.code === 'NICKNAME_CONFLICT') {
+      //   setShowConflictModal(true);
+      // } else {
+      //   Alert.alert('오류', '회원가입에 실패했습니다');
+      // }
       throw error; // ProfileForm에서 로딩 상태 해제를 위해
     }
   };
