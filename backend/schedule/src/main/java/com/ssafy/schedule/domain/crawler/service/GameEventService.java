@@ -20,9 +20,7 @@ public class GameEventService {
     private final ChatEventKafkaProducer chatEventKafkaProducer;
 
     /**
-     * 경기 시작 2시간 전 이벤트 처리
-     * - 현재는 로그만 출력하고, 추후 채팅 서버 호출 로직 추가 예정
-     * 
+
      * @param game 이벤트 대상 경기
      */
     public void handleGameStartingSoonEvent(Game game) {

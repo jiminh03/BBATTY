@@ -1,5 +1,7 @@
 package com.ssafy.schedule.domain.crawler.controller;
 
+import com.ssafy.schedule.domain.chat.dto.GameListEventDto;
+import com.ssafy.schedule.domain.chat.kafka.ChatEventKafkaProducer;
 import com.ssafy.schedule.domain.crawler.service.ScheduledGameService;
 import com.ssafy.schedule.domain.crawler.service.FinishedGameService;
 import com.ssafy.schedule.global.entity.Game;
@@ -23,6 +25,7 @@ public class CrawlerController {
 
     private final ScheduledGameService scheduledGameService;
     private final FinishedGameService finishedGameService;
+    private final ChatEventKafkaProducer chatEventKafkaProducer;
 
     @PostMapping("/scheduled-games/{date}")
     public ResponseEntity<Map<String, Object>> crawlScheduledGames(@PathVariable String date) {
@@ -36,7 +39,20 @@ public class CrawlerController {
             
             // 일정 크롤링 및 저장 실행
             List<Game> savedGames = scheduledGameService.crawlAndSaveScheduledGames(date);
-            
+
+
+            // 크롤링한 게임들을 채팅 서버로 전송
+            if (!savedGames.isEmpty()) {
+                try {
+                    GameListEventDto eventDto = GameListEventDto.from(savedGames);
+                    chatEventKafkaProducer.sendGameListUpdateEvent(eventDto);
+
+                    log.info("✅ 채팅 서버로 게임 리스트 전송 완료: {}개 게임", savedGames.size());
+                } catch (Exception e) {
+                    log.error("채팅 서버 게임 리스트 전송 실패: {}", e.getMessage(), e);
+                }
+            }
+
             response.put("success", true);
             response.put("message", date + " 경기 일정 크롤링 완료");
             response.put("date", date);

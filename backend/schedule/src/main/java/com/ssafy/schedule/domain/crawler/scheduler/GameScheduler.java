@@ -32,7 +32,7 @@ public class GameScheduler {
      * 매일 00:00에 3주뒤의 날짜의 경기 일정을 크롤링하여 저장
      * - 아직 진행되지 않은 예정된 경기들을 SCHEDULED 상태로 저장
      */
-    @Scheduled(cron = "0 0 1 * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
     public void crawlTodayScheduledGames() {
         
         // 3주 뒤의 날짜 계산
@@ -43,7 +43,7 @@ public class GameScheduler {
         try {
             List<Game> savedGames = scheduledGameService.crawlAndSaveScheduledGames(targetDate);
             log.info("========== ({}) 경기 일정 크롤링 완료: {}개 저장 ==========", targetDate, savedGames.size());
-            
+
             // 크롤링한 게임들을 채팅 서버로 전송
             if (!savedGames.isEmpty()) {
                 sendGameListToChatServer(savedGames);
@@ -59,7 +59,7 @@ public class GameScheduler {
      * - 어제 진행된 경기들의 결과를 기존 일정에 업데이트
      * - 멀티스레드로 동작하므로 경기 일정 크롤링과 동시 실행 가능
      */
-    @Scheduled(cron = "0 23 1 * * *",  zone = "Asia/Seoul")
+    @Scheduled(cron = "0 0 0 * * *",  zone = "Asia/Seoul")
     public void updateYesterdayFinishedGames() {
         String yesterday = LocalDate.now(ZoneId.of("Asia/Seoul"))
                 .minusDays(1).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
