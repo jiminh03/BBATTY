@@ -2,6 +2,7 @@ package com.ssafy.schedule.domain.crawler.controller;
 
 import com.ssafy.schedule.domain.crawler.service.ScheduledGameService;
 import com.ssafy.schedule.domain.crawler.service.FinishedGameService;
+import com.ssafy.schedule.global.entity.Game;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -11,6 +12,7 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -33,12 +35,12 @@ public class CrawlerController {
             LocalDate.parse(date, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
             
             // 일정 크롤링 및 저장 실행
-            int savedCount = scheduledGameService.crawlAndSaveScheduledGames(date);
+            List<Game> savedGames = scheduledGameService.crawlAndSaveScheduledGames(date);
             
             response.put("success", true);
             response.put("message", date + " 경기 일정 크롤링 완료");
             response.put("date", date);
-            response.put("savedCount", savedCount);
+            response.put("games", savedGames);
             
             return ResponseEntity.ok(response);
             

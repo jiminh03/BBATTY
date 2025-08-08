@@ -1,14 +1,21 @@
 package com.ssafy.schedule.domain.crawler.scheduler;
 
+import com.ssafy.schedule.domain.chat.dto.GameListEventDto;
+import com.ssafy.schedule.domain.chat.kafka.ChatEventKafkaProducer;
 import com.ssafy.schedule.domain.crawler.service.FinishedGameService;
 import com.ssafy.schedule.domain.crawler.service.ScheduledGameService;
+import com.ssafy.schedule.global.entity.Game;
+import com.ssafy.schedule.global.repository.GameRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 @Component
 @Slf4j
@@ -18,12 +25,14 @@ public class GameScheduler {
     private final ScheduledGameService scheduledGameService;
     private final FinishedGameService finishedGameService;
     private final ChatCreateScheduler gameEventScheduler;
+    private final GameRepository gameRepository;
+    private final ChatEventKafkaProducer chatEventKafkaProducer;
 
     /**
      * 매일 00:00에 3주뒤의 날짜의 경기 일정을 크롤링하여 저장
      * - 아직 진행되지 않은 예정된 경기들을 SCHEDULED 상태로 저장
      */
-    @Scheduled(cron = "0 0 0 * * *")
+    @Scheduled(cron = "0 0 1 * * *", zone = "Asia/Seoul")
     public void crawlTodayScheduledGames() {
         
         // 3주 뒤의 날짜 계산
@@ -32,10 +41,16 @@ public class GameScheduler {
                 .format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
         
         try {
-            int savedCount = scheduledGameService.crawlAndSaveScheduledGames(targetDate);
-            log.info("========== 오늘({}) 경기 일정 크롤링 완료: {}개 저장 ==========", targetDate, savedCount);
+            List<Game> savedGames = scheduledGameService.crawlAndSaveScheduledGames(targetDate);
+            log.info("========== ({}) 경기 일정 크롤링 완료: {}개 저장 ==========", targetDate, savedGames.size());
+            
+            // 크롤링한 게임들을 채팅 서버로 전송
+            if (!savedGames.isEmpty()) {
+                sendGameListToChatServer(savedGames);
+            }
+            
         } catch (Exception e) {
-            log.error("========== 오늘({}) 경기 일정 크롤링 실패: {} ==========", targetDate, e.getMessage(), e);
+            log.error("========== ({}) 경기 일정 크롤링 실패: {} ==========", targetDate, e.getMessage(), e);
         }
     }
 
@@ -44,9 +59,10 @@ public class GameScheduler {
      * - 어제 진행된 경기들의 결과를 기존 일정에 업데이트
      * - 멀티스레드로 동작하므로 경기 일정 크롤링과 동시 실행 가능
      */
-    @Scheduled(cron = "0 0 0 * * *")
+    @Scheduled(cron = "0 23 1 * * *",  zone = "Asia/Seoul")
     public void updateYesterdayFinishedGames() {
-        String yesterday = LocalDate.now().minusDays(1).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        String yesterday = LocalDate.now(ZoneId.of("Asia/Seoul"))
+                .minusDays(1).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
         
         log.info("========== 어제({}) 경기 결과 업데이트 시작 ==========", yesterday);
         
@@ -62,7 +78,7 @@ public class GameScheduler {
      * 매일 02:00에 완료된 이벤트 스케줄 정리
      * - 이미 실행 완료되거나 취소된 스케줄 작업들을 메모리에서 제거
      */
-    @Scheduled(cron = "0 0 2 * * *")
+    @Scheduled(cron = "0 0 2 * * *", zone = "Asia/Seoul")
     public void cleanupCompletedEventSchedules() {
         log.info("========== 완료된 이벤트 스케줄 정리 시작 ==========");
         
@@ -72,6 +88,22 @@ public class GameScheduler {
             log.info("========== 이벤트 스케줄 정리 완료: 현재 {}개 스케줄 활성 ==========", currentTaskCount);
         } catch (Exception e) {
             log.error("========== 이벤트 스케줄 정리 실패: {} ==========", e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * 크롤링한 게임 리스트를 채팅 서버로 전송
+     * 
+     * @param games 전송할 게임 리스트
+     */
+    private void sendGameListToChatServer(List<Game> games) {
+        try {
+            GameListEventDto eventDto = GameListEventDto.from(games);
+            chatEventKafkaProducer.sendGameListUpdateEvent(eventDto);
+            
+            log.info("✅ 채팅 서버로 게임 리스트 전송 완료: {}개 게임", games.size());
+        } catch (Exception e) {
+            log.error("채팅 서버 게임 리스트 전송 실패: {}", e.getMessage(), e);
         }
     }
 }
