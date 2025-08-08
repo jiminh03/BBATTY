@@ -36,17 +36,17 @@ public class ChatAuthResponse {
         private int age;
         private String gender;
     }
-    
+
     @Data
     @Builder
     @NoArgsConstructor
     @AllArgsConstructor
     public static class ChatRoomInfo {
-        private String roomId;
-        private String chatType;
-        private Long matchId;
-        private String roomName;
-        private boolean isNewRoom;  // 새로 생성된 방인지 여부
+        private String roomId;          // 통합 채팅방 ID (최상위)
+        private String chatType;        // "MATCH" or "WATCH"
+        private Long gameId;           // 게임 ID (비즈니스 참조)
+        private String roomName;        // 방 제목
+        private boolean isNewRoom;      // 새로 생성된 방인지 여부
     }
     
     public static ApiResponse<ChatAuthResponse> success(String requestId, UserInfo userInfo, ChatRoomInfo chatRoomInfo) {

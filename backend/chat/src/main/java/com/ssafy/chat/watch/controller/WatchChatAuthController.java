@@ -37,15 +37,15 @@ public class WatchChatAuthController {
         log.info("직관 채팅방 입장 요청 - gameId: {}, 직관인증: {}", 
                 request.getGameId(), request.isAttendanceVerified());
 
-        // 현재는 JWT 토큰 사용하지 않음 - 더미로 처리
-        String jwtToken = null;
+        // JWT 토큰 추출
+        String jwtToken = extractTokenFromHeader(authHeader);
         
         try {
             Map<String, Object> sessionData = watchChatAuthService.validateAndCreateSession(jwtToken, request);
             
             // WebSocket 접속 링크 생성
-            String websocketUrl = String.format("ws://localhost:8084/ws/watch-chat/websocket?token=%s&gameId=%s", 
-                    sessionData.get("sessionToken"), request.getGameId());
+            String websocketUrl = String.format("ws://localhost:8084/ws/watch-chat/websocket?token=%s&gameId=%s&teamId=%s", 
+                    sessionData.get("sessionToken"), request.getGameId(), sessionData.get("teamId"));
             
             // 응답 DTO 생성
             WatchChatJoinResponse response = WatchChatJoinResponse.builder()
@@ -63,10 +63,10 @@ public class WatchChatAuthController {
             
         } catch (SecurityException e) {
             log.warn("직관 채팅방 입장 인증 실패: {}", e.getMessage());
-            throw new ApiException(ErrorCode.UNAUTHORIZED, e.getMessage());
+            throw new ApiException(ErrorCode.UNAUTHORIZED);
         } catch (IllegalArgumentException e) {
             log.warn("직관 채팅방 입장 요청 오류: {}", e.getMessage());
-            throw new ApiException(ErrorCode.BAD_REQUEST, e.getMessage());
+            throw new ApiException(ErrorCode.BAD_REQUEST);
         }
     }
 
@@ -83,13 +83,13 @@ public class WatchChatAuthController {
             
         } catch (Exception e) {
             log.error("세션 무효화 실패 - sessionToken: {}", sessionToken, e);
-            throw new ApiException(ErrorCode.SERVER_ERROR, "세션 무효화에 실패했습니다.");
+            throw new ApiException(ErrorCode.SERVER_ERROR);
         }
     }
 
     private String extractTokenFromHeader(String authHeader) {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new SecurityException("Authorization 헤더가 누락되었거나 형식이 올바르지 않습니다.");
+            throw new ApiException(ErrorCode.UNAUTHORIZED);
         }
         return authHeader.substring(7);
     }

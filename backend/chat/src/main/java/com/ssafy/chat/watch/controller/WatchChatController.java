@@ -66,6 +66,24 @@ public class WatchChatController {
     }
 
     /**
+     * 관전 채팅방 목록 조회
+     */
+    @GetMapping("/rooms")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getWatchChatRooms() {
+        Map<String, Object> result = watchChatService.getWatchChatRooms();
+        return ResponseEntity.ok(ApiResponse.success(result));
+    }
+
+    /**
+     * 특정 관전 채팅방 조회
+     */
+    @GetMapping("/rooms/{roomId}")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getWatchChatRoom(@PathVariable String roomId) {
+        Map<String, Object> roomInfo = watchChatService.getWatchChatRoom(roomId);
+        return ResponseEntity.ok(ApiResponse.success(roomInfo));
+    }
+
+    /**
      * 헬스체크
      */
     @GetMapping("/health")

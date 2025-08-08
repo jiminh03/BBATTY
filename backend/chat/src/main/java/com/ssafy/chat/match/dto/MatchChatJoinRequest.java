@@ -21,9 +21,8 @@ import jakarta.validation.constraints.Min;
 public class MatchChatJoinRequest {
     
     // 매칭 채팅방 ID 
-    @NotNull(message = "매칭 ID는 필수입니다.")
-    @Min(value = 1, message = "매칭 ID는 1 이상이어야 합니다.")
-    private Long matchId;
+    @NotBlank(message = "매칭 ID는 필수입니다.")
+    private String matchId;
     
     // 클라이언트에서 제공하는 정보
     @NotBlank(message = "닉네임은 필수입니다.")
