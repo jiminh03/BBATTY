@@ -1,14 +1,7 @@
 import { Alert } from 'react-native';
 import { AxiosError } from 'axios';
 import { API_CONFIG } from '../client/config';
-import {
-  ErrorCodes,
-  ErrorMessages,
-  mapHttpStatusToErrorCode,
-  createApiError,
-  type ApiError,
-  type ErrorCode,
-} from '../types/errors';
+import { ErrorCodes, ErrorMessages, mapHttpStatusToErrorCode, type ErrorCode } from '../types/errors';
 
 interface ProcessedError {
   type: 'response_error' | 'network_error' | 'setup_error';
@@ -29,10 +22,6 @@ export const handleApiError = (error: AxiosError): ProcessedError => {
 
   if (API_CONFIG.errors.showToast) {
     showErrorToUser(processedError);
-  }
-
-  if (API_CONFIG.errors.reportToService) {
-    reportErrorToService(processedError);
   }
 
   return processedError;
@@ -94,64 +83,15 @@ const showErrorToUser = (processedError: ProcessedError): void => {
   ];
 
   if (criticalErrors.includes(processedError.code)) {
-    Alert.alert('오류 발생', processedError.message, [
-      { text: '확인', style: 'default' },
-      ...(processedError.code === ErrorCodes.NETWORK_ERROR
-        ? [
-            {
-              text: '재시도',
-              onPress: () => {
-                /* 재시도 로직 */
-              },
-            },
-          ]
-        : []),
-    ]);
+    Alert.alert('Critical 오류 발생', processedError.message);
   } else {
     // Toast 메시지 표시 (실제 구현에서는 Toast 라이브러리 사용)
     console.log(' Toast:', processedError.message);
   }
 };
 
-// 에러 리포팅 서비스에 전송
-const reportErrorToService = (processedError: ProcessedError): void => {
-  // 실제 구현에서는 Sentry, Crashlytics 등의 서비스 사용
-  if (__DEV__) {
-    console.log(' Error would be reported:', processedError);
-    return;
-  }
-
-  // 에러 리포팅 로직
-  try {
-    // 예시: Sentry.captureException(processedError);
-  } catch (reportingError) {
-    console.warn('Failed to report error:', reportingError);
-  }
-};
-
 // 특정 에러 타입인지 확인하는 헬퍼 함수들
 export class ErrorCheckers {
-  /*
-  static isNetworkError(error: ProcessedError): boolean {
-    return error.code === ErrorCodes.NETWORK_ERROR;
-  }
-
-  static isAuthError(error: ProcessedError): boolean {
-    return [
-      ErrorCodes.AUTH_TOKEN_EXPIRED,
-      ErrorCodes.AUTH_PERMISSION_DENIED,
-    ].includes(error.code);
-  }
-
-  static isServerError(error: ProcessedError): boolean {
-    return [ErrorCodes.SERVER_ERROR].includes(error.code);
-  }
-
-  static isValidationError(error: ProcessedError): boolean {
-    return error.code === ErrorCodes.DATA_VALIDATION_FAILED;
-  }
-    */
-
   static isRetryableError(error: ProcessedError): boolean {
     const retryableErrorList = [ErrorCodes.NETWORK_ERROR, ErrorCodes.SERVER_ERROR] as const;
 

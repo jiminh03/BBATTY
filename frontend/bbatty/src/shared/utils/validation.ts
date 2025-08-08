@@ -1,5 +1,3 @@
-import { formatDate } from './date';
-
 // 검증 결과 타입
 export interface ValidationResult {
   isValid: boolean;
@@ -62,47 +60,5 @@ export const combineValidators = <T = string>(...validators: ValidationRule<T>[]
       }
     }
     return { isValid: true };
-  };
-};
-
-// 폼 검증 헬퍼??
-export interface FormField<T = string> {
-  value: T;
-  validators: ValidationRule<T>[];
-}
-
-export type FormFields = Record<string, FormField>;
-
-export const validateForm = (
-  fields: FormFields
-): {
-  isValid: boolean;
-  errors: Record<string, string | undefined>;
-} => {
-  const errors: Record<string, string | undefined> = {};
-  let isValid = true;
-
-  for (const [fieldName, field] of Object.entries(fields)) {
-    const validator = combineValidators(...field.validators);
-    const result = validator(field.value);
-
-    if (!result.isValid) {
-      errors[fieldName] = result.error;
-      isValid = false;
-    }
-  }
-
-  return { isValid, errors };
-};
-
-// 실시간 검증 디바운스 헬퍼??
-export const createDebouncedValidator = (validator: ValidationRule, delay = 300): ((value: string) => void) => {
-  let timeoutId: NodeJS.Timeout;
-
-  return (value: string) => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => {
-      validator(value);
-    }, delay);
   };
 };
