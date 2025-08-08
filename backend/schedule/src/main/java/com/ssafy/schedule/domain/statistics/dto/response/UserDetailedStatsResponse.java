@@ -18,7 +18,7 @@ import java.util.Map;
 public class UserDetailedStatsResponse {
     
     private Long userId;
-    private String season; // "all" 또는 "2025" 등
+    private String season; // "total" 또는 "2025" 등
     
     // 기본 승무패
     private int totalGames;

@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -67,23 +68,25 @@ public class AttendanceServiceImpl implements AttendanceService {
         // 3. 직관 인증 (시간 + 위치 검증)
         Game verifiedGame = verifyAttendance(todayGames, request);
 
-        // 4. 중복 인증 확인 (경기별 개별 검증)
-        String redisKey = RedisKey.USER_ATTENDANCE_GAME + userId + ":" + verifiedGame.getId();
-        boolean alreadyAttendedRedis = redisUtil.hasKey(redisKey);
-        boolean alreadyAttendedDB = userAttendedRepository.existsByUserIdAndGameId(userId, verifiedGame.getId());
+        // 4. 중복 인증 확인 (DB에서만 확인)
+        boolean alreadyAttended = userAttendedRepository.existsByUserIdAndGameId(userId, verifiedGame.getId());
         
-        if (alreadyAttendedRedis || alreadyAttendedDB) {
+        if (alreadyAttended) {
             log.info("직관 인증 실패 - 이미 인증함: userId={}, gameId={}", userId, verifiedGame.getId());
             throw new ApiException(ErrorCode.ALREADY_ATTENDED_GAME);
         }
         
-        // 5. 직관 기록 저장 (DB + Redis)
+        // 5. 직관 기록 저장
+        // DB (로깅용)
         UserAttended userAttended = UserAttended.of(userId, verifiedGame.getId());
         userAttendedRepository.save(userAttended);
-        
-        // Redis에 인증 정보 저장 (당일 자정까지 TTL)
+        // Redis (통계용)
+        saveAttendanceRecordToRedis(userId, verifiedGame);
+
+        // 직관 인증 정보 저장 (직관 채팅 입장용, 당일 자정까지 TTL)
+        String attendanceGameKey = RedisKey.USER_ATTENDANCE_GAME + userId + ":" + verifiedGame.getId();
         Duration ttlUntilMidnight = DateUtil.calculateTTLUntilMidnight();
-        redisUtil.setValue(redisKey, "ATTENDED", ttlUntilMidnight);
+        redisUtil.setValue(attendanceGameKey, "ATTENDED", ttlUntilMidnight);
         
         // 당일 인증자 목록에 추가 (이틀 TTL)
         String dailyAttendeesKey = RedisKey.ATTENDANCE_DAILY_ATTENDEES + today;
@@ -92,7 +95,7 @@ public class AttendanceServiceImpl implements AttendanceService {
         redisUtil.expire(dailyAttendeesKey, weekTTL);
         
         log.info("Redis에 직관 인증 저장: key={}, gameId={}, TTL={}초", 
-                redisKey, verifiedGame.getId(), ttlUntilMidnight.getSeconds());
+                attendanceGameKey, verifiedGame.getId(), ttlUntilMidnight.getSeconds());
         log.info("당일 인증자 목록 업데이트: key={}, userId={}", dailyAttendeesKey, userId);
         
         // 6. 응답 생성
@@ -237,6 +240,54 @@ public class AttendanceServiceImpl implements AttendanceService {
                 .toList();
         
         return gameRepository.findAllById(gameIds);
+    }
+    
+    /**
+     * 직관 기록을 Redis에 저장 (통계용)
+     */
+    private void saveAttendanceRecordToRedis(Long userId, Game game) {
+        try {
+            // 경기 시간을 한국 시간 기준 타임스탬프로 변환 (정렬용 스코어)
+            long timestamp = game.getDateTime()
+                    .atZone(ZoneId.of("Asia/Seoul"))
+                    .toInstant()
+                    .toEpochMilli();
+            
+            // 경기 정보 JSON 생성
+            String gameRecord = createGameRecord(game);
+            
+            // 시즌별 직관 기록 저장
+            String season = String.valueOf(game.getDateTime().getYear());
+            String seasonKey = RedisKey.USER_ATTENDANCE_RECORDS + userId + ":" + season;
+            redisUtil.addToSortedSet(seasonKey, gameRecord, timestamp);
+            
+            // 통산 직관 기록 저장
+            String totalKey = RedisKey.USER_ATTENDANCE_RECORDS + userId + ":total";
+            redisUtil.addToSortedSet(totalKey, gameRecord, timestamp);
+            
+            log.info("Redis 직관 기록 저장 완료 - userId: {}, gameId: {}, season: {}", 
+                    userId, game.getId(), season);
+            
+        } catch (Exception e) {
+            log.error("Redis 직관 기록 저장 실패 - userId: {}, gameId: {}", userId, game.getId(), e);
+            // Redis 저장 실패해도 전체 프로세스는 계속 진행
+        }
+    }
+    
+    /**
+     * 경기 정보를 JSON 문자열로 변환
+     */
+    private String createGameRecord(Game game) {
+        // 간단한 JSON 형태로 생성 (Jackson 라이브러리 없이)
+        return String.format(
+                "{\"gameId\":%d,\"homeTeam\":\"%s\",\"awayTeam\":\"%s\",\"dateTime\":\"%s\",\"stadium\":\"%s\",\"status\":\"%s\"}",
+                game.getId(),
+                game.getHomeTeam().getName(),
+                game.getAwayTeam().getName(), 
+                game.getDateTime().toString(),
+                game.getStadium(),
+                game.getStatus().name()
+        );
     }
     
 }
