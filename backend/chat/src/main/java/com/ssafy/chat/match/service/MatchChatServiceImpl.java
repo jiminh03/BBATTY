@@ -1,5 +1,7 @@
 package com.ssafy.chat.match.service;
 
+import com.ssafy.chat.common.util.KSTTimeUtil;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.chat.match.dto.MatchChatMessage;
 import com.ssafy.chat.match.kafka.MatchChatKafkaProducer;
@@ -110,7 +112,7 @@ public class MatchChatServiceImpl implements MatchChatService {
         Map<String, Object> systemMessage = Map.of(
                 "messageType", "SYSTEM",
                 "roomId", matchId,
-                "timestamp", LocalDateTime.now().toString(),
+                "timestamp", KSTTimeUtil.nowAsString(),
                 "content", message,
                 "isSystemMessage", true
         );

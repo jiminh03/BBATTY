@@ -1,5 +1,7 @@
 package com.ssafy.chat.match.handler;
 
+import com.ssafy.chat.common.util.KSTTimeUtil;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.chat.common.dto.UserSessionInfo;
 import com.ssafy.chat.common.enums.ChatRoomType;
@@ -229,7 +231,7 @@ public class MatchChatWebSocketHandler implements WebSocketHandler {
         message.setMessageType(MessageType.CHAT);
         message.setRoomId(userInfo.getRoomId());
         message.setContent(content);
-        message.setTimestamp(java.time.LocalDateTime.now());
+        message.setTimestamp(KSTTimeUtil.now());
         
         // 매칭 채팅 특화 정보
         message.setUserId(userInfo.getUserId());

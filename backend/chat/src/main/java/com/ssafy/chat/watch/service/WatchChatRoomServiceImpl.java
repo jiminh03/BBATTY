@@ -1,4 +1,6 @@
-package com.ssafy.chat.watch.service.impl;
+package com.ssafy.chat.watch.service;
+
+import com.ssafy.chat.common.util.KSTTimeUtil;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.chat.watch.dto.ChatRoomCreateEventDto;
@@ -55,7 +57,7 @@ public class WatchChatRoomServiceImpl implements WatchChatRoomService {
                     .currentParticipants(0)
                     .maxParticipants(1000)  // 관전방은 대용량
                     .status("ACTIVE")
-                    .createdAt(LocalDateTime.now().toString())
+                    .createdAt(KSTTimeUtil.nowAsString())
                     .build();
 
             // Redis에 저장
@@ -99,7 +101,7 @@ public class WatchChatRoomServiceImpl implements WatchChatRoomService {
             LocalDate gameDate = LocalDate.parse(gameDateStr, DATE_FORMATTER);
             LocalDateTime endOfGameDay = gameDate.plusDays(1).atTime(LocalTime.MIDNIGHT);
 
-            Duration ttl = Duration.between(LocalDateTime.now(), endOfGameDay);
+            Duration ttl = Duration.between(KSTTimeUtil.now(), endOfGameDay);
 
             // TTL이 음수이거나 너무 짧으면 기본 24시간 설정
             if (ttl.isNegative() || ttl.toHours() < 1) {

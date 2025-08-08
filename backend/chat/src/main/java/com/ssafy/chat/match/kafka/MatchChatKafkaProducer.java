@@ -1,5 +1,7 @@
 package com.ssafy.chat.match.kafka;
 
+import com.ssafy.chat.common.util.KSTTimeUtil;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.chat.match.dto.MatchChatMessage;
@@ -72,7 +74,7 @@ public class MatchChatKafkaProducer {
         Map<String, Object> joinEvent = Map.of(
                 "messageType", "USER_JOIN",
                 "roomId", matchId,
-                "timestamp", LocalDateTime.now().toString(),
+                "timestamp", KSTTimeUtil.nowAsString(),
                 "userId", userId,
                 "userName", userName,
                 "content", userName + "님이 입장하셨습니다."
@@ -87,7 +89,7 @@ public class MatchChatKafkaProducer {
         Map<String, Object> leaveEvent = Map.of(
                 "messageType", "USER_LEAVE",
                 "roomId", matchId,
-                "timestamp", LocalDateTime.now().toString(),
+                "timestamp", KSTTimeUtil.nowAsString(),
                 "userId", userId,
                 "userName", userName,
                 "content", userName + "님이 퇴장하셨습니다."

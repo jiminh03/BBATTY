@@ -7,6 +7,8 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
+import com.ssafy.chat.common.util.KSTTimeUtil;
+
 /**
  * 팀별 채팅방 정보 (개선 버전)
  */
@@ -115,7 +117,7 @@ public class TeamChatRoomInfo {
         if (gameDateTime == null) {
             return 0;
         }
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime nowTime = KSTTimeUtil.now();
         if (gameDateTime.isBefore(now)) {
             return 0; // 이미 시작됨
         }
