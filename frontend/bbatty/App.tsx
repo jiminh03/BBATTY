@@ -63,9 +63,7 @@ export default function App() {
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider>
-            <NavigationContainer>
-                <AppNavigator />
-            </NavigationContainer>
+            <AppNavigator />
             {/* <ErrorBoundary>
               <LoadingProvider>
                 <ToastProvider> */}

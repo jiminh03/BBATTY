@@ -87,10 +87,7 @@ export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnaut
       //     console.warn(`잘못된 api 형식 [${requestId}]:`, response.data);
       //   }
       // }
-
-      console.log('응답 데이터: ', response.data);
-
-      return response.data;
+      return response;
     },
     async (error: AxiosError) => {
       const originalRequest = error.config;
