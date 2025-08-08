@@ -1,7 +1,5 @@
 package com.ssafy.schedule.domain.crawler.service;
 
-import com.ssafy.schedule.domain.chat.dto.GameListEventDto;
-import com.ssafy.schedule.domain.chat.kafka.ChatEventKafkaProducer;
 import com.ssafy.schedule.global.constant.GameStatus;
 import com.ssafy.schedule.global.entity.Game;
 import com.ssafy.schedule.global.entity.Team;
@@ -102,8 +100,6 @@ public class ScheduledGameService extends BaseCrawlerService {
                     awayTeamName, homeTeamName, scores[0], scores[1]);
             return null;
         }
-
-
 
         // 필수 정보 검증
         if (homeTeamName == null || awayTeamName == null || gameTime == null) {
