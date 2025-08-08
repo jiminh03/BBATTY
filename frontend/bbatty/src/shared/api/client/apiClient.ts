@@ -68,7 +68,6 @@ const applyTokenToClients = (token: string | null) => {
 // 401 에러 시 호출될 콜백
 const handleUnauthorized = async () => {
   applyTokenToClients(null);
-  // 추가적인 정리 작업이 필요한 경우 여기서 수행
 };
 
 export const initializeApiClient = async (): Promise<void> => {
@@ -78,18 +77,6 @@ export const initializeApiClient = async (): Promise<void> => {
   setupInterceptors(apiClient, handleUnauthorized);
   setupInterceptors(chatApiClient, handleUnauthorized);
   setupInterceptors(uploadClient, handleUnauthorized);
-
-  /*
-  // 디버그 모드에서 초기화 로그
-  if (DEBUG_CONFIG.enableRequestLogging) {
-    console.log('초기화 완, baseURL :', API_CONFIG.baseURL);
-  }
-    */
-};
-
-// 토큰 변경 시 갱신
-export const updateClientsToken = async (token: string | null) => {
-  applyTokenToClients(token);
 };
 
 export { apiClient, chatApiClient, uploadClient };

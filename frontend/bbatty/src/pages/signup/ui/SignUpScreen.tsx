@@ -10,6 +10,8 @@ import { extractData, tokenManager } from '../../../shared';
 import { useAuthStore } from '../../../entities/auth/model/authStore';
 import { ProfileFormData } from '../../../features/user-profile/model/profileTypes';
 import { RegisterRequest } from '../../../entities/auth';
+import { navigationRef } from '../../../navigation/navigationRefs';
+import { MainTabParamList } from '../../../navigation/types';
 
 type Props = AuthStackScreenProps<'SignUp'>;
 
@@ -59,10 +61,10 @@ export default function SignUpScreen({ route }: Props) {
 
       Alert.alert('성공', '회원가입이 완료되었습니다');
 
-      // 메인 화면으로 이동
-      navigation.reset({
+      // 루트 네비게이터 레벨에서 리셋
+      navigationRef.reset({
         index: 0,
-        routes: [{ name: 'MainTabs' as any }],
+        routes: [{ name: 'MainTabs' }],
       });
     } catch (error: any) {
       console.log(error);
