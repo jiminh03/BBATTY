@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 
 /**
  * 경기 관련 이벤트 처리 서비스
- * - 경기 시작 2시간 전 알림 이벤트
+ * - 경기 시작 3시간 전 알림 이벤트
  * - 채팅 서버로 이벤트 전송 (추후 구현)
  */
 @Service
@@ -20,11 +20,11 @@ public class GameEventService {
     private final ChatEventKafkaProducer chatEventKafkaProducer;
 
     /**
-
+     * 경기 시작 3시간 전 이벤트 처리
      * @param game 이벤트 대상 경기
      */
     public void handleGameStartingSoonEvent(Game game) {
-        log.info("🔔 경기 시작 2시간 전 이벤트 발생!");
+        log.info("🔔 경기 시작 3시간 전 이벤트 발생!");
         log.info("경기 정보: {} vs {} at {}", 
                 game.getAwayTeam().getName(), 
                 game.getHomeTeam().getName(), 
