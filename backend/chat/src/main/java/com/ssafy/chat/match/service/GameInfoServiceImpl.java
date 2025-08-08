@@ -11,6 +11,7 @@ import com.ssafy.chat.match.dto.GameListResponse;
 import com.ssafy.chat.match.dto.GameInfoResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -28,6 +29,7 @@ public class GameInfoServiceImpl implements GameInfoService {
     private final RedisUtil redisUtil;
     private final ObjectMapper objectMapper;
     private final MatchChatService matchChatService;
+    private final StringRedisTemplate stringRedisTemplate;
     
     private static final String GAME_KEY_PREFIX = "games:";
     private static final Duration TTL_DURATION = Duration.ofDays(14); // 2주 자동 삭제
@@ -77,9 +79,10 @@ public class GameInfoServiceImpl implements GameInfoService {
     public List<GameInfo> getGameInfosByDate(String date) {
         try {
             String key = GAME_KEY_PREFIX + date;
-            String jsonValue = redisUtil.getValue(key, String.class);
             
-            if (jsonValue == null) {
+            // StringRedisTemplate으로 순수 문자열 조회
+            String jsonValue = stringRedisTemplate.opsForValue().get(key);
+            if (jsonValue == null || jsonValue.isEmpty()) {
                 return new ArrayList<>();
             }
             

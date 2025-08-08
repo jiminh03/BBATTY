@@ -28,7 +28,7 @@ public class MatchChatKafkaComsumer {
      */
     @KafkaListener(
             topicPattern = "match-chat-.*",
-            groupId = "match-chat-instance-#{T(java.util.UUID).randomUUID().toString()}"
+            groupId = "match-chat-consumer-group"
     )
     public void handleMatchChatMessage(
             @Payload String messageJson,

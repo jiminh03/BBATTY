@@ -166,7 +166,7 @@ public class MatchChatWebSocketHandler implements WebSocketHandler {
             throw new ApiException(ErrorCode.BAD_REQUEST);
         }
 
-        Long userId = (Long) userIdObj;
+        Long userId = ((Number) userIdObj).longValue();
         String nickname = String.valueOf(nicknameObj);  //nickname 변수명으로 변경
         String matchId = String.valueOf(matchIdObj);
 

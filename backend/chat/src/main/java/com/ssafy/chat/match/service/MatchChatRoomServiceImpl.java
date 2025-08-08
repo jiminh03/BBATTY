@@ -77,7 +77,7 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
             // 4. bbatty 서버에서 인증된 사용자 정보 추출
             @SuppressWarnings("unchecked")
             Map<String, Object> userInfo = (Map<String, Object>) authResult.get("userInfo");
-            Long userId = (Long) userInfo.get("userId");
+            Long userId = ((Number) userInfo.get("userId")).longValue();
             
             // 5. 경기 ID 기반으로 매칭 채팅방 ID 자동 생성
             String matchId = generateMatchId(request.getGameId());
