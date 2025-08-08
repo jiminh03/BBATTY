@@ -1,23 +1,9 @@
 import { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import { Alert } from 'react-native';
 import { tokenManager } from './tokenManager';
-import { API_CONFIG /*, DEBUG_CONFIG*/ } from './config';
+import { API_CONFIG } from './config';
 import { handleApiError } from '../utils/errorHandler';
 import { retryRequest } from '../utils/retry';
-
-// 요청 메타데이터
-interface RequestMetadata {
-  startTime: number;
-  requestId: string;
-}
-
-// Axios 확장
-declare module 'axios' {
-  interface AxiosRequestConfig {
-    metadata?: RequestMetadata;
-    _retry?: boolean;
-  }
-}
 
 // 토큰 제거시 호출될 콜백
 type OnUnauthorizedCallback = () => Promise<void>;
@@ -26,23 +12,6 @@ export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnaut
   // 요청 인터셉터
   client.interceptors.request.use(
     async (config: InternalAxiosRequestConfig) => {
-      // 요청 메타데이터 추가
-      const requestId = `req_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-      config.metadata = {
-        startTime: Date.now(),
-        requestId,
-      };
-
-      /* 디버그 로깅
-      if (DEBUG_CONFIG.enableRequestLogging) {
-        console.log(`🚀 API Request [${requestId}]: ${config.method?.toUpperCase()} ${config.url}`, {
-          params: config.params,
-          data: config.data,
-          headers: config.headers,
-        });
-      }
-      */
-
       //퍼블릭 엔드포인트가 아닌 경우 토큰 추가
       const isPublicEndpoint = /\/api\/(auth\/(signup|check-nickname|refresh))(\/.*)?$/.test(config.url || '');
 
@@ -51,11 +20,6 @@ export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnaut
         if (token && config.headers) {
           config.headers.Authorization = `Bearer ${token}`;
         }
-        console.log('토큰 인증 필요');
-      }
-
-      if (config.headers) {
-        config.headers['X-Request-ID'] = requestId;
       }
 
       return config;
@@ -69,45 +33,18 @@ export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnaut
   // 응답 인터셉터
   client.interceptors.response.use(
     (response: AxiosResponse) => {
-      //const duration = Date.now() - (response.config.metadata?.startTime || 0);
-      const requestId = response.config.metadata?.requestId;
-
-      /*
-      // 디버그 로깅
-      if (DEBUG_CONFIG.enableResponseLogging) {
-        console.log(`✅ API Response [${requestId}]: ${response.config.method?.toUpperCase()} ${response.config.url}`, {
-          status: response.status,
-          duration: `${duration}ms`,
-          data: response.data,
-        });
+      if (response.data && typeof response.data === 'object') {
+        if (!('SUCCESS' in response.data)) {
+          console.warn(`잘못된 api 형식 :`, response.data);
+        }
       }
-        */
-      // if (response.data && typeof response.data === 'object') {
-      //   if (!('SUCCESS' in response.data )) {
-      //     console.warn(`잘못된 api 형식 [${requestId}]:`, response.data);
-      //   }
-      // }
       return response;
     },
     async (error: AxiosError) => {
       const originalRequest = error.config;
-      //const duration = Date.now() - (originalRequest?.metadata?.startTime || 0);
-      //const requestId = originalRequest?.metadata?.requestId;
-
-      /*
-      // 디버그 로깅
-      if (DEBUG_CONFIG.enableResponseLogging) {
-        console.log(`✅ API Response [${requestId}]: ${response.config.method?.toUpperCase()} ${response.config.url}`, {
-          status: response.status,
-          duration: `${duration}ms`,
-          data: response.data,
-        });
-      }
-      */
 
       // 토큰 만료 또는 인증 실패
-      if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
-        originalRequest._retry = true;
+      if (error.response?.status === 401 && originalRequest) {
         // 토큰 제거
         await tokenManager.removeToken();
 

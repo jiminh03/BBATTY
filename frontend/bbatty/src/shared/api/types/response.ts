@@ -17,13 +17,7 @@ export interface ApiErrorResponse {
 
 export type ApiResponse<T = unknown> = ApiSuccessResponse<T> | ApiErrorResponse;
 
-//null 및 데이터 반환
+//null or 데이터 반환
 export const extractData = <T>(response: ApiResponse<T>): T | null => {
   return response.status === 'SUCCESS' ? response.data : null;
 };
-
-//에러 및 데이터 반환
-// export const safeExtractData = <T>(response: ApiResponse<T>): T => {
-//   if (!isSuccessResponse(response)) throw new Error(`${response.error.code} ${response.error.details}`);
-//   return response.data;
-// };

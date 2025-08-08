@@ -24,7 +24,7 @@ export default function AppNavigator() {
     try {
       const token = await tokenManager.getToken();
       // 개발 중에는 항상 인증된 상태로 설정 (테스트 목적)
-      setIsAuthenticated(true);
+      // setIsAuthenticated(token);
       // setIsAuthenticated(!!token);
     } catch (error) {
       console.error('Auth check error ', error);
@@ -58,6 +58,7 @@ export default function AppNavigator() {
       {/* <StatusBar barStyle='light-content' backgroundColor={theme.colors.background} /> */}
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name='AuthStack' component={AuthNavigator} />
+        <Stack.Screen name='MainTaps' component={MainNavigator} />
       </Stack.Navigator>
     </NavigationContainer>
   );
