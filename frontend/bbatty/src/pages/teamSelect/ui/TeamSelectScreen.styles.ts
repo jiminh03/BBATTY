@@ -22,21 +22,6 @@ export const styles = StyleSheet.create({
     color: '#666666',
     marginBottom: 4,
   },
-  nicknameContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    marginBottom: 16,
-  },
-  nickname: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#000000',
-  },
-  nicknameSuffix: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#000000',
-  },
   question: {
     fontSize: 20,
     fontWeight: '600',

@@ -44,13 +44,14 @@ export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnaut
       */
 
       //퍼블릭 엔드포인트가 아닌 경우 토큰 추가
-      const isPublicEndpoint = false; // config.url?.includes('/auth/login');
+      const isPublicEndpoint = /\/api\/(auth\/(signup|check-nickname|refresh))(\/.*)?$/.test(config.url || '');
 
       if (!isPublicEndpoint) {
         const token = await tokenManager.getToken();
         if (token && config.headers) {
           config.headers.Authorization = `Bearer ${token}`;
         }
+        console.log('토큰 인증 필요');
       }
 
       if (config.headers) {
@@ -87,7 +88,9 @@ export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnaut
       //   }
       // }
 
-      return response;
+      console.log('응답 데이터: ', response.data);
+
+      return response.data;
     },
     async (error: AxiosError) => {
       const originalRequest = error.config;

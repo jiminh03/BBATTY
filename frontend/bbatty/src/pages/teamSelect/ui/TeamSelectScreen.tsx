@@ -1,34 +1,20 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { AuthStackScreenProps } from '../../../navigation/types';
 import { haptic } from '../../../shared';
-// import { useUserStore } from '@/entities/user';
-// import { authApi } from '@/features/auth/api';
 import { TeamGrid } from './TeamGrid';
 import { TeamConfirmModal } from './TeamConfirmModal';
-import { TEAMS } from '../types';
+import { TEAMS } from '../../../entities/team/model/teamTypes';
 import { styles } from './TeamSelectScreen.styles';
-
-type Props = AuthStackScreenProps<'TeamSelect'>;
-import { AuthStackParamList } from '../../../navigation/types';
-import { navigationRef } from '../../../navigation/navigationRefs';
-
-type TeamSelectRouteProp = RouteProp<AuthStackParamList, 'TeamSelect'>;
 
 export default function TeamSelectScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<AuthStackScreenProps<'TeamSelect'>['navigation']>();
-  // const setCurrentUser = useUserStore((state) => state.setCurrentUser);
 
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-
-  // route params에서 사용자 정보 가져오기
-  const route = useRoute<TeamSelectRouteProp>();
-  const nickname = route.params?.nickname || '사용자';
 
   const handleTeamSelect = (teamId: number) => {
     haptic.light();
@@ -39,21 +25,10 @@ export default function TeamSelectScreen() {
   const handleConfirm = async () => {
     if (!selectedTeamId) return;
 
-    setIsLoading(true);
     try {
-      // 팀 선택 API 호출
-      // await authApi.selectTeam(selectedTeamId);
-
-      // //로그인 성공 시 팀 선택 화면으로 이동
-      // navigationRef.navigate('AuthStack', {
-      //   screen: 'TeamSelect',
-      //   params: {
-      //     nickname: userInfo.properties?.nickname,
-      //   },
-      // });
       // 선택한 팀 정보 가져오기
       const selectedTeam = TEAMS.find((team) => team.id === selectedTeamId)!;
-      navigationRef.navigate('AuthStack', {
+      navigation.navigate('AuthStack', {
         screen: 'SignUp',
         params: {
           teamId: selectedTeam.id,
@@ -62,7 +37,6 @@ export default function TeamSelectScreen() {
     } catch (error) {
       Alert.alert('오류', '팀 선택에 실패했습니다. 다시 시도해주세요.');
     } finally {
-      setIsLoading(false);
     }
   };
 
@@ -77,10 +51,6 @@ export default function TeamSelectScreen() {
         {/* 헤더 섹션 */}
         <View style={styles.header}>
           <Text style={styles.greeting}>안녕하세요</Text>
-          <View style={styles.nicknameContainer}>
-            <Text style={styles.nickname}>{nickname}</Text>
-            <Text style={styles.nicknameSuffix}>님!</Text>
-          </View>
           <Text style={styles.question}>어느 팀을 응원하시나요?</Text>
           <Text style={styles.subText}>한 번 선택한 팀은 변경할 수 없으니 신중히 선택해주세요</Text>
         </View>
@@ -93,7 +63,6 @@ export default function TeamSelectScreen() {
       <TeamConfirmModal
         visible={showConfirmModal}
         teamId={selectedTeamId}
-        isLoading={isLoading}
         onConfirm={handleConfirm}
         onCancel={handleCancel}
       />

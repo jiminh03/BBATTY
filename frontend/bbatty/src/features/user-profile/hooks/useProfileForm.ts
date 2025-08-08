@@ -1,20 +1,15 @@
 import { useState } from 'react';
 import { ValidationRules, combineValidators } from '../../../shared';
+import { ProfileFormData } from '../model/profileTypes';
 
-export interface ProfileFormState {
-  nickname: string;
-  profileImage: string | null;
-  introduction: string;
-}
-
-export const useProfileForm = (initialData?: Partial<ProfileFormState>) => {
-  const [formData, setFormData] = useState<ProfileFormState>({
+export const useProfileForm = (initialData?: Partial<ProfileFormData>) => {
+  const [formData, setFormData] = useState<ProfileFormData>({
     nickname: initialData?.nickname || '',
-    profileImage: initialData?.profileImage || null,
-    introduction: initialData?.introduction || '',
+    profileImage: initialData?.profileImage,
+    introduction: initialData?.introduction,
   });
 
-  const [errors, setErrors] = useState<Partial<Record<keyof ProfileFormState, string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof ProfileFormData, string>>>({});
   const [isNicknameAvailable, setIsNicknameAvailable] = useState<boolean | null>(null);
 
   // 검증 규칙
@@ -28,7 +23,7 @@ export const useProfileForm = (initialData?: Partial<ProfileFormState>) => {
   };
 
   // 필드 업데이트
-  const updateField = <K extends keyof ProfileFormState>(field: K, value: ProfileFormState[K]) => {
+  const updateField = <K extends keyof ProfileFormData>(field: K, value: ProfileFormData[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
 
     // 닉네임 변경 시 중복 확인 초기화

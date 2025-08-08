@@ -15,10 +15,7 @@ export type RootStackParamList = {
 
 // 인증 스택 파라미터
 export type AuthStackParamList = {
-  userInfo: any;
-  TeamSelect: {
-    nickname: string;
-  };
+  TeamSelect: undefined;
   SignUp: {
     teamId: number;
   };
