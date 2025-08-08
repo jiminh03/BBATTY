@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Animated, Image } from 'react-native';
-import { Team } from '../types';
+import { Team } from '../../../entities/team/model/teamTypes';
 import { styles } from './TeamGrid.styles';
 
 interface TeamGridProps {
@@ -38,8 +38,8 @@ export const TeamGrid: React.FC<TeamGridProps> = ({ teams, onSelectTeam, selecte
             key={team.id}
             style={[styles.teamCard, isSelected && styles.teamCardSelected]}
             onPress={() => onSelectTeam(team.id)}
-            onPressIn={handlePressIn}
-            onPressOut={handlePressOut}
+            // onPressIn={handlePressIn}
+            // onPressOut={handlePressOut}
             activeOpacity={0.7}
           >
             <Animated.View style={[styles.teamCardContent, { transform: [{ scale: scaleValue }] }]}>
@@ -48,9 +48,7 @@ export const TeamGrid: React.FC<TeamGridProps> = ({ teams, onSelectTeam, selecte
                 {/* <Image source={{ uri: team.logoUrl }} style={styles.teamLogo} /> */}
                 <Text style={styles.teamLogoEmoji}>{team.logo}</Text>
               </View>
-              <Text style={[styles.teamName, isSelected && styles.teamNameSelected]}>
-                {team.name} {/* 팀명만 표시 (예: 트윈스, 위즈) */}
-              </Text>
+              <Text style={[styles.teamName, isSelected && styles.teamNameSelected]}>{team.name}</Text>
             </Animated.View>
           </TouchableOpacity>
         );

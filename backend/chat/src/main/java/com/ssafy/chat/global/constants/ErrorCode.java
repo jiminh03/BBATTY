@@ -28,8 +28,39 @@ public enum ErrorCode {
 
     // KAFKA
     KAFKA_MESSAGE_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "메시지 전송에 실패했어요."),
-    KAFKA_MESSAGE_CONSUME_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "메시지 수신에 실패했어요.");
-
+    KAFKA_MESSAGE_CONSUME_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "메시지 수신에 실패했어요."),
+    
+    // GAME
+    GAME_NOT_FOUND(HttpStatus.NOT_FOUND, "경기 정보를 찾을 수 없어요."),
+    GAME_FINISHED(HttpStatus.BAD_REQUEST, "이미 종료된 경기예요."),
+    GAME_NOT_LIVE(HttpStatus.BAD_REQUEST, "라이브 중인 경기가 아니에요."),
+    
+    // TEAM
+    UNAUTHORIZED_TEAM_ACCESS(HttpStatus.FORBIDDEN, "해당 팀에 대한 권한이 없어요."),
+    TEAM_NOT_IN_GAME(HttpStatus.BAD_REQUEST, "해당 팀이 경기에 참여하지 않아요."),
+    
+    // WATCH CHAT
+    WATCH_CHAT_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "관전 채팅방을 찾을 수 없어요."),
+    WATCH_CHAT_ROOM_CREATE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "관전 채팅방 생성에 실패했어요."),
+    WATCH_CHAT_ROOM_LIST_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "관전 채팅방 목록 조회에 실패했어요."),
+    WATCH_CHAT_ROOM_INFO_INVALID(HttpStatus.BAD_REQUEST, "관전 채팅방 정보가 올바르지 않아요."),
+    
+    // REDIS
+    REDIS_CONNECTION_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "Redis 연결에 실패했어요."),
+    REDIS_OPERATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "Redis 작업에 실패했어요."),
+    REDIS_KEY_NOT_FOUND(HttpStatus.NOT_FOUND, "Redis에서 키를 찾을 수 없어요."),
+    REDIS_DATA_PARSING_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "Redis 데이터 파싱에 실패했어요."),
+    
+    // VALIDATION
+    INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "입력값이 올바르지 않아요."),
+    REQUIRED_FIELD_MISSING(HttpStatus.BAD_REQUEST, "필수 필드가 누락되었어요."),
+    DATA_FORMAT_INVALID(HttpStatus.BAD_REQUEST, "데이터 형식이 올바르지 않아요."),
+    
+    // MATCH ID VALIDATION
+    MATCH_ID_MISSING(HttpStatus.BAD_REQUEST, "매칭 ID가 누락되었어요."),
+    MATCH_ID_FORMAT_INVALID(HttpStatus.BAD_REQUEST, "매칭 ID 형식이 올바르지 않아요."),
+    MATCH_ID_PREFIX_INVALID(HttpStatus.BAD_REQUEST, "매칭 ID는 'match_'로 시작해야 해요."),
+    MATCH_ID_GAME_ID_INVALID(HttpStatus.BAD_REQUEST, "매칭 ID에서 경기 ID를 추출할 수 없어요.");
     private final HttpStatus status;
     private final String message;
 }

@@ -10,7 +10,7 @@ public interface MatchChatRoomService {
     /**
      * 매칭 채팅방 생성
      */
-    MatchChatRoomCreateResponse createMatchChatRoom(MatchChatRoomCreateRequest request);
+    MatchChatRoomCreateResponse createMatchChatRoom(MatchChatRoomCreateRequest request, String jwtToken);
     
     /**
      * 매칭 채팅방 목록 조회 (무한 스크롤)

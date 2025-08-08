@@ -5,6 +5,7 @@ import { initializeApiClient } from './src/shared';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider } from './src/shared/styles';
+import { ToastProvider } from './src/app/providers/ToastProvider';
 import AppNavigator from './src/navigation/AppNavigator';
 /*
 import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
@@ -63,12 +64,12 @@ export default function App() {
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider>
-                <AppNavigator />
+            <ToastProvider>
+              <AppNavigator />
+            </ToastProvider>
             {/* <ErrorBoundary>
-              <LoadingProvider>
-                <ToastProvider> */}
-            {/* </ToastProvider>
-              </LoadingProvider>
+              <LoadingProvider> */}
+            {/* </LoadingProvider>
             </ErrorBoundary> */}
           </ThemeProvider>
         </QueryClientProvider>

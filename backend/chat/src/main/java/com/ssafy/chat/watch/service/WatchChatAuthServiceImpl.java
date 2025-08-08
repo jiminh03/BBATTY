@@ -39,17 +39,14 @@ public class WatchChatAuthServiceImpl implements WatchChatAuthService {
         Map<String, Object> roomInfo = createRoomInfo(request);
         
         // 2. bbatty 서버에 인증 요청 전송
-        String requestId = chatAuthRequestProducer.sendAuthRequest(
+        String requestId = chatAuthRequestProducer.sendWatchChatJoinRequest(
             jwtToken, 
-            "WATCH", 
-            "JOIN", 
             request.getGameId(), 
-            roomInfo,
-            null // 익명 채팅이므로 nickname 없음
+            roomInfo
         );
         
         if (requestId == null) {
-            throw new ApiException(ErrorCode.KAFKA_MESSAGE_SEND_FAILED, "bbatty 서버 인증 요청 전송 실패");
+            throw new ApiException(ErrorCode.KAFKA_MESSAGE_SEND_FAILED);
         }
         
         log.info("bbatty 서버 인증 요청 완료: requestId={}, gameId={}", requestId, request.getGameId());
@@ -58,13 +55,23 @@ public class WatchChatAuthServiceImpl implements WatchChatAuthService {
         Map<String, Object> authResult = chatAuthResultService.waitForAuthResult(requestId, 10000);
         
         if (authResult == null) {
-            throw new ApiException(ErrorCode.SERVER_ERROR, "인증 응답 타임아웃");
+            throw new ApiException(ErrorCode.SERVER_ERROR);
         }
         
         Boolean success = (Boolean) authResult.get("success");
         if (!success) {
             String errorMessage = (String) authResult.get("errorMessage");
-            throw new ApiException(ErrorCode.UNAUTHORIZED, "인증 실패: " + errorMessage);
+            
+            // bbatty 서버에서 온 에러 메시지에 따라 적절한 ErrorCode 선택
+            if (errorMessage != null && errorMessage.contains("경기 정보를 찾을 수 없어요")) {
+                throw new ApiException(ErrorCode.GAME_NOT_FOUND);
+            } else if (errorMessage != null && errorMessage.contains("이미 종료된 경기예요")) {
+                throw new ApiException(ErrorCode.GAME_FINISHED);
+            } else if (errorMessage != null && errorMessage.contains("해당 팀에 대한 권한이 없어요")) {
+                throw new ApiException(ErrorCode.UNAUTHORIZED_TEAM_ACCESS);
+            } else {
+                throw new ApiException(ErrorCode.UNAUTHORIZED);
+            }
         }
         
         // 4. 인증 성공 시 세션 생성
@@ -83,9 +90,9 @@ public class WatchChatAuthServiceImpl implements WatchChatAuthService {
         // 5. 응답 생성
         Map<String, Object> response = new HashMap<>();
         response.put("sessionToken", sessionToken);
-        response.put("userId", userInfo.get("userId"));
+        response.put("userId", ((Number) userInfo.get("userId")).longValue());
         response.put("nickname", userInfo.get("nickname"));
-        response.put("teamId", userInfo.get("teamId"));
+        response.put("teamId", ((Number) userInfo.get("teamId")).longValue());
         response.put("teamName", userInfo.get("teamName"));
         response.put("gameId", request.getGameId());
         response.put("expiresIn", SESSION_EXPIRE_TIME.getSeconds());
@@ -110,9 +117,9 @@ public class WatchChatAuthServiceImpl implements WatchChatAuthService {
      */
     private Map<String, Object> createSessionInfoFromAuth(Map<String, Object> userInfo, WatchChatJoinRequest request) {
         Map<String, Object> sessionInfo = new HashMap<>();
-        sessionInfo.put("userId", userInfo.get("userId"));
+        sessionInfo.put("userId", ((Number) userInfo.get("userId")).longValue());
         sessionInfo.put("nickname", userInfo.get("nickname"));
-        sessionInfo.put("teamId", userInfo.get("teamId"));
+        sessionInfo.put("teamId", ((Number) userInfo.get("teamId")).longValue());
         sessionInfo.put("teamName", userInfo.get("teamName"));
         sessionInfo.put("gameId", request.getGameId());
         sessionInfo.put("chatType", "WATCH");
@@ -128,7 +135,7 @@ public class WatchChatAuthServiceImpl implements WatchChatAuthService {
             Object sessionData = redisUtil.getValue(sessionKey);
             
             if (sessionData == null) {
-                throw new ApiException(ErrorCode.INVALID_SESSION_TOKEN, "유효하지 않은 세션 토큰입니다.");
+                throw new ApiException(ErrorCode.INVALID_SESSION_TOKEN);
             }
 
             Map<String, Object> userInfo = (Map<String, Object>) sessionData;
@@ -142,7 +149,7 @@ public class WatchChatAuthServiceImpl implements WatchChatAuthService {
             throw e;
         } catch (Exception e) {
             log.warn("세션 토큰 검증 실패 - token: {}", sessionToken, e);
-            throw new ApiException(ErrorCode.SERVER_ERROR, "세션 검증에 실패했습니다.");
+            throw new ApiException(ErrorCode.SERVER_ERROR);
         }
     }
 

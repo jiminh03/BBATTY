@@ -1,23 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import { NavigationContainer } from '@react-navigation/native';
-import { useTheme } from '../shared/styles';
 import { tokenManager } from '../shared';
-import { RootStackParamList } from './types';
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
 import { linking } from './linking';
-import SplashScreen from '../pages/splash/ui';
+import SplashScreen from '../pages/splash/ui/SplashScreen';
 import { navigationRef } from './navigationRefs';
-
-const Stack = createStackNavigator<RootStackParamList>();
+import { useAuthStore } from '../entities/auth/model/authStore';
+const Stack = createStackNavigator();
 
 export default function AppNavigator() {
-  const [userInfo, setUserInfo] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showSplash, setShowSplash] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const { theme } = useTheme();
+  const { setKakaoUserInfo, setKakaoAccessToken } = useAuthStore();
 
   useEffect(() => {
     checkAuthState();
@@ -26,30 +23,24 @@ export default function AppNavigator() {
   const checkAuthState = async () => {
     try {
       const token = await tokenManager.getToken();
-      // 개발 중에는 항상 인증된 상태로 설정 (테스트 목적)
-      setIsAuthenticated(true);
-      // setIsAuthenticated(!!token);
+      setIsAuthenticated(!!token);
     } catch (error) {
       console.error('Auth check error ', error);
-      setIsAuthenticated(true); // 개발 중 우회
-      // setIsAuthenticated(false);
+      setIsAuthenticated(false);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleLoginSuccess = (userInfo: any) => {
+  const handleLoginSuccess = (userInfo: any, accessToken: string) => {
     setIsAuthenticated(true);
     setShowSplash(false);
-    setUserInfo(userInfo);
+    setKakaoUserInfo(userInfo);
+    setKakaoAccessToken(accessToken);
+  };
 
-    // //로그인 성공 시 팀 선택 화면으로 이동
-    // navigationRef.navigate('AuthStack', {
-    //   screen: 'TeamSelect',
-    //   params: {
-    //     nickname: userInfo.properties?.nickname,
-    //   },
-    // });
+  const handleSignUpComplete = () => {
+    setIsAuthenticated(true);
   };
 
   if (showSplash) {
@@ -70,7 +61,9 @@ export default function AppNavigator() {
         {isAuthenticated ? (
           <Stack.Screen name='MainTabs' component={MainNavigator} />
         ) : (
-          <Stack.Screen name='AuthStack' children={() => <AuthNavigator userInfo={userInfo} />} />
+          <Stack.Screen name='AuthStack'>
+            {() => <AuthNavigator onSignUpComplete={handleSignUpComplete} />}
+          </Stack.Screen>
         )}
       </Stack.Navigator>
     </NavigationContainer>

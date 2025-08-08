@@ -15,13 +15,10 @@ export type RootStackParamList = {
 
 // 인증 스택 파라미터
 export type AuthStackParamList = {
-  userInfo: any;
-  Landing: undefined;
-  Login: undefined;
-  TeamSelect: {
-    nickname: string;
+  TeamSelect: undefined;
+  SignUp: {
+    teamId: number;
   };
-  SignUp: undefined;
 };
 
 // 메인 탭 파라미터

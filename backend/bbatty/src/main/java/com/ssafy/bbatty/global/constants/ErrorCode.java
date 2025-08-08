@@ -83,6 +83,13 @@ public enum ErrorCode {
     GAME_NOT_LIVE(HttpStatus.BAD_REQUEST, "경기가 진행 중이 아닙니다"),
     TEAM_NOT_IN_GAME(HttpStatus.BAD_REQUEST, "해당 팀이 경기에 참여하지 않습니다"),
     UNAUTHORIZED_TEAM_ACCESS(HttpStatus.FORBIDDEN, "팀에 대한 접근 권한이 없습니다"),
+    
+    // MATCH CHAT ROOM CONDITIONS
+    AGE_CONDITION_NOT_MET(HttpStatus.FORBIDDEN, "나이 조건에 맞지 않습니다"),
+    GENDER_CONDITION_NOT_MET(HttpStatus.FORBIDDEN, "성별 조건에 맞지 않습니다"), 
+    WIN_RATE_CONDITION_NOT_MET(HttpStatus.FORBIDDEN, "승률 조건에 맞지 않습니다"),
+    MATCH_ROOM_CONDITIONS_INVALID(HttpStatus.BAD_REQUEST, "매칭방 조건 정보가 올바르지 않습니다"),
+    ROOM_INFO_MISSING(HttpStatus.BAD_REQUEST, "채팅방 정보가 누락되었습니다"),
 
     // USER PRIVACY
     PRIVATE_CONTENT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "비공개 설정된 콘텐츠에요.");

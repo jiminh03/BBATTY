@@ -65,13 +65,13 @@ public class MatchChatServiceImpl implements MatchChatService {
     }
     
     @Override
-    public void sendUserJoinEvent(String matchId, String userId, String userName) {
+    public void sendUserJoinEvent(String matchId, Long userId, String userName) {
         log.debug("사용자 입장 이벤트 발송 - matchId: {}, userId: {}", matchId, userId);
         kafkaProducer.sendUserJoinEvent(matchId, userId, userName);
     }
     
     @Override
-    public void sendUserLeaveEvent(String matchId, String userId, String userName) {
+    public void sendUserLeaveEvent(String matchId, Long userId, String userName) {
         log.debug("사용자 퇴장 이벤트 발송 - matchId: {}, userId: {}", matchId, userId);
         kafkaProducer.sendUserLeaveEvent(matchId, userId, userName);
     }

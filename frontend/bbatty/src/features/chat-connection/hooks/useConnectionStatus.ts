@@ -8,6 +8,7 @@ export const useConnectionStatus = () => {
     error, 
     reconnectAttempts,
     lastConnectedAt 
+    
   } = useConnectionStore();
 
   const isOnline = isConnected && connectionStatus === 'CONNECTED';

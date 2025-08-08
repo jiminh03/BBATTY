@@ -47,9 +47,9 @@ public class ChatCreateScheduler {
             return false;
         }
 
-        // 경기 시간 2시간 전 계산
-        LocalDateTime eventTime = game.getDateTime().minusHours(2);
-        LocalDateTime now = LocalDateTime.now();
+        // 경기 시간 3시간 전 계산
+        LocalDateTime eventTime = game.getDateTime().minusHours(3);
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
 
         // 이미 지난 시간이면 스케줄하지 않음
         if (eventTime.isBefore(now) || eventTime.isEqual(now)) {

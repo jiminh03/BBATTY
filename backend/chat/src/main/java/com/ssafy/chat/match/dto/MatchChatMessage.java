@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class MatchChatMessage extends ChatMessage {
     // 사용자 ID (메인 서버 프로필 조회용)
-    private String userId;
+    private Long userId;
     
     // 사용자 닉네임
     private String nickname;

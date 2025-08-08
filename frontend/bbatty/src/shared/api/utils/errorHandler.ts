@@ -24,7 +24,7 @@ export const handleApiError = (error: AxiosError): ProcessedError => {
   const processedError = processError(error);
 
   if (API_CONFIG.errors.logToConsole) {
-    console.log(error);
+    console.log(`흠 ... ${error} :  ${error.toJSON}`);
   }
 
   if (API_CONFIG.errors.showToast) {
