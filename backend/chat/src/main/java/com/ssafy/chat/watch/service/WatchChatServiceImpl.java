@@ -99,7 +99,7 @@ public class WatchChatServiceImpl implements WatchChatService {
             
             // 최근 N분간의 메시지 수 합계
             for (int i = 0; i < TRAFFIC_WINDOW_MINUTES; i++) {
-                String minute = now.minusMinutes(i)
+                String minute = nowTime.minusMinutes(i)
                         .format(DateTimeFormatter.ofPattern("yyyyMMddHHmm"));
                 String key = ChatRedisKey.getWatchTrafficKey(roomId, minute);
                 
