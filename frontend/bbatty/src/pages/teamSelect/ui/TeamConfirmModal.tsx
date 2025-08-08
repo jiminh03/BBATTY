@@ -1,23 +1,16 @@
 import React from 'react';
 import { View, Text, Modal, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { TEAMS } from '../types';
+import { TEAMS } from '../../../entities/team/model/teamTypes';
 import { styles } from './TeamConfirmModal.style';
 
 interface TeamConfirmModalProps {
   visible: boolean;
   teamId: number | null;
-  isLoading: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
-export const TeamConfirmModal: React.FC<TeamConfirmModalProps> = ({
-  visible,
-  teamId,
-  isLoading,
-  onConfirm,
-  onCancel,
-}) => {
+export const TeamConfirmModal: React.FC<TeamConfirmModalProps> = ({ visible, teamId, onConfirm, onCancel }) => {
   const selectedTeam = teamId ? TEAMS.find((team) => team.id === teamId) : null;
 
   if (!selectedTeam) return null;
@@ -29,32 +22,18 @@ export const TeamConfirmModal: React.FC<TeamConfirmModalProps> = ({
           <View style={styles.modalTeamLogo}>
             <Text style={styles.modalTeamEmoji}>{selectedTeam.logo}</Text>
           </View>
-
           <Text style={styles.modalTitle}>{selectedTeam.name}</Text>
-
           <Text style={styles.modalMessage}>
             한 번 선택한 팀은 <Text style={styles.modalHighlight}>변경 불가능</Text>합니다.
           </Text>
 
           <View style={styles.modalButtons}>
-            <TouchableOpacity
-              style={[styles.modalButton, styles.modalCancelButton]}
-              onPress={onCancel}
-              disabled={isLoading}
-            >
+            <TouchableOpacity style={[styles.modalButton, styles.modalCancelButton]} onPress={onCancel}>
               <Text style={styles.modalButtonText}>취소</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.modalButton, styles.modalConfirmButton]}
-              onPress={onConfirm}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <ActivityIndicator size='small' color='#FFFFFF' />
-              ) : (
-                <Text style={[styles.modalButtonText, styles.modalConfirmText]}>확정</Text>
-              )}
+            <TouchableOpacity style={[styles.modalButton, styles.modalConfirmButton]} onPress={onConfirm}>
+              <Text style={[styles.modalButtonText, styles.modalConfirmText]}>확정</Text>
             </TouchableOpacity>
           </View>
         </View>

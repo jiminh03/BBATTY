@@ -1,5 +1,7 @@
 package com.ssafy.schedule.domain.crawler.service;
 
+import com.ssafy.schedule.domain.chat.dto.GameListEventDto;
+import com.ssafy.schedule.domain.chat.kafka.ChatEventKafkaProducer;
 import com.ssafy.schedule.global.constant.GameStatus;
 import com.ssafy.schedule.global.entity.Game;
 import com.ssafy.schedule.global.entity.Team;
@@ -14,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -41,24 +44,25 @@ public class ScheduledGameService extends BaseCrawlerService {
      * @param date YYYY-MM-DD 형식의 날짜
      * @return 저장된 경기 일정 수
      */
-    public int crawlAndSaveScheduledGames(String date) {
+    public List<Game> crawlAndSaveScheduledGames(String date) {
         log.info("{} 예정된 경기 일정 크롤링 시작", date);
 
         List<String> gameUrls = crawlGameUrls(date);
         if (gameUrls.isEmpty()) {
             log.warn("크롤링된 경기 링크가 없습니다.");
-            return 0;
+            return new ArrayList<>();
         }
 
-        int savedCount = 0;
+        List<Game> savedGames = new ArrayList<>();
         for (String gameUrl : gameUrls) {
-            if (processScheduledGame(gameUrl, date)) {
-                savedCount++;
+            Game savedGame = processScheduledGame(gameUrl, date);
+            if (savedGame != null) {
+                savedGames.add(savedGame);
             }
         }
         
-        log.info("{}개의 예정된 경기 일정 저장 완료", savedCount);
-        return savedCount;
+        log.info("{}개의 예정된 경기 일정 저장 완료", savedGames.size());
+        return savedGames;
     }
 
     /**
@@ -69,13 +73,13 @@ public class ScheduledGameService extends BaseCrawlerService {
      * @return 저장 성공 여부
      */
     @Transactional
-    public boolean processScheduledGame(String gameUrl, String dateStr) {
+    public Game processScheduledGame(String gameUrl, String dateStr) {
         log.debug("예정된 경기 처리: {}", gameUrl);
 
         String html = getRenderedHtmlByUrl(gameUrl);
         if (html == null) {
             log.error("HTML 렌더링 실패: {}", gameUrl);
-            return false;
+            return null;
         }
 
         Document doc = Jsoup.parse(html);
@@ -96,7 +100,7 @@ public class ScheduledGameService extends BaseCrawlerService {
         if (scores != null) {
             log.debug("점수가 있는 경기 - 예정된 경기 저장 건너뛰기: {} vs {} ({}:{})", 
                     awayTeamName, homeTeamName, scores[0], scores[1]);
-            return false;
+            return null;
         }
 
 
@@ -104,7 +108,7 @@ public class ScheduledGameService extends BaseCrawlerService {
         // 필수 정보 검증
         if (homeTeamName == null || awayTeamName == null || gameTime == null) {
             log.warn("필수 정보 누락 - 홈팀: {}, 원정팀: {}, 시간: {}", homeTeamName, awayTeamName, gameTime);
-            return false;
+            return null;
         }
 
         log.debug("예정된 경기 발견: {} vs {} at {} (경기장: {})", awayTeamName, homeTeamName, gameTime, stadiumLocation);
@@ -121,7 +125,7 @@ public class ScheduledGameService extends BaseCrawlerService {
      * @param stadiumLocation 경기장 지역명 (크롤링된 이름)
      * @return 저장 성공 여부
      */
-    private boolean saveScheduledGame(String homeTeamName, String awayTeamName, String gameTime, String dateStr, String stadiumLocation) {
+    private Game saveScheduledGame(String homeTeamName, String awayTeamName, String gameTime, String dateStr, String stadiumLocation) {
         try {
             // 팀명 매핑 및 조회
             String mappedHomeTeamName = mapTeamName(homeTeamName);
@@ -133,7 +137,7 @@ public class ScheduledGameService extends BaseCrawlerService {
             if (homeTeam == null || awayTeam == null) {
                 log.warn("팀을 찾을 수 없음 - 홈팀: {} ({}), 원정팀: {} ({})", 
                         homeTeamName, mappedHomeTeamName, awayTeamName, mappedAwayTeamName);
-                return false;
+                return null;
             }
 
             // 날짜/시간 파싱
@@ -143,7 +147,7 @@ public class ScheduledGameService extends BaseCrawlerService {
             if (gameRepository.existsByHomeTeamAndAwayTeamAndDateTime(homeTeam, awayTeam, gameDateTime)) {
                 log.debug("이미 존재하는 경기 일정 - 건너뛰기: {} vs {} at {}", 
                         mappedAwayTeamName, mappedHomeTeamName, gameDateTime);
-                return false;
+                return null;
             }
 
             // 경기 일정 저장 (SCHEDULED 상태)
@@ -160,11 +164,11 @@ public class ScheduledGameService extends BaseCrawlerService {
 
             log.info("✅ 예정된 경기 일정 저장: {} vs {} at {}", 
                     mappedAwayTeamName, mappedHomeTeamName, gameDateTime);
-            return true;
+            return savedGame;
 
         } catch (Exception e) {
             log.error("경기 일정 저장 실패: {}", e.getMessage(), e);
-            return false;
+            return null;
         }
     }
 }

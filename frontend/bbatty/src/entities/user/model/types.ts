@@ -41,8 +41,19 @@ export interface User extends BaseEntity {
   profileImageURL?: string;
   introduction?: string;
   age: number;
-  gender?: string;
+  gender: string;
   teamId: string;
+}
+
+export interface UserProfile {
+  userId: number;
+  nickname: string;
+  profileImg?: string;
+  teamId: number;
+  teamName: string;
+  introduction?: string;
+  age: number;
+  gender: string;
 }
 
 export interface DetailedUser extends User {
@@ -50,9 +61,9 @@ export interface DetailedUser extends User {
 }
 
 export interface UserSummary {
-  id: string;
-  nickName: string;
+  nickname: string;
   profileImage?: string;
+  introduction?: string;
 }
 
 // ================================== RequestPayload =======================================
