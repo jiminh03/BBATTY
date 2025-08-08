@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import { NavigationContainer } from '@react-navigation/native';
 import { tokenManager } from '../shared';
+import { setUnauthorizedCallback } from '../shared/api/client/apiClient';
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
 import { linking } from './linking';
@@ -32,11 +33,14 @@ export default function AppNavigator() {
     }
   };
 
-  const handleLoginSuccess = (userInfo: any, accessToken: string) => {
-    setIsAuthenticated(true);
+  const handleLoginSuccess = async (userInfo: any, accessToken: string) => {
     setShowSplash(false);
     setKakaoUserInfo(userInfo);
     setKakaoAccessToken(accessToken);
+    
+    // 서버에서 JWT 토큰을 받은 후에만 인증된 상태로 변경
+    const token = await tokenManager.getToken();
+    setIsAuthenticated(!!token);
   };
 
   const handleSignUpComplete = () => {

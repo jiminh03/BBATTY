@@ -65,9 +65,16 @@ const applyTokenToClients = (token: string | null) => {
   }
 };
 
+// 로그아웃 처리를 위한 콜백 저장
+let onUnauthorizedCallback: (() => void) | null = null;
+
 // 401 에러 시 호출될 콜백
 const handleUnauthorized = async () => {
   applyTokenToClients(null);
+  // AppNavigator에서 설정한 콜백 호출 (인증 상태 변경)
+  if (onUnauthorizedCallback) {
+    onUnauthorizedCallback();
+  }
 };
 
 export const initializeApiClient = async (): Promise<void> => {
@@ -77,6 +84,11 @@ export const initializeApiClient = async (): Promise<void> => {
   setupInterceptors(apiClient, handleUnauthorized);
   setupInterceptors(chatApiClient, handleUnauthorized);
   setupInterceptors(uploadClient, handleUnauthorized);
+};
+
+// AppNavigator에서 호출할 함수
+export const setUnauthorizedCallback = (callback: () => void) => {
+  onUnauthorizedCallback = callback;
 };
 
 export { apiClient, chatApiClient, uploadClient };
