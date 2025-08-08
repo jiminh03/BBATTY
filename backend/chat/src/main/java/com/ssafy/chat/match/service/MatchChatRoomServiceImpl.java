@@ -1,5 +1,7 @@
 package com.ssafy.chat.match.service;
 
+import com.ssafy.chat.common.util.KSTTimeUtil;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.chat.match.dto.*;
@@ -120,8 +122,8 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
                     .genderCondition(request.getGenderCondition())
                     .maxParticipants(request.getMaxParticipants())
                     .currentParticipants(0)
-                    .createdAt(LocalDateTime.now().toString())
-                    .lastActivityAt(LocalDateTime.now().toString())
+                    .createdAt(KSTTimeUtil.nowAsString())
+                    .lastActivityAt(KSTTimeUtil.nowAsString())
                     .status("ACTIVE")
                     .ownerId(userId.toString()) // bbatty 서버에서 인증된 실제 사용자 ID
                     .build();
@@ -505,7 +507,7 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
             LocalDate gameDate = LocalDate.parse(gameDateStr, DATE_FORMATTER);
             LocalDateTime midnightAfterGame = gameDate.plusDays(1).atTime(LocalTime.MIDNIGHT);
             
-            Duration ttl = Duration.between(LocalDateTime.now(), midnightAfterGame);
+            Duration ttl = Duration.between(KSTTimeUtil.now(), midnightAfterGame);
             
             // TTL이 음수이거나 0에 가깝다면 기본 1시간 설정
             if (ttl.isNegative() || ttl.toMinutes() < 10) {

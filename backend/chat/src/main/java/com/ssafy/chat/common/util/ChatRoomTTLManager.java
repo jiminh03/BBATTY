@@ -1,5 +1,7 @@
 package com.ssafy.chat.common.util;
 
+import com.ssafy.chat.common.util.KSTTimeUtil;
+
 import com.ssafy.chat.common.enums.ChatRoomType;
 import lombok.extern.slf4j.Slf4j;
 
@@ -60,7 +62,7 @@ public class ChatRoomTTLManager {
      * 관전 채팅방에서 사용 - 당일 자정에 만료
      */
     public static Duration getTTLUntilMidnight() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = KSTTimeUtil.now();
         LocalDateTime midnight = now.toLocalDate().plusDays(1).atStartOfDay();
         Duration duration = Duration.between(now, midnight);
         
@@ -87,7 +89,7 @@ public class ChatRoomTTLManager {
 
         LocalDate gameDate = gameDateTime.toLocalDate();
         LocalDateTime midnightAfterGame = gameDate.plusDays(1).atTime(LocalTime.MIDNIGHT);
-        Duration ttl = Duration.between(LocalDateTime.now(), midnightAfterGame);
+        Duration ttl = Duration.between(KSTTimeUtil.now(), midnightAfterGame);
         
         // TTL이 음수이거나 너무 짧으면 기본 TTL 적용
         if (ttl.isNegative() || ttl.toMinutes() < MINIMUM_TTL.toMinutes()) {
