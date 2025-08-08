@@ -18,6 +18,8 @@ export type AuthStackParamList = {
   TeamSelect: undefined;
   SignUp: {
     teamId: number;
+    //추가
+    onSignUpComplete?: () => void;
   };
 };
 

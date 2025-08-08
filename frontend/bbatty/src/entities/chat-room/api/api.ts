@@ -1,4 +1,5 @@
 import { apiClient, chatApiClient } from '../../../shared/api';
+import { API_CONFIG } from '../../../shared/api/client/config';
 import { 
   AuthResponse, 
   MatchChatJoinRequest, 
@@ -24,7 +25,7 @@ const MOCK_ROOMS: MatchChatRoom[] = [
     currentParticipants: 3,
     createdAt: "2025-08-06T04:55:50.011618551",
     status: "ACTIVE",
-    websocketUrl: "ws://10.0.2.2:8084/ws/match-chat/websocket?matchId=match_game_20250806_001_345c0215"
+    websocketUrl: `${API_CONFIG.socketUrl}/ws/match-chat/websocket?matchId=match_game_20250806_001_345c0215`
   },
   {
     matchId: "match_game_20250806_001_0e1b267d",
@@ -39,7 +40,7 @@ const MOCK_ROOMS: MatchChatRoom[] = [
     currentParticipants: 5,
     createdAt: "2025-08-06T04:52:44.389962725",
     status: "ACTIVE",
-    websocketUrl: "ws://10.0.2.2:8084/ws/match-chat/websocket?matchId=match_game_20250806_001_0e1b267d"
+    websocketUrl: `${API_CONFIG.socketUrl}/ws/match-chat/websocket?matchId=match_game_20250806_001_0e1b267d`
   }
 ];
 
@@ -57,7 +58,7 @@ export const chatRoomApi = {
         message: '채팅방 참여 성공 (목 데이터)',
         data: {
           sessionToken: 'mock_session_token_' + Date.now(),
-          websocketUrl: 'ws://10.0.2.2:8084/ws/match-chat/websocket?matchId=' + request.matchId
+          websocketUrl: `${API_CONFIG.socketUrl}/ws/match-chat/websocket?matchId=${request.matchId}`
         }
       };
     }
@@ -75,7 +76,7 @@ export const chatRoomApi = {
         message: '워치 채팅 참여 성공 (목 데이터)',
         data: {
           sessionToken: 'mock_watch_session_' + Date.now(),
-          websocketUrl: 'ws://10.0.2.2:8084/ws/watch-chat/websocket?gameId=' + request.gameId + '&teamId=' + request.teamId
+          websocketUrl: `${API_CONFIG.socketUrl}/ws/watch-chat/websocket?gameId=${request.gameId}&teamId=${request.teamId}`
         }
       };
     }
@@ -145,7 +146,7 @@ export const chatRoomApi = {
         currentParticipants: 0,
         createdAt: new Date().toISOString(),
         status: 'ACTIVE',
-        websocketUrl: `ws://10.0.2.2:8084/ws/match-chat/websocket?matchId=mock_match_${Date.now()}`
+        websocketUrl: `${API_CONFIG.socketUrl}/ws/match-chat/websocket?matchId=mock_match_${Date.now()}`
       };
       
       return {
