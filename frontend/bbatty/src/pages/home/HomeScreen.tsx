@@ -53,6 +53,13 @@ export default function HomeScreen({ navigation, route }: Props) {
           >
             <Text style={styles.quickButtonText}>매치 채팅 참여하기</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickButton}
+            onPress={() => navigation.navigate('PostList', { teamId: 1 })} // ✅ teamId 전달
+          >
+            <Text style={styles.quickButtonText}>게시글 조회 </Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>
