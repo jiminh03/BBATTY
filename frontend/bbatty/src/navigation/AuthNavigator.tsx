@@ -6,7 +6,11 @@ import TeamSelectScreen from '../pages/teamSelect/ui/TeamSelectScreen';
 
 const Stack = createStackNavigator<AuthStackParamList>();
 
-export default function AuthNavigator() {
+interface AuthNavigatorProps {
+  onSignUpComplete?: () => void;
+}
+
+export default function AuthNavigator({ onSignUpComplete }: AuthNavigatorProps) {
   return (
     <Stack.Navigator
       initialRouteName='TeamSelect'
@@ -15,7 +19,9 @@ export default function AuthNavigator() {
       }}
     >
       <Stack.Screen name='TeamSelect' component={TeamSelectScreen} />
-      <Stack.Screen name='SignUp' component={SignUpScreen} />
+      <Stack.Screen name='SignUp'>
+        {(props) => <SignUpScreen {...props} onSignUpComplete={onSignUpComplete} />}
+      </Stack.Screen>
     </Stack.Navigator>
   );
 }

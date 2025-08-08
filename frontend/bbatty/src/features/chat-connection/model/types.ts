@@ -1,5 +1,9 @@
 export interface ConnectionConfig {
   url: string;
+  sessionToken?: string;
+  userId?: string;
+  teamId?: string;
+  roomId?: string;
   options?: {
     auth?: { 
       sessionToken?: string;
@@ -16,7 +20,18 @@ export type ConnectionStatus =
   | 'CONNECTING' 
   | 'CONNECTED' 
   | 'RECONNECTING' 
+  | 'FAILED'
   | 'ERROR';
+
+export interface ConnectionEvents {
+  onConnect?: () => void;
+  onDisconnect?: (reason: string) => void;
+  onError?: (error: any) => void;
+  onMessage?: (message: any) => void;
+  onReconnecting?: (data: any) => void;
+  onMaxReconnectFailed?: (error: any) => void;
+  onMessageSendError?: (error: any) => void;
+}
 
 export interface SocketClient {
   connect(): Promise<void>;

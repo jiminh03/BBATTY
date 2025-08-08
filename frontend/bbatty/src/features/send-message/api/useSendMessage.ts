@@ -3,10 +3,11 @@ import { sendMessageApi } from './sendMessageApi';
 import { useSendMessageStore } from '../model/store';
 import { useConnectionStatus } from '../../chat-connection';
 import { SendMessageRequest, SendMessageOptions } from '../model/types';
+import { getErrorMessage, logChatError, ChatError } from '../../../shared/utils/error';
 
 interface UseSendMessageOptions {
   onSuccess?: (message: string) => void;
-  onError?: (error: Error) => void;
+  onError?: (error: ChatError) => void;
 }
 
 export const useSendMessage = (options: UseSendMessageOptions = {}) => {
@@ -20,11 +21,16 @@ export const useSendMessage = (options: UseSendMessageOptions = {}) => {
   
   const { canSendMessage } = useConnectionStatus();
 
-  return useMutation<void, Error, SendMessageRequest>({
+  return useMutation<void, ChatError, SendMessageRequest>({
     mutationFn: async (request) => {
       // 연결 상태 체크
       if (!canSendMessage()) {
-        throw new Error('채팅 서버에 연결되지 않았습니다.');
+        const connectionError = getErrorMessage({
+          type: 'CONNECTION_ERROR',
+          message: 'Not connected to chat server'
+        });
+        logChatError(connectionError, { request });
+        throw connectionError;
       }
 
       setLoading(true);
@@ -36,10 +42,14 @@ export const useSendMessage = (options: UseSendMessageOptions = {}) => {
         incrementSendCount();
         options.onSuccess?.(request.content);
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : '메시지 전송에 실패했습니다.';
-        setError(errorMessage);
-        options.onError?.(new Error(errorMessage));
-        throw error;
+        const chatError = error instanceof Object && 'type' in error 
+          ? error as ChatError 
+          : getErrorMessage(error);
+        
+        logChatError(chatError, { request });
+        setError(chatError.userMessage);
+        options.onError?.(chatError);
+        throw chatError;
       } finally {
         setLoading(false);
       }

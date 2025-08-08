@@ -11,6 +11,7 @@
 // client.sendChatMessage('안녕하세요!');
 
 import { SocketConfig, WebSocketMessage } from './types';
+import { getErrorMessage, logChatError, calculateRetryDelay, canRetry, ChatError } from '../../../utils/error';
 
 class SocketClient {
   private ws: WebSocket | null = null;
@@ -21,6 +22,8 @@ class SocketClient {
   private isConnecting = false;
   private messageQueue: WebSocketMessage[] = [];
   private isAuthenticated = false;
+  private currentError: ChatError | null = null;
+  private connectionTimeoutId: NodeJS.Timeout | null = null;
 
   constructor(private config: SocketConfig) {}
 
@@ -35,7 +38,7 @@ class SocketClient {
           if (this.ws?.readyState === WebSocket.OPEN) {
             resolve(this.ws);
           } else if (!this.isConnecting) {
-            reject(new Error('Connection failed'));
+            reject(this.currentError || new Error('Connection failed'));
           } else {
             setTimeout(checkConnection, 100);
           }
@@ -47,6 +50,22 @@ class SocketClient {
     return new Promise((resolve, reject) => {
       try {
         this.isConnecting = true;
+        this.currentError = null;
+        
+        // 연결 타임아웃 설정 (15초)
+        this.connectionTimeoutId = setTimeout(() => {
+          if (this.isConnecting) {
+            const timeoutError = getErrorMessage({ 
+              code: 'TIMEOUT', 
+              message: 'Connection timeout' 
+            });
+            this.currentError = timeoutError;
+            logChatError(timeoutError, { url: this.config.url });
+            this.emitEvent('connect_error', timeoutError);
+            reject(timeoutError);
+            this.cleanup();
+          }
+        }, 15000);
         
         let wsUrl = this.config.url;
         if (!wsUrl.startsWith('ws://') && !wsUrl.startsWith('wss://')) {
@@ -71,26 +90,47 @@ class SocketClient {
         this.ws = new WebSocket(wsUrl);
 
         this.ws.onopen = () => {
+          this.clearConnectionTimeout();
           this.isConnecting = false;
           this.reconnectAttempts = 0;
           this.isAuthenticated = true;
+          this.currentError = null;
           this.flushMessageQueue();
           this.emitEvent('connect');
           resolve(this.ws!);
         };
 
         this.ws.onclose = (event) => {
+          this.clearConnectionTimeout();
           this.isConnecting = false;
           this.isAuthenticated = false;
-          this.emitEvent('disconnect', { code: event.code, reason: event.reason });
-          this.handleReconnect();
+          
+          const closeError = getErrorMessage({
+            type: 'close',
+            code: event.code,
+            reason: event.reason
+          });
+          this.currentError = closeError;
+          logChatError(closeError, { code: event.code, reason: event.reason });
+          
+          this.emitEvent('disconnect', closeError);
+          this.handleReconnect(closeError);
         };
 
         this.ws.onerror = (error) => {
+          this.clearConnectionTimeout();
           this.isConnecting = false;
           this.isAuthenticated = false;
-          this.emitEvent('connect_error', error);
-          reject(error);
+          
+          const connectionError = getErrorMessage({
+            type: 'CONNECTION_ERROR',
+            message: 'WebSocket connection error'
+          });
+          this.currentError = connectionError;
+          logChatError(connectionError, { originalError: error });
+          
+          this.emitEvent('connect_error', connectionError);
+          reject(connectionError);
         };
 
         this.ws.onmessage = (event) => {
@@ -107,20 +147,37 @@ class SocketClient {
         };
 
       } catch (error) {
+        this.clearConnectionTimeout();
         this.isConnecting = false;
-        reject(error);
+        const unknownError = getErrorMessage(error);
+        this.currentError = unknownError;
+        logChatError(unknownError, { originalError: error });
+        reject(unknownError);
       }
     });
   }
 
   disconnect(): void {
+    this.clearConnectionTimeout();
     if (this.ws) {
       this.ws.close(1000, 'Client disconnect');
       this.ws = null;
     }
+    this.cleanup();
+  }
+
+  private clearConnectionTimeout(): void {
+    if (this.connectionTimeoutId) {
+      clearTimeout(this.connectionTimeoutId);
+      this.connectionTimeoutId = null;
+    }
+  }
+
+  private cleanup(): void {
     this.isConnecting = false;
     this.isAuthenticated = false;
     this.messageQueue = [];
+    this.currentError = null;
   }
 
   emit(event: string, data?: any): void {
@@ -140,7 +197,25 @@ class SocketClient {
 
   sendChatMessage(content: string): void {
     if (this.ws?.readyState === WebSocket.OPEN && this.isAuthenticated) {
-      this.ws.send(content);
+      try {
+        this.ws.send(content);
+      } catch (error) {
+        const sendError = getErrorMessage({
+          type: 'MESSAGE_SEND',
+          message: 'Failed to send message'
+        });
+        logChatError(sendError, { content, originalError: error });
+        this.emitEvent('message_send_error', sendError);
+        throw sendError;
+      }
+    } else {
+      const connectionError = getErrorMessage({
+        type: 'CONNECTION_ERROR',
+        message: 'Not connected to server'
+      });
+      logChatError(connectionError, { content });
+      this.emitEvent('message_send_error', connectionError);
+      throw connectionError;
     }
   }
 
@@ -199,16 +274,44 @@ class SocketClient {
     }
   }
 
-  private handleReconnect(): void {
-    if (this.reconnectAttempts < this.maxReconnectAttempts) {
+  private handleReconnect(error?: ChatError): void {
+    if (!error) {
+      error = this.currentError || getErrorMessage({ message: 'Connection lost' });
+    }
+    
+    if (canRetry(error, this.reconnectAttempts, this.maxReconnectAttempts)) {
       this.reconnectAttempts++;
-      const delay = this.reconnectInterval * Math.pow(2, this.reconnectAttempts - 1);
+      const delay = calculateRetryDelay(this.reconnectAttempts - 1, this.reconnectInterval);
+      
+      logChatError(error, { 
+        reconnectAttempt: this.reconnectAttempts, 
+        nextRetryIn: delay 
+      });
+      
+      this.emitEvent('reconnecting', { 
+        attempt: this.reconnectAttempts, 
+        maxAttempts: this.maxReconnectAttempts,
+        delay,
+        error
+      });
       
       setTimeout(() => {
-        this.connect().catch(() => {});
+        this.connect().catch((reconnectError) => {
+          logChatError(getErrorMessage(reconnectError), { 
+            isReconnectAttempt: true,
+            attempt: this.reconnectAttempts 
+          });
+        });
       }, delay);
     } else {
-      this.emitEvent('max_reconnect_failed');
+      const maxReconnectError = getErrorMessage({
+        message: 'Maximum reconnection attempts exceeded'
+      });
+      logChatError(maxReconnectError, { 
+        totalAttempts: this.reconnectAttempts,
+        lastError: error 
+      });
+      this.emitEvent('max_reconnect_failed', maxReconnectError);
     }
   }
 
@@ -226,6 +329,25 @@ class SocketClient {
       case WebSocket.CLOSED: return 'CLOSED';
       default: return 'UNKNOWN';
     }
+  }
+
+  getCurrentError(): ChatError | null {
+    return this.currentError;
+  }
+
+  getReconnectStatus(): { attempts: number; maxAttempts: number; canRetry: boolean } {
+    const currentError = this.currentError || getErrorMessage({ message: 'No error' });
+    return {
+      attempts: this.reconnectAttempts,
+      maxAttempts: this.maxReconnectAttempts,
+      canRetry: canRetry(currentError, this.reconnectAttempts, this.maxReconnectAttempts)
+    };
+  }
+
+  forceReconnect(): Promise<WebSocket> {
+    this.disconnect();
+    this.reconnectAttempts = 0;
+    return this.connect();
   }
 }
 

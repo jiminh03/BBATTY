@@ -23,13 +23,10 @@ export default function AppNavigator() {
   const checkAuthState = async () => {
     try {
       const token = await tokenManager.getToken();
-      // 개발 중에는 항상 인증된 상태로 설정 (테스트 목적)
-      setIsAuthenticated(true);
-      // setIsAuthenticated(!!token);
+      setIsAuthenticated(!!token);
     } catch (error) {
       console.error('Auth check error ', error);
-      setIsAuthenticated(true); // 개발 중 우회
-      // setIsAuthenticated(false);
+      setIsAuthenticated(false);
     } finally {
       setIsLoading(false);
     }
@@ -40,6 +37,10 @@ export default function AppNavigator() {
     setShowSplash(false);
     setKakaoUserInfo(userInfo);
     setKakaoAccessToken(accessToken);
+  };
+
+  const handleSignUpComplete = () => {
+    setIsAuthenticated(true);
   };
 
   if (showSplash) {
@@ -57,7 +58,13 @@ export default function AppNavigator() {
     <NavigationContainer ref={navigationRef} linking={linking}>
       {/* <StatusBar barStyle='light-content' backgroundColor={theme.colors.background} /> */}
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name='AuthStack' component={AuthNavigator} />
+        {isAuthenticated ? (
+          <Stack.Screen name='MainTabs' component={MainNavigator} />
+        ) : (
+          <Stack.Screen name='AuthStack'>
+            {() => <AuthNavigator onSignUpComplete={handleSignUpComplete} />}
+          </Stack.Screen>
+        )}
       </Stack.Navigator>
     </NavigationContainer>
   );

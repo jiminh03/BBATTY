@@ -6,6 +6,8 @@ import { Label } from '../../../shared/ui/atoms/Label/Label';
 import { useSendMessage } from '../api/useSendMessage';
 import { messageValidation } from '../utils/validation';
 import { messageFormatter } from '../utils/messageFormatter';
+import { getErrorMessage, ChatError } from '../../../shared/utils/error';
+import { useToast } from '../../../app/providers/ToastProvider';
 import { styles } from './SendMessageForm.styles';
 
 interface SendMessageFormProps {
@@ -26,16 +28,22 @@ export const SendMessageForm: React.FC<SendMessageFormProps> = ({
   const [message, setMessage] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
   const inputRef = useRef<any>(null);
+  const { showErrorToast, showToast } = useToast();
 
   const sendMessage = useSendMessage({
     onSuccess: () => {
       setMessage('');
       setErrors([]);
       onSend?.(message);
+      showToast('메시지가 전송되었습니다.', 'success', 1500);
     },
     onError: (error) => {
-      setErrors([error.message]);
-      Alert.alert('오류', error.message);
+      const chatError = error instanceof Object && 'type' in error 
+        ? error as ChatError 
+        : getErrorMessage(error);
+      
+      setErrors([chatError.userMessage]);
+      showErrorToast(chatError);
     },
   });
 
@@ -46,7 +54,11 @@ export const SendMessageForm: React.FC<SendMessageFormProps> = ({
     const validation = messageValidation.validateMessage(message);
     if (!validation.isValid) {
       setErrors(validation.errors);
-      Alert.alert('입력 오류', validation.errors.join('\n'));
+      const validationError = getErrorMessage({
+        type: 'VALIDATION_ERROR',
+        message: validation.errors.join(', ')
+      });
+      showErrorToast(validationError);
       return;
     }
 
