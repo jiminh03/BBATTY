@@ -12,7 +12,8 @@ export interface MatchChatJoinRequest {
 }
 
 export interface WatchChatJoinRequest {
-  gameId: string;
+  gameId: number;
+  teamId: number;
   isAttendanceVerified: boolean;
 }
 
