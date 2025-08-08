@@ -70,7 +70,7 @@ class AttendanceControllerTest {
                 .willReturn(mockResponse);
 
         // when
-        ApiResponse<AttendanceVerifyResponse> response = attendanceController.verifyAttendance(userPrincipal, request);
+        ApiResponse<AttendanceVerifyResponse> response = attendanceController.verifyAttendance(userPrincipal, request).getBody();
 
         // then
         assertThat(response).isNotNull();
