@@ -5,7 +5,7 @@ export const gameApi = {
   // 경기 목록 조회
   getGames: async (): Promise<GamesResponse> => {
     try {
-      const response = await chatApiClient.get('/api/match/games');
+      const response = await chatApiClient.get('http://i13a403.p.ssafy.io:8080/api/games/three-weeks');
       return response;
     } catch (error: any) {
       console.warn('서버 연결 실패, 목 데이터 반환:', error);

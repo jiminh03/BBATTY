@@ -44,7 +44,10 @@ export const MatchChatRoomListScreen = () => {
       setLoading(true);
       const response = await chatRoomApi.getMatchChatRooms();
       
-      if (response.data?.rooms) {
+      if (response.data?.data?.rooms) {
+        setRooms(response.data.data.rooms);
+      } else if (response.data?.rooms) {
+        // 목 데이터 형식 (기존 호환성)
         setRooms(response.data.rooms);
       } else {
         Alert.alert('오류', '채팅방 목록을 불러오는데 실패했습니다.');
