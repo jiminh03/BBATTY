@@ -35,7 +35,7 @@ public class ChatAuthResultController {
             Object result = redisUtil.getValue(resultKey);
             
             if (result == null) {
-                return ResponseEntity.ok(ApiResponse.error("인증 결과를 찾을 수 없습니다. 다시 시도해주세요."));
+                return ResponseEntity.ok(ApiResponse.<Map<String, Object>>fail(com.ssafy.chat.global.constants.ErrorCode.NOT_FOUND, null));
             }
             
             @SuppressWarnings("unchecked")
@@ -48,7 +48,7 @@ public class ChatAuthResultController {
             
         } catch (Exception e) {
             log.error("인증 결과 조회 실패: requestId={}", requestId, e);
-            return ResponseEntity.ok(ApiResponse.error("인증 결과 조회에 실패했습니다."));
+            return ResponseEntity.ok(ApiResponse.<Map<String, Object>>fail(com.ssafy.chat.global.constants.ErrorCode.SERVER_ERROR, null));
         }
     }
 }

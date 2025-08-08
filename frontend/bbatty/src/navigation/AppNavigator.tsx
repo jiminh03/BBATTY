@@ -8,7 +8,6 @@ import { linking } from './linking';
 import SplashScreen from '../pages/splash/ui/SplashScreen';
 import { navigationRef } from './navigationRefs';
 import { useAuthStore } from '../entities/auth/model/authStore';
-
 const Stack = createStackNavigator();
 
 export default function AppNavigator() {
@@ -24,10 +23,13 @@ export default function AppNavigator() {
   const checkAuthState = async () => {
     try {
       const token = await tokenManager.getToken();
-      setIsAuthenticated(!!token);
+      // 개발 중에는 항상 인증된 상태로 설정 (테스트 목적)
+      setIsAuthenticated(true);
+      // setIsAuthenticated(!!token);
     } catch (error) {
       console.error('Auth check error ', error);
-      setIsAuthenticated(false);
+      setIsAuthenticated(true); // 개발 중 우회
+      // setIsAuthenticated(false);
     } finally {
       setIsLoading(false);
     }

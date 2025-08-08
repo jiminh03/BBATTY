@@ -1,6 +1,8 @@
 package com.ssafy.chat.match.controller;
 
+import com.ssafy.chat.global.constants.ErrorCode;
 import com.ssafy.chat.global.constants.SuccessCode;
+import com.ssafy.chat.global.exception.ApiException;
 import com.ssafy.chat.global.response.ApiResponse;
 import com.ssafy.chat.match.dto.*;
 import com.ssafy.chat.match.service.MatchChatRoomService;
@@ -49,7 +51,7 @@ public class MatchChatRoomController {
         
         MatchChatRoomCreateResponse response = matchChatRoomService.getMatchChatRoom(matchId);
         if (response == null) {
-            return ResponseEntity.notFound().build();
+            throw new ApiException(ErrorCode.MATCH_CHAT_ROOM_NOT_FOUND);
         }
         return ResponseEntity.ok(ApiResponse.success(response));
     }

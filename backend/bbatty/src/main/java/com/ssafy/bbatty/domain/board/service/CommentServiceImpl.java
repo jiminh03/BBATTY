@@ -6,6 +6,7 @@ import com.ssafy.bbatty.domain.board.dto.response.CommentListResponse;
 import com.ssafy.bbatty.domain.board.dto.response.CommentResponse;
 import com.ssafy.bbatty.domain.board.entity.Comment;
 import com.ssafy.bbatty.domain.board.entity.Post;
+import com.ssafy.bbatty.domain.board.kafka.PostEventKafkaProducer;
 import com.ssafy.bbatty.domain.board.repository.CommentRepository;
 import com.ssafy.bbatty.domain.board.repository.PostRepository;
 import com.ssafy.bbatty.domain.user.entity.User;
@@ -18,6 +19,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -29,6 +31,7 @@ public class CommentServiceImpl implements CommentService{
     private final PostRepository postRepository;
     private final UserRepository userRepository;
     private final CommentRepository commentRepository;
+    private final PostEventKafkaProducer postEventKafkaProducer;
     private static final int PAGE_SIZE = 10; // 한 번에 가져올 댓글 수
 
     @Override
@@ -50,7 +53,14 @@ public class CommentServiceImpl implements CommentService{
             comment = new Comment(post, user, request.getContent());
         }
 
-        return commentRepository.save(comment);
+        Comment savedComment = commentRepository.save(comment);
+        
+        // 3일 이내 작성된 글인지 확인 후 Kafka 이벤트 전송
+        if (post.getCreatedAt().isAfter(LocalDateTime.now().minusDays(3))) {
+            postEventKafkaProducer.sendCommentEvent(post.getId(), request.getUserId(), post.getTeamId(), savedComment.getId());
+        }
+        
+        return savedComment;
     }
 
     @Override

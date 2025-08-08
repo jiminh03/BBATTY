@@ -18,10 +18,10 @@ public class WatchChatJoinResponse {
     private String sessionToken;
     
     // 팀 ID
-    private String teamId;
+    private Long teamId;
     
     // 게임 ID
-    private String gameId;
+    private Long gameId;
     
     // 토큰 만료 시간 (초)
     private long expiresIn;

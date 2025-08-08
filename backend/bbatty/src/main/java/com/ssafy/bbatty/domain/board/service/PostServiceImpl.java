@@ -7,6 +7,7 @@ import com.ssafy.bbatty.domain.board.dto.response.PostListPageResponse;
 import com.ssafy.bbatty.domain.board.dto.response.PostListResponse;
 import com.ssafy.bbatty.domain.board.entity.Post;
 import com.ssafy.bbatty.domain.board.entity.PostImage;
+import com.ssafy.bbatty.domain.board.kafka.PostEventKafkaProducer;
 import com.ssafy.bbatty.domain.board.repository.PostRepository;
 import com.ssafy.bbatty.domain.user.entity.User;
 import com.ssafy.bbatty.domain.user.repository.UserRepository;
@@ -20,6 +21,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -33,6 +35,7 @@ public class PostServiceImpl implements PostService {
     private final UserRepository userRepository;
     private final PostImageService postImageService;
     private final PostCountService postCountService;
+    private final PostEventKafkaProducer postEventKafkaProducer;
     private static final int PAGE_SIZE = 5; // 한 번에 가져올 게시글 수
 
     /*
@@ -170,6 +173,11 @@ public class PostServiceImpl implements PostService {
         }
 
         postCountService.incrementViewCount(postId, userId);
+        
+        // 3일 이내 작성된 글인지 확인 후 Kafka 이벤트 전송
+        if (post.getCreatedAt().isAfter(LocalDateTime.now().minusDays(3))) {
+            postEventKafkaProducer.sendViewEvent(postId, userId, post.getTeamId());
+        }
 
         return PostDetailResponse.builder()
                 .postId(post.getId())

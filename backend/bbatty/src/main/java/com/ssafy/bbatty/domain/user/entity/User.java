@@ -50,6 +50,18 @@ public class User extends BaseEntity {
     @Builder.Default
     private Role role = Role.USER;
 
+    @Column(name = "posts_public", nullable = false)
+    @Builder.Default
+    private Boolean postsPublic = true;
+
+    @Column(name = "stats_public", nullable = false)
+    @Builder.Default
+    private Boolean statsPublic = true;
+
+    @Column(name = "attendance_records_public", nullable = false)
+    @Builder.Default
+    private Boolean attendanceRecordsPublic = true;
+
     // UserInfo와 1:1 관계
     @Setter
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
@@ -80,6 +92,15 @@ public class User extends BaseEntity {
         this.nickname = nickname;
         this.introduction = introduction;
         this.profileImg = profileImg;
+    }
+
+    /**
+     * 프라이버시 설정 업데이트
+     */
+    public void updatePrivacySettings(Boolean postsPublic, Boolean statsPublic, Boolean attendanceRecordsPublic) {
+        this.postsPublic = postsPublic;
+        this.statsPublic = statsPublic;
+        this.attendanceRecordsPublic = attendanceRecordsPublic;
     }
 
     /**
