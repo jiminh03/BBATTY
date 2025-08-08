@@ -49,7 +49,7 @@ public class MatchChatAuthController {
             Map<String, Object> sessionData = matchChatAuthService.validateAndCreateSession(jwtToken, request);
             
             // WebSocket 접속 링크 생성
-            String websocketUrl = String.format("ws://localhost:8084/ws/match-chat/websocket?token=%s&matchId=%s", 
+            String websocketUrl = String.format("ws://i13a403.p.ssafy.io:8084/ws/match-chat/websocket?token=%s&matchId=%s", 
                     sessionData.get("sessionToken"), request.getMatchId());
 
             // 응답 DTO 생성
