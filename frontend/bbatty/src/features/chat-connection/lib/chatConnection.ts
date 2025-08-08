@@ -4,6 +4,7 @@ import { ConnectionConfig, ConnectionEvents } from '../model/types';
 import { useChatRoomStore } from '../../../entities/chat-room';
 import { useMessageStore } from '../../../entities/message';
 import { useUserStore } from '../../../entities/user';
+import { getErrorMessage, logChatError, ChatError } from '../../../shared/utils/error';
 
 export class ChatConnectionManager {
   private client: SocketClient | null = null;
@@ -58,10 +59,11 @@ export class ChatConnectionManager {
     });
 
     // 연결 오류
-    this.client.on('connect_error', (error) => {
+    this.client.on('connect_error', (chatError: ChatError) => {
       useConnectionStore.getState().setConnectionStatus('DISCONNECTED');
-      useConnectionStore.getState().setError(error.message || 'Connection error');
-      this.events.onError?.(error);
+      useConnectionStore.getState().setError(chatError.userMessage);
+      logChatError(chatError, { managerId: this.config?.userId });
+      this.events.onError?.(chatError);
     });
 
     // 메시지 수신
@@ -99,10 +101,27 @@ export class ChatConnectionManager {
       }
     });
 
+    // 재연결 시도 중
+    this.client.on('reconnecting', (data) => {
+      useConnectionStore.getState().setConnectionStatus('RECONNECTING');
+      useConnectionStore.getState().setReconnectAttempts(data.attempt);
+      const statusMessage = `재연결 중... (${data.attempt}/${data.maxAttempts})`;
+      useConnectionStore.getState().setError(statusMessage);
+      this.events.onReconnecting?.(data);
+    });
+
     // 재연결 실패
-    this.client.on('max_reconnect_failed', () => {
-      useConnectionStore.getState().setError('최대 재연결 시도 횟수를 초과했습니다.');
-      this.events.onMaxReconnectFailed?.();
+    this.client.on('max_reconnect_failed', (chatError: ChatError) => {
+      useConnectionStore.getState().setConnectionStatus('FAILED');
+      useConnectionStore.getState().setError(chatError.userMessage);
+      logChatError(chatError, { managerId: this.config?.userId });
+      this.events.onMaxReconnectFailed?.(chatError);
+    });
+
+    // 메시지 전송 에러
+    this.client.on('message_send_error', (chatError: ChatError) => {
+      logChatError(chatError, { managerId: this.config?.userId });
+      this.events.onMessageSendError?.(chatError);
     });
   }
 
@@ -135,15 +154,30 @@ export class ChatConnectionManager {
 
   sendMessage(content: string): void {
     if (!this.client || !this.client.getConnectionStatus()) {
-      throw new Error('Not connected to chat server');
+      const connectionError = getErrorMessage({
+        type: 'CONNECTION_ERROR',
+        message: 'Not connected to chat server'
+      });
+      logChatError(connectionError, { content, managerId: this.config?.userId });
+      throw connectionError;
     }
     
-    this.client.sendChatMessage(content);
+    try {
+      this.client.sendChatMessage(content);
+    } catch (error) {
+      // SocketClient에서 이미 에러 처리되므로 다시 throw
+      throw error;
+    }
   }
 
   joinRoom(roomId: string, userData?: any): void {
     if (!this.client || !this.client.getConnectionStatus()) {
-      throw new Error('Not connected to chat server');
+      const connectionError = getErrorMessage({
+        type: 'CONNECTION_ERROR', 
+        message: 'Not connected to chat server'
+      });
+      logChatError(connectionError, { roomId, managerId: this.config?.userId });
+      throw connectionError;
     }
     
     this.client.joinRoom(roomId, userData);
@@ -151,7 +185,12 @@ export class ChatConnectionManager {
 
   leaveRoom(roomId: string): void {
     if (!this.client || !this.client.getConnectionStatus()) {
-      throw new Error('Not connected to chat server');
+      const connectionError = getErrorMessage({
+        type: 'CONNECTION_ERROR',
+        message: 'Not connected to chat server' 
+      });
+      logChatError(connectionError, { roomId, managerId: this.config?.userId });
+      throw connectionError;
     }
     
     this.client.leaveRoom(roomId);
