@@ -158,7 +158,6 @@ public class MatchChatAuthServiceImpl implements MatchChatAuthService {
         sessionInfo.put("teamId", teamId);
         
         sessionInfo.put("matchId", request.getMatchId());
-        sessionInfo.put("userName", request.getNickname());
         sessionInfo.put("nickname", request.getNickname());
         sessionInfo.put("winRate", request.getWinRate());
         sessionInfo.put("profileImgUrl", request.getProfileImgUrl());
