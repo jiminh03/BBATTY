@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import type { InfiniteScrollParams, InfiniteScrollResponse } from '../types/infiniteScroll';
 import { InfiniteScrollBuilder } from '../types/infiniteScroll';
-import type { QueryKey } from '../lib/tanstack/queryKeys';
+import type { QueryKey } from '../lib/tanstack/queryKeyTypes';
 import type { ApiResponse } from '../types/response';
 
 type InfiniteScrollApiFunction<TData> = (

@@ -17,7 +17,7 @@ import lombok.NoArgsConstructor;
 public class UserBasicStatsResponse {
     
     private Long userId;
-    private String season; // "all", "2025" 등
+    private String season; // "total", "2025" 등
     
     // 선택 시즌 승무패 정보
     private int totalGames;

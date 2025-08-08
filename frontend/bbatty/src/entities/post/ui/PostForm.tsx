@@ -1,8 +1,7 @@
-// post/ui/PostForm.tsx
 import React, { useState } from 'react';
 import { View, TextInput, Button, Text, StyleSheet } from 'react-native';
 import { useCreatePost } from '../queries/usePostQueries';
-import { isValidPost, validatePostContent } from '../utils/vaildation';
+import { isValidPost, validatePostContent } from '../../post/utils/vaildation';
 
 export const PostForm: React.FC = () => {
   const [title, setTitle] = useState('');
@@ -18,14 +17,16 @@ export const PostForm: React.FC = () => {
     }
 
     createPost.mutate(
-      { title, content, teamId: 1 },
+      { title, content, teamId: 1 }, // teamId 하드코딩 예시
       {
         onSuccess: () => {
           setTitle('');
           setContent('');
           setError('');
+          console.log('게시글 생성 성공!');
         },
-        onError: () => {
+        onError: (err: any) => {
+          console.log(err);
           setError('게시글 생성 실패');
         },
       }
@@ -48,7 +49,11 @@ export const PostForm: React.FC = () => {
         multiline
       />
       {error !== '' && <Text style={styles.error}>{error}</Text>}
-      <Button title="게시글 생성" onPress={handleSubmit} />
+      <Button
+        title={createPost.isPending ? '생성 중...' : '게시글 생성'}
+        onPress={handleSubmit}
+        disabled={createPost.isPending}
+      />
     </View>
   );
 };

@@ -1,6 +1,7 @@
 package com.ssafy.chat.watch.redis;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ssafy.chat.global.constants.ChatRedisKey;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -27,7 +28,7 @@ public class WatchChatRedisPub {
     public void publishMessage(String roomId, Map<String, Object> message) {
         try {
             // Map 객체를 직접 발행 (PubSub 전용 템플릿 사용)
-            redisPubSubTemplate.convertAndSend(getChannelName(roomId), message);
+            redisPubSubTemplate.convertAndSend(ChatRedisKey.getWatchPubSubChannel(roomId), message);
             log.debug("관전 채팅 메시지 발행 - roomId: {}", roomId);
         } catch (Exception e) {
             log.error("관전 채팅 메시지 발행 실패 - roomId: {}", roomId, e);
@@ -62,10 +63,5 @@ public class WatchChatRedisPub {
         publishMessage(roomId, leaveEvent);
     }
     
-    /**
-     * 채널명 생성
-     */
-    private String getChannelName(String roomId) {
-        return "watch-chat:" + roomId;
-    }
+    // 채널명은 ChatRedisKey에서 관리
 }

@@ -1,6 +1,6 @@
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { STORAGE_KEYS, APP_INFO, checkNetwork } from '../../shared';
+import { STORAGE_KEYS, checkNetwork } from '../../shared';
 
 export class AppInitService {
   static async checkNetworkConnection(): Promise<boolean> {

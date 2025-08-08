@@ -47,8 +47,14 @@ public class ChatAuthServiceImpl implements ChatAuthService {
             // 3. 사용자 정보 생성 (전달받은 정보 사용)
             ChatAuthResponse.UserInfo userInfo = createUserInfo(userId, userTeamId, userGender, userAge, userNickname);
             
+            // 4. 게임 정보 생성 (매칭 채팅인 경우)
+            Map<String, Object> gameInfo = null;
+            if ("MATCH".equals(request.getChatType()) && request.getGameId() != null) {
+                gameInfo = createGameInfo(request.getGameId());
+            }
+            
             // 5. Kafka로 인증 성공 결과 전송
-            sendAuthSuccessToKafka(request.getRequestId(), userInfo, chatRoomInfo);
+            sendAuthSuccessToKafka(request.getRequestId(), userInfo, chatRoomInfo, gameInfo);
             
             log.info("채팅 인증 성공: userId={}, chatType={}, action={}", 
                     userId, request.getChatType(), request.getAction());
@@ -316,19 +322,63 @@ public class ChatAuthServiceImpl implements ChatAuthService {
     
     
     /**
+     * 게임 정보 생성 (매칭 채팅용)
+     */
+    private Map<String, Object> createGameInfo(Long gameId) {
+        try {
+            Game game = gameRepository.findById(gameId)
+                    .orElseThrow(() -> new ApiException(ErrorCode.GAME_NOT_FOUND));
+            
+            return Map.of(
+                    "gameId", game.getId(),
+                    "gameDate", game.getDateTime().toString(), // LocalDate -> "yyyy-MM-dd"
+                    "homeTeamId", game.getHomeTeamId(),
+                    "awayTeamId", game.getAwayTeamId(),
+                    "homeTeamName", game.getHomeTeam() != null ? game.getHomeTeam().getName() : "홈팀",
+                    "awayTeamName", game.getAwayTeam() != null ? game.getAwayTeam().getName() : "원정팀",
+                    "status", game.getStatus().name(),
+                    "stadium", game.getStadium() != null ? game.getStadium() : "경기장"
+            );
+        } catch (Exception e) {
+            log.error("게임 정보 생성 실패 - gameId: {}", gameId, e);
+            throw new ApiException(ErrorCode.GAME_NOT_FOUND);
+        }
+    }
+    
+    /**
      * Kafka로 인증 성공 결과 전송
      */
     private void sendAuthSuccessToKafka(String requestId, ChatAuthResponse.UserInfo userInfo, 
-                                      ChatAuthResponse.ChatRoomInfo chatRoomInfo) {
-        Map<String, Object> authResult = Map.of(
-                "success", true,
-                "requestId", requestId,
-                "timestamp", LocalDateTime.now().toString(),
-                "userInfo", userInfo,
-                "chatRoomInfo", chatRoomInfo
-        );
+                                      ChatAuthResponse.ChatRoomInfo chatRoomInfo, Map<String, Object> gameInfo) {
+        Map<String, Object> authResult;
+        
+        if (gameInfo != null) {
+            // 매칭 채팅인 경우 gameInfo 포함
+            authResult = Map.of(
+                    "success", true,
+                    "requestId", requestId,
+                    "timestamp", LocalDateTime.now().toString(),
+                    "userInfo", userInfo,
+                    "chatRoomInfo", chatRoomInfo,
+                    "gameInfo", gameInfo
+            );
+        } else {
+            // 관전 채팅인 경우 기존과 동일
+            authResult = Map.of(
+                    "success", true,
+                    "requestId", requestId,
+                    "timestamp", LocalDateTime.now().toString(),
+                    "userInfo", userInfo,
+                    "chatRoomInfo", chatRoomInfo
+            );
+        }
         
         chatAuthKafkaProducer.sendAuthResult(requestId, authResult);
+        
+        if (gameInfo != null) {
+            log.info("매칭 채팅 인증 응답 전송 - requestId: {}, gameId: {}, gameDate: {}", 
+                    requestId, gameInfo.get("gameId"), gameInfo.get("gameDate"));
+        }
     }
     
     /**

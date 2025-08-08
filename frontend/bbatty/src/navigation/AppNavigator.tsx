@@ -50,7 +50,7 @@ export default function AppNavigator() {
           setShowSplash(false);
         }}
         onLoginSuccess={handleLoginSuccess}
-      ></SplashScreen>
+      />
     );
   }
 

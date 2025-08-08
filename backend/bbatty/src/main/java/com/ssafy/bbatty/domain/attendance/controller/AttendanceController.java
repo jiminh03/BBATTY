@@ -8,6 +8,7 @@ import com.ssafy.bbatty.global.security.UserPrincipal;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,7 +31,7 @@ public class AttendanceController {
      * @return 인증 결과
      */
     @PostMapping("/verify")
-    public ApiResponse<AttendanceVerifyResponse> verifyAttendance(
+    public ResponseEntity<ApiResponse<AttendanceVerifyResponse>> verifyAttendance(
             @AuthenticationPrincipal UserPrincipal userPrincipal,
             @Valid @RequestBody AttendanceVerifyRequest request) {
         
@@ -39,6 +40,6 @@ public class AttendanceController {
         
         AttendanceVerifyResponse response = attendanceService.verifyAttendance(userId, request);
         
-        return ApiResponse.success(response);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

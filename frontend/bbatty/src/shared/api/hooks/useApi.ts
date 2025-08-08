@@ -1,6 +1,6 @@
 import { useQuery, useMutation, UseQueryOptions, UseMutationOptions } from '@tanstack/react-query';
 import { AxiosResponse } from 'axios';
-import { type QueryKey } from '../lib/tanstack/queryKeys';
+import { type QueryKey } from '../lib/tanstack/queryKeyTypes';
 import { extractData, type ApiResponse } from '../types/response';
 
 type ApiFunction<TData, TVariables = void> = (variablese: TVariables) => Promise<AxiosResponse<ApiResponse<TData>>>;
@@ -28,7 +28,7 @@ export const useApi = <TData, TError = Error, TVariables = void>({
       return response.data;
     },
     select: (data) => {
-      if (!data.success || !data.data) {
+      if (data.status !== 'SUCCESS' || !data.data) {
         throw new Error('Invalid API response');
       }
       return data.data;
