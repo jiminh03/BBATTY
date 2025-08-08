@@ -32,7 +32,7 @@ public class WatchChatController {
                 "token", "세션 토큰",
                 "teamId", "채팅방 팀 ID"
         ));
-        connectionInfo.put("exampleUrl", "ws://localhost:8084/ws/watch-chat?token=your_session_token&teamId=team1");
+        connectionInfo.put("exampleUrl", "ws://i13a403.p.ssafy.io:8084/ws/watch-chat?token=your_session_token&teamId=team1");
         connectionInfo.put("messageFormat", Map.of(
                 "type", "message",
                 "content", "메시지 내용"
