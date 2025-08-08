@@ -48,12 +48,15 @@ export default function SignUpScreen({ route }: Props) {
       };
 
       const response = await authApi.signup(registerData);
+        console.log(JSON.stringify(response));
+        
+        if(response.status !== 'SUCCESS') return;
+        
 
-      const registerResult = extractData(response)!;
       // 토큰들 저장
       await Promise.all([
-        tokenManager.setToken(registerResult.tokens.accessToken),
-        tokenManager.setRefreshToken(registerResult.tokens.refreshToken),
+        tokenManager.setToken(response.data.tokens.accessToken),
+        tokenManager.setRefreshToken(response.data.tokens.refreshToken),
       ]);
 
       Alert.alert('성공', '회원가입이 완료되었습니다');

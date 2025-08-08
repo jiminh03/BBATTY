@@ -105,6 +105,50 @@ public class MatchChatServiceImpl implements MatchChatService {
         broadcastToMatchChatRoom(matchId, messageData);
     }
     
+    @Override
+    public void sendSystemMessageToRoom(String matchId, String message) {
+        Map<String, Object> systemMessage = Map.of(
+                "messageType", "SYSTEM",
+                "roomId", matchId,
+                "timestamp", LocalDateTime.now().toString(),
+                "content", message,
+                "isSystemMessage", true
+        );
+        broadcastToMatchChatRoom(matchId, systemMessage);
+        log.info("🔔 시스템 메시지 전송 - matchId: {}, message: {}", matchId, message);
+    }
+    
+    @Override
+    public void forceCloseRoomSessions(String matchId) {
+        Set<WebSocketSession> sessions = matchChatSessions.get(matchId);
+        if (sessions == null || sessions.isEmpty()) {
+            log.debug("강제 종료할 세션 없음 - matchId: {}", matchId);
+            return;
+        }
+        
+        log.info("🔒 매칭 채팅방 세션 강제 종료 시작 - matchId: {}, 세션 수: {}", matchId, sessions.size());
+        
+        // 복사본 생성 (ConcurrentModificationException 방지)
+        Set<WebSocketSession> sessionCopy = Set.copyOf(sessions);
+        int closedCount = 0;
+        
+        for (WebSocketSession session : sessionCopy) {
+            try {
+                if (session.isOpen()) {
+                    session.close();
+                    closedCount++;
+                }
+            } catch (Exception e) {
+                log.error("세션 강제 종료 실패 - sessionId: {}", session.getId(), e);
+            }
+        }
+        
+        // 메모리에서 해당 채팅방 세션 정보 완전 제거
+        matchChatSessions.remove(matchId);
+        
+        log.info("✅ 매칭 채팅방 세션 강제 종료 완료 - matchId: {}, 종료된 세션 수: {}", matchId, closedCount);
+    }
+    
     private void broadcastToMatchChatRoom(String matchId, Map<String, Object> messageData) {
         Set<WebSocketSession> sessions = matchChatSessions.get(matchId);
         if (sessions == null || sessions.isEmpty()) {
