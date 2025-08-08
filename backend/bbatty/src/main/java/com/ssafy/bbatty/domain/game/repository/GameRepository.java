@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -24,4 +25,11 @@ public interface GameRepository extends JpaRepository<Game, Long> {
     List<Game> findTeamGamesToday(@Param("teamId") Long teamId, 
                                   @Param("date") LocalDate date, 
                                   @Param("status") GameStatus status);
+
+    /**
+     * 특정 기간 동안의 경기 조회 (3주간 일정 조회용)
+     */
+    @Query("SELECT g FROM Game g WHERE g.dateTime BETWEEN :startDate AND :endDate ORDER BY g.dateTime ASC")
+    List<Game> findByDateTimeBetween(@Param("startDate") LocalDateTime startDate, 
+                                     @Param("endDate") LocalDateTime endDate);
 }

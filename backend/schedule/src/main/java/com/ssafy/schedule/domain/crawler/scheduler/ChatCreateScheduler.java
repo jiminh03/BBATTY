@@ -2,15 +2,19 @@ package com.ssafy.schedule.domain.crawler.scheduler;
 
 import com.ssafy.schedule.global.entity.Game;
 import com.ssafy.schedule.domain.crawler.service.GameEventService;
+import com.ssafy.schedule.global.repository.GameRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 
@@ -27,12 +31,19 @@ public class ChatCreateScheduler {
     @Qualifier("gameEventTaskScheduler")
     private final TaskScheduler taskScheduler;
     private final GameEventService gameEventService;
+    private final GameRepository gameRepository;
 
     /**
      * 스케줄된 작업들을 관리하는 맵
      * Key: 경기 ID, Value: 스케줄된 작업의 Future 객체
      */
     private final ConcurrentHashMap<Long, ScheduledFuture<?>> scheduledTasks = new ConcurrentHashMap<>();
+    
+    /**
+     * 스케줄된 작업의 실행 시간 정보를 저장하는 맵
+     * Key: 경기 ID, Value: 스케줄된 실행 시간
+     */
+    private final ConcurrentHashMap<Long, LocalDateTime> scheduledTimes = new ConcurrentHashMap<>();
 
     /**
      * 경기 시작 2시간 전 이벤트 스케줄 등록
@@ -63,12 +74,17 @@ public class ChatCreateScheduler {
             
             // 스케줄 등록
             ScheduledFuture<?> scheduledTask = taskScheduler.schedule(
-                () -> gameEventService.handleGameStartingSoonEvent(game),
+                () -> {
+                    log.info("⏰ 스케줄된 작업 실행 시작 - 경기 ID: {}", game.getId());
+                    gameEventService.handleGameStartingSoonEvent(game);
+                    log.info("⏰ 스케줄된 작업 실행 완료 - 경기 ID: {}", game.getId());
+                },
                 scheduledDate
             );
 
-            // 스케줄된 작업 저장
+            // 스케줄된 작업과 시간 정보 저장
             scheduledTasks.put(game.getId(), scheduledTask);
+            scheduledTimes.put(game.getId(), eventTime);
 
             log.info("✅ 경기 이벤트 스케줄 등록: 경기 ID={}, 이벤트 시간={}, 경기={} vs {}", 
                     game.getId(), eventTime, game.getAwayTeam().getName(), game.getHomeTeam().getName());
@@ -89,6 +105,7 @@ public class ChatCreateScheduler {
      */
     public boolean cancelGameEvent(Long gameId) {
         ScheduledFuture<?> scheduledTask = scheduledTasks.remove(gameId);
+        scheduledTimes.remove(gameId);
         
         if (scheduledTask != null) {
             boolean cancelled = scheduledTask.cancel(false);
@@ -118,13 +135,29 @@ public class ChatCreateScheduler {
             return;
         }
 
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd HH:mm");
         log.info("📋 ========== 현재 스케줄된 이벤트 목록 ({} 개) ==========", scheduledTasks.size());
         
         scheduledTasks.forEach((gameId, task) -> {
             try {
-                // 게임 정보 조회 (간단한 로깅을 위해 게임 ID만 출력)
+                Optional<Game> gameOpt = gameRepository.findById(gameId);
+                LocalDateTime scheduledTime = scheduledTimes.get(gameId);
                 String status = task.isDone() ? "완료됨" : task.isCancelled() ? "취소됨" : "대기중";
-                log.info("🎮 경기 ID: {} | 상태: {} | 작업: {}", gameId, status, task.toString());
+                
+                if (gameOpt.isPresent() && scheduledTime != null) {
+                    Game game = gameOpt.get();
+                    String gameTime = game.getDateTime().format(formatter);
+                    String scheduleTime = scheduledTime.format(formatter);
+                    
+                    log.info("🎮 경기: {} vs {} | 경기시간: {} | 스케줄시간: {} | 상태: {}", 
+                            game.getAwayTeam().getName(), 
+                            game.getHomeTeam().getName(), 
+                            gameTime,
+                            scheduleTime,
+                            status);
+                } else {
+                    log.info("🎮 경기 ID: {} | 상태: {} | 경기 정보 없음", gameId, status);
+                }
             } catch (Exception e) {
                 log.warn("경기 ID {} 정보 출력 중 오류: {}", gameId, e.getMessage());
             }
@@ -141,6 +174,7 @@ public class ChatCreateScheduler {
         
         scheduledTasks.values().forEach(task -> task.cancel(false));
         scheduledTasks.clear();
+        scheduledTimes.clear();
     }
 
     /**
@@ -150,9 +184,17 @@ public class ChatCreateScheduler {
     public void cleanupCompletedTasks() {
         int beforeSize = scheduledTasks.size();
         
-        scheduledTasks.entrySet().removeIf(entry -> 
-            entry.getValue().isDone() || entry.getValue().isCancelled()
-        );
+        scheduledTasks.entrySet().removeIf(entry -> {
+            Long gameId = entry.getKey();
+            ScheduledFuture<?> task = entry.getValue();
+            boolean shouldRemove = task.isDone() || task.isCancelled();
+            
+            if (shouldRemove) {
+                scheduledTimes.remove(gameId);
+            }
+            
+            return shouldRemove;
+        });
         
         int afterSize = scheduledTasks.size();
         int cleanedCount = beforeSize - afterSize;

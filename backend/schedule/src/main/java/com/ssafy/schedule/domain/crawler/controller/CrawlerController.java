@@ -1,10 +1,12 @@
 package com.ssafy.schedule.domain.crawler.controller;
 
-import com.ssafy.schedule.domain.chat.dto.GameListEventDto;
 import com.ssafy.schedule.domain.chat.kafka.ChatEventKafkaProducer;
+import com.ssafy.schedule.domain.crawler.scheduler.ChatCreateScheduler;
+import com.ssafy.schedule.domain.crawler.service.GameEventService;
 import com.ssafy.schedule.domain.crawler.service.ScheduledGameService;
 import com.ssafy.schedule.domain.crawler.service.FinishedGameService;
 import com.ssafy.schedule.global.entity.Game;
+import com.ssafy.schedule.global.repository.GameRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +28,9 @@ public class CrawlerController {
     private final ScheduledGameService scheduledGameService;
     private final FinishedGameService finishedGameService;
     private final ChatEventKafkaProducer chatEventKafkaProducer;
+    private final ChatCreateScheduler chatCreateScheduler;
+    private final GameEventService gameEventService;
+    private final GameRepository gameRepository;
 
     @PostMapping("/scheduled-games/{date}")
     public ResponseEntity<Map<String, Object>> crawlScheduledGames(@PathVariable String date) {
@@ -39,19 +44,6 @@ public class CrawlerController {
             
             // 일정 크롤링 및 저장 실행
             List<Game> savedGames = scheduledGameService.crawlAndSaveScheduledGames(date);
-
-
-            // 크롤링한 게임들을 채팅 서버로 전송
-            if (!savedGames.isEmpty()) {
-                try {
-                    GameListEventDto eventDto = GameListEventDto.from(savedGames);
-                    chatEventKafkaProducer.sendGameListUpdateEvent(eventDto);
-
-                    log.info("✅ 채팅 서버로 게임 리스트 전송 완료: {}개 게임", savedGames.size());
-                } catch (Exception e) {
-                    log.error("채팅 서버 게임 리스트 전송 실패: {}", e.getMessage(), e);
-                }
-            }
 
             response.put("success", true);
             response.put("message", date + " 경기 일정 크롤링 완료");
@@ -179,6 +171,75 @@ public class CrawlerController {
             response.put("success", false);
             response.put("message", "월별 저장 실패: " + e.getMessage());
             response.put("yearMonth", yearMonth);
+            
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    // ========== 개발용 API ==========
+    
+    /**
+     * 현재 스케줄된 모든 작업 정보 조회 (개발용)
+     */
+    @GetMapping("/dev/scheduled-tasks")
+    public ResponseEntity<Map<String, Object>> getScheduledTasks() {
+        log.info("스케줄된 작업 조회 요청 (개발용)");
+        
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            int taskCount = chatCreateScheduler.getScheduledTaskCount();
+            chatCreateScheduler.printAllScheduledTasks();
+            
+            response.put("success", true);
+            response.put("scheduledTaskCount", taskCount);
+            response.put("message", "스케줄된 작업 정보가 로그에 출력되었습니다.");
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            log.error("스케줄된 작업 조회 실패: {}", e.getMessage(), e);
+            response.put("success", false);
+            response.put("message", "작업 조회 실패: " + e.getMessage());
+            
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * 특정 경기의 이벤트를 수동으로 테스트 (개발용)
+     */
+    @PostMapping("/dev/test-game-event/{gameId}")
+    public ResponseEntity<Map<String, Object>> testGameEvent(@PathVariable Long gameId) {
+        log.info("경기 이벤트 수동 테스트 요청 (개발용): 경기 ID = {}", gameId);
+        
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
+            Game game = gameRepository.findById(gameId)
+                    .orElseThrow(() -> new IllegalArgumentException("경기를 찾을 수 없습니다: " + gameId));
+            
+            log.info("수동 이벤트 테스트 실행: {} vs {} at {}", 
+                    game.getAwayTeam().getName(), 
+                    game.getHomeTeam().getName(), 
+                    game.getDateTime());
+            
+            // 이벤트 직접 실행
+            gameEventService.handleGameStartingSoonEvent(game);
+            
+            response.put("success", true);
+            response.put("gameId", gameId);
+            response.put("message", "경기 이벤트가 수동으로 실행되었습니다.");
+            response.put("gameInfo", String.format("%s vs %s", 
+                    game.getAwayTeam().getName(), game.getHomeTeam().getName()));
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            log.error("경기 이벤트 수동 테스트 실패: {}", e.getMessage(), e);
+            response.put("success", false);
+            response.put("gameId", gameId);
+            response.put("message", "이벤트 테스트 실패: " + e.getMessage());
             
             return ResponseEntity.badRequest().body(response);
         }
