@@ -44,19 +44,10 @@ public class ChatRedisKey {
     
     /** 매칭 채팅방 목록: match:room:list (Set) */
     public static final String MATCH_ROOM_LIST = "match:room:list";
-
-    // ===========================================
-    // GAME 도메인 - 경기 정보 관련 (Watch/Match 공통)
-    // ===========================================
-
-    /** 전체 게임 목록: game:list:all (String) */
-    public static final String GAME_LIST_ALL = "game:list:all";
     
-    /** 날짜별 게임 목록: game:list:date:{date} (String) */
-    public static final String GAME_LIST_BY_DATE = "game:list:date:";
-    
-    /** 개별 게임 정보: game:info:{gameId} (String) */
-    public static final String GAME_INFO = "game:info:";
+    /** 날짜별 매칭 채팅방 목록: match:room:list:date:{date} (Set) */
+    public static final String MATCH_ROOM_LIST_BY_DATE = "match:room:list:date:";
+
 
     // ===========================================
     // AUTH & SESSION 도메인 - 인증 및 세션 관련
@@ -120,27 +111,14 @@ public class ChatRedisKey {
     public static String getMatchRoomInfoKey(String matchId) {
         return MATCH_ROOM_INFO + matchId;
     }
+    
+    /**
+     * 날짜별 매칭 채팅방 목록 키 생성
+     */
+    public static String getMatchRoomListByDateKey(String date) {
+        return MATCH_ROOM_LIST_BY_DATE + date;
+    }
 
-    /**
-     * 전체 게임 목록 키 생성
-     */
-    public static String getGameListAllKey() {
-        return GAME_LIST_ALL;
-    }
-    
-    /**
-     * 날짜별 게임 목록 키 생성
-     */
-    public static String getGameListByDateKey(String date) {
-        return GAME_LIST_BY_DATE + date;
-    }
-    
-    /**
-     * 개별 게임 정보 키 생성
-     */
-    public static String getGameInfoKey(String gameId) {
-        return GAME_INFO + gameId;
-    }
 
     /**
      * 사용자 세션 정보 키 생성

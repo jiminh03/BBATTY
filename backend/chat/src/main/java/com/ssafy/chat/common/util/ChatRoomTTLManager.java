@@ -25,8 +25,6 @@ public class ChatRoomTTLManager {
     /** 트래픽 모니터링 TTL: 3분 + 1분 버퍼 */
     public static final Duration TRAFFIC_MONITORING_TTL = Duration.ofMinutes(4);
 
-    /** 게임 정보 캐시 TTL: 14일 */
-    public static final Duration GAME_INFO_TTL = Duration.ofDays(14);
 
     /** 채팅 인증 결과 TTL: 10분 */
     public static final Duration CHAT_AUTH_RESULT_TTL = Duration.ofMinutes(10);
@@ -109,12 +107,6 @@ public class ChatRoomTTLManager {
         return TRAFFIC_MONITORING_TTL;
     }
 
-    /**
-     * 게임 정보 캐시 TTL 반환
-     */
-    public static Duration getGameInfoTTL() {
-        return GAME_INFO_TTL;
-    }
 
     /**
      * 채팅 인증 결과 TTL 반환

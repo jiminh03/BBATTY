@@ -63,7 +63,6 @@ public class ChatMonitoringUtil {
         switch (keyType) {
             case "CHAT_ROOM" -> cleanupExpiredChatRoom(key);
             case "USER_SESSION" -> cleanupExpiredUserSession(key);
-            case "GAME_INFO" -> cleanupExpiredGameInfo(key);
             default -> log.debug("알 수 없는 키 타입: {}", keyType);
         }
     }
@@ -215,13 +214,6 @@ public class ChatMonitoringUtil {
         // WebSocket 연결 해제, 세션 매핑 정리 등
     }
 
-    /**
-     * 만료된 게임 정보 정리
-     */
-    private static void cleanupExpiredGameInfo(String key) {
-        log.info("🧽 만료된 게임 정보 정리 - 키: {}", key);
-        // 관련 캐시 무효화, 통계 업데이트 등
-    }
 
     // ===========================================
     // 헬스체크 및 진단
