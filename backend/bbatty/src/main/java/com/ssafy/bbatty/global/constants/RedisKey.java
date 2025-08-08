@@ -35,8 +35,8 @@ public class RedisKey {
     /** 사용자별 경기 직관 인증 여부: user:attendance:{user_id}:{game_id} */
     public static final String USER_ATTENDANCE_GAME = "user:attendance:";
 
-    /** 사용자 직관 기록 목록: user:attendance:{user_id}:{season} (Sorted Set - score는 타임스탬프) */
-    public static final String USER_ATTENDANCE_RECORDS = "user:attendance:";
+    /** 사용자 직관 기록 목록: user:attendance:records:{user_id}:{season} (Sorted Set - score는 타임스탬프) */
+    public static final String USER_ATTENDANCE_RECORDS = "user:attendance:records:";
 
     // ===========================================
     // STATS 도메인 - 모든 통계 데이터 통합
@@ -52,7 +52,7 @@ public class RedisKey {
     public static final String STATS_USER_DETAILED = "stats:user:detailed:";
 
     // ===========================================
-    // RANKING 도메인 - 모든 순위 데이터 통합
+    // RANKING 도메인 - 이번 시즌 승률 기준 랭킹 (Top 10)
     // ===========================================
 
     /** 전체 상위 10명: ranking:global:top10 (Sorted Set) */

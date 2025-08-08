@@ -75,15 +75,26 @@ public class StatisticsRedisRepository {
     }
     
     /**
-     * 사용자의 모든 통계 데이터 삭제 (재계산 시)
+     * 사용자의 현재 시즌 및 통산 통계 데이터 삭제 (재계산 시)
      */
-    public void clearUserStats(Long userId) {
-        String winRateKey = RedisKey.STATS_USER_WINRATE + userId;
+    public void clearCurrentSeasonAndTotalStats(Long userId, String currentSeason) {
+        // 현재 시즌 통계 삭제
+        String currentSeasonWinRateKey = RedisKey.STATS_USER_WINRATE + userId + ":" + currentSeason;
+        String currentSeasonDetailedKey = RedisKey.STATS_USER_DETAILED + userId + ":" + currentSeason;
+        
+        // 통산 통계 삭제
+        String totalWinRateKey = RedisKey.STATS_USER_WINRATE + userId + ":total";
+        String totalDetailedKey = RedisKey.STATS_USER_DETAILED + userId + ":total";
+        
+        // 연승 통계 삭제
         String streakStatsKey = RedisKey.STATS_USER_STREAK + userId;
         
-        redisTemplate.delete(winRateKey);
+        redisTemplate.delete(currentSeasonWinRateKey);
+        redisTemplate.delete(currentSeasonDetailedKey);
+        redisTemplate.delete(totalWinRateKey);
+        redisTemplate.delete(totalDetailedKey);
         redisTemplate.delete(streakStatsKey);
         
-        log.info("사용자 통계 캐시 삭제: userId={}", userId);
+        log.info("사용자 현재 시즌/통산 통계 캐시 삭제: userId={}, currentSeason={}", userId, currentSeason);
     }
 }

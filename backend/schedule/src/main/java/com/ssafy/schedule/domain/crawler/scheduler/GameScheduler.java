@@ -1,11 +1,13 @@
 package com.ssafy.schedule.domain.crawler.scheduler;
 
-import com.ssafy.schedule.domain.chat.dto.GameListEventDto;
 import com.ssafy.schedule.domain.chat.kafka.ChatEventKafkaProducer;
 import com.ssafy.schedule.domain.crawler.service.FinishedGameService;
 import com.ssafy.schedule.domain.crawler.service.ScheduledGameService;
+import com.ssafy.schedule.domain.statistics.service.StatisticsUpdateService;
+
 import com.ssafy.schedule.global.entity.Game;
 import com.ssafy.schedule.global.repository.GameRepository;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -25,8 +27,10 @@ public class GameScheduler {
     private final ScheduledGameService scheduledGameService;
     private final FinishedGameService finishedGameService;
     private final ChatCreateScheduler gameEventScheduler;
+    private final StatisticsUpdateService statisticsUpdateService;
     private final GameRepository gameRepository;
     private final ChatEventKafkaProducer chatEventKafkaProducer;
+
 
     /**
      * 매일 00:00에 3주뒤의 날짜의 경기 일정을 크롤링하여 저장
@@ -36,7 +40,7 @@ public class GameScheduler {
     public void crawlTodayScheduledGames() {
         
         // 3주 뒤의 날짜 계산
-        String targetDate = LocalDate.now()
+        String targetDate = LocalDate.now(ZoneId.of("Asia/Seoul"))
                 .plusWeeks(3)  
                 .format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
         
@@ -44,11 +48,6 @@ public class GameScheduler {
             List<Game> savedGames = scheduledGameService.crawlAndSaveScheduledGames(targetDate);
             log.info("========== ({}) 경기 일정 크롤링 완료: {}개 저장 ==========", targetDate, savedGames.size());
 
-            // 크롤링한 게임들을 채팅 서버로 전송
-            if (!savedGames.isEmpty()) {
-                sendGameListToChatServer(savedGames);
-            }
-            
         } catch (Exception e) {
             log.error("========== ({}) 경기 일정 크롤링 실패: {} ==========", targetDate, e.getMessage(), e);
         }
@@ -69,6 +68,10 @@ public class GameScheduler {
         try {
             int updatedCount = finishedGameService.crawlAndUpdateFinishedGames(yesterday);
             log.info("========== 어제({}) 경기 결과 업데이트 완료: {}개 업데이트 ==========", yesterday, updatedCount);
+            
+            // 경기 결과 업데이트 완료 후 관련 사용자 통계 재계산
+            statisticsUpdateService.updateUserStatsForDate(yesterday);
+            
         } catch (Exception e) {
             log.error("========== 어제({}) 경기 결과 업데이트 실패: {} ==========", yesterday, e.getMessage(), e);
         }
@@ -88,22 +91,6 @@ public class GameScheduler {
             log.info("========== 이벤트 스케줄 정리 완료: 현재 {}개 스케줄 활성 ==========", currentTaskCount);
         } catch (Exception e) {
             log.error("========== 이벤트 스케줄 정리 실패: {} ==========", e.getMessage(), e);
-        }
-    }
-    
-    /**
-     * 크롤링한 게임 리스트를 채팅 서버로 전송
-     * 
-     * @param games 전송할 게임 리스트
-     */
-    private void sendGameListToChatServer(List<Game> games) {
-        try {
-            GameListEventDto eventDto = GameListEventDto.from(games);
-            chatEventKafkaProducer.sendGameListUpdateEvent(eventDto);
-            
-            log.info("✅ 채팅 서버로 게임 리스트 전송 완료: {}개 게임", games.size());
-        } catch (Exception e) {
-            log.error("채팅 서버 게임 리스트 전송 실패: {}", e.getMessage(), e);
         }
     }
 }

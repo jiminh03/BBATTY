@@ -1,10 +1,14 @@
 package com.ssafy.chat.common.util;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
+import java.util.HashSet;
+import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
@@ -81,5 +85,47 @@ public class RedisUtil {
 
     public int getHashSize(String key) {
         return redisTemplate.opsForHash().size(key).intValue();
+    }
+    
+    /**
+     * SCAN을 사용하여 패턴 매칭 키 조회 (성능 최적화)
+     * keys() 명령어의 대안으로 프로덕션 환경에서 안전
+     */
+    public Set<String> scanKeys(String pattern) {
+        return scanKeys(pattern, 1000); // 기본 count: 1000
+    }
+    
+    /**
+     * SCAN을 사용하여 패턴 매칭 키 조회 (커스텀 count)
+     */
+    public Set<String> scanKeys(String pattern, long count) {
+        Set<String> keys = new HashSet<>();
+        try {
+            ScanOptions options = ScanOptions.scanOptions()
+                    .match(pattern)
+                    .count(count)
+                    .build();
+            
+            Cursor<byte[]> cursor = redisTemplate.getConnectionFactory()
+                    .getConnection()
+                    .scan(options);
+                    
+            while (cursor.hasNext()) {
+                keys.add(new String(cursor.next()));
+            }
+            cursor.close();
+        } catch (Exception e) {
+            // SCAN 실패 시 fallback으로 keys() 사용 (개발 환경에서만)
+            try {
+                Set<String> fallbackKeys = redisTemplate.keys(pattern);
+                if (fallbackKeys != null) {
+                    keys.addAll(fallbackKeys);
+                }
+            } catch (Exception fallbackException) {
+                // 로그만 남기고 빈 Set 반환
+                System.err.println("Redis SCAN과 keys() 모두 실패: " + fallbackException.getMessage());
+            }
+        }
+        return keys;
     }
 }

@@ -55,19 +55,6 @@ export const ErrorMessages: Record<ErrorCode, string> = {
   FILE_TOO_LARGE: 'FILE_TOO_LARGE',
 };
 
-export const createApiError = (
-  code: ErrorCode,
-  message?: string,
-  details?: unknown,
-  statusCode?: number
-): ApiError => ({
-  code,
-  message: message || ErrorMessages[code] || '알 수 없는 오류가 발생했습니다.',
-  details,
-  statusCode,
-  timestamp: new Date().toISOString(),
-});
-
 export const mapHttpStatusToErrorCode = (statusCode: number): ErrorCode => {
   const statusMap: Record<number, ErrorCode> = {
     400: ErrorCodes.DATA_VALIDATION_FAILED,

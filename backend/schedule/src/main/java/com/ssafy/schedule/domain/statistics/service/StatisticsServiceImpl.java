@@ -1,14 +1,14 @@
 package com.ssafy.schedule.domain.statistics.service;
 
-import com.ssafy.schedule.global.entity.Game;
-import com.ssafy.schedule.global.repository.GameRepository;
 import com.ssafy.schedule.domain.statistics.dto.internal.AttendanceRecord;
 import com.ssafy.schedule.domain.statistics.dto.response.UserBasicStatsResponse;
 import com.ssafy.schedule.domain.statistics.dto.response.UserDetailedStatsResponse;
 import com.ssafy.schedule.domain.statistics.dto.response.UserStreakStatsResponse;
 import com.ssafy.schedule.domain.statistics.repository.StatisticsRedisRepository;
-import com.ssafy.schedule.global.constant.RedisKey;
 import com.ssafy.schedule.global.constant.GameResult;
+import com.ssafy.schedule.global.constant.RedisKey;
+import com.ssafy.schedule.global.entity.Game;
+import com.ssafy.schedule.global.repository.GameRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -17,7 +17,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * 통계 서비스 구현체
@@ -33,8 +32,8 @@ public class StatisticsServiceImpl implements StatisticsService {
     private final GameRepository gameRepository;
     
     @Override
-    public UserBasicStatsResponse calculateUserBasicStats(Long userId, String season, String userTeam) {
-        log.info("사용자 기본 통계 계산 시작: userId={}, season={}, userTeam={}", userId, season, userTeam);
+    public UserBasicStatsResponse calculateUserBasicStats(Long userId, String season, Long teamId) {
+        log.info("사용자 기본 통계 계산 시작: userId={}, season={}, teamId={}", userId, season, teamId);
         
         // 캐시 확인 (시즌별 키 구분)
         Object cached = statisticsRedisRepository.getUserWinRate(userId, season);
@@ -43,20 +42,25 @@ public class StatisticsServiceImpl implements StatisticsService {
         }
         
         // 선택 시즌 직관 기록 조회 및 계산
-        List<AttendanceRecord> records = getAttendanceRecords(userId, season, userTeam);
+        List<AttendanceRecord> records = getAttendanceRecords(userId, season, teamId);
         
         UserBasicStatsResponse response = buildBasicStats(userId, season, records);
         
         // 캐시 저장
         statisticsRedisRepository.saveUserWinRate(userId, season, response);
         
+        // 이번 시즌인 경우 랭킹 업데이트
+        if (season.equals(getCurrentSeason()) && response.getTotalGames() >= 3) {
+            updateWinRateRankings(userId, teamId, Double.parseDouble(response.getWinRate()));
+        }
+        
         log.info("사용자 기본 통계 계산 완료: userId={}, season={}, winRate={}", userId, season, response.getWinRate());
         return response;
     }
     
     @Override
-    public UserDetailedStatsResponse calculateUserDetailedStats(Long userId, String season, String userTeam) {
-        log.info("사용자 상세 통계 계산 시작: userId={}, season={}, userTeam={}", userId, season, userTeam);
+    public UserDetailedStatsResponse calculateUserDetailedStats(Long userId, String season, Long teamId) {
+        log.info("사용자 상세 통계 계산 시작: userId={}, season={}, teamId={}", userId, season, teamId);
         
         // 캐시 확인
         Object cached = statisticsRedisRepository.getUserDetailedStats(userId, season);
@@ -65,7 +69,7 @@ public class StatisticsServiceImpl implements StatisticsService {
         }
         
         // 직관 기록 조회 및 계산
-        List<AttendanceRecord> records = getAttendanceRecords(userId, season, userTeam);
+        List<AttendanceRecord> records = getAttendanceRecords(userId, season, teamId);
         
         UserDetailedStatsResponse response = buildDetailedStats(userId, season, records);
         
@@ -77,8 +81,8 @@ public class StatisticsServiceImpl implements StatisticsService {
     }
     
     @Override
-    public UserStreakStatsResponse calculateUserStreakStats(Long userId, String userTeam) {
-        log.info("사용자 연승 통계 계산 시작: userId={}, userTeam={}", userId, userTeam);
+    public UserStreakStatsResponse calculateUserStreakStats(Long userId, Long teamId) {
+        log.info("사용자 연승 통계 계산 시작: userId={}, teamId={}", userId, teamId);
         
         // 캐시 확인
         Object cached = statisticsRedisRepository.getUserStreakStats(userId);
@@ -86,8 +90,8 @@ public class StatisticsServiceImpl implements StatisticsService {
             return (UserStreakStatsResponse) cached;
         }
         
-        // 전체 직관 기록 조회 (연승 계산을 위해)
-        List<AttendanceRecord> allRecords = getAttendanceRecords(userId, "all", userTeam);
+        // 통산 직관 기록 조회 (연승 계산을 위해)
+        List<AttendanceRecord> allRecords = getAttendanceRecords(userId, "total", teamId);
         
         UserStreakStatsResponse response = buildStreakStats(userId, allRecords);
         
@@ -102,11 +106,13 @@ public class StatisticsServiceImpl implements StatisticsService {
     public void recalculateUserStats(Long userId) {
         log.info("사용자 통계 재계산 시작: userId={}", userId);
         
-        // 캐시 삭제
-        statisticsRedisRepository.clearUserStats(userId);
+        // 현재 시즌 가져오기
+        String currentSeason = getCurrentSeason();
         
-        // 모든 시즌별 캐시 삭제만 수행
-        // userTeam은 클라이언트에서 파라미터로 전달받아 사용
+        // 현재 시즌과 통산 통계 캐시만 삭제
+        statisticsRedisRepository.clearCurrentSeasonAndTotalStats(userId, currentSeason);
+        
+        log.info("사용자 통계 재계산 완료: userId={}, currentSeason={}", userId, currentSeason);
     }
     
     // ===========================================
@@ -114,57 +120,36 @@ public class StatisticsServiceImpl implements StatisticsService {
     // ===========================================
     
     /**
-     * 사용자의 직관 기록을 Redis와 DB에서 조회하여 결합
+     * 사용자의 직관 기록을 Redis USER_ATTENDANCE_RECORDS 키에서 조회
      */
-    private List<AttendanceRecord> getAttendanceRecords(Long userId, String season, String userTeam) {
+    private List<AttendanceRecord> getAttendanceRecords(Long userId, String season, Long teamId) {
         List<AttendanceRecord> records = new ArrayList<>();
         
-        // Redis에서 직관 인증 기록 조회
-        Set<String> attendanceKeys = redisTemplate.keys(RedisKey.USER_ATTENDANCE_GAME + userId + ":*");
+        // Redis 키 구성 (시즌별 또는 통산)
+        String redisKey = RedisKey.USER_ATTENDANCE_RECORDS + userId + ":" + season;
         
-        if (attendanceKeys == null || attendanceKeys.isEmpty()) {
+        // Redis에서 직관 기록 조회 (Sorted Set - 최신순)
+        Set<Object> attendanceRecords = redisTemplate.opsForZSet().reverseRange(redisKey, 0, -1);
+        
+        if (attendanceRecords == null || attendanceRecords.isEmpty()) {
+            log.info("Redis에서 직관 기록 없음: userId={}, season={}", userId, season);
             return records;
         }
         
-        // 게임 ID 추출
-        Set<Long> gameIds = attendanceKeys.stream()
-                .map(key -> key.substring(key.lastIndexOf(':') + 1))
-                .map(Long::valueOf)
-                .collect(Collectors.toSet());
+        log.info("Redis에서 직관 기록 조회: userId={}, season={}, count={}", userId, season, attendanceRecords.size());
         
-        // DB에서 게임 정보 조회
-        List<Game> games = gameRepository.findAllById(gameIds);
-        Map<Long, Game> gameMap = games.stream()
-                .collect(Collectors.toMap(Game::getId, game -> game));
-        
-        // AttendanceRecord 생성
-        for (Long gameId : gameIds) {
-            Game game = gameMap.get(gameId);
-            if (game == null) continue;
-            
-            // 시즌 필터링
-            if (!season.equals("all") && !isInSeason(game.getDateTime(), season)) {
-                continue;
+        // JSON 레코드들을 AttendanceRecord로 변환
+        for (Object recordObj : attendanceRecords) {
+            try {
+                String recordJson = String.valueOf(recordObj);
+                AttendanceRecord record = parseAttendanceRecord(recordJson, teamId);
+                if (record != null) {
+                    records.add(record);
+                }
+            } catch (Exception e) {
+                log.warn("직관 기록 파싱 실패: userId={}, record={}", userId, recordObj, e);
             }
-            
-            AttendanceRecord record = AttendanceRecord.builder()
-                    .userId(userId)
-                    .gameId(gameId)
-                    .gameDateTime(game.getDateTime())
-                    .season(extractSeason(game.getDateTime()))
-                    .homeTeam(game.getHomeTeam().getName())
-                    .awayTeam(game.getAwayTeam().getName())
-                    .userTeam(userTeam)
-                    .gameResult(game.getResult())
-                    .stadium(game.getStadium())
-                    .userGameResult(calculateUserGameResult(game.getResult(), userTeam, game.getHomeTeam().getName(), game.getAwayTeam().getName()))
-                    .build();
-            
-            records.add(record);
         }
-        
-        // 시간순 정렬
-        records.sort(Comparator.comparing(AttendanceRecord::getGameDateTime));
         
         return records;
     }
@@ -224,18 +209,21 @@ public class StatisticsServiceImpl implements StatisticsService {
             // 구장별 통계
             updateCounters(stadiumCounters, record.getStadium(), record.getUserGameResult());
             
-            // 상대팀별 통계  
-            updateCounters(opponentCounters, record.getOpponentTeam(), record.getUserGameResult());
-            
-            // 요일별 통계
-            updateCounters(dayOfWeekCounters, record.getDayOfWeek().toString(), record.getUserGameResult());
+            // 상대팀별 통계 (팀 ID 사용)
+            Long opponentTeamId = record.getOpponentTeamId(record.getUserTeamId());
+            if (opponentTeamId != null) {
+                updateCounters(opponentCounters, String.valueOf(opponentTeamId), record.getUserGameResult());
+            }
             
             // 홈/원정별 통계
-            if (record.isHomeGame()) {
+            if (record.isHomeGame(record.getUserTeamId())) {
                 updateCounters(homeCounters, record.getUserGameResult());
             } else {
                 updateCounters(awayCounters, record.getUserGameResult());
             }
+            
+            // 요일별 통계
+            updateCounters(dayOfWeekCounters, record.getDayOfWeek().toString(), record.getUserGameResult());
         }
         
         // CategoryStats 객체로 변환 (승률 계산 포함)
@@ -269,7 +257,10 @@ public class StatisticsServiceImpl implements StatisticsService {
     private UserStreakStatsResponse buildStreakStats(Long userId, List<AttendanceRecord> allRecords) {
         String currentSeason = getCurrentSeason();
         
-        int currentWinStreak = 0;
+        // 연승 계산을 위해 시간 순서대로 정렬 (오래된 것부터)
+        allRecords.sort((r1, r2) -> r1.getGameDateTime().compareTo(r2.getGameDateTime()));
+        
+        int currentWinStreak;
         int maxWinStreakAll = 0;
         int maxWinStreakCurrentSeason = 0;
         Map<String, Integer> maxWinStreakBySeason = new HashMap<>();
@@ -387,24 +378,165 @@ public class StatisticsServiceImpl implements StatisticsService {
     }
     
     /**
-     * 특정 시즌인지 확인
+     * 사용자 관점에서 경기 결과 계산 (팀 ID 기반)
      */
-    private boolean isInSeason(LocalDateTime dateTime, String season) {
-        return extractSeason(dateTime).equals(season);
-    }
-    
-    /**
-     * 사용자 관점에서 경기 결과 계산
-     */
-    private AttendanceRecord.UserGameResult calculateUserGameResult(GameResult gameResult, String userTeam, String homeTeam, String awayTeam) {
+    private AttendanceRecord.UserGameResult calculateUserGameResult(GameResult gameResult, Long userTeamId, Long homeTeamId) {
         if (gameResult == GameResult.DRAW) {
             return AttendanceRecord.UserGameResult.DRAW;
         }
         
-        boolean isUserTeamHome = userTeam.equals(homeTeam);
+        boolean isUserTeamHome = userTeamId.equals(homeTeamId);
         boolean isUserTeamWin = (isUserTeamHome && gameResult == GameResult.HOME_WIN) ||
                                (!isUserTeamHome && gameResult == GameResult.AWAY_WIN);
         
         return isUserTeamWin ? AttendanceRecord.UserGameResult.WIN : AttendanceRecord.UserGameResult.LOSS;
+    }
+    
+    /**
+     * JSON 문자열을 AttendanceRecord로 변환
+     * JSON 예시: {"gameId":123,"homeTeam":"KIA","awayTeam":"두산","dateTime":"2024-01-01T14:00:00","stadium":"광주","status":"FINISHED"}
+     */
+    private AttendanceRecord parseAttendanceRecord(String recordJson, Long userTeamId) {
+        try {
+            // gameId 추출
+            Long gameId = extractJsonLong(recordJson);
+            if (gameId == null) {
+                log.warn("JSON에서 gameId를 찾을 수 없음: {}", recordJson);
+                return null;
+            }
+            
+            // 기본 정보 추출 (JSON에서)
+            String homeTeam = extractJsonString(recordJson, "homeTeam");
+            String awayTeam = extractJsonString(recordJson, "awayTeam");
+            String dateTimeStr = extractJsonString(recordJson, "dateTime");
+            String stadium = extractJsonString(recordJson, "stadium");
+            
+            if (homeTeam == null || awayTeam == null || dateTimeStr == null || stadium == null) {
+                log.warn("JSON에서 필수 필드를 찾을 수 없음: {}", recordJson);
+                return null;
+            }
+            
+            // 경기 시간 파싱
+            LocalDateTime gameDateTime = LocalDateTime.parse(dateTimeStr);
+            
+            // DB에서 최신 경기 결과 조회 (경기 결과는 실시간으로 변할 수 있음)
+            Optional<Game> gameOpt = gameRepository.findById(gameId);
+            if (gameOpt.isEmpty()) {
+                log.warn("DB에서 게임을 찾을 수 없음: gameId={}", gameId);
+                return null;
+            }
+            
+            Game game = gameOpt.get();
+            
+            
+            return AttendanceRecord.builder()
+                    .userId(null) // 통계 계산에서는 불필요
+                    .gameId(gameId)
+                    .gameDateTime(gameDateTime)
+                    .season(extractSeason(gameDateTime))
+                    .homeTeamId(game.getHomeTeam().getId())
+                    .awayTeamId(game.getAwayTeam().getId())
+                    .userTeamId(userTeamId)
+                    .gameResult(game.getResult()) // DB에서 최신 결과
+                    .stadium(stadium)
+                    .userGameResult(calculateUserGameResult(game.getResult(), userTeamId, game.getHomeTeam().getId()))
+                    .build();
+                    
+        } catch (Exception e) {
+            log.error("JSON 파싱 실패: {}", recordJson, e);
+            return null;
+        }
+    }
+    
+    /**
+     * JSON에서 Long 값 추출
+     */
+    private Long extractJsonLong(String json) {
+        try {
+            String value = extractJsonValue(json, "gameId");
+            return value != null ? Long.valueOf(value) : null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+    
+    /**
+     * JSON에서 String 값 추출
+     */
+    private String extractJsonString(String json, String key) {
+        return extractJsonValue(json, key);
+    }
+    
+    /**
+     * JSON에서 특정 키의 값 추출 (간단한 파서)
+     */
+    private String extractJsonValue(String json, String key) {
+        try {
+            String pattern = "\"" + key + "\":";
+            int startIndex = json.indexOf(pattern);
+            if (startIndex == -1) return null;
+            
+            startIndex += pattern.length();
+            
+            // 값의 시작 위치 찾기 (공백 제거)
+            while (startIndex < json.length() && Character.isWhitespace(json.charAt(startIndex))) {
+                startIndex++;
+            }
+            
+            // 값의 끝 위치 찾기
+            int endIndex;
+            if (json.charAt(startIndex) == '"') {
+                // 문자열 값인 경우
+                startIndex++; // 시작 따옴표 제거
+                endIndex = json.indexOf('"', startIndex);
+            } else {
+                // 숫자 값인 경우
+                endIndex = json.indexOf(',', startIndex);
+                if (endIndex == -1) {
+                    endIndex = json.indexOf('}', startIndex);
+                }
+            }
+            
+            if (endIndex == -1) return null;
+            
+            return json.substring(startIndex, endIndex).trim();
+        } catch (Exception e) {
+            log.debug("JSON 값 추출 실패: key={}, json={}", key, json, e);
+            return null;
+        }
+    }
+    
+    /**
+     * 승률 랭킹 업데이트 (전체 + 팀별)
+     */
+    private void updateWinRateRankings(Long userId, Long teamId, double winRate) {
+        try {
+            // 전체 랭킹 업데이트
+            String globalRankingKey = RedisKey.RANKING_GLOBAL_TOP10;
+            redisTemplate.opsForZSet().add(globalRankingKey, userId, winRate);
+            
+            // Top 10만 유지 (11번째부터 끝까지 삭제)
+            Long totalCount = redisTemplate.opsForZSet().zCard(globalRankingKey);
+            if (totalCount != null && totalCount > 10) {
+                redisTemplate.opsForZSet().removeRange(globalRankingKey, 0, totalCount - 11);
+            }
+            
+            // 팀별 랭킹 업데이트
+            if (teamId != null) {
+                String teamRankingKey = RedisKey.RANKING_TEAM_TOP10 + teamId + ":top10";
+                redisTemplate.opsForZSet().add(teamRankingKey, userId, winRate);
+                
+                // Top 10만 유지
+                Long teamTotalCount = redisTemplate.opsForZSet().zCard(teamRankingKey);
+                if (teamTotalCount != null && teamTotalCount > 10) {
+                    redisTemplate.opsForZSet().removeRange(teamRankingKey, 0, teamTotalCount - 11);
+                }
+            }
+            
+            log.debug("승률 랭킹 업데이트 완료: userId={}, winRate={}, teamId={}", userId, winRate, teamId);
+            
+        } catch (Exception e) {
+            log.error("승률 랭킹 업데이트 실패: userId={}, winRate={}, teamId={}", userId, winRate, teamId, e);
+        }
     }
 }

@@ -57,5 +57,15 @@ public interface MatchChatService {
      * Kafka에서 받은 메시지를 처리
      */
     void handleKafkaMessage(String matchId, java.util.Map<String, Object> messageData);
+    
+    /**
+     * 특정 매칭 채팅방의 모든 세션에 시스템 메시지 전송
+     */
+    void sendSystemMessageToRoom(String matchId, String message);
+    
+    /**
+     * 특정 매칭 채팅방의 모든 세션을 강제 종료
+     */
+    void forceCloseRoomSessions(String matchId);
 
 }

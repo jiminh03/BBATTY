@@ -30,7 +30,7 @@ public class MatchChatAuthController {
      * 매칭 채팅방 입장 요청
      * JWT 토큰 + 클라이언트 정보로 입장 조건 검증 후 세션 토큰 발급
      */
-    @PostMapping("/auth/join")
+    @PostMapping("/join")
     public ResponseEntity<ApiResponse<MatchChatJoinResponse>> joinMatchChat(
             @RequestHeader(value = "Authorization", required = true) String authHeader,
             @Valid @RequestBody MatchChatJoinRequest request) {
@@ -49,7 +49,7 @@ public class MatchChatAuthController {
             Map<String, Object> sessionData = matchChatAuthService.validateAndCreateSession(jwtToken, request);
             
             // WebSocket 접속 링크 생성
-            String websocketUrl = String.format("ws://localhost:8084/ws/match-chat/websocket?token=%s&matchId=%s", 
+            String websocketUrl = String.format("ws://i13a403.p.ssafy.io:8084/ws/match-chat/websocket?token=%s&matchId=%s", 
                     sessionData.get("sessionToken"), request.getMatchId());
 
             // 응답 DTO 생성
@@ -59,6 +59,9 @@ public class MatchChatAuthController {
                     .matchId(String.valueOf(request.getMatchId()))
                     .expiresIn((Long) sessionData.get("expiresIn"))
                     .websocketUrl(websocketUrl)
+                    .nickname((String) sessionData.get("nickname"))
+                    .teamId(sessionData.get("teamId") != null ? ((Number) sessionData.get("teamId")).longValue() : null)
+                    .teamName((String) sessionData.get("teamName"))
                     .build();
             
             log.info("매칭 채팅방 입장 승인 - matchId: {}, userId: {}", 

@@ -367,5 +367,4 @@ public class TeamRankingService {
             return calculateTeamRanking();
         }
     }
-
 }

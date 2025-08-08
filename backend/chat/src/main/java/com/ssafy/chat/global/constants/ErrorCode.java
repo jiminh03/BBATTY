@@ -60,7 +60,27 @@ public enum ErrorCode {
     MATCH_ID_MISSING(HttpStatus.BAD_REQUEST, "매칭 ID가 누락되었어요."),
     MATCH_ID_FORMAT_INVALID(HttpStatus.BAD_REQUEST, "매칭 ID 형식이 올바르지 않아요."),
     MATCH_ID_PREFIX_INVALID(HttpStatus.BAD_REQUEST, "매칭 ID는 'match_'로 시작해야 해요."),
-    MATCH_ID_GAME_ID_INVALID(HttpStatus.BAD_REQUEST, "매칭 ID에서 경기 ID를 추출할 수 없어요.");
+    MATCH_ID_GAME_ID_INVALID(HttpStatus.BAD_REQUEST, "매칭 ID에서 경기 ID를 추출할 수 없어요."),
+    
+    // CLEANUP
+    CLEANUP_REQUEST_INVALID(HttpStatus.BAD_REQUEST, "정리 요청 데이터가 올바르지 않아요."),
+    CLEANUP_DATE_MISSING(HttpStatus.BAD_REQUEST, "정리 대상 날짜가 누락되었어요."),
+    CLEANUP_ACTION_UNKNOWN(HttpStatus.BAD_REQUEST, "알 수 없는 정리 액션이에요."),
+    CLEANUP_SESSION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "세션 정리에 실패했어요."),
+    CLEANUP_KAFKA_TOPIC_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "Kafka 토픽 삭제에 실패했어요."),
+    CLEANUP_REDIS_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "Redis 정리에 실패했어요."),
+    CLEANUP_SYSTEM_MESSAGE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "시스템 메시지 전송에 실패했어요."),
+
+    // JSON
+    // JSON
+    JSON_PARSING_FAILED(HttpStatus.BAD_REQUEST, "JSON 파싱에 실패했어요."),
+    JSON_SERIALIZATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "JSON 직렬화에 실패했어요."),
+    JSON_DESERIALIZATION_FAILED(HttpStatus.BAD_REQUEST, "JSON 역직렬화에 실패했어요."),
+    JSON_FORMAT_INVALID(HttpStatus.BAD_REQUEST, "JSON 형식이 올바르지 않아요."),
+    JSON_FIELD_MISSING(HttpStatus.BAD_REQUEST, "JSON에서 필수 필드가 누락되었어요."),
+    JSON_TYPE_MISMATCH(HttpStatus.BAD_REQUEST, "JSON 필드의 타입이 일치하지 않아요.")
+    ;
+    
     private final HttpStatus status;
     private final String message;
 }

@@ -1,6 +1,11 @@
 package com.ssafy.chat.watch.service;
 
+import com.ssafy.chat.common.util.KSTTimeUtil;
+
+import com.ssafy.chat.common.util.ChatRoomTTLManager;
 import com.ssafy.chat.common.util.JsonUtils;
+import com.ssafy.chat.common.util.RedisUtil;
+import com.ssafy.chat.global.constants.ChatRedisKey;
 import com.ssafy.chat.global.constants.ErrorCode;
 import com.ssafy.chat.global.exception.ApiException;
 import com.ssafy.chat.watch.dto.WatchChatMessage;
@@ -30,9 +35,8 @@ public class WatchChatServiceImpl implements WatchChatService {
     private final WatchChatRedisPub redisPub;
     private final WatchChatRedisSub redisSub;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final RedisUtil redisUtil;
     
-    private static final String SESSION_KEY_PREFIX = "user:session:";
-    private static final String TRAFFIC_KEY_PREFIX = "chat:traffic:";
     private static final int TRAFFIC_SPIKE_THRESHOLD = 100; // 최근 3분간 100개 이상
     private static final int TRAFFIC_WINDOW_MINUTES = 3;
     
@@ -72,13 +76,13 @@ public class WatchChatServiceImpl implements WatchChatService {
     @Override
     public void incrementTrafficCount(String roomId) {
         try {
-            String currentMinute = LocalDateTime.now()
+            String currentMinute = KSTTimeUtil.now()
                     .format(DateTimeFormatter.ofPattern("yyyyMMddHHmm"));
-            String trafficKey = TRAFFIC_KEY_PREFIX + roomId + ":" + currentMinute;
+            String trafficKey = ChatRedisKey.getWatchTrafficKey(roomId, currentMinute);
             
             // 현재 분의 메시지 수 증가
             redisTemplate.opsForValue().increment(trafficKey);
-            redisTemplate.expire(trafficKey, TRAFFIC_WINDOW_MINUTES + 1, TimeUnit.MINUTES);
+            redisTemplate.expire(trafficKey, ChatRoomTTLManager.getTrafficMonitoringTTL());
             
             log.debug("관전 채팅 트래픽 카운트 증가 - roomId: {}, key: {}", roomId, trafficKey);
             
@@ -90,14 +94,14 @@ public class WatchChatServiceImpl implements WatchChatService {
     @Override
     public void checkTrafficSpike(String roomId) {
         try {
-            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime nowTime = KSTTimeUtil.now();
             long totalMessages = 0;
             
             // 최근 N분간의 메시지 수 합계
             for (int i = 0; i < TRAFFIC_WINDOW_MINUTES; i++) {
-                String minute = now.minusMinutes(i)
+                String minute = nowTime.minusMinutes(i)
                         .format(DateTimeFormatter.ofPattern("yyyyMMddHHmm"));
-                String key = TRAFFIC_KEY_PREFIX + roomId + ":" + minute;
+                String key = ChatRedisKey.getWatchTrafficKey(roomId, minute);
                 
                 Object count = redisTemplate.opsForValue().get(key);
                 if (count != null) {
@@ -136,7 +140,7 @@ public class WatchChatServiceImpl implements WatchChatService {
                 return false;
             }
             
-            String sessionKey = SESSION_KEY_PREFIX + sessionToken;
+            String sessionKey = ChatRedisKey.getUserSessionKey(sessionToken);
             return redisTemplate.hasKey(sessionKey);
             
         } catch (Exception e) {
@@ -148,7 +152,7 @@ public class WatchChatServiceImpl implements WatchChatService {
     @Override
     public Map<String, Object> getUserInfoFromSession(String sessionToken) {
         try {
-            String sessionKey = SESSION_KEY_PREFIX + sessionToken;
+            String sessionKey = ChatRedisKey.getUserSessionKey(sessionToken);
             Map<Object, Object> sessionData = redisTemplate.opsForHash().entries(sessionKey);
             
             if (sessionData.isEmpty()) {
@@ -195,12 +199,12 @@ public class WatchChatServiceImpl implements WatchChatService {
             roomInfo.put("createdAt", System.currentTimeMillis());
             roomInfo.put("status", "ACTIVE");
             
-            // Redis에 저장 (키: watch_room:{roomId})
-            String redisKey = "watch_room:" + roomId;
+            // Redis에 저장
+            String redisKey = ChatRedisKey.getWatchRoomInfoKey(roomId);
             redisTemplate.opsForHash().putAll(redisKey, roomInfo);
             
             // TTL 설정 (7일)
-            redisTemplate.expire(redisKey, java.time.Duration.ofDays(7));
+            redisTemplate.expire(redisKey, ChatRoomTTLManager.getTTLUntilMidnight());
             
             log.info("직관 채팅방 생성됨: roomId={}, gameId={}, teamId={}, teamName={}", 
                     roomId, gameId, teamId, teamName);
@@ -216,9 +220,9 @@ public class WatchChatServiceImpl implements WatchChatService {
         try {
             log.debug("관전 채팅방 목록 조회 시작");
             
-            // Redis에서 모든 관전 채팅방 조회
-            String pattern = "watch_room:*";
-            var keys = redisTemplate.keys(pattern);
+            // Redis에서 모든 관전 채팅방 조회 (SCAN 사용으로 성능 최적화)
+            String pattern = ChatRedisKey.WATCH_ROOM_INFO + "*";
+            var keys = redisUtil.scanKeys(pattern);
             
             Map<String, Object> result = new HashMap<>();
             result.put("rooms", new HashMap<>());
@@ -294,7 +298,7 @@ public class WatchChatServiceImpl implements WatchChatService {
         try {
             log.debug("관전 채팅방 조회 시작: roomId={}", roomId);
             
-            String redisKey = "watch_room:" + roomId;
+            String redisKey = ChatRedisKey.getWatchRoomInfoKey(roomId);
             Map<Object, Object> roomData = redisTemplate.opsForHash().entries(redisKey);
             
             if (roomData == null || roomData.isEmpty()) {

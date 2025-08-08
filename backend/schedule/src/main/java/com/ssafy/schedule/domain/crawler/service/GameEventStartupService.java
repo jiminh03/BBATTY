@@ -70,8 +70,8 @@ public class GameEventStartupService implements ApplicationRunner {
 
         for (Game game : scheduledGames) {
             try {
-                // 경기 시작 2시간 전이 이미 지났으면 스케줄하지 않음
-                LocalDateTime eventTime = game.getDateTime().minusHours(2);
+                // 경기 시작 3시간 전이 이미 지났으면 스케줄하지 않음
+                LocalDateTime eventTime = game.getDateTime().minusHours(3);
                 if (eventTime.isBefore(now) || eventTime.isEqual(now)) {
                     log.debug("경기 ID {} 이벤트 시간이 이미 지남 - 스케줄 건너뛰기: {} vs {} at {}", 
                             game.getId(), 
