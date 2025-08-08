@@ -34,7 +34,7 @@ export type HomeStackParamList = {
   Home: undefined;
   PostForm: undefined;
   PostList: {
-    teamId?: number;
+    teamId: number;
   };
   PostDetail: {
     postId: number;
