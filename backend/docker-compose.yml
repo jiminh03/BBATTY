@@ -186,21 +186,6 @@ services:
     networks:
       - app-network
 
-    # Kafdrop (Kafka 모니터링 웹 UI)
-  kafdrop:
-    image: obsidiandynamics/kafdrop
-    container_name: kafdrop
-    restart: always
-    ports:
-      - "9000:9000"  # 호스트 9000번 포트로 접속
-    environment:
-      KAFKA_BROKERCONNECT: kafka:9092
-      JVM_OPTS: "-Xms32M -Xmx64M"
-    depends_on:
-      - kafka
-    networks:
-      - app-network
-
 volumes:
   mysql_data:
   jenkins_data:
