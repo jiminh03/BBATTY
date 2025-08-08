@@ -112,28 +112,29 @@
 - **Kafka 기반 인기글 시스템**
 - 좋아요, 조회수, 댓글 이벤트를 각각의 토픽으로 비동기 처리
 - Schedule 서버의 주기적 점수 계산 및 감쇄 처리
-- Redis Sorted Set으로 실시간 인기글 랭킹 관리
+- Redis Sorted Set으로 인기글 랭킹 관리
 
-- **Redis + MySQL 하이브리드 아키텍처**
+**Redis + MySQL 하이브리드 아키텍처**
 - Redis: 빠른 응답을 위한 실시간 카운트 캐싱
 - MySQL: 데이터 영속성 및 비즈니스 인텔리전스 활용
 - 비동기 사용자 행동 로그 저장으로 서버 부하 분산
 
-- **S3 Presigned URL 방식**
+**S3 Presigned URL 방식**
 - 이미지 업로드 시 클라이언트 직접 업로드로 서버 부하 최소화
 - 프론트엔드 악성 요청 방지 로직 (연속 좋아요 방지 등)
 
 ## 🏗️ 시스템 구조
 
 ```
-📱 React Native App
-    ↕️
-🖥️ Spring Boot API Server
-    ↕️
-🔄 Kafka (서버간 통신)
-    ↕️
-💾 MySQL + Redis + AWS S3
+
 ```
+
+### ERD
+
+![ERD](img/bbatty_1.png)
+
+https://www.erdcloud.com/d/or5ngZvQWRQkWEWX8
+
 
 ## 📈 개발 현황
 
