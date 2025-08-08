@@ -131,7 +131,7 @@
 
 ### ERD
 
-![ERD](img/bbatty_1.png)
+![ERD](img/erd.png)
 
 https://www.erdcloud.com/d/or5ngZvQWRQkWEWX8
 
