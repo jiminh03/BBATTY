@@ -1,4 +1,4 @@
-import { apiClient, ApiResponse, ApiErrorResponse } from '../../../shared/api';
+import { apiClient, ApiResponse, ApiErrorResponse, extractData } from '../../../shared/api';
 import {
   CreatePostPayload,
   UpdatePostPayload,
@@ -12,10 +12,6 @@ import { Post } from '../model/types';
 import { CursorPostListResponse } from './types';
 import { PostStatus } from '../model/types';
 
-function isSuccess<T>(res: ApiResponse<T> | ApiErrorResponse): res is ApiResponse<T> {
-  return res.success === true;
-}
-
 export const postApi = {
   // 게시글 생성
   createPost: (payload: CreatePostPayload): Promise<AxiosResponse<ApiResponse<Post>>> =>
@@ -28,41 +24,25 @@ export const postApi = {
   deletePost: (postId: string) => apiClient.delete(`/api/posts/${postId}`),
 
   // 게시글 상세 조회
-  getPostById: async (postId: number) => {
-      const res = await apiClient.get<ApiResponse<Post>>(`/api/posts/${postId}`)
-
-      if (!res.data.success) {
-        throw new Error(res.data.message || '게시글 상세 조회 실패')
-      }
-
-      return res.data.data
-    },
-  
-  // 팀별 게시글 목록 조회
-  getPosts : async (
-    teamId: number,
-    cursor?: number
-  ): Promise<CursorPostListResponse> => {
-    const token = localStorage.getItem('accessToken');
-
-    const config = {
-      params: cursor !== undefined ? { cursor } : {},
-      headers: new AxiosHeaders(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
-
-    const res = await apiClient.get<CursorPostListResponse>(
-      `/api/posts/team/${teamId}`,
-      config
-    );
-
-    const { status, message, data } = res.data;
-
-    if (status !== 'SUCCESS' || !data) {
-      throw new Error(message || '게시글 목록 조회 실패');
-    }
-
+  getPostById: async (postId: number): Promise<Post> => {
+    // ⬇️ 여기서 제네릭은 "실데이터 타입"만!
+    const res = await apiClient.get<Post>(`/api/posts/${postId}`);
+    const data = extractData<Post>(res);  // ApiResponse<Post> → Post | null
+    if (!data) throw new Error(res.message || '게시글 상세 조회 실패');
     return data;
   },
+
+  // 팀별 게시글 목록 조회 (cursor 기반)
+  getPosts: async (teamId: number, cursor?: number): Promise<CursorPostListResponse> => {
+    const res = await apiClient.get<CursorPostListResponse>(
+      `/api/posts/team/${teamId}`,
+      { params: cursor !== undefined ? { cursor } : {} }
+    );
+    const data = extractData<CursorPostListResponse>(res);
+    if (!data) throw new Error(res.message || '게시글 목록 조회 실패');
+    return data; // 타입 OK
+  },
+
 
   // 인기 게시글 목록 조회
   getPopularPosts: ({ page = 0, size = 10, teamId }: GetPostsParams) =>

@@ -1,19 +1,34 @@
-// post/queries/usePostQueries.ts
-
-import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
+import { useMutation, useInfiniteQuery, useQueryClient, useQuery } from '@tanstack/react-query'
 import { postApi } from '../api/api'
-import { CreatePostPayload } from '../api/types'
-import { CursorPostListResponse } from '../api/types'
+import { CreatePostPayload, CursorPostListResponse } from '../api/types'
+import { Post } from '../model/types';
 
-export const usePostListQuery = () => {
+// 무한스크롤 게시글 목록
+export const usePostListQuery = (teamId: number) => {           // ✅ teamId 받기
   return useInfiniteQuery<CursorPostListResponse>({
-    queryKey: ['posts'],
-    queryFn: ({ pageParam = undefined }) =>
-      postApi.getPosts(pageParam as number | undefined),
-
+    queryKey: ['posts', teamId],
+    queryFn: ({ pageParam = undefined }) => postApi.getPosts(teamId, pageParam as number),
     initialPageParam: undefined,
+    getNextPageParam: (lastPage) => (lastPage.hasNext ? lastPage.nextCursor : undefined),
+  });
+};
 
-    getNextPageParam: (lastPage) =>
-      lastPage.hasNext ? lastPage.nextCursor : undefined,
+// 게시글 생성
+export const useCreatePost = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CreatePostPayload) => postApi.createPost(payload),
+    onSuccess: (_, vars) => {
+      // teamId별 캐시 무효화
+      qc.invalidateQueries({ queryKey: ['posts', vars.teamId] });
+    },
+  });
+};
+
+// 게시글 상세보기
+export const usePostDetailQuery = (postId: number) => {
+  return useQuery<Post>({
+    queryKey: ['post', postId],
+    queryFn: () => postApi.getPostById(postId),
   });
 };

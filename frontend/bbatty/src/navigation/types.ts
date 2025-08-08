@@ -15,10 +15,7 @@ export type RootStackParamList = {
 
 // 인증 스택 파라미터
 export type AuthStackParamList = {
-  userInfo: any;
-  TeamSelect: {
-    nickname: string;
-  };
+  TeamSelect: undefined;
   SignUp: {
     teamId: number;
   };
@@ -35,11 +32,12 @@ export type MainTabParamList = {
 // 홈 스택 파라미터
 export type HomeStackParamList = {
   Home: undefined;
+  PostForm: undefined;
   PostList: {
-    teamId?: string;
+    teamId?: number;
   };
   PostDetail: {
-    postId: string;
+    postId: number;
   };
   PostCreate: {
     category?: string;

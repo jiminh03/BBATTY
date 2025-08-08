@@ -1,20 +1,28 @@
+import { useNavigation } from "@react-navigation/native";
 import { PostListItem } from "../api/types";
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
 
 export const PostItem = ({ post }: { post: PostListItem }) => {
-  return (
-    <View style={styles.container}>
-      <View style={styles.commentBox}>
-        <Text style={styles.commentTextNumber}>{post.commentCount}</Text>
-        <Text style={styles.commentTextLabel}>댓글</Text>
-      </View>
+  const navigation = useNavigation<any>();
 
-      <Text style={styles.title}>{post.title}</Text>
-      <Text style={styles.meta}>
-        {post.nickname}   {new Date(post.createdAt).toLocaleString()}   👁 {post.viewCount}   👍 {post.likeCount}
-      </Text>
-    </View>
+  return (
+    <TouchableOpacity
+      onPress={() => navigation.navigate('PostDetail', { postId: post.id })}
+      activeOpacity={0.8}
+    >
+      <View style={styles.container}>
+        <View style={styles.commentBox}>
+          <Text style={styles.commentTextNumber}>{post.commentCount}</Text>
+          <Text style={styles.commentTextLabel}>댓글</Text>
+        </View>
+
+        <Text style={styles.title}>{post.title}</Text>
+        <Text style={styles.meta}>
+          {post.nickname}   {new Date(post.createdAt).toLocaleString()}   👁 {post.viewCount}   👍 {post.likeCount}
+        </Text>
+      </View>
+    </TouchableOpacity>
   );
 };
 

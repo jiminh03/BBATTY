@@ -3,18 +3,12 @@ import { View, Text, TextInput, TouchableOpacity, ActivityIndicator } from 'reac
 import { ProfileImagePicker } from './ProfileImagePicker';
 import { useProfileForm } from '../hooks/useProfileForm';
 import { styles } from './ProfileForm.style';
-import { RegisterRequest } from '../../../entities/auth/model/types';
-
-export interface ProfileFormData {
-  nickname: string;
-  profileImage?: string;
-  introduction?: string;
-}
+import { ProfileFormData } from '../model/profileTypes';
+import { authApi } from '../../../entities/auth';
 
 export interface ProfileFormProps {
   initialData?: Partial<ProfileFormData>;
-  onSubmit: (data: RegisterRequest) => Promise<void>;
-  onCheckNickname?: (nickname: string) => Promise<boolean>;
+  onSubmit: (data: ProfileFormData) => Promise<void>;
   isEditMode?: boolean;
   showNicknameField?: boolean;
 }
@@ -22,7 +16,6 @@ export interface ProfileFormProps {
 export const ProfileForm: React.FC<ProfileFormProps> = ({
   initialData = {},
   onSubmit,
-  onCheckNickname,
   isEditMode = false,
   showNicknameField = true,
 }) => {
@@ -38,19 +31,16 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
 
   // 닉네임 중복 확인
   const handleCheckNickname = async () => {
-    if (!onCheckNickname) return;
-
     // 먼저 유효성 검사
     if (errors.nickname) return;
 
     setIsCheckingNickname(true);
     try {
-      // const isAvailable = await onCheckNickname(formData.nickname);
-      // setIsNicknameAvailable(isAvailable);
+      const isAvailable = await authApi.checkNickname({ nickname: formData.nickname });
+      setIsNicknameAvailable(true);
       // if (!isAvailable) {
       //   setErrors((prev) => ({ ...prev, nickname: '이미 사용 중인 닉네임입니다' }));
       // }
-      setIsNicknameAvailable(true);
     } catch (error) {
       console.error('닉네임 확인 실패:', error);
     } finally {
@@ -75,7 +65,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
 
     setIsSubmitting(true);
     try {
-      // await onSubmit(formData);
+      await onSubmit(formData);
     } finally {
       setIsSubmitting(false);
     }
@@ -88,11 +78,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
 
   return (
     <>
-      <ProfileImagePicker
-        imageUri={formData.profileImage}
-        onImageSelect={(uri) => updateField('profileImage', uri)}
-        onPress={() => {}}
-      />
+      <ProfileImagePicker imageUri={formData.profileImage} onImageSelect={(uri) => updateField('profileImage', uri)} />
 
       {showNicknameField && (
         <View style={styles.inputSection}>
@@ -108,7 +94,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
               maxLength={10}
               editable={!isEditMode}
             />
-            {!isEditMode && onCheckNickname && (
+            {!isEditMode && (
               <TouchableOpacity
                 style={styles.checkButton}
                 onPress={handleCheckNickname}
@@ -138,7 +124,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
           maxLength={50}
           textAlignVertical='top'
         />
-        <Text style={styles.charCount}>{formData.introduction.length}/50</Text>
+        <Text style={styles.charCount}>{formData.introduction?.length}/50</Text>
         {errors.introduction && <Text style={styles.errorText}>{errors.introduction}</Text>}
       </View>
 
