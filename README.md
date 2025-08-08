@@ -129,9 +129,12 @@
 
 ```
 
-### ERD
+### 아키텍처
 
 ![아키텍처](img/architecture.png)
+
+
+### erd
 
 ![ERD](img/erd.png)
 
