@@ -1,5 +1,7 @@
 package com.ssafy.chat.common.util;
 
+import com.ssafy.chat.common.util.KSTTimeUtil;
+
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
@@ -156,7 +158,7 @@ public class ChatMonitoringUtil {
      * 마지막 에러 시간 업데이트
      */
     private static void updateLastErrorTime(String errorType) {
-        String timestamp = LocalDateTime.now().format(TIMESTAMP_FORMATTER);
+        String timestamp = KSTTimeUtil.now().format(TIMESTAMP_FORMATTER);
         lastErrorTimes.put(errorType, timestamp);
     }
 
@@ -236,7 +238,7 @@ public class ChatMonitoringUtil {
         // 전체 시스템 상태
         boolean isHealthy = redisErrors < 5 && websocketErrors < 10;
         health.put("overall_status", isHealthy ? "HEALTHY" : "DEGRADED");
-        health.put("timestamp", LocalDateTime.now().format(TIMESTAMP_FORMATTER));
+        health.put("timestamp", KSTTimeUtil.now().format(TIMESTAMP_FORMATTER));
         
         return health;
     }

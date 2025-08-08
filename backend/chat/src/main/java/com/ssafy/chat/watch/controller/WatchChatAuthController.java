@@ -44,7 +44,7 @@ public class WatchChatAuthController {
             Map<String, Object> sessionData = watchChatAuthService.validateAndCreateSession(jwtToken, request);
             
             // WebSocket 접속 링크 생성
-            String websocketUrl = String.format("ws://localhost:8084/ws/watch-chat/websocket?token=%s&gameId=%s&teamId=%s", 
+            String websocketUrl = String.format("ws://i13a403.p.ssafy.io:8084/ws/watch-chat/websocket?token=%s&gameId=%s&teamId=%s", 
                     sessionData.get("sessionToken"), request.getGameId(), sessionData.get("teamId"));
             
             // 응답 DTO 생성

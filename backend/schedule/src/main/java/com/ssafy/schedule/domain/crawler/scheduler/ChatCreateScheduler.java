@@ -20,7 +20,7 @@ import java.util.concurrent.ScheduledFuture;
 
 /**
  * 경기 이벤트 동적 스케줄링 서비스
- * - 경기 시작 2시간 전에 이벤트를 발생시키는 스케줄을 동적으로 관리
+ * - 경기 시작 3시간 전에 이벤트를 발생시키는 스케줄을 동적으로 관리
  * - TaskScheduler를 사용하여 정확한 시간에 이벤트 실행
  */
 @Service
@@ -31,7 +31,6 @@ public class ChatCreateScheduler {
     @Qualifier("gameEventTaskScheduler")
     private final TaskScheduler taskScheduler;
     private final GameEventService gameEventService;
-    private final GameRepository gameRepository;
 
     /**
      * 스케줄된 작업들을 관리하는 맵
@@ -46,7 +45,7 @@ public class ChatCreateScheduler {
     private final ConcurrentHashMap<Long, LocalDateTime> scheduledTimes = new ConcurrentHashMap<>();
 
     /**
-     * 경기 시작 2시간 전 이벤트 스케줄 등록
+     * 경기 시작 3시간 전 이벤트 스케줄 등록
      * 
      * @param game 스케줄링할 경기
      * @return 스케줄 등록 성공 여부
@@ -54,23 +53,29 @@ public class ChatCreateScheduler {
     public boolean scheduleGameStartingEvent(Game game) {
         // 이미 스케줄된 경기는 건너뛰기
         if (scheduledTasks.containsKey(game.getId())) {
-            log.debug("경기 ID {}는 이미 스케줄되어 있음", game.getId());
+            log.info("경기 ID {}는 이미 스케줄되어 있음", game.getId());
             return false;
         }
 
         // 경기 시간 3시간 전 계산
-        LocalDateTime eventTime = game.getDateTime().minusHours(3);
+        LocalDateTime eventTime = game.getDateTime().minusMinutes(180);
         LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
 
         // 이미 지난 시간이면 스케줄하지 않음
         if (eventTime.isBefore(now) || eventTime.isEqual(now)) {
-            log.debug("경기 ID {} 이벤트 시간이 이미 지났음: {}", game.getId(), eventTime);
+            log.info("경기 ID {} 이벤트 시간이 이미 지났음: {}", game.getId(), eventTime);
             return false;
         }
 
         try {
-            // Date 객체로 변환 (TaskScheduler에서 사용)
-            Date scheduledDate = Date.from(eventTime.atZone(ZoneId.systemDefault()).toInstant());
+            // Date 객체로 변환 (TaskScheduler에서 사용) - 일관된 시간대 사용
+            Date scheduledDate = Date.from(eventTime.atZone(ZoneId.of("Asia/Seoul")).toInstant());
+            
+            log.info("🕐 스케줄링 상세 정보: 경기 ID={}, 현재 시간={}, 이벤트 시간={}, 스케줄 Date={}",
+                    game.getId(), 
+                    now, 
+                    eventTime, 
+                    scheduledDate);
             
             // 스케줄 등록
             ScheduledFuture<?> scheduledTask = taskScheduler.schedule(
@@ -136,25 +141,30 @@ public class ChatCreateScheduler {
         }
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd HH:mm");
+        LocalDateTime currentTime = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
+        
         log.info("📋 ========== 현재 스케줄된 이벤트 목록 ({} 개) ==========", scheduledTasks.size());
+        log.info("🕐 현재 시간: {} (Asia/Seoul)", currentTime.format(formatter));
         
         scheduledTasks.forEach((gameId, task) -> {
             try {
-                Optional<Game> gameOpt = gameRepository.findById(gameId);
                 LocalDateTime scheduledTime = scheduledTimes.get(gameId);
                 String status = task.isDone() ? "완료됨" : task.isCancelled() ? "취소됨" : "대기중";
-                
-                if (gameOpt.isPresent() && scheduledTime != null) {
-                    Game game = gameOpt.get();
-                    String gameTime = game.getDateTime().format(formatter);
+
+                if (scheduledTime != null) {
                     String scheduleTime = scheduledTime.format(formatter);
-                    
-                    log.info("🎮 경기: {} vs {} | 경기시간: {} | 스케줄시간: {} | 상태: {}", 
-                            game.getAwayTeam().getName(), 
-                            game.getHomeTeam().getName(), 
-                            gameTime,
+
+                    // 남은 시간 계산
+                    long minutesUntilExecution = java.time.Duration.between(currentTime, scheduledTime).toMinutes();
+                    String timeUntil = minutesUntilExecution > 0 ? minutesUntilExecution + "분 후" :
+                                       minutesUntilExecution == 0 ? "지금" :
+                                       Math.abs(minutesUntilExecution) + "분 전";
+
+                    log.info("🎮 경기ID: {} | 스케줄시간: {} | 상태: {} | 실행까지: {}",
+                            gameId,
                             scheduleTime,
-                            status);
+                            status,
+                            timeUntil);
                 } else {
                     log.info("🎮 경기 ID: {} | 상태: {} | 경기 정보 없음", gameId, status);
                 }
@@ -200,7 +210,7 @@ public class ChatCreateScheduler {
         int cleanedCount = beforeSize - afterSize;
         
         if (cleanedCount > 0) {
-            log.debug("완료된 스케줄 정리: {}개 제거, 현재 {}개 스케줄 활성", cleanedCount, afterSize);
+            log.info("완료된 스케줄 정리: {}개 제거, 현재 {}개 스케줄 활성", cleanedCount, afterSize);
         }
     }
 }

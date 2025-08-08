@@ -1,5 +1,7 @@
 package com.ssafy.chat.watch.handler;
 
+import com.ssafy.chat.common.util.KSTTimeUtil;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.chat.common.dto.UserSessionInfo;
 import com.ssafy.chat.common.enums.ChatRoomType;
@@ -284,7 +286,7 @@ public class WatchChatWebSocketHandler implements WebSocketHandler {
         message.setMessageType(MessageType.CHAT);
         message.setRoomId(userInfo.getRoomId());
         message.setContent(content);
-        message.setTimestamp(LocalDateTime.now());
+        message.setTimestamp(KSTTimeUtil.now());
         message.setUserId(userInfo.getUserId()); // 실제 사용자 ID 포함 (신고 기능 등을 위해)
         
         log.info("Watch 채팅 메시지 생성 - userId: {}, roomId: {}, content: {}", 
