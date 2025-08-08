@@ -32,4 +32,26 @@ public class RedisKey {
     
     /** 사용자 상세 통계: stats:user:detailed:{user_id}:{season} (Hash) */
     public static final String STATS_USER_DETAILED = "stats:user:detailed:";
+    
+    // ===========================================
+    // RANKING 도메인 - 이번 시즌 승률 기준 랭킹 (Top 10)
+    // ===========================================
+    
+    /** 전체 상위 10명: ranking:global:top10 (Sorted Set) */
+    public static final String RANKING_GLOBAL_TOP10 = "ranking:global:top10";
+    
+    /** 팀별 상위 10명: ranking:team:{team_id}:top10 (Sorted Set) */
+    public static final String RANKING_TEAM_TOP10 = "ranking:team:";
+    
+    /** 전체 순위에서 내 순위: ranking:user:global:{user_id} */
+    public static final String RANKING_USER_GLOBAL = "ranking:user:global:";
+    
+    /** 팀내 순위에서 내 순위: ranking:user:team:{team_id}:{user_id} */
+    public static final String RANKING_USER_TEAM = "ranking:user:team:";
+    
+    /** 전체 백분위: ranking:percentile:global:{user_id} */
+    public static final String RANKING_PERCENTILE_GLOBAL = "ranking:percentile:global:";
+    
+    /** 팀내 백분위: ranking:percentile:team:{team_id}:{user_id} */
+    public static final String RANKING_PERCENTILE_TEAM = "ranking:percentile:team:";
 }

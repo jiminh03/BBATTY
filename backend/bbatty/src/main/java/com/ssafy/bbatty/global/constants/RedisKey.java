@@ -52,7 +52,7 @@ public class RedisKey {
     public static final String STATS_USER_DETAILED = "stats:user:detailed:";
 
     // ===========================================
-    // RANKING 도메인 - 모든 순위 데이터 통합
+    // RANKING 도메인 - 이번 시즌 승률 기준 랭킹 (Top 10)
     // ===========================================
 
     /** 전체 상위 10명: ranking:global:top10 (Sorted Set) */
