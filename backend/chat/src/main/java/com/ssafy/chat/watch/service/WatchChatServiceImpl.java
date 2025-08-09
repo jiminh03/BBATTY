@@ -1,5 +1,7 @@
 package com.ssafy.chat.watch.service;
 
+import com.ssafy.chat.common.util.KSTTimeUtil;
+
 import com.ssafy.chat.common.util.ChatRoomTTLManager;
 import com.ssafy.chat.common.util.JsonUtils;
 import com.ssafy.chat.common.util.RedisUtil;
@@ -74,7 +76,7 @@ public class WatchChatServiceImpl implements WatchChatService {
     @Override
     public void incrementTrafficCount(String roomId) {
         try {
-            String currentMinute = LocalDateTime.now()
+            String currentMinute = KSTTimeUtil.now()
                     .format(DateTimeFormatter.ofPattern("yyyyMMddHHmm"));
             String trafficKey = ChatRedisKey.getWatchTrafficKey(roomId, currentMinute);
             
@@ -92,12 +94,12 @@ public class WatchChatServiceImpl implements WatchChatService {
     @Override
     public void checkTrafficSpike(String roomId) {
         try {
-            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime nowTime = KSTTimeUtil.now();
             long totalMessages = 0;
             
             // 최근 N분간의 메시지 수 합계
             for (int i = 0; i < TRAFFIC_WINDOW_MINUTES; i++) {
-                String minute = now.minusMinutes(i)
+                String minute = nowTime.minusMinutes(i)
                         .format(DateTimeFormatter.ofPattern("yyyyMMddHHmm"));
                 String key = ChatRedisKey.getWatchTrafficKey(roomId, minute);
                 

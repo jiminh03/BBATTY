@@ -1,10 +1,10 @@
 import { Comment } from '../model/types'
 
 export interface CreateCommentPayload {
-  postId: string
+  postId: number
+  userId: number
   content: string
   parentId?: string | null
-  depth?: number
 }
 
 export interface UpdateCommentPayload {
@@ -17,7 +17,7 @@ export interface DeleteCommentPayload {
 }
 
 export interface GetCommentsParams {
-  postId: string
+  postId: number
   page?: number
   size?: number
 }

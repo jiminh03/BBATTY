@@ -4,6 +4,7 @@ import { tokenManager } from './tokenManager';
 import { API_CONFIG } from './config';
 import { handleApiError } from '../utils/errorHandler';
 import { retryRequest } from '../utils/retry';
+import { authApi } from '../../../entities/auth/api/authApi';
 
 // 토큰 제거시 호출될 콜백
 type OnUnauthorizedCallback = () => Promise<void>;
@@ -34,7 +35,7 @@ export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnaut
   client.interceptors.response.use(
     (response: AxiosResponse) => {
       if (response.data && typeof response.data === 'object') {
-        if (!('SUCCESS' in response.data)) {
+        if (!('status' in response.data) || response.data.status !== 'SUCCESS') {
           console.warn(`잘못된 api 형식 :`, response.data);
         }
       }
@@ -47,13 +48,13 @@ export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnaut
       if (error.response?.status === 401 && originalRequest) {
         // 토큰 제거
         await tokenManager.removeToken();
+        await tokenManager.removeRefreshToken();
 
-        // 콜백이 제공된 경우 실행 (클라이언트 헤더 업데이트 등)
+        // 콜백이 제공된 경우 실행 (네비게이션 처리 등)
         if (onUnauthorized) {
           await onUnauthorized();
         }
 
-        //  적절한 네비게이션 로직으로 대체해야 함
         return Promise.reject(error);
       }
 

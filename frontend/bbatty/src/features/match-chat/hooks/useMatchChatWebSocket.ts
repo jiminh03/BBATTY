@@ -30,6 +30,8 @@ export type ConnectionStatus = 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'ER
 interface UseMatchChatWebSocketProps {
   websocketUrl: string;
   currentUserId: string;
+  userNickname: string;
+  profileImgUrl?: string;
   onMessage?: (message: ChatMessage) => void;
   onConnectionStatusChange?: (status: ConnectionStatus) => void;
 }
@@ -37,6 +39,8 @@ interface UseMatchChatWebSocketProps {
 export const useMatchChatWebSocket = ({
   websocketUrl,
   currentUserId,
+  userNickname,
+  profileImgUrl,
   onMessage,
   onConnectionStatusChange
 }: UseMatchChatWebSocketProps) => {
@@ -86,11 +90,7 @@ export const useMatchChatWebSocket = ({
     try {
       updateConnectionStatus('CONNECTING');
       
-      // 안드로이드 에뮬레이터용 URL 변경
       let wsUrl = websocketUrl;
-      if (wsUrl.includes('localhost')) {
-        wsUrl = wsUrl.replace('localhost', '10.0.2.2');
-      }
       
       console.log(`웹소켓 연결: ${wsUrl}`);
 
@@ -100,6 +100,19 @@ export const useMatchChatWebSocket = ({
       websocket.onopen = () => {
         updateConnectionStatus('CONNECTED');
         console.log('웹소켓 연결 성공');
+        
+        // 서버에 사용자 인증 정보 전송
+        const matchId = new URL(wsUrl).searchParams.get('matchId');
+        const authData = {
+          matchId: matchId,
+          nickname: userNickname,
+          winRate: 75, // TODO: 실제 승률 데이터로 대체
+          profileImgUrl: profileImgUrl || '',
+          isWinFairy: false // TODO: 실제 승부요정 여부로 대체
+        };
+        
+        websocket.send(JSON.stringify(authData));
+        console.log('사용자 인증 정보 전송:', authData);
       };
 
       websocket.onmessage = (event) => {

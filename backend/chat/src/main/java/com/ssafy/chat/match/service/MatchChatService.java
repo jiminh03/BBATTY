@@ -22,11 +22,11 @@ public interface MatchChatService {
     /**
      * 사용자 입장 이벤트 발송
      */
-    void sendUserJoinEvent(String matchId, Long userId, String userName);
+    void sendUserJoinEvent(String matchId, Long userId, String nickname);
     /**
      * 사용자 퇴장 이벤트 발송
      */
-    void sendUserLeaveEvent(String matchId, Long userId, String userName);
+    void sendUserLeaveEvent(String matchId, Long userId, String nickname);
     /**
      * 매칭 채팅방의 최근 메시지 히스토리 조회
      * @param matchId 매칭 Id

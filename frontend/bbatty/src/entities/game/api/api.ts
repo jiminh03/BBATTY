@@ -1,23 +1,20 @@
-import { apiClient } from '../../../shared/api';
+import { chatApiClient } from '../../../shared/api';
 import type { GamesResponse } from './types';
 
 export const gameApi = {
   // 경기 목록 조회
-  getGames: async (): Promise<{ data: GamesResponse }> => {
+  getGames: async (): Promise<GamesResponse> => {
     try {
-      console.log('경기 목록 API 요청: /api/match/games');
-      const response = await apiClient.get('/api/match/games');
-      console.log('경기 목록 API 응답 성공:', response.data);
-      return response as any;
+      const response = await chatApiClient.get('http://i13a403.p.ssafy.io:8080/api/games/three-weeks');
+      return response;
     } catch (error: any) {
-      console.warn('경기 목록 API 실패:', error.response ? error.response.data : error.message);
+      console.warn('서버 연결 실패, 목 데이터 반환:', error);
       
       // 목 데이터 반환
       return {
-        data: {
-          status: 'SUCCESS',
-          message: '경기 목록 조회 성공 (목 데이터)',
-          data: [
+        status: 'SUCCESS',
+        message: '경기 목록 조회 성공 (목 데이터)',
+        data: [
             {
               date: "2025-08-07",
               games: [
@@ -73,7 +70,6 @@ export const gameApi = {
               ]
             }
           ]
-        }
       };
     }
   },

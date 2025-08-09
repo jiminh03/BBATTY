@@ -5,7 +5,7 @@ import { resetToAuth, resetToMain } from '../../navigation/navigationRefs';
 export const useAuth = () => {
   const logout = async () => {
     try {
-      await tokenManager.removeToken;
+      await tokenManager.removeToken();
       resetToAuth();
     } catch (error) {
       console.error('로그아웃 실패:', error);

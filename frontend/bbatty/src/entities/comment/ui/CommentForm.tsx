@@ -1,59 +1,33 @@
-// comment/ui/CommentForm.tsx
-import React, { useState } from 'react'
-import { View, TextInput, Button, Alert } from 'react-native'
-import { useCreateComment } from '../queries/useCommentQueries'
-import { isValidComment } from '../utils/validation'
+// entities/comment/ui/CommentForm.tsx
+import React, { useState } from 'react';
+import { View, TextInput, Button, StyleSheet, Text } from 'react-native';
+import { useCreateComment } from '../queries/useCommentQueries';
 
-interface CommentFormProps {
-  postId: string
-  parentId?: string | null
-  depth?: number
-}
+export const CommentForm = ({ postId }: { postId: number, userId:number }) => {
+  const [content, setContent] = useState('');
+  const [err, setErr] = useState('');
+  // userId는 아직 하드코딩
+  const create = useCreateComment(postId);
 
-export const CommentForm: React.FC<CommentFormProps> = ({
-  postId,
-  parentId = null,
-  depth = 0,
-}) => {
-  const [content, setContent] = useState('')
-  const createComment = useCreateComment()
-
-  const handleSubmit = () => {
-    if (!isValidComment(content)) {
-      Alert.alert('오류', '댓글은 1자 이상 200자 이하여야 합니다.')
-      return
-    }
-
-    createComment.mutate(
-      { postId, content, parentId, depth },
-      {
-        onSuccess: () => {
-          setContent('') // 작성 후 초기화
-        },
-        onError: (error: any) => {
-          Alert.alert('댓글 작성 실패', error.message || '잠시 후 다시 시도해주세요.')
-        },
-      }
-    )
-  }
+  const submit = () => {
+    const msg = content.trim();
+    if (!msg) return setErr('내용을 입력해주세요.');
+    create.mutate(msg, {
+      onSuccess: () => { setContent(''); setErr(''); },
+      onError: () => setErr('댓글 생성 실패'),
+    });
+  };
 
   return (
-    <View style={{ marginBottom: 16 }}>
-      <TextInput
-        placeholder="댓글을 입력하세요"
-        value={content}
-        onChangeText={setContent}
-        multiline
-        style={{
-          borderWidth: 1,
-          borderColor: '#ccc',
-          padding: 8,
-          borderRadius: 6,
-          minHeight: 60,
-          marginBottom: 8,
-        }}
-      />
-      <Button title="댓글 작성" onPress={handleSubmit} />
+    <View style={s.wrap}>
+      <TextInput style={s.input} placeholder="댓글을 입력하세요" value={content} onChangeText={setContent} multiline />
+      {!!err && <Text style={s.error}>{err}</Text>}
+      <Button title={create.isPending ? '작성 중...' : '댓글 등록'} onPress={submit} disabled={create.isPending}/>
     </View>
-  )
-}
+  );
+};
+const s = StyleSheet.create({
+  wrap:{ padding:12, backgroundColor:'#fff', borderTopWidth:1, borderColor:'#eee' },
+  input:{ borderWidth:1, borderColor:'#ccc', borderRadius:6, padding:10, minHeight:60, marginBottom:8, textAlignVertical:'top' },
+  error:{ color:'red', marginBottom:6 },
+});
