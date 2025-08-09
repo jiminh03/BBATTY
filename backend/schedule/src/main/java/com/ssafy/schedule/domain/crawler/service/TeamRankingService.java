@@ -122,24 +122,6 @@ public class TeamRankingService {
     }
 
     /**
-     * 특정 날짜까지의 2025년 완료된 경기로 구단 통계를 계산
-     * 
-     * @param endDate 기준 날짜 (이 날짜까지의 경기만 포함)
-     * @return 구단별 승/무/패/총경기수 통계 리스트
-     */
-    @Transactional(readOnly = true)
-    public List<TeamStats> calculateTeamRankingUntilDate(LocalDate endDate) {
-        log.info("2025년 {}까지 구단 통계 계산 시작", endDate);
-
-        // 1. 2025년에서 지정된 날짜까지 완료된 경기 조회
-        List<Game> finishedGames = gameRepository.findByStatusAndYearAndGameDateLessThanEqual(
-                GameStatus.FINISHED, 2025, endDate);
-        log.info("2025년 {}까지 완료된 경기 수: {}경기", endDate, finishedGames.size());
-
-        return calculateRankingFromGames(finishedGames, "2025년 " + endDate + "까지");
-    }
-
-    /**
      * 경기 목록으로부터 구단 통계를 계산하는 공통 메서드
      */
     private List<TeamStats> calculateRankingFromGames(List<Game> finishedGames, String period) {
@@ -325,46 +307,6 @@ public class TeamRankingService {
             log.error("순위 데이터 JSON 직렬화 실패", e);
         } catch (Exception e) {
             log.error("현재 순위 캐시 실패", e);
-        }
-    }
-
-    /**
-     * Redis에서 2025년 현재까지의 순위 조회
-     * - 캐시가 없으면 실시간 계산 후 캐시 저장
-     * 
-     * @return 순위 목록 (캐시 또는 실시간 계산)
-     */
-    public List<TeamStats> getCurrentRanking() {
-        try {
-            // Redis에서 캐시된 순위 조회
-            String rankingJson = redisTemplate.opsForValue().get(CURRENT_RANKING_KEY);
-
-            if (rankingJson != null) {
-                log.debug("Redis에서 캐시된 2025년 순위 반환");
-                return objectMapper.readValue(rankingJson, new TypeReference<List<TeamStats>>() {});
-            }
-            
-            // 캐시가 없으면 실시간 계산 후 캐시 저장
-            log.warn("Redis에 캐시된 순위가 없음 - 실시간 계산 후 캐시 저장");
-            List<TeamStats> rankings = calculateTeamRanking();
-            
-            // 계산된 순위를 캐시에 저장
-            try {
-                String newRankingJson = objectMapper.writeValueAsString(rankings);
-                redisTemplate.opsForValue().set(CURRENT_RANKING_KEY, newRankingJson);
-                log.info("실시간 계산 순위를 Redis에 캐시 저장 완료");
-            } catch (JsonProcessingException cacheException) {
-                log.error("실시간 계산 순위 캐시 저장 실패", cacheException);
-            }
-            
-            return rankings;
-            
-        } catch (JsonProcessingException e) {
-            log.error("캐시된 순위 데이터 역직렬화 실패 - 실시간 계산으로 대체", e);
-            return calculateTeamRanking();
-        } catch (Exception e) {
-            log.error("순위 조회 실패 - 실시간 계산으로 대체", e);
-            return calculateTeamRanking();
         }
     }
 }

@@ -3,6 +3,7 @@ package com.ssafy.schedule.domain.crawler.scheduler;
 import com.ssafy.schedule.domain.chat.kafka.ChatEventKafkaProducer;
 import com.ssafy.schedule.domain.crawler.service.FinishedGameService;
 import com.ssafy.schedule.domain.crawler.service.ScheduledGameService;
+import com.ssafy.schedule.domain.crawler.service.TeamRankingService;
 import com.ssafy.schedule.domain.statistics.service.StatisticsUpdateService;
 
 import com.ssafy.schedule.global.entity.Game;
@@ -28,6 +29,7 @@ public class GameScheduler {
     private final FinishedGameService finishedGameService;
     private final ChatCreateScheduler gameEventScheduler;
     private final StatisticsUpdateService statisticsUpdateService;
+    private final TeamRankingService teamRankingService;
     private final GameRepository gameRepository;
     private final ChatEventKafkaProducer chatEventKafkaProducer;
 
@@ -71,6 +73,10 @@ public class GameScheduler {
             
             // 경기 결과 업데이트 완료 후 관련 사용자 통계 재계산
             statisticsUpdateService.updateUserStatsForDate(yesterday);
+            
+            // 경기 결과 업데이트 완료 후 팀 순위 재계산 및 Redis 캐시 업데이트
+            teamRankingService.cacheCurrentRanking();
+            log.info("========== 어제({}) 경기 결과 반영 후 팀 순위 캐시 업데이트 완료 ==========", yesterday);
             
         } catch (Exception e) {
             log.error("========== 어제({}) 경기 결과 업데이트 실패: {} ==========", yesterday, e.getMessage(), e);
