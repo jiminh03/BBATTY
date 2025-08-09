@@ -1,32 +1,26 @@
 package com.ssafy.chat.match.service;
 
 import com.ssafy.chat.common.util.KSTTimeUtil;
+import com.ssafy.chat.common.util.ChatRoomUtils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ssafy.chat.config.ChatProperties;
+import com.ssafy.chat.match.domain.MatchChatRoom;
+import com.ssafy.chat.match.domain.MatchChatRoomStatus;
 import com.ssafy.chat.match.dto.*;
 import com.ssafy.chat.global.exception.ApiException;
 import com.ssafy.chat.global.constants.ErrorCode;
 import com.ssafy.chat.global.constants.ChatRedisKey;
 import com.ssafy.chat.auth.kafka.ChatAuthRequestProducer;
 import com.ssafy.chat.auth.service.ChatAuthResultService;
-import com.ssafy.chat.config.JwtProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
-
-import jakarta.servlet.http.HttpServletRequest;
 
 import java.time.Duration;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * 매칭 채팅방 서비스 구현체
@@ -40,115 +34,24 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
     private final ObjectMapper objectMapper;
     private final ChatAuthRequestProducer chatAuthRequestProducer;
     private final ChatAuthResultService chatAuthResultService;
+    private final ChatProperties chatProperties;
+    private final ChatRoomUtils chatRoomUtils;
     
-    private static final String MATCH_ROOM_PREFIX = "match_room:";
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     
     @Override
     public MatchChatRoomCreateResponse createMatchChatRoom(MatchChatRoomCreateRequest request, String jwtToken) {
         try {
+            // 1. 사용자 인증 및 권한 검증
+            AuthResult authResult = authenticateUser(jwtToken, request);
             
-            // 1. bbatty 서버에 방 생성 인증 요청
-            Map<String, Object> roomCreateInfo = new HashMap<>();
-            roomCreateInfo.put("matchTitle", request.getMatchTitle());
-            roomCreateInfo.put("matchDescription", request.getMatchDescription());
-            roomCreateInfo.put("teamId", request.getTeamId());
-            roomCreateInfo.put("minAge", request.getMinAge());
-            roomCreateInfo.put("maxAge", request.getMaxAge());
-            roomCreateInfo.put("genderCondition", request.getGenderCondition());
-            roomCreateInfo.put("maxParticipants", request.getMaxParticipants());
+            // 2. 채팅방 생성
+            MatchChatRoom chatRoom = buildMatchChatRoom(request, authResult);
             
-            String requestId = chatAuthRequestProducer.sendMatchChatCreateRequest(
-                jwtToken, request.getGameId(), roomCreateInfo, request.getNickname());
+            // 3. Redis에 저장
+            saveChatRoomToRedis(chatRoom, authResult.getGameDateStr());
             
-            if (requestId == null) {
-                throw new ApiException(ErrorCode.SERVER_ERROR);
-            }
-            
-            // 2. bbatty 서버 응답 대기
-            Map<String, Object> authResult = chatAuthResultService.waitForAuthResult(requestId, 10000);
-            
-            if (authResult == null) {
-                log.error("bbatty 서버 응답이 null - gameId: {}, requestId: {}", request.getGameId(), requestId);
-                throw new ApiException(ErrorCode.SERVER_ERROR);
-            }
-            
-            log.debug("bbatty 서버 응답 - gameId: {}, authResult: {}", request.getGameId(), authResult);
-            
-            Boolean success = (Boolean) authResult.get("success");
-            if (success == null || !success) {
-                String errorMessage = (String) authResult.get("errorMessage");
-                log.error("bbatty 서버 인증 실패 - gameId: {}, errorMessage: {}", request.getGameId(), errorMessage);
-                throw new ApiException(ErrorCode.UNAUTHORIZED);
-            }
-            
-            // 3. bbatty 서버에서 인증된 사용자 정보 및 게임 정보 추출
-            @SuppressWarnings("unchecked")
-            Map<String, Object> userInfo = (Map<String, Object>) authResult.get("userInfo");
-            @SuppressWarnings("unchecked")
-            Map<String, Object> gameInfo = (Map<String, Object>) authResult.get("gameInfo");
-            
-            // 필수 데이터 검증
-            if (userInfo == null) {
-                log.error("bbatty 서버에서 userInfo가 null - gameId: {}", request.getGameId());
-                throw new ApiException(ErrorCode.UNAUTHORIZED);
-            }
-            
-            if (gameInfo == null) {
-                log.error("bbatty 서버에서 gameInfo가 null - gameId: {}. 해당 경기가 존재하지 않거나 bbatty 응답에 문제가 있음", request.getGameId());
-                throw new ApiException(ErrorCode.GAME_NOT_FOUND);
-            }
-            
-            Long userId = ((Number) userInfo.get("userId")).longValue();
-            String gameDateStr = (String) gameInfo.get("gameDate"); // bbatty에서 "yyyy-MM-dd" 형식으로 제공
-            
-            if (gameDateStr == null || gameDateStr.trim().isEmpty()) {
-                log.error("bbatty 서버에서 gameDate가 null 또는 empty - gameId: {}, gameInfo: {}", request.getGameId(), gameInfo);
-                throw new ApiException(ErrorCode.GAME_NOT_FOUND);
-            }
-            
-            // 4. 경기 ID 기반으로 매칭 채팅방 ID 자동 생성
-            String matchId = generateMatchId(request.getGameId());
-            
-            // 5. 매칭방 생성
-            MatchChatRoom matchRoom = MatchChatRoom.builder()
-                    .matchId(matchId)
-                    .gameId(request.getGameId())
-                    .matchTitle(request.getMatchTitle())
-                    .matchDescription(request.getMatchDescription())
-                    .teamId(request.getTeamId())
-                    .minAge(request.getMinAge())
-                    .maxAge(request.getMaxAge())
-                    .genderCondition(request.getGenderCondition())
-                    .maxParticipants(request.getMaxParticipants())
-                    .currentParticipants(0)
-                    .createdAt(KSTTimeUtil.nowAsString())
-                    .lastActivityAt(KSTTimeUtil.nowAsString())
-                    .status("ACTIVE")
-                    .ownerId(userId.toString()) // bbatty 서버에서 인증된 실제 사용자 ID
-                    .build();
-            
-            // 6. TTL 계산 (경기 날짜 자정까지)
-            Duration ttl = calculateTTLFromGameDate(gameDateStr);
-            
-            // 7. Redis에 저장 - ChatRedisKey 사용
-            String roomKey = ChatRedisKey.getMatchRoomInfoKey(matchId);
-            String roomJson = objectMapper.writeValueAsString(matchRoom);
-            redisTemplate.opsForValue().set(roomKey, roomJson, ttl);
-            
-            // 8. 전체 매칭방 목록에 추가
-            long score = System.currentTimeMillis();
-            redisTemplate.opsForZSet().add(ChatRedisKey.MATCH_ROOM_LIST, matchId, score);
-            redisTemplate.expire(ChatRedisKey.MATCH_ROOM_LIST, ttl);
-            
-            // 9. 날짜별 매칭방 목록에도 추가
-            String dateListKey = ChatRedisKey.getMatchRoomListByDateKey(gameDateStr);
-            redisTemplate.opsForSet().add(dateListKey, matchId);
-            redisTemplate.expire(dateListKey, ttl);
-            
-            log.info("매칭 채팅방 생성 완료 - gameId: {}, matchId: {}", request.getGameId(), matchId);
-            
-            return convertToResponse(matchRoom);
+            // 4. 응답 변환
+            return convertToResponse(chatRoom);
             
         } catch (ApiException e) {
             throw e; // ApiException은 그대로 다시 던지기
@@ -160,7 +63,7 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
             throw new ApiException(ErrorCode.SERVER_ERROR);
         }
     }
-    
+
     @Override
     public MatchChatRoomListResponse getMatchChatRoomList(MatchChatRoomListRequest request) {
         try {
@@ -186,7 +89,7 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
         // 클라이언트가 제공한 cursor 이전 데이터 조회
         long maxScore = Long.MAX_VALUE;
         if (request.getLastCreatedAt() != null) {
-            maxScore = parseTimestampToScore(request.getLastCreatedAt()) - 1;
+            maxScore = chatRoomUtils.parseTimestampToScore(request.getLastCreatedAt()) - 1;
         }
         
         // 정확히 필요한 수만큼 조회 (키워드 필터링이 없으므로)
@@ -220,7 +123,7 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
         // 키워드 검색 시에는 더 많은 데이터를 가져와야 함 (필터링으로 인한 결과 부족 방지)
         long maxScore = Long.MAX_VALUE;
         if (request.getLastCreatedAt() != null) {
-            maxScore = parseTimestampToScore(request.getLastCreatedAt()) - 1;
+            maxScore = chatRoomUtils.parseTimestampToScore(request.getLastCreatedAt()) - 1;
         }
         
         List<MatchChatRoomCreateResponse> rooms = new ArrayList<>();
@@ -296,7 +199,7 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
                     try {
                         MatchChatRoom matchRoom = objectMapper.readValue(roomJson, MatchChatRoom.class);
                         // ACTIVE 상태의 채팅방만 포함
-                        if ("ACTIVE".equals(matchRoom.getStatus())) {
+                        if (matchRoom.isActive()) {
                             rooms.add(convertToResponse(matchRoom));
                         }
                     } catch (Exception e) {
@@ -346,7 +249,7 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
         
         // 마지막 항목 이후에 데이터가 더 있는지 확인
         if (!rooms.isEmpty()) {
-            long lastScore = parseTimestampToScore(rooms.get(rooms.size() - 1).getCreatedAt()) - 1;
+            long lastScore = chatRoomUtils.parseTimestampToScore(rooms.get(rooms.size() - 1).getCreatedAt()) - 1;
             Set<String> nextCheck = redisTemplate.opsForZSet()
                     .reverseRangeByScore(ChatRedisKey.MATCH_ROOM_LIST, 0, lastScore, 0, 1);
             return nextCheck != null && !nextCheck.isEmpty();
@@ -363,7 +266,7 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
             return false;
         }
         
-        long maxScore = parseTimestampToScore(lastCreatedAt) - 1;
+        long maxScore = chatRoomUtils.parseTimestampToScore(lastCreatedAt) - 1;
         Set<String> nextBatch = redisTemplate.opsForZSet()
                 .reverseRangeByScore(ChatRedisKey.MATCH_ROOM_LIST, 0, maxScore, 0, 10);
         
@@ -406,7 +309,7 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
             MatchChatRoom matchRoom = objectMapper.readValue(roomJson, MatchChatRoom.class);
             
             // 2. 채팅방 상태 검증
-            if (!"ACTIVE".equals(matchRoom.getStatus())) {
+            if (!matchRoom.isActive()) {
                 throw new ApiException(ErrorCode.MATCH_CHAT_ROOM_CLOSED);
             }
             
@@ -435,9 +338,10 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
                 .genderCondition(matchRoom.getGenderCondition())
                 .maxParticipants(matchRoom.getMaxParticipants())
                 .currentParticipants(matchRoom.getCurrentParticipants())
+                .minWinRate(matchRoom.getMinWinRate())
                 .createdAt(matchRoom.getCreatedAt())
-                .status(matchRoom.getStatus())
-                .websocketUrl(String.format("ws://i13a403.p.ssafy.io:8084/ws/match-chat/websocket?matchId=%s", matchRoom.getMatchId()))
+                .status(matchRoom.getStatus().name())
+                .websocketUrl(chatRoomUtils.buildMatchChatWebSocketUrl(matchRoom.getMatchId()))
                 .build();
     }
     
@@ -485,41 +389,140 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
         String uniqueId = java.util.UUID.randomUUID().toString().substring(0, 8);
         return String.format("match_%s_%s", gameId, uniqueId);
     }
-    
+
     /**
-     * 타임스탬프 문자열을 점수(long)로 변환
+     * 사용자 인증 및 권한 검증
      */
-    private long parseTimestampToScore(String timestamp) {
-        try {
-            LocalDateTime dateTime = LocalDateTime.parse(timestamp);
-            return dateTime.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
-        } catch (Exception e) {
-            log.warn("타임스탬프 파싱 실패 - timestamp: {}", timestamp, e);
-            return System.currentTimeMillis();
+    private AuthResult authenticateUser(String jwtToken, MatchChatRoomCreateRequest request) {
+        // 1. bbatty 서버에 방 생성 인증 요청
+        Map<String, Object> roomCreateInfo = buildRoomCreateInfo(request);
+        
+        String requestId = chatAuthRequestProducer.sendMatchChatCreateRequest(
+            jwtToken, request.getGameId(), roomCreateInfo, request.getNickname());
+        
+        if (requestId == null) {
+            throw new ApiException(ErrorCode.SERVER_ERROR);
         }
+        
+        // 2. bbatty 서버 응답 대기
+        Map<String, Object> authResult = chatAuthResultService.waitForAuthResult(requestId, (int) chatRoomUtils.getAuthTimeoutMs());
+        
+        if (authResult == null) {
+            log.error("bbatty 서버 응답이 null - gameId: {}, requestId: {}", request.getGameId(), requestId);
+            throw new ApiException(ErrorCode.SERVER_ERROR);
+        }
+        
+        // 인증 결과 로깅 - 필요시에만 사용
+        
+        // 3. 인증 결과 검증
+        Boolean success = (Boolean) authResult.get("success");
+        if (success == null || !success) {
+            String errorMessage = (String) authResult.get("errorMessage");
+            log.error("bbatty 서버 인증 실패 - gameId: {}, errorMessage: {}", request.getGameId(), errorMessage);
+            throw new ApiException(ErrorCode.UNAUTHORIZED);
+        }
+        
+        // 4. 인증된 정보 추출 및 검증
+        return extractAndValidateAuthData(authResult, request.getGameId());
     }
-    
+
     /**
-     * 게임 날짜 문자열을 기준으로 TTL 계산 (게임 날짜 자정까지)
+     * 방 생성 정보 구성
      */
-    private Duration calculateTTLFromGameDate(String gameDateStr) {
-        try {
-            LocalDate gameDate = LocalDate.parse(gameDateStr, DATE_FORMATTER);
-            LocalDateTime midnightAfterGame = gameDate.plusDays(1).atTime(LocalTime.MIDNIGHT);
-            
-            Duration ttl = Duration.between(KSTTimeUtil.now(), midnightAfterGame);
-            
-            // TTL이 음수이거나 0에 가깝다면 기본 1시간 설정
-            if (ttl.isNegative() || ttl.toMinutes() < 10) {
-                ttl = Duration.ofHours(1);
-            }
-            
-            log.info("게임 날짜: {}, TTL: {}시간", gameDate, ttl.toHours());
-            return ttl;
-        } catch (Exception e) {
-            log.warn("게임 날짜 파싱 실패 - gameDateStr: {}", gameDateStr, e);
-            return Duration.ofHours(1); // 기본값
+    private Map<String, Object> buildRoomCreateInfo(MatchChatRoomCreateRequest request) {
+        Map<String, Object> roomCreateInfo = new HashMap<>();
+        roomCreateInfo.put("matchTitle", request.getMatchTitle());
+        roomCreateInfo.put("matchDescription", request.getMatchDescription());
+        roomCreateInfo.put("teamId", request.getTeamId());
+        roomCreateInfo.put("minAge", request.getMinAge());
+        roomCreateInfo.put("maxAge", request.getMaxAge());
+        roomCreateInfo.put("genderCondition", request.getGenderCondition());
+        roomCreateInfo.put("maxParticipants", request.getMaxParticipants());
+        roomCreateInfo.put("minWinRate", request.getMinWinRate());
+        return roomCreateInfo;
+    }
+
+    /**
+     * 인증 데이터 추출 및 검증
+     */
+    private AuthResult extractAndValidateAuthData(Map<String, Object> authResult, Long gameId) {
+        @SuppressWarnings("unchecked")
+        Map<String, Object> userInfo = (Map<String, Object>) authResult.get("userInfo");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> gameInfo = (Map<String, Object>) authResult.get("gameInfo");
+        
+        // 필수 데이터 검증
+        if (userInfo == null) {
+            log.error("bbatty 서버에서 userInfo가 null - gameId: {}", gameId);
+            throw new ApiException(ErrorCode.UNAUTHORIZED);
         }
+        
+        if (gameInfo == null) {
+            log.error("bbatty 서버에서 gameInfo가 null - gameId: {}. 해당 경기가 존재하지 않거나 bbatty 응답에 문제가 있음", gameId);
+            throw new ApiException(ErrorCode.GAME_NOT_FOUND);
+        }
+        
+        Long userId = ((Number) userInfo.get("userId")).longValue();
+        String gameDateStr = (String) gameInfo.get("gameDate");
+        
+        if (gameDateStr == null || gameDateStr.trim().isEmpty()) {
+            log.error("bbatty 서버에서 gameDate가 null 또는 empty - gameId: {}, gameInfo: {}", gameId, gameInfo);
+            throw new ApiException(ErrorCode.GAME_NOT_FOUND);
+        }
+        
+        return AuthResult.builder()
+                .userInfo(userInfo)
+                .gameInfo(gameInfo)
+                .gameIdStr(gameId.toString())
+                .gameDateStr(gameDateStr)
+                .userId(userId)
+                .build();
+    }
+
+    /**
+     * MatchChatRoom 객체 생성
+     */
+    private MatchChatRoom buildMatchChatRoom(MatchChatRoomCreateRequest request, AuthResult authResult) {
+        String matchId = generateMatchId(request.getGameId());
+        
+        return MatchChatRoom.create(
+                matchId,
+                request.getGameId(),
+                request.getMatchTitle(),
+                request.getMatchDescription(),
+                request.getTeamId(),
+                request.getMinAge(),
+                request.getMaxAge(),
+                request.getGenderCondition(),
+                request.getMaxParticipants(),
+                request.getMinWinRate(),
+                authResult.getUserId().toString()
+        );
+    }
+
+    /**
+     * 채팅방을 Redis에 저장
+     */
+    private void saveChatRoomToRedis(MatchChatRoom chatRoom, String gameDateStr) throws JsonProcessingException {
+        // 1. TTL 계산 (경기 날짜 자정까지)
+        Duration ttl = chatRoomUtils.calculateTTLFromGameDate(gameDateStr);
+        
+        // 2. Redis에 저장 - ChatRedisKey 사용
+        String roomKey = ChatRedisKey.getMatchRoomInfoKey(chatRoom.getMatchId());
+        String roomJson = objectMapper.writeValueAsString(chatRoom);
+        redisTemplate.opsForValue().set(roomKey, roomJson, ttl);
+        
+        // 3. 전체 매칭방 목록에 추가
+        long score = System.currentTimeMillis();
+        redisTemplate.opsForZSet().add(ChatRedisKey.MATCH_ROOM_LIST, chatRoom.getMatchId(), score);
+        redisTemplate.expire(ChatRedisKey.MATCH_ROOM_LIST, ttl);
+        
+        // 4. 날짜별 매칭방 목록에도 추가
+        String dateListKey = ChatRedisKey.getMatchRoomListByDateKey(gameDateStr);
+        redisTemplate.opsForSet().add(dateListKey, chatRoom.getMatchId());
+        redisTemplate.expire(dateListKey, ttl);
+        
+        log.info("매칭 채팅방 생성 완료 - gameId: {}, matchId: {}", chatRoom.getGameId(), chatRoom.getMatchId());
     }
     
 }

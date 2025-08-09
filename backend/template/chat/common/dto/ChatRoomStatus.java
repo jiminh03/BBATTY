@@ -87,7 +87,6 @@ public class ChatRoomStatus {
      */
     public boolean isGameRoom() {
         return roomType == ChatRoomType.GAME;
-    }
 
     /**
      * 매칭 채팅방인지 확인
