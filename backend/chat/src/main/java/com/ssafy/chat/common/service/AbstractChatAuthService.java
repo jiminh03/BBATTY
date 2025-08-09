@@ -47,7 +47,7 @@ public abstract class AbstractChatAuthService {
 
         // 인증 결과 대기
         Map<String, Object> authResult = chatAuthResultService.waitForAuthResult(
-                requestId, chatRoomUtils.getAuthTimeoutMs());
+                requestId, (int) chatRoomUtils.getAuthTimeoutMs());
 
         if (authResult == null) {
             log.error("bbatty 서버 인증 응답 타임아웃 - requestId: {}", requestId);
