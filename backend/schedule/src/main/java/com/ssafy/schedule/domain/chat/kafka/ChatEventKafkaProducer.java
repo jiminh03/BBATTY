@@ -20,6 +20,7 @@ public class ChatEventKafkaProducer {
     private final ObjectMapper objectMapper;
     
     private static final String CHAT_ROOM_CREATE_TOPIC = "chat-room-create-events";
+    //private static final String CHAT_ROOM_DELETE_TOPIC = "chat-room-delete-events";
     
     /**
      * 채팅방 생성 이벤트를 Kafka로 전송
@@ -46,4 +47,30 @@ public class ChatEventKafkaProducer {
             log.error("채팅방 생성 이벤트 직렬화 실패: gameId={}", eventDto.getGameId(), e);
         }
     }
+
+    /**
+     * 채팅방 삭제 이벤트를 Kafka로 전송
+
+    public void sendChatRoomDeleteEvent(ChatRoomDeleteEventDto eventDto) {
+        try {
+            String messageJson = objectMapper.writeValueAsString(eventDto);
+            String key = eventDto.getDate();
+            
+            log.debug("채팅방 삭제 이벤트 Kafka 전송: date={}", eventDto.getDate());
+            
+            kafkaTemplate.send(CHAT_ROOM_DELETE_TOPIC, key, messageJson)
+                    .whenComplete((result, ex) -> {
+                        if (ex != null) {
+                            log.error("채팅방 삭제 이벤트 Kafka 전송 실패: date={}, error={}", 
+                                    eventDto.getDate(), ex.getMessage(), ex);
+                        } else {
+                            log.info("✅ 채팅방 삭제 이벤트 Kafka 전송 성공: date={}, offset={}", 
+                                    eventDto.getDate(), result.getRecordMetadata().offset());
+                        }
+                    });
+        } catch (JsonProcessingException e) {
+            log.error("채팅방 삭제 이벤트 직렬화 실패: date={}", eventDto.getDate(), e);
+        }
+    }
+    */
 }

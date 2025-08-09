@@ -32,7 +32,7 @@ public class WebSocketHandshakeInterceptor implements HandshakeInterceptor {
                                    WebSocketHandler wsHandler, Map<String, Object> attributes) throws Exception {
         
         URI uri = request.getURI();
-        log.info("WebSocket 핸드셰이크 요청 - URI: {}", uri);
+        log.debug("WebSocket 핸드셰이크 요청 - URI: {}", uri);
         
         try {
             // 쿼리 파라미터 추출
@@ -41,7 +41,7 @@ public class WebSocketHandshakeInterceptor implements HandshakeInterceptor {
                     .getQueryParams()
                     .toSingleValueMap();
             
-            log.info("쿼리 파라미터: {}", queryParams);
+            log.debug("쿼리 파라미터: {}", queryParams);
             
             // 필수 파라미터 검증
             String sessionToken = queryParams.get("token");
@@ -81,7 +81,7 @@ public class WebSocketHandshakeInterceptor implements HandshakeInterceptor {
             Map<String, Object> userInfo = matchChatAuthService.getUserInfoByToken(sessionToken);
 
             // ✅ 조회된 userInfo 내용 확인
-            log.info("조회된 userInfo: {}", userInfo);
+            log.debug("조회된 userInfo: {}", userInfo);
 
             // WebSocket 세션 속성에 사용자 정보 저장
             attributes.put("chatType", "match");
@@ -96,17 +96,10 @@ public class WebSocketHandshakeInterceptor implements HandshakeInterceptor {
             attributes.put("teamId", userInfo.get("teamId"));
 
             // ✅ 설정된 attributes 확인 (핵심 정보만)
-            log.info("설정된 핵심 attributes - userId: '{}', nickname: '{}', matchId: '{}'",
+            log.debug("설정된 핵심 attributes - userId: '{}', nickname: '{}', matchId: '{}'",
                     attributes.get("userId"), attributes.get("nickname"), attributes.get("matchId"));
 
-            // ✅ attributes에 설정된 값들의 타입도 확인
-            log.info("attributes 값 타입 확인 - userId: {} ({}), nickname: {} ({}), matchId: {} ({})",
-                    attributes.get("userId"),
-                    attributes.get("userId") != null ? attributes.get("userId").getClass().getSimpleName() : "null",
-                    attributes.get("nickname"),
-                    attributes.get("nickname") != null ? attributes.get("nickname").getClass().getSimpleName() : "null",
-                    attributes.get("matchId"),
-                    attributes.get("matchId") != null ? attributes.get("matchId").getClass().getSimpleName() : "null");
+            // 디버깅 정보 - 프로덕션에서는 제거됨
 
             log.info("매칭 채팅 핸드셰이크 성공 - userId: {}, matchId: {}, nickname: {}",
                     userInfo.get("userId"), matchId, userInfo.get("nickname"));
@@ -126,7 +119,7 @@ public class WebSocketHandshakeInterceptor implements HandshakeInterceptor {
             // 세션 토큰 유효성만 검증 (Redis 조회 최소화)
             Map<String, Object> userInfo = watchChatAuthService.getUserInfoByToken(sessionToken);
             
-            log.info("직관 채팅 userInfo 조회 결과: {}", userInfo);
+            log.debug("직관 채팅 userInfo 조회 결과: {}", userInfo);
             
             // WebSocket 세션 속성에 사용자 정보 저장 (URL에서 받은 teamId, gameId 사용)
             attributes.put("chatType", "watch");
@@ -135,7 +128,7 @@ public class WebSocketHandshakeInterceptor implements HandshakeInterceptor {
             attributes.put("gameId", Long.parseLong(gameId));  // URL에서 받은 gameId 사용
             attributes.put("isAttendanceVerified", userInfo.get("isAttendanceVerified"));
             
-            log.info("직관 채팅 attributes 설정 완료: chatType={}, userId={}, teamId={}, gameId={}", 
+            log.debug("직관 채팅 attributes 설정 완료: chatType={}, userId={}, teamId={}, gameId={}", 
                 attributes.get("chatType"), attributes.get("userId"), attributes.get("teamId"), attributes.get("gameId"));
             
             log.info("직관 채팅 핸드셰이크 성공 - teamId: {}, gameId: {}", 
@@ -155,7 +148,7 @@ public class WebSocketHandshakeInterceptor implements HandshakeInterceptor {
         if (exception != null) {
             log.error("핸드셰이크 후 처리 중 오류 발생", exception);
         } else {
-            log.info("핸드셰이크 완료");
+            log.debug("핸드셰이크 완료");
         }
     }
 }

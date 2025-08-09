@@ -1,5 +1,6 @@
 package com.ssafy.chat.watch.controller;
 
+import com.ssafy.chat.config.ChatProperties;
 import com.ssafy.chat.global.response.ApiResponse;
 import com.ssafy.chat.watch.service.WatchChatService;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ import java.util.Map;
 public class WatchChatController {
 
     private final WatchChatService watchChatService;
+    private final ChatProperties chatProperties;
 
     /**
      * WebSocket 연결 정보 (테스트용)
@@ -32,7 +34,7 @@ public class WatchChatController {
                 "token", "세션 토큰",
                 "teamId", "채팅방 팀 ID"
         ));
-        connectionInfo.put("exampleUrl", "ws://i13a403.p.ssafy.io:8084/ws/watch-chat?token=your_session_token&teamId=team1");
+        connectionInfo.put("exampleUrl", String.format("%s/ws/watch-chat?token=your_session_token&teamId=team1", chatProperties.getWebsocket().getBaseUrl()));
         connectionInfo.put("messageFormat", Map.of(
                 "type", "message",
                 "content", "메시지 내용"

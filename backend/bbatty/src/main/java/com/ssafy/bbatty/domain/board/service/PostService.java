@@ -19,4 +19,7 @@ public interface PostService {
     
     PostListPageResponse getPostListByUser(Long userId, Long cursor);
 
+    // 검색 기능
+    PostListPageResponse searchPostsByTeam(Long teamId, String keyword, Long cursor);
+
 }

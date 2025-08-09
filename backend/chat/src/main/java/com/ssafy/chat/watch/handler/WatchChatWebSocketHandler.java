@@ -166,17 +166,14 @@ public class WatchChatWebSocketHandler implements WebSocketHandler {
             }
 
             // HandshakeInterceptor에서 설정한 속성들 추출
-            log.info("attributes 내용 확인: {}", attributes);
+            log.debug("attributes 내용 확인: {}", attributes);
             
             Object userIdObj = attributes.get("userId");
             Object teamIdObj = attributes.get("teamId");
             Object gameIdObj = attributes.get("gameId");
             Boolean isAttendanceVerified = (Boolean) attributes.get("isAttendanceVerified");
             
-            log.info("userIdObj: {} ({}), teamIdObj: {} ({}), gameIdObj: {} ({})", 
-                userIdObj, userIdObj != null ? userIdObj.getClass().getSimpleName() : "null",
-                teamIdObj, teamIdObj != null ? teamIdObj.getClass().getSimpleName() : "null",
-                gameIdObj, gameIdObj != null ? gameIdObj.getClass().getSimpleName() : "null");
+            // 타입 확인 로그 - 디버깅용으로만 사용
             
             Long userId = userIdObj != null ? ((Number) userIdObj).longValue() : null;
             Long teamId = teamIdObj != null ? ((Number) teamIdObj).longValue() : null;
@@ -192,7 +189,7 @@ public class WatchChatWebSocketHandler implements WebSocketHandler {
             // 채팅방 ID = "watch-{gameId}-{teamId}" 형식으로 경기별, 팀별 구분
             String roomId = String.format("watch-%d-%d", gameId, teamId);
 
-            log.info("직관 채팅 사용자 세션 생성 - userId: {}, teamId: {}, gameId: {}, roomId: {}", 
+            log.debug("직관 채팅 사용자 세션 생성 - userId: {}, teamId: {}, gameId: {}, roomId: {}", 
                     userId, teamId, gameId, roomId);
 
             return new UserSessionInfo(userId, userName, roomId);
@@ -213,7 +210,7 @@ public class WatchChatWebSocketHandler implements WebSocketHandler {
             Long userTeamId = ((Number) session.getAttributes().get("teamId")).longValue();
             Long gameId = ((Number) session.getAttributes().get("gameId")).longValue();
             
-            log.info("직관 채팅방 입장 허용 - 사용자팀: {}, 게임: {}", userTeamId, gameId);
+            log.debug("직관 채팅방 입장 허용 - 사용자팀: {}, 게임: {}", userTeamId, gameId);
             return true;
             
         } catch (Exception e) {
@@ -232,7 +229,7 @@ public class WatchChatWebSocketHandler implements WebSocketHandler {
             // 기존 연결이 있는지 확인
             Set<WebSocketSession> existingSessions = connectedUsers.get(userId);
             if (existingSessions != null && !existingSessions.isEmpty()) {
-                log.info("관전 채팅 - 기존 연결 해제 - userId: {}, 기존 세션 수: {}", 
+                log.debug("관전 채팅 - 기존 연결 해제 - userId: {}, 기존 세션 수: {}", 
                         userId, existingSessions.size());
                 
                 // 기존 모든 세션 종료

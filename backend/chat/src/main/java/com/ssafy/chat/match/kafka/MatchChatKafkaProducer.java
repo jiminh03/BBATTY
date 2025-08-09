@@ -70,14 +70,14 @@ public class MatchChatKafkaProducer {
     /**
      * 사용자 입장 이벤트 발송
      */
-    public void sendUserJoinEvent(String matchId, Long userId, String userName){
+    public void sendUserJoinEvent(String matchId, Long userId, String nickname){
         Map<String, Object> joinEvent = Map.of(
                 "messageType", "USER_JOIN",
                 "roomId", matchId,
                 "timestamp", KSTTimeUtil.nowAsString(),
                 "userId", userId,
-                "userName", userName,
-                "content", userName + "님이 입장하셨습니다."
+                "nickname", nickname,
+                "content", nickname + "님이 입장하셨습니다."
         );
         sendEvent(matchId, joinEvent);
     }
@@ -85,14 +85,14 @@ public class MatchChatKafkaProducer {
     /**
      * 사용자 퇴장 이벤트 발송
      */
-    public void sendUserLeaveEvent(String matchId, Long userId, String userName){
+    public void sendUserLeaveEvent(String matchId, Long userId, String nickname){
         Map<String, Object> leaveEvent = Map.of(
                 "messageType", "USER_LEAVE",
                 "roomId", matchId,
                 "timestamp", KSTTimeUtil.nowAsString(),
                 "userId", userId,
-                "userName", userName,
-                "content", userName + "님이 퇴장하셨습니다."
+                "nickname", nickname,
+                "content", nickname + "님이 퇴장하셨습니다."
         );
         sendEvent(matchId, leaveEvent);
     }
