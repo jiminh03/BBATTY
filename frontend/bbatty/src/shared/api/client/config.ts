@@ -45,8 +45,8 @@ export const API_CONFIG: ApiConfig = {
   socketUrl: 'ws://i13a403.p.ssafy.io:8084',
 
   timeout: {
-    default: 3000, // 3초
-    upload: 10000, // 파일 업로드는 10초
+    default: 10000, // 10초
+    upload: 30000, // 파일 업로드는 30초
   },
 
   retry: {

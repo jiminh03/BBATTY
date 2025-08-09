@@ -20,6 +20,15 @@ export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnaut
         const token = await tokenManager.getToken();
         if (token && config.headers) {
           config.headers.Authorization = `Bearer ${token}`;
+          // 매치채팅 입장 시에만 전체 토큰 로깅
+          if (config.url?.includes('/api/match-chat/') || config.url?.includes('/api/watch-chat/')) {
+            console.log('매치채팅 API 요청 URL:', config.url);
+            console.log('전체 JWT 토큰:', token);
+            // 리프레시 토큰도 함께 로깅
+            tokenManager.getRefreshToken().then(refreshToken => {
+              console.log('리프레시 토큰:', refreshToken || 'null');
+            });
+          }
         }
       }
 
@@ -36,7 +45,7 @@ export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnaut
     (response: AxiosResponse) => {
       if (response.data && typeof response.data === 'object') {
         if (!('status' in response.data) || response.data.status !== 'SUCCESS') {
-          console.warn(`잘못된 api 형식 :`, response.data);
+          console.warn(`잘못된 api 형식 `, response.data);
         }
       }
       return response;
@@ -46,7 +55,16 @@ export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnaut
 
       // 토큰 만료 또는 인증 실패
       if (error.response?.status === 401 && originalRequest) {
-        // 토큰 제거
+        const isChatAPI = originalRequest.url?.includes('/api/match-chat/') || originalRequest.url?.includes('/api/watch-chat/');
+        
+        // Chat API의 경우 토큰 삭제하지 않고 에러만 전달
+        // (상위에서 JWT 토큰 문제인지 판단하도록)
+        if (isChatAPI) {
+          console.warn('Chat API 401 에러 - JWT 토큰 확인 필요:', originalRequest.url);
+          return Promise.reject(error);
+        }
+        
+        // 일반 API는 기존 로직대로 토큰 제거 및 로그아웃 처리
         await tokenManager.removeToken();
         await tokenManager.removeRefreshToken();
 
