@@ -92,18 +92,6 @@ export default function AppNavigator() {
     }
   };
 
-  if (isLoading || !isTokenInitialized || !isUserInitialized) {
-    return (
-      <SplashScreen
-        onAnimationComplete={() => {
-          if (!isLoading && isTokenInitialized && isUserInitialized) {
-            setShowSplash(false);
-          }
-        }}
-        onLoginSuccess={handleLoginSuccess}
-      />
-    );
-  }
   if (showSplash) {
     return (
       <SplashScreen
