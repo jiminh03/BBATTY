@@ -340,7 +340,7 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
                 .currentParticipants(matchRoom.getCurrentParticipants())
                 .minWinRate(matchRoom.getMinWinRate())
                 .createdAt(matchRoom.getCreatedAt())
-                .status(matchRoom.getStatus())
+                .status(matchRoom.getStatus().name())
                 .websocketUrl(chatRoomUtils.buildMatchChatWebSocketUrl(matchRoom.getMatchId()))
                 .build();
     }
@@ -405,7 +405,7 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
         }
         
         // 2. bbatty 서버 응답 대기
-        Map<String, Object> authResult = chatAuthResultService.waitForAuthResult(requestId, chatRoomUtils.getAuthTimeoutMs());
+        Map<String, Object> authResult = chatAuthResultService.waitForAuthResult(requestId, (int) chatRoomUtils.getAuthTimeoutMs());
         
         if (authResult == null) {
             log.error("bbatty 서버 응답이 null - gameId: {}, requestId: {}", request.getGameId(), requestId);
