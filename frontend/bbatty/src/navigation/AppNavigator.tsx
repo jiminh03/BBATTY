@@ -12,18 +12,18 @@ import { useUserStore } from '../entities/user/model/userStore';
 import { isErr, isOk } from '../shared/utils/result';
 import { Alert } from 'react-native';
 import { Token } from '../shared/api/token/tokenTypes';
+import { initializeApiClient } from '../shared/api/client/apiClient';
 
 const Stack = createStackNavigator();
 
 export default function AppNavigator() {
-  const [isLoading, setIsLoading] = useState(true);
   const [showSplash, setShowSplash] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isExistingUser, setIsExistingUser] = useState(false);
 
   const { setKakaoUserInfo, setKakaoAccessToken } = usekakaoStore();
-  const { initializeTokens, refreshTokens, isTokenInitialized } = useTokenStore();
-  const { initializeUser, setCurrentUser, isUserInitialized } = useUserStore();
+  const { initializeTokens, refreshTokens, resetToken } = useTokenStore();
+  const { initializeUser, setCurrentUser, reset } = useUserStore();
 
   useEffect(() => {
     initializeApp();
@@ -32,52 +32,80 @@ export default function AppNavigator() {
   const initializeApp = async () => {
     try {
       await Promise.all([initializeTokens(), initializeUser()]);
-      await checkAuthState();
+      initializeApiClient();
     } catch (error) {
       console.error('App initialization failed:', error);
       setIsAuthenticated(false);
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const checkAuthState = async () => {
+  // 자동로그인 성공 시 호출
+  const handleAutoLoginSuccess = () => {
+    setIsAuthenticated(true);
+    setIsExistingUser(true);
+    setShowSplash(false);
+  };
+
+  // 카카오 로그인 성공 시 호출 (기존 사용자 여부 확인 필요)
+  const handleLoginSuccess = async (userInfo: any, accessToken: string) => {
     try {
-      // 기존 사용자 여부 확인
+      setKakaoUserInfo(userInfo);
+      setKakaoAccessToken(accessToken);
+
+      // 기존 사용자인지 확인
       const hasUserResult = await useUserStore.getState().hasUser();
-      if (isOk(hasUserResult)) {
-        setIsExistingUser(hasUserResult.data);
-      }
+      const isExisting = isOk(hasUserResult) && hasUserResult.data;
 
-      const refreshResult = await refreshTokens();
+      setIsExistingUser(isExisting);
+      setShowSplash(false);
 
-      if (isOk(refreshResult) && refreshResult.data) {
-        setIsAuthenticated(true);
-      } else {
-        setIsAuthenticated(false);
-
-        if (isOk(hasUserResult) && hasUserResult.data) {
-          await setCurrentUser(null);
-          setIsExistingUser(false);
-        }
+      // 기존 사용자라면 서버에 로그인 요청
+      if (isExisting) {
+        await handleExistingUserLogin(accessToken);
       }
     } catch (error) {
-      console.error('Auth check error ', error);
-      setIsAuthenticated(false);
-    } finally {
-      setIsLoading(false);
+      console.error('Login success handling failed:', error);
+      setShowSplash(false);
     }
   };
 
-  const handleLoginSuccess = (userInfo: any, accessToken: string) => {
-    setShowSplash(false);
-    setKakaoUserInfo(userInfo);
-    setKakaoAccessToken(accessToken);
+  // 기존 사용자 로그인 처리
+  const handleExistingUserLogin = async (kakaoAccessToken: string) => {
+    try {
+      const { authApi } = await import('../features/user-auth/api/authApi');
+
+      const loginResult = await authApi.login({
+        accessToken: kakaoAccessToken,
+      });
+
+      if (isOk(loginResult)) {
+        const { userProfile, tokens } = loginResult.data;
+
+        const setTokensResult = await useTokenStore.getState().setTokens(tokens);
+
+        if (isErr(setTokensResult)) {
+          throw new Error('Token save failed');
+        }
+
+        // 사용자 정보 업데이트
+        await setCurrentUser(userProfile);
+        setIsAuthenticated(true);
+
+        console.log('Existing user login successful');
+      } else {
+        throw new Error(loginResult.error.message);
+      }
+    } catch (error) {
+      console.error('Existing user login failed:', error);
+      Alert.alert('로그인 실패', '자동 로그인에 실패했습니다. 다시 로그인해주세요.');
+      // 이게 안되면 뭐먹고 사냐?
+    }
   };
 
+  // 회원가입 완료 시 호출
   const handleSignUpComplete = async (userInfo: any, tokens: Token) => {
     try {
-      const setTokensResult = await useTokenStore.getState().setTokens(tokens.accessToken, tokens.refreshToken);
+      const setTokensResult = await useTokenStore.getState().setTokens(tokens);
 
       if (isErr(setTokensResult)) {
         throw new Error('Token save failed');
@@ -95,10 +123,9 @@ export default function AppNavigator() {
   if (showSplash) {
     return (
       <SplashScreen
-        onAnimationComplete={() => {
-          setShowSplash(false);
-        }}
+        onAnimationComplete={() => setShowSplash(false)}
         onLoginSuccess={handleLoginSuccess}
+        onAutoLoginSuccess={handleAutoLoginSuccess}
       />
     );
   }

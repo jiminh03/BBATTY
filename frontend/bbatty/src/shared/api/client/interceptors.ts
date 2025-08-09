@@ -17,9 +17,20 @@ export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnaut
       const isPublicEndpoint = /\/api\/(auth\/(signup|check-nickname|refresh))(\/.*)?$/.test(config.url || '');
 
       if (!isPublicEndpoint) {
-        const token = useTokenStore.getState().getAccessToken();
-        if (token && config.headers) {
-          config.headers.Authorization = `Bearer ${token}`;
+        // 토큰 만료 임박 시 선제 갱신
+        const checkResult = await useTokenStore.getState().checkAndRefreshIfNeeded();
+
+        if (isOk(checkResult) && checkResult.data) {
+          // 갱신된 토큰으로 헤더 설정
+          const token = useTokenStore.getState().getAccessToken();
+          if (token && config.headers) {
+            config.headers.Authorization = `Bearer ${token}`;
+          }
+        } else {
+          // 토큰 갱신 실패 시 인증 상태 초기화
+          console.warn('Token refresh failed in request interceptor');
+          await onUnauthorized();
+          return Promise.reject(new Error('Authentication failed'));
         }
       }
 
@@ -58,6 +69,7 @@ export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnaut
         } else {
           // 토큰 갱신 실패 - 콜백 실행
           if (onUnauthorized) {
+            console.error('토큰 갱신에 실패하였습니다.');
             await onUnauthorized();
           }
         }
