@@ -23,6 +23,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.test.context.TestPropertySource;
 
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -38,6 +39,11 @@ import static org.mockito.BDDMockito.*;
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("AttendanceServiceImpl 테스트")
+@TestPropertySource(properties = {
+        "spring.kafka.enabled=false",           // Kafka 비활성화
+        "spring.task.scheduling.enabled=false", // 스케줄러 비활성화
+        "spring.jpa.hibernate.ddl-auto=create-drop" // 테스트 DB 격리
+})
 class AttendanceServiceImplTest {
 
     @Mock
