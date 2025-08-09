@@ -23,14 +23,18 @@ export const tokenManager: TokenManager = {
   async getToken(): Promise<string | null> {
     try {
       // 디바이스에 저장됐던 토큰 => 메모리로 복원
-      return await SecureStore.getItemAsync(STORAGE_KEYS.AUTH_TOKEN);
+      const token = await SecureStore.getItemAsync(STORAGE_KEYS.AUTH_TOKEN);
+      console.log('SecureStore에서 토큰 조회:', { hasToken: !!token, tokenLength: token ? token.length : 0 });
+      return token;
     } catch (error) {
+      console.error('토큰 조회 에러:', error);
       return null;
     }
   },
 
   async removeToken(): Promise<void> {
     try {
+      console.log('토큰 삭제 실행됨');
       await SecureStore.deleteItemAsync(STORAGE_KEYS.AUTH_TOKEN);
     } catch (error) {
       console.warn('토큰 제거 실패', error);

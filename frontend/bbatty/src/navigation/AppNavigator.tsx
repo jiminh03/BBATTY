@@ -19,12 +19,22 @@ export default function AppNavigator() {
 
   useEffect(() => {
     checkAuthState();
+    
+    // 인터셉터에서 401 에러 시 호출될 콜백 설정
+    setUnauthorizedCallback(() => {
+      console.log('Unauthorized callback 호출됨 - 인증 상태 변경');
+      setIsAuthenticated(false);
+      setShowSplash(true);
+    });
   }, []);
 
   const checkAuthState = async () => {
     try {
+      // JWT 토큰 체크는 하지만 인증 상태는 false로 설정 (카카오 로그인 후 팀선택으로 보내기 위함)
       const token = await tokenManager.getToken();
-      setIsAuthenticated(!!token);
+      const hasToken = !!token;
+      console.log('토큰 상태:', { hasToken, tokenLength: token ? token.length : 0 });
+      setIsAuthenticated(false); // 항상 스플래시 -> 카카오로그인 -> 팀선택 플로우
     } catch (error) {
       console.error('Auth check error ', error);
       setIsAuthenticated(false);
@@ -44,14 +54,21 @@ export default function AppNavigator() {
   };
 
   const handleSignUpComplete = () => {
+    console.log('handleSignUpComplete 호출됨');
     setIsAuthenticated(true);
   };
+
+  // 로딩 중에는 아무것도 표시하지 않음
+  if (isLoading) {
+    return null;
+  }
 
   if (showSplash) {
     return (
       <SplashScreen
         onAnimationComplete={() => {
-          setShowSplash(false);
+          // 애니메이션 완료 후에도 스플래시 유지 (카카오 로그인 대기)
+          // setShowSplash(false); // 이 줄을 주석처리하여 카카오 로그인 전까지 스플래시 유지
         }}
         onLoginSuccess={handleLoginSuccess}
       />

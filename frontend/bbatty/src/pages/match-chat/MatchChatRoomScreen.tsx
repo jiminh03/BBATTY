@@ -28,6 +28,8 @@ export const MatchChatRoomScreen = () => {
   const route = useRoute<RoutePropType>();
   const { room, websocketUrl, sessionToken } = route.params;
   
+  console.log('MatchChatRoomScreen route.params:', route.params);
+  
   const [currentMessage, setCurrentMessage] = useState('');
   const { currentUser } = useUserStore();
   const currentUserId = currentUser?.id || '3658'; // fallback to test ID
@@ -83,11 +85,20 @@ export const MatchChatRoomScreen = () => {
       
       // 안드로이드 에뮬레이터용 URL 변경
       let wsUrl = websocketUrl;
-      if (wsUrl.includes('localhost')) {
+      if (wsUrl && wsUrl.includes('localhost')) {
         wsUrl = wsUrl.replace('localhost', '10.0.2.2');
       }
       
-      console.log(`웹소켓 연결: ${wsUrl}`);
+      console.log('웹소켓 연결 시작');
+      console.log('websocketUrl:', websocketUrl);
+      console.log('sessionToken:', sessionToken);
+      console.log(`최종 wsUrl: ${wsUrl}`);
+
+      if (!wsUrl) {
+        console.error('웹소켓 URL이 없습니다!');
+        setConnectionStatus('DISCONNECTED');
+        return;
+      }
 
       const websocket = new WebSocket(wsUrl);
       setWs(websocket);
@@ -96,17 +107,21 @@ export const MatchChatRoomScreen = () => {
         setConnectionStatus('CONNECTED');
         console.log('웹소켓 연결 성공');
         
-        // 서버에 사용자 인증 정보 전송
-        const authData = {
-          matchId: room.matchId,
-          nickname: currentUser?.nickname || 'Anonymous',
-          winRate: 75, // TODO: 실제 승률 데이터로 대체
-          profileImgUrl: currentUser?.profileImg || '',
-          isWinFairy: false // TODO: 실제 승부요정 여부로 대체
-        };
+        // watch chat의 경우 사용자 정보 전송하지 않음
+        const isWatchChat = wsUrl.includes('/ws/watch-chat/') || (wsUrl.includes('gameId=') && wsUrl.includes('teamId='));
         
-        websocket.send(JSON.stringify(authData));
-        console.log('사용자 인증 정보 전송:', authData);
+        if (!isWatchChat) {
+          // 매치 채팅의 경우만 사용자 인증 정보 전송
+          const authData = {
+            matchId: room.matchId,
+            nickname: currentUser?.nickname || 'Anonymous',
+            winRate: 75,
+            profileImgUrl: currentUser?.profileImageURL || '',
+            isWinFairy: false
+          };
+          
+          websocket.send(JSON.stringify(authData));
+        }
       };
 
       websocket.onmessage = (event) => {
