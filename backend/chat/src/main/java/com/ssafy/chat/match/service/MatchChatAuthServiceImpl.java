@@ -179,6 +179,7 @@ public class MatchChatAuthServiceImpl implements MatchChatAuthService {
         Map<String, Object> roomInfo = new HashMap<>();
         roomInfo.put("matchId", request.getMatchId());
         roomInfo.put("nickname", request.getNickname());
+        roomInfo.put("winRate", request.getWinRate());
         roomInfo.put("roomType", "MATCH");
         return roomInfo;
     }

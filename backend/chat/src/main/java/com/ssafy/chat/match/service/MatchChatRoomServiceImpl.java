@@ -57,6 +57,7 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
             roomCreateInfo.put("maxAge", request.getMaxAge());
             roomCreateInfo.put("genderCondition", request.getGenderCondition());
             roomCreateInfo.put("maxParticipants", request.getMaxParticipants());
+            roomCreateInfo.put("minWinRate", request.getMinWinRate());
             
             String requestId = chatAuthRequestProducer.sendMatchChatCreateRequest(
                 jwtToken, request.getGameId(), roomCreateInfo, request.getNickname());
@@ -122,6 +123,7 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
                     .genderCondition(request.getGenderCondition())
                     .maxParticipants(request.getMaxParticipants())
                     .currentParticipants(0)
+                    .minWinRate(request.getMinWinRate())
                     .createdAt(KSTTimeUtil.nowAsString())
                     .lastActivityAt(KSTTimeUtil.nowAsString())
                     .status("ACTIVE")
@@ -435,6 +437,7 @@ public class MatchChatRoomServiceImpl implements MatchChatRoomService {
                 .genderCondition(matchRoom.getGenderCondition())
                 .maxParticipants(matchRoom.getMaxParticipants())
                 .currentParticipants(matchRoom.getCurrentParticipants())
+                .minWinRate(matchRoom.getMinWinRate())
                 .createdAt(matchRoom.getCreatedAt())
                 .status(matchRoom.getStatus())
                 .websocketUrl(String.format("ws://i13a403.p.ssafy.io:8084/ws/match-chat/websocket?matchId=%s", matchRoom.getMatchId()))

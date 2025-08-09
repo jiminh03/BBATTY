@@ -2,11 +2,7 @@ package com.ssafy.bbatty.domain.chat.service;
 
 import com.ssafy.bbatty.domain.chat.dto.request.ChatAuthRequest;
 import com.ssafy.bbatty.domain.chat.dto.response.ChatAuthResponse;
-import com.ssafy.bbatty.domain.chat.kafka.ChatAuthKafkaProducer;
-import com.ssafy.bbatty.domain.game.entity.Game;
-import com.ssafy.bbatty.domain.game.repository.GameRepository;
 import com.ssafy.bbatty.global.constants.ErrorCode;
-import com.ssafy.bbatty.global.constants.GameStatus;
 import com.ssafy.bbatty.global.exception.ApiException;
 import com.ssafy.bbatty.global.response.ApiResponse;
 import com.ssafy.bbatty.global.security.JwtProvider;
@@ -18,7 +14,6 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import jakarta.servlet.http.HttpServletRequest;
-import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
@@ -30,16 +25,17 @@ import java.util.Map;
 @Transactional(readOnly = true)
 public class ChatAuthServiceImpl implements ChatAuthService {
     
-    private final GameRepository gameRepository;
-    private final ChatAuthKafkaProducer chatAuthKafkaProducer;
+    private final ChatPermissionValidatorService permissionValidatorService;
+    private final GameInfoService gameInfoService;
+    private final ChatMessageSenderService messageSenderService;
     private final JwtProvider jwtProvider;
     
     @Override
     public ApiResponse<ChatAuthResponse> authorizeChatAccess(Long userId, Long userTeamId, String userGender, 
                                                            int userAge, String userNickname, ChatAuthRequest request) {
         try {
-            // 1. 채팅 유형별 권한 검증
-            validateChatPermission(userId, userTeamId, userGender, userAge, request);
+            // 1. 채팅 유형별 권한 검증 (분리된 서비스 사용)
+            permissionValidatorService.validateChatPermission(userId, userTeamId, userGender, userAge, request);
             
             // 2. 채팅방 정보 생성
             ChatAuthResponse.ChatRoomInfo chatRoomInfo = createChatRoomInfo(request);
@@ -47,14 +43,14 @@ public class ChatAuthServiceImpl implements ChatAuthService {
             // 3. 사용자 정보 생성 (전달받은 정보 사용)
             ChatAuthResponse.UserInfo userInfo = createUserInfo(userId, userTeamId, userGender, userAge, userNickname);
             
-            // 4. 게임 정보 생성 (매칭 채팅인 경우)
+            // 4. 게임 정보 생성 (매칭 채팅인 경우) - 분리된 서비스 사용
             Map<String, Object> gameInfo = null;
             if ("MATCH".equals(request.getChatType()) && request.getGameId() != null) {
-                gameInfo = createGameInfo(request.getGameId());
+                gameInfo = gameInfoService.createGameInfo(request.getGameId());
             }
             
-            // 5. Kafka로 인증 성공 결과 전송
-            sendAuthSuccessToKafka(request.getRequestId(), userInfo, chatRoomInfo, gameInfo);
+            // 5. Kafka로 인증 성공 결과 전송 (분리된 서비스 사용)
+            messageSenderService.sendAuthSuccessToKafka(request.getRequestId(), userInfo, chatRoomInfo, gameInfo);
             
             log.info("채팅 인증 성공: userId={}, chatType={}, action={}", 
                     userId, request.getChatType(), request.getAction());
@@ -64,8 +60,8 @@ public class ChatAuthServiceImpl implements ChatAuthService {
         } catch (ApiException e) {
             log.warn("채팅 인증 실패: userId={}, error={}", userId, e.getMessage());
             
-            // Kafka로 인증 실패 결과 전송
-            sendAuthFailureToKafka(request.getRequestId(), e.getMessage());
+            // Kafka로 인증 실패 결과 전송 (분리된 서비스 사용)
+            messageSenderService.sendAuthFailureToKafka(request.getRequestId(), e.getMessage());
             
             return ChatAuthResponse.failure(request.getRequestId(), e.getMessage());
         }
@@ -94,202 +90,6 @@ public class ChatAuthServiceImpl implements ChatAuthService {
         }
     }
     
-    /**
-     * 채팅 유형별 권한 검증
-     */
-    private void validateChatPermission(Long userId, Long userTeamId, String userGender, int userAge, ChatAuthRequest request) {
-        String chatType = request.getChatType();
-        
-        if ("MATCH".equals(chatType)) {
-            validateMatchChatPermission(request);
-            // 매칭방 조건 검증 (CREATE/JOIN 모두)
-            validateMatchRoomConditions(userId, userTeamId, userGender, userAge, request);
-        } else if ("WATCH".equals(chatType)) {
-            validateWatchChatPermission(userTeamId, request);
-        } else {
-            throw new ApiException(ErrorCode.INVALID_INPUT_VALUE);
-        }
-    }
-
-    /**
-     * 매칭 채팅 권한 검증
-     */
-    private void validateMatchChatPermission(ChatAuthRequest request) {
-        if (request.getGameId() == null) {
-            throw new ApiException(ErrorCode.INVALID_INPUT_VALUE);
-        }
-
-        // 경기 존재 여부 확인
-        Game game = gameRepository.findById(request.getGameId())
-                .orElseThrow(() -> new ApiException(ErrorCode.GAME_NOT_FOUND));
-
-        // 기본적인 경기 상태 확인
-        if (game.getStatus() == GameStatus.FINISHED) {
-            throw new ApiException(ErrorCode.GAME_FINISHED);
-        }
-    }
-    
-    /**
-     * 매칭방 조건 검증 (CREATE/JOIN 공통)
-     */
-    private void validateMatchRoomConditions(Long userId, Long userTeamId, String userGender, 
-                                           int userAge, ChatAuthRequest request) {
-        if (request.getRoomInfo() == null) {
-            log.debug("roomInfo가 없어 매칭방 조건 검증을 생략합니다. userId={}", userId);
-            return; // roomInfo가 없으면 검증 생략
-        }
-        
-        Map<String, Object> roomInfo = request.getRoomInfo();
-        
-        try {
-            // 1. 나이 조건 검증
-            validateAgeCondition(userAge, roomInfo);
-            
-            // 2. 성별 조건 검증  
-            validateGenderCondition(userGender, roomInfo);
-            
-            // 3. 팀 조건 검증 (allowOtherTeams 고려)
-            validateTeamCondition(userTeamId, roomInfo);
-            
-            // 4. 승률 조건 검증
-            validateWinRateCondition(userId, roomInfo);
-            
-            log.info("매칭방 조건 검증 완료: userId={}, age={}, gender={}, teamId={}", 
-                    userId, userAge, userGender, userTeamId);
-                    
-        } catch (ClassCastException | NumberFormatException e) {
-            log.error("매칭방 조건 정보 파싱 오류: userId={}, error={}", userId, e.getMessage());
-            throw new ApiException(ErrorCode.MATCH_ROOM_CONDITIONS_INVALID);
-        }
-    }
-    
-    /**
-     * 나이 조건 검증
-     */
-    private void validateAgeCondition(int userAge, Map<String, Object> roomInfo) {
-        Object minAgeObj = roomInfo.get("minAge");
-        Object maxAgeObj = roomInfo.get("maxAge");
-        
-        if (minAgeObj != null && maxAgeObj != null) {
-            int minAge = ((Number) minAgeObj).intValue();
-            int maxAge = ((Number) maxAgeObj).intValue();
-            
-            if (userAge < minAge || userAge > maxAge) {
-                throw new ApiException(ErrorCode.AGE_CONDITION_NOT_MET);
-            }
-        }
-    }
-    
-    /**
-     * 성별 조건 검증
-     */
-    private void validateGenderCondition(String userGender, Map<String, Object> roomInfo) {
-        Object genderConditionObj = roomInfo.get("genderCondition");
-        
-        if (genderConditionObj != null) {
-            String genderCondition = (String) genderConditionObj;
-            
-            if (!"ALL".equals(genderCondition) && !genderCondition.equals(userGender)) {
-                throw new ApiException(ErrorCode.GENDER_CONDITION_NOT_MET);
-            }
-        }
-    }
-    
-    /**
-     * 팀 조건 검증 (allowOtherTeams 필드 고려)
-     */
-    private void validateTeamCondition(Long userTeamId, Map<String, Object> roomInfo) {
-        Object allowOtherTeamsObj = roomInfo.get("allowOtherTeams");
-        Object roomTeamIdObj = roomInfo.get("teamId");
-        
-        if (allowOtherTeamsObj != null && roomTeamIdObj != null) {
-            boolean allowOtherTeams = (Boolean) allowOtherTeamsObj;
-            Long roomTeamId = ((Number) roomTeamIdObj).longValue();
-            
-            // allowOtherTeams가 false인 경우, 같은 팀만 참여 가능
-            if (!allowOtherTeams && !userTeamId.equals(roomTeamId)) {
-                throw new ApiException(ErrorCode.UNAUTHORIZED_TEAM_ACCESS);
-            }
-        }
-    }
-    
-    /**
-     * 승률 조건 검증
-     */
-    private void validateWinRateCondition(Long userId, Map<String, Object> roomInfo) {
-        Object minWinRateObj = roomInfo.get("minWinRate");
-        
-        if (minWinRateObj != null) {
-            int minWinRate = ((Number) minWinRateObj).intValue();
-            
-            // 사용자의 실제 승률을 계산 (실제 구현에서는 UserService나 별도 서비스에서 계산)
-            double userWinRate = calculateUserWinRate(userId);
-            
-            if (userWinRate < minWinRate) {
-                throw new ApiException(ErrorCode.WIN_RATE_CONDITION_NOT_MET);
-            }
-        }
-    }
-    
-    /**
-     * 사용자 승률 계산 (임시 구현 - 실제로는 별도 서비스에서 처리)
-     */
-    private double calculateUserWinRate(Long userId) {
-        // TODO: 실제 승률 계산 로직 구현
-        // 현재는 임시로 70.0 반환
-        return 70.0;
-    }
-    
-    /**
-     * 직관 채팅 권한 검증 (사용자 팀 == 응원 팀)
-     */
-    private void validateWatchChatPermission(Long userTeamId, ChatAuthRequest request) {
-        if (request.getGameId() == null || request.getRoomInfo() == null) {
-            throw new ApiException(ErrorCode.INVALID_INPUT_VALUE);
-        }
-
-        try {
-            // roomInfo에서 응원할 팀 정보 추출
-            Map<String, Object> roomInfo = request.getRoomInfo();
-            Object teamIdObj = roomInfo.get("teamId");
-            
-            if (teamIdObj == null) {
-                log.error("직관 채팅방 정보에 teamId가 없습니다. roomInfo={}", roomInfo);
-                throw new ApiException(ErrorCode.ROOM_INFO_MISSING);
-            }
-            
-            Long supportTeamId = ((Number) teamIdObj).longValue();
-
-            // 경기 정보 확인
-            Game game = gameRepository.findById(request.getGameId())
-                    .orElseThrow(() -> new ApiException(ErrorCode.GAME_NOT_FOUND));
-
-            // 경기 상태 확인 (종료된 경기는 직관 채팅 불가)
-            if (game.getStatus() == GameStatus.FINISHED) {
-                throw new ApiException(ErrorCode.GAME_FINISHED);
-            }
-
-            // 응원할 팀이 경기에 참여하는지 확인
-            if (!game.getHomeTeamId().equals(supportTeamId) && !game.getAwayTeamId().equals(supportTeamId)) {
-                log.warn("경기에 참여하지 않는 팀으로 직관 채팅 시도: gameId={}, supportTeamId={}, homeTeamId={}, awayTeamId={}", 
-                        request.getGameId(), supportTeamId, game.getHomeTeamId(), game.getAwayTeamId());
-                throw new ApiException(ErrorCode.TEAM_NOT_IN_GAME);
-            }
-
-            // 사용자 팀과 응원 팀이 같은지 확인
-            if (!userTeamId.equals(supportTeamId)) {
-                log.info("다른 팀 직관 채팅 시도: userId의 teamId={}, 응원 teamId={}", userTeamId, supportTeamId);
-                throw new ApiException(ErrorCode.UNAUTHORIZED_TEAM_ACCESS);
-            }
-
-            log.info("직관 채팅 권한 검증 완료: userId teamId={}, supportTeamId={}, gameId={}", 
-                    userTeamId, supportTeamId, request.getGameId());
-                    
-        } catch (ClassCastException | NumberFormatException e) {
-            log.error("직관 채팅방 정보 파싱 오류: roomInfo={}, error={}", request.getRoomInfo(), e.getMessage());
-            throw new ApiException(ErrorCode.ROOM_INFO_MISSING);
-        }
-    }
 
     /**
      * 채팅방 정보 생성
@@ -320,78 +120,4 @@ public class ChatAuthServiceImpl implements ChatAuthService {
                 .build();
     }
     
-    
-    /**
-     * 게임 정보 생성 (매칭 채팅용)
-     */
-    private Map<String, Object> createGameInfo(Long gameId) {
-        try {
-            Game game = gameRepository.findById(gameId)
-                    .orElseThrow(() -> new ApiException(ErrorCode.GAME_NOT_FOUND));
-            
-            return Map.of(
-                    "gameId", game.getId(),
-                    "gameDate", game.getDateTime().toString(), // LocalDate -> "yyyy-MM-dd"
-                    "homeTeamId", game.getHomeTeamId(),
-                    "awayTeamId", game.getAwayTeamId(),
-                    "homeTeamName", game.getHomeTeam() != null ? game.getHomeTeam().getName() : "홈팀",
-                    "awayTeamName", game.getAwayTeam() != null ? game.getAwayTeam().getName() : "원정팀",
-                    "status", game.getStatus().name(),
-                    "stadium", game.getStadium() != null ? game.getStadium() : "경기장"
-            );
-        } catch (Exception e) {
-            log.error("게임 정보 생성 실패 - gameId: {}", gameId, e);
-            throw new ApiException(ErrorCode.GAME_NOT_FOUND);
-        }
-    }
-    
-    /**
-     * Kafka로 인증 성공 결과 전송
-     */
-    private void sendAuthSuccessToKafka(String requestId, ChatAuthResponse.UserInfo userInfo, 
-                                      ChatAuthResponse.ChatRoomInfo chatRoomInfo, Map<String, Object> gameInfo) {
-        Map<String, Object> authResult;
-        
-        if (gameInfo != null) {
-            // 매칭 채팅인 경우 gameInfo 포함
-            authResult = Map.of(
-                    "success", true,
-                    "requestId", requestId,
-                    "timestamp", LocalDateTime.now().toString(),
-                    "userInfo", userInfo,
-                    "chatRoomInfo", chatRoomInfo,
-                    "gameInfo", gameInfo
-            );
-        } else {
-            // 관전 채팅인 경우 기존과 동일
-            authResult = Map.of(
-                    "success", true,
-                    "requestId", requestId,
-                    "timestamp", LocalDateTime.now().toString(),
-                    "userInfo", userInfo,
-                    "chatRoomInfo", chatRoomInfo
-            );
-        }
-        
-        chatAuthKafkaProducer.sendAuthResult(requestId, authResult);
-        
-        if (gameInfo != null) {
-            log.info("매칭 채팅 인증 응답 전송 - requestId: {}, gameId: {}, gameDate: {}", 
-                    requestId, gameInfo.get("gameId"), gameInfo.get("gameDate"));
-        }
-    }
-    
-    /**
-     * Kafka로 인증 실패 결과 전송
-     */
-    private void sendAuthFailureToKafka(String requestId, String errorMessage) {
-        Map<String, Object> authResult = Map.of(
-                "success", false,
-                "requestId", requestId,
-                "timestamp", LocalDateTime.now().toString(),
-                "errorMessage", errorMessage
-        );
-        
-        chatAuthKafkaProducer.sendAuthResult(requestId, authResult);
-    }
 }
