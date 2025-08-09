@@ -17,12 +17,11 @@ import com.ssafy.bbatty.global.exception.ApiException;
 import com.ssafy.bbatty.global.util.RedisUtil;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 
 import java.math.BigDecimal;
@@ -36,14 +35,13 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.*;
 
-@ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
-@DisplayName("AttendanceServiceImpl 테스트")
+@SpringBootTest
+@ActiveProfiles("test")
 @TestPropertySource(properties = {
-        "spring.kafka.enabled=false",           // Kafka 비활성화
-        "spring.task.scheduling.enabled=false", // 스케줄러 비활성화
-        "spring.jpa.hibernate.ddl-auto=create-drop" // 테스트 DB 격리
+        "spring.kafka.enabled=false",
+        "spring.task.scheduling.enabled=false"
 })
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
 class AttendanceServiceImplTest {
 
     @Mock
