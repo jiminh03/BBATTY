@@ -152,7 +152,7 @@ public class MatchChatValidationStrategy implements ChatValidationStrategy {
             
             if (userWinRate == null) {
                 log.warn("사용자 승률 정보가 없습니다. 승률 조건 검증을 생략합니다.");
-                return;
+                throw new ApiException(ErrorCode.INVALID_INPUT_VALUE);
             }
             
             if (userWinRate < minWinRate) {
