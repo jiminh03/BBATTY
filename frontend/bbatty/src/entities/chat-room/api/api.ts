@@ -162,9 +162,27 @@ export const chatRoomApi = {
   // 매치 채팅방 생성 - 직접 타입 정의
   createMatchChatRoom: async (request: CreateMatchChatRoomRequest): Promise<CreateMatchChatRoomResponse> => {
     try {
+      console.log('🚀 CreateMatchChatRoom 요청 데이터:', JSON.stringify(request, null, 2));
+      console.log('🚀 CreateMatchChatRoom 요청 URL:', `${API_CONFIG.chatBaseURL}/api/match-chat-rooms`);
+      console.log('🚀 CreateMatchChatRoom 헤더:', JSON.stringify(chatApiClient.defaults.headers, null, 2));
+      
       const response = await chatApiClient.post('/api/match-chat-rooms', request);
+      console.log('✅ CreateMatchChatRoom 성공:', response.data);
       return response;
     } catch (error: any) {
+      console.error('❌ CreateMatchChatRoom 에러 상세:', {
+        message: error.message,
+        code: error.code,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          headers: error.config?.headers,
+          data: error.config?.data
+        }
+      });
       console.warn('서버 연결 실패, 목 데이터 반환:', error);
       const newRoom: MatchChatRoom = {
         matchId: 'mock_match_' + Date.now(),
