@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import { KakaoLoginResponse } from '../../auth';
+import { KakaoLoginResponse } from '..';
 
-interface AuthStore {
+interface KakaoStore {
   kakaoUserInfo: KakaoLoginResponse | null;
   kakaoAccessToken: string | null;
   setKakaoUserInfo: (userInfo: KakaoLoginResponse) => void;
@@ -9,7 +9,7 @@ interface AuthStore {
   clearKakaoUserInfo: () => void;
 }
 
-export const useAuthStore = create<AuthStore>((set) => ({
+export const usekakaoStore = create<KakaoStore>((set) => ({
   kakaoUserInfo: null,
   kakaoAccessToken: null,
   setKakaoUserInfo: (userInfo) => set({ kakaoUserInfo: userInfo }),

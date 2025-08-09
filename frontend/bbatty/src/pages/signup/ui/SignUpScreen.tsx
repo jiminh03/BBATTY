@@ -1,98 +1,125 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, ScrollView, KeyboardAvoidingView, Platform, Alert, TouchableOpacity, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
-import { AuthStackScreenProps } from '../../../navigation/types';
-import { authApi } from '../../../entities/auth/api/authApi';
+import { RouteProp, useNavigation } from '@react-navigation/native';
+import { AuthStackParamList, AuthStackScreenProps } from '../../../navigation/types';
+import { authApi } from '../../../features/user-auth';
 import { ProfileForm, NicknameConflictModal } from '../../../features/user-profile';
 import { styles } from './SignUpScreen.style';
-import { extractData, tokenManager } from '../../../shared';
-import { useAuthStore } from '../../../entities/auth/model/authStore';
-import { useUserStore } from '../../../entities/user/model/userStore';
+import { usekakaoStore } from '../../../features/user-auth/model/kakaoStore';
 import { ProfileFormData } from '../../../features/user-profile/model/profileTypes';
-import { RegisterRequest } from '../../../entities/auth';
-import { navigationRef } from '../../../navigation/navigationRefs';
-import { MainTabParamList } from '../../../navigation/types';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { useUserStore } from '../../../entities/user';
+import { useTokenStore } from '../../../shared/api/token/tokenStore';
+import { isOk } from '../../../shared/utils/result';
+import { Token } from '../../../shared/api/token/tokenTypes';
 
-type Props = AuthStackScreenProps<'SignUp'> & {
-  //추가
-  onSignUpComplete?: () => void;
-};
+type SignUpScreenNavigationProp = StackNavigationProp<AuthStackParamList, 'SignUp'>;
+type SignUpScreenRouteProp = RouteProp<AuthStackParamList, 'SignUp'>;
 
-export default function SignUpScreen({ route, onSignUpComplete }: Props) {
-  const navigation = useNavigation<AuthStackScreenProps<'SignUp'>['navigation']>();
+interface SignUpScreenProps {
+  navigation: SignUpScreenNavigationProp;
+  route: SignUpScreenRouteProp;
+  onSignUpComplete?: (userInfo: any, tokens: Token) => void;
+  isExistingUser?: boolean;
+}
+
+export default function SignUpScreen({
+  navigation,
+  route,
+  onSignUpComplete,
+  isExistingUser = false,
+}: SignUpScreenProps) {
   const insets = useSafeAreaInsets();
+  const [isLoading, setIsLoading] = useState(false);
   const [showConflictModal, setShowConflictModal] = useState(false);
+  const { kakaoUserInfo, kakaoAccessToken } = usekakaoStore();
+  const { setCurrentUser } = useUserStore();
+  const { setTokens } = useTokenStore();
 
   const teamId = route.params?.teamId;
-  const { kakaoUserInfo, kakaoAccessToken } = useAuthStore();
-  const { setCurrentUser } = useUserStore();
+  useEffect(() => {
+    if (isExistingUser && kakaoUserInfo && kakaoAccessToken) {
+      handleExistingUserLogin();
+    }
+  }, [isExistingUser, kakaoUserInfo, kakaoAccessToken]);
 
-  // 회원가입 완료
-  const handleSubmit = async (data: ProfileFormData) => {
+  // 기존 회원 로그인
+  const handleExistingUserLogin = async () => {
+    if (!kakaoUserInfo || !kakaoAccessToken) {
+      Alert.alert('오류', '카카오 로그인 정보가 없습니다.');
+      return;
+    }
+
+    setIsLoading(true);
+    const result = await authApi.login({
+      accessToken: kakaoAccessToken,
+    });
+
+    setIsLoading(false);
+
+    if (isOk(result)) {
+      const { userProfile, tokens } = result.data;
+
+      onSignUpComplete?.(userProfile, tokens);
+    } else {
+      console.error('Login failed:', result.error);
+      Alert.alert('로그인 실패', result.error.message || '자동 로그인에 실패했습니다.');
+    }
+  };
+
+  // 신규 회원가입
+  const handleSignUp = async (formData: ProfileFormData) => {
     if (!teamId) {
-      Alert.alert('오류', '팀이 선택되지 않았습니다');
+      Alert.alert('오류', '팀이 선택되지 않았습니다.');
       return;
     }
 
     if (!kakaoUserInfo || !kakaoAccessToken) {
-      Alert.alert('오류', '카카오 로그인 정보가 없습니다');
+      Alert.alert('오류', '카카오 로그인 정보가 없습니다.');
       return;
     }
-    try {
-      const registerData: RegisterRequest = {
-        accessToken: kakaoAccessToken,
-        kakaoId: kakaoUserInfo.id.toString(),
-        email: kakaoUserInfo.kakao_account?.email,
-        birthYear: kakaoUserInfo.kakao_account?.birthyear,
-        gender: kakaoUserInfo.kakao_account?.gender,
-        teamId,
-        nickname: data.nickname,
-        profileImg: data.profileImage || '',
-        introduction: data.introduction || '',
-      };
 
-      const response = await authApi.signup(registerData);
-        console.log(JSON.stringify(response));
-        
-        if(response.data.status !== 'SUCCESS') return;
-        
+    const result = await authApi.signup({
+      accessToken: kakaoAccessToken,
+      kakaoId: kakaoUserInfo.id.toString(),
+      nickname: formData.nickname,
+      email: kakaoUserInfo.kakao_account?.email || '',
+      gender: kakaoUserInfo.kakao_account?.gender,
+      birthYear: kakaoUserInfo.kakao_account?.birthyear,
+      profileImg: formData.profileImage,
+      introduction: formData.introduction,
+      teamId: teamId,
+    });
 
-      // 토큰들 저장
-      await Promise.all([
-        tokenManager.setToken(response.data.data.tokens.accessToken),
-        tokenManager.setRefreshToken(response.data.data.tokens.refreshToken),
-      ]);
+    if (isOk(result)) {
+      const { userProfile, tokens } = result.data;
+      onSignUpComplete?.(userProfile, tokens);
+    } else {
+      console.error('Sign up failed:', result.error);
 
-      // 사용자 정보 저장
-      setCurrentUser({
-        id: response.data.data.userProfile.userId.toString(),
-        nickname: response.data.data.userProfile.nickname,
-        profileImg: response.data.data.userProfile.profileImg || '',
-        teamId: response.data.data.userProfile.teamId,
-        teamName: response.data.data.userProfile.teamName,
-        introduction: response.data.data.userProfile.introduction || '',
-        age: response.data.data.userProfile.age,
-        gender: response.data.data.userProfile.gender,
-      });
-
-      Alert.alert('성공', '회원가입이 완료되었습니다');
-
-      // onSignUpComplete 콜백 호출하여 인증 상태 변경
-      if (onSignUpComplete) {
-        onSignUpComplete();
+      // 닉네임 중복 에러 처리
+      if (result.error.code === 'NICKNAME_CONFLICT') {
+        setShowConflictModal(true);
+      } else {
+        Alert.alert('회원가입 실패', result.error.message || '회원가입에 실패했습니다.');
       }
-    } catch (error: any) {
-      console.log(error);
-      // // 닉네임 중복 에러 처리 <= 이부분수정해야함
-      // if (error.response?.data?.error?.code === 'NICKNAME_CONFLICT') {
-      //   setShowConflictModal(true);
-      // } else {
-      //   Alert.alert('오류', '회원가입에 실패했습니다');
-      // }
-      throw error; // ProfileForm에서 로딩 상태 해제를 위해
+
+      throw new Error(result.error.message); // ProfileForm에서 로딩 해제용
     }
   };
+
+  if (isExistingUser && isLoading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Text>로그인 중...</Text>
+      </View>
+    );
+  }
+
+  if (isExistingUser) {
+    return null;
+  }
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -108,7 +135,7 @@ export default function SignUpScreen({ route, onSignUpComplete }: Props) {
           <Text style={styles.backButtonText}>{'<'} 회원가입</Text>
         </TouchableOpacity>
 
-        <ProfileForm onSubmit={handleSubmit} showNicknameField={true} isEditMode={false} />
+        <ProfileForm onSubmit={handleSignUp} showNicknameField={true} isEditMode={false} />
       </ScrollView>
 
       <NicknameConflictModal visible={showConflictModal} onConfirm={() => setShowConflictModal(false)} />

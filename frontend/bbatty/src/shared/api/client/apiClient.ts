@@ -2,7 +2,7 @@ import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 
 import { ApiResponse } from '../types/response';
 import { API_CONFIG } from './config';
 import { setupInterceptors } from './interceptors';
-import { tokenManager } from './tokenManager';
+import { useTokenStore } from '../token/tokenStore';
 
 interface CustomAxiosInstance extends AxiosInstance {
   get<T = unknown, R = ApiResponse<T>, D = any>(
@@ -70,6 +70,7 @@ let onUnauthorizedCallback: (() => void) | null = null;
 
 // 401 에러 시 호출될 콜백
 const handleUnauthorized = async () => {
+  await useTokenStore.getState().clearTokens();
   applyTokenToClients(null);
   // AppNavigator에서 설정한 콜백 호출 (인증 상태 변경)
   if (onUnauthorizedCallback) {
@@ -77,8 +78,8 @@ const handleUnauthorized = async () => {
   }
 };
 
-export const initializeApiClient = async (): Promise<void> => {
-  const token = await tokenManager.getToken();
+export const initializeApiClient = (): void => {
+  const token = useTokenStore.getState().getAccessToken();
   applyTokenToClients(token);
 
   setupInterceptors(apiClient, handleUnauthorized);

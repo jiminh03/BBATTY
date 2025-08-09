@@ -1,9 +1,9 @@
 // 스토리지 키
 export const STORAGE_KEYS = {
   // 인증
-  AUTH_TOKEN: 'auth_token',
+  ACCESS_TOKEN: 'auth_token',
   REFRESH_TOKEN: 'refresh_token',
-  USER_ID: 'user_id',
+  USER: 'user',
 
   // 사용자 설정
   SELECTED_TEAM: 'selected_team',

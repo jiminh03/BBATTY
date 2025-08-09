@@ -1,17 +1,7 @@
-import { UserProfile } from '../../user/model/types';
-
-export interface TokenInfo {
-  accessToken: string;
-  refreshToken: string;
-  accessTokenExpiresAt: string;
-  refreshTokenExpiresAt: string;
-}
+import { User } from '../../../entities/user/model/userTypes';
+import { Token } from '../../../shared/api/token/tokenTypes';
 
 // ================================= Request =======================================
-
-export interface CheckNicknameRequest {
-  nickname: string;
-}
 
 export interface RegisterRequest {
   accessToken: string; // 카카오 액세스 토큰
@@ -23,6 +13,10 @@ export interface RegisterRequest {
   nickname: string;
   profileImg?: string;
   introduction?: string;
+}
+
+export interface LoginRequest {
+  accessToken: string; // 유저 액세스 토큰
 }
 
 // ================================= Response ======================================
@@ -54,32 +48,12 @@ export interface KakaoUserInfo {
   };
 }
 
-export interface CheckNicknameResponse {
-  data: boolean;
-}
-
 export interface RegisterResponse {
-  tokens: {
-    accessToken: string;
-    refreshToken: string;
-    accessTokenExpiresAt: string;
-    refreshTokenExpiresAt: string;
-  };
-  userProfile: {
-    userId: number;
-    nickname: string;
-    profileImg?: string;
-    teamId: number;
-    teamName: string;
-    introduction?: string;
-    age: number;
-    gender: string;
-  };
+  tokens: Token;
+  userProfile: User;
 }
 
-export interface RefreshTokenResponse {
-  accessToken: string;
-  refreshToken: string;
-  accessTokenExpiresAt: string;
-  refreshTokenExpiresAt: string;
+export interface LoginResponse {
+  tokens: Token;
+  userProfile: User;
 }

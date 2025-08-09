@@ -4,7 +4,8 @@ import { ProfileImagePicker } from './ProfileImagePicker';
 import { useProfileForm } from '../hooks/useProfileForm';
 import { styles } from './ProfileForm.style';
 import { ProfileFormData } from '../model/profileTypes';
-import { authApi } from '../../../entities/auth';
+import { profileApi } from '../api/profileApi';
+import { isOk } from '../../../shared/utils/result';
 
 export interface ProfileFormProps {
   initialData?: Partial<ProfileFormData>;
@@ -36,13 +37,21 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
 
     setIsCheckingNickname(true);
     try {
-      const isAvailable = await authApi.checkNickname({ nickname: formData.nickname });
-      setIsNicknameAvailable(true);
-      // if (!isAvailable) {
-      //   setErrors((prev) => ({ ...prev, nickname: '이미 사용 중인 닉네임입니다' }));
+      const result = await profileApi.checkNickname({ nickname: formData.nickname });
+
+      // if (isOk(result)) {
+      //   console.log('닉네임 체크 성공:', result.data);
+      //   setIsNicknameAvailable(result.data.data);
+      //   if (!result.data.data) {
+      //     setErrors((prev) => ({ ...prev, nickname: '이미 사용 중인 닉네임입니다' }));
+      //   }
+      // } else {
+      //   console.error('닉네임 체크 실패:', result.error);
+      //   setErrors((prev) => ({ ...prev, nickname: '닉네임 확인에 실패했습니다' }));
       // }
+      setIsNicknameAvailable(true);
     } catch (error) {
-      console.error('닉네임 확인 실패:', error);
+      console.error('예외 발생:', error);
     } finally {
       setIsCheckingNickname(false);
     }
@@ -71,10 +80,10 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
     }
   };
 
-  const isSubmitDisabled =
-    (showNicknameField && (!formData.nickname || !!errors.nickname || (!isEditMode && !isNicknameAvailable))) ||
-    !!errors.introduction ||
-    isSubmitting;
+  // const isSubmitDisabled =
+  //   (showNicknameField && (!formData.nickname || !!errors.nickname || (!isEditMode && !isNicknameAvailable))) ||
+  //   !!errors.introduction ||
+  //   isSubmitting;
 
   return (
     <>
@@ -131,7 +140,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
       <TouchableOpacity
         style={[styles.submitButton /*{ backgroundColor: isSubmitDisabled ? '#CCCCCC' : theme.colors.text.primary }*/]}
         onPress={handleSubmit}
-        disabled={isSubmitDisabled}
+        // disabled={isSubmitDisabled}
       >
         {isSubmitting ? (
           <ActivityIndicator size='small' color='#FFFFFF' />
