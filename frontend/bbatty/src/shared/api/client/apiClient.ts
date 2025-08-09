@@ -82,6 +82,8 @@ const handleUnauthorized = async () => {
 };
 
 export const initializeApiClient = (): void => {
+  useTokenStore.getState().setApiClient(apiClient);
+
   const token = useTokenStore.getState().getAccessToken();
   applyTokenToClients(token);
 
