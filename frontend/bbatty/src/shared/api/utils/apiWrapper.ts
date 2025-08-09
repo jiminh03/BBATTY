@@ -1,3 +1,4 @@
+import { AxiosResponse } from 'axios';
 import { wrapAsync, AsyncResult } from '../../utils/result';
 import { ApiResponse } from '../types/response';
 
@@ -17,10 +18,11 @@ const createApiError = (message: string, code?: string, statusCode?: string, det
   details,
 });
 
-export const wrapApiCall = <T>(apicall: () => Promise<ApiResponse<T>>): AsyncResult<T, ApiError> => {
+export const wrapApiCall = <T>(apicall: () => Promise<AxiosResponse<ApiResponse<T>>>): AsyncResult<T, ApiError> => {
   return wrapAsync(
     async () => {
-      const apiResponse = await apicall();
+      const response = await apicall();
+      const apiResponse = response.data;
       console.log('apiResponse : ', apiResponse);
 
       if (apiResponse.status === 'SUCCESS') {

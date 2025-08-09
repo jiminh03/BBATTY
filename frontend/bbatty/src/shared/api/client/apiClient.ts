@@ -5,24 +5,27 @@ import { setupInterceptors } from './interceptors';
 import { useTokenStore } from '../token/tokenStore';
 
 interface CustomAxiosInstance extends AxiosInstance {
-  get<T = unknown, R = ApiResponse<T>, D = any>(
+  get<T = unknown, R = AxiosResponse<ApiResponse<T>>, D = any>(
     url: string,
     config?: Partial<InternalAxiosRequestConfig<D>>
   ): Promise<R>;
 
-  post<T = unknown, R = ApiResponse<T>, D = any>(
+  post<T = unknown, R = AxiosResponse<ApiResponse<T>>, D = any>(
     url: string,
     data?: D,
     config?: InternalAxiosRequestConfig<D>
   ): Promise<R>;
 
-  put<T = unknown, R = ApiResponse<T>, D = any>(
+  put<T = unknown, R = AxiosResponse<ApiResponse<T>>, D = any>(
     url: string,
     data?: D,
     config?: InternalAxiosRequestConfig<D>
   ): Promise<R>;
 
-  delete<T = unknown, R = ApiResponse<T>, D = any>(url: string, config?: InternalAxiosRequestConfig<D>): Promise<R>;
+  delete<T = unknown, R = AxiosResponse<ApiResponse<T>>, D = any>(
+    url: string,
+    config?: InternalAxiosRequestConfig<D>
+  ): Promise<R>;
 }
 
 // 메인 클라 (일반 API용 - 8080 포트)

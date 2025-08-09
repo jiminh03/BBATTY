@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import { wrapAsync, Result, AsyncResult, isErr, isOk, Err, Ok } from '../../utils/result';
-import { apiClient, extractData } from '..';
+import { apiClient } from '..';
 import { STORAGE_KEYS } from '../../constants/storageKeys';
 import { wrapApiCall } from '../utils/apiWrapper';
 import { Token } from './tokenTypes';

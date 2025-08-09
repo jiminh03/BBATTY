@@ -23,8 +23,6 @@ type UserStore = UserState & UserActions;
 
 export const useUserStore = create<UserStore>((set, get) => ({
   currentUser: null,
-  sessionInfo: null,
-  connectedUsers: {},
   isUserInitialized: false,
 
   initializeUser: async () => {
