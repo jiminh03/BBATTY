@@ -1,5 +1,7 @@
 package com.ssafy.chat.match.controller;
 
+import com.ssafy.chat.common.util.ChatRoomUtils;
+import com.ssafy.chat.config.ChatProperties;
 import com.ssafy.chat.global.constants.ErrorCode;
 import com.ssafy.chat.global.exception.ApiException;
 import com.ssafy.chat.global.response.ApiResponse;
@@ -25,6 +27,8 @@ import java.util.Map;
 public class MatchChatAuthController {
 
     private final MatchChatAuthService matchChatAuthService;
+    private final ChatProperties chatProperties;
+    private final ChatRoomUtils chatRoomUtils;
 
     /**
      * 매칭 채팅방 입장 요청
@@ -48,8 +52,9 @@ public class MatchChatAuthController {
             // 입장 검증 및 세션 토큰 발급
             Map<String, Object> sessionData = matchChatAuthService.validateAndCreateSession(jwtToken, request);
             
-            // WebSocket 접속 링크 생성
-            String websocketUrl = String.format("ws://localhost:8084/ws/match-chat/websocket?token=%s&matchId=%s", 
+            // WebSocket 접속 링크 생성 - 매칭 채팅은 토큰 기반이므로 별도 처리
+            String websocketUrl = String.format("%s/ws/match-chat/websocket?token=%s&matchId=%s",
+                    chatProperties.getWebsocket().getBaseUrl(), 
                     sessionData.get("sessionToken"), request.getMatchId());
 
             // 응답 DTO 생성

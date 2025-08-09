@@ -1,5 +1,7 @@
 package com.ssafy.chat.match.service;
 
+import com.ssafy.chat.common.util.KSTTimeUtil;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.chat.match.dto.MatchChatMessage;
 import com.ssafy.chat.match.kafka.MatchChatKafkaProducer;
@@ -65,15 +67,15 @@ public class MatchChatServiceImpl implements MatchChatService {
     }
     
     @Override
-    public void sendUserJoinEvent(String matchId, Long userId, String userName) {
+    public void sendUserJoinEvent(String matchId, Long userId, String nickname) {
         log.debug("사용자 입장 이벤트 발송 - matchId: {}, userId: {}", matchId, userId);
-        kafkaProducer.sendUserJoinEvent(matchId, userId, userName);
+        kafkaProducer.sendUserJoinEvent(matchId, userId, nickname);
     }
     
     @Override
-    public void sendUserLeaveEvent(String matchId, Long userId, String userName) {
+    public void sendUserLeaveEvent(String matchId, Long userId, String nickname) {
         log.debug("사용자 퇴장 이벤트 발송 - matchId: {}, userId: {}", matchId, userId);
-        kafkaProducer.sendUserLeaveEvent(matchId, userId, userName);
+        kafkaProducer.sendUserLeaveEvent(matchId, userId, nickname);
     }
     
     @Override
@@ -110,7 +112,7 @@ public class MatchChatServiceImpl implements MatchChatService {
         Map<String, Object> systemMessage = Map.of(
                 "messageType", "SYSTEM",
                 "roomId", matchId,
-                "timestamp", LocalDateTime.now().toString(),
+                "timestamp", KSTTimeUtil.nowAsString(),
                 "content", message,
                 "isSystemMessage", true
         );

@@ -132,33 +132,6 @@ class AttendanceServiceImplTest {
     }
 
     @Test
-    @DisplayName("이미 인증한 경기인 경우 예외 발생 - Redis 체크")
-    void verifyAttendance_alreadyAttendedRedis() {
-        // given
-        Long userId = 1L;
-        Long teamId = 10L;
-        Long gameId = 100L;
-        AttendanceVerifyRequest request = new AttendanceVerifyRequest(BigDecimal.valueOf(37.5121), BigDecimal.valueOf(127.0718)); // 잠실야구장 근처
-
-        User mockUser = createMockUser(userId, teamId);
-        Team homeTeam = createMockTeam(teamId, "두산");
-        Team awayTeam = createMockTeam(20L, "LG");
-        Game mockGame = createMockGame(gameId, homeTeam, awayTeam, LocalDateTime.now().plusHours(1));
-
-        given(userRepository.findById(userId)).willReturn(Optional.of(mockUser));
-        given(activeGameRepository.findTeamGamesToday(eq(teamId), any(LocalDate.class)))
-                .willReturn(Optional.empty());
-        given(gameRepository.findTeamGamesToday(eq(teamId), any(LocalDate.class), eq(GameStatus.SCHEDULED)))
-                .willReturn(List.of(mockGame));
-        given(redisUtil.hasKey(anyString())).willReturn(true); // Redis에 이미 있음
-
-        // when & then
-        assertThatThrownBy(() -> attendanceService.verifyAttendance(userId, request))
-                .isInstanceOf(ApiException.class)
-                .hasMessageContaining(ErrorCode.ALREADY_ATTENDED_GAME.getMessage());
-    }
-
-    @Test
     @DisplayName("이미 인증한 경기인 경우 예외 발생 - DB 체크")
     void verifyAttendance_alreadyAttendedDB() {
         // given

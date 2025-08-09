@@ -1,7 +1,5 @@
 package com.ssafy.schedule.domain.crawler.service;
 
-import com.ssafy.schedule.domain.chat.dto.GameListEventDto;
-import com.ssafy.schedule.domain.chat.kafka.ChatEventKafkaProducer;
 import com.ssafy.schedule.global.constant.GameStatus;
 import com.ssafy.schedule.global.entity.Game;
 import com.ssafy.schedule.global.entity.Team;
@@ -103,8 +101,6 @@ public class ScheduledGameService extends BaseCrawlerService {
             return null;
         }
 
-
-
         // 필수 정보 검증
         if (homeTeamName == null || awayTeamName == null || gameTime == null) {
             log.warn("필수 정보 누락 - 홈팀: {}, 원정팀: {}, 시간: {}", homeTeamName, awayTeamName, gameTime);
@@ -159,7 +155,7 @@ public class ScheduledGameService extends BaseCrawlerService {
             
             Game savedGame = gameRepository.save(game);
 
-            // 경기 시작 2시간 전 이벤트 스케줄 등록
+            // 경기 시작 3시간 전 이벤트 스케줄 등록
             gameEventScheduler.scheduleGameStartingEvent(savedGame);
 
             log.info("✅ 예정된 경기 일정 저장: {} vs {} at {}", 

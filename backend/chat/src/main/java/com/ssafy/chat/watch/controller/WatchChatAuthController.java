@@ -1,5 +1,7 @@
 package com.ssafy.chat.watch.controller;
 
+import com.ssafy.chat.common.util.ChatRoomUtils;
+import com.ssafy.chat.config.ChatProperties;
 import com.ssafy.chat.global.constants.ErrorCode;
 import com.ssafy.chat.global.exception.ApiException;
 import com.ssafy.chat.global.response.ApiResponse;
@@ -24,6 +26,8 @@ import java.util.Map;
 public class WatchChatAuthController {
 
     private final WatchChatAuthService watchChatAuthService;
+    private final ChatProperties chatProperties;
+    private final ChatRoomUtils chatRoomUtils;
 
     /**
      * 직관 채팅방 입장 토큰 발급
@@ -44,8 +48,10 @@ public class WatchChatAuthController {
             Map<String, Object> sessionData = watchChatAuthService.validateAndCreateSession(jwtToken, request);
             
             // WebSocket 접속 링크 생성
-            String websocketUrl = String.format("ws://localhost:8084/ws/watch-chat/websocket?token=%s&gameId=%s&teamId=%s", 
-                    sessionData.get("sessionToken"), request.getGameId(), sessionData.get("teamId"));
+            String websocketUrl = chatRoomUtils.buildWatchChatWebSocketUrl(
+                    (String) sessionData.get("sessionToken"), 
+                    request.getGameId(), 
+                    (Long) sessionData.get("teamId"));
             
             // 응답 DTO 생성
             WatchChatJoinResponse response = WatchChatJoinResponse.builder()

@@ -7,8 +7,6 @@ import {
   StyleSheet,
   SafeAreaView,
   Alert,
-  Modal,
-  TextInput,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
@@ -16,6 +14,7 @@ import type { RouteProp } from '@react-navigation/native';
 import { chatRoomApi } from '../../entities/chat-room/api/api';
 import type { MatchChatRoom } from '../../entities/chat-room/api/types';
 import type { ChatStackParamList } from '../../navigation/types';
+import { useUserStore } from '../../entities/user/model/userStore';
 
 type NavigationProp = StackNavigationProp<ChatStackParamList>;
 type RoutePropType = RouteProp<ChatStackParamList, 'MatchChatRoomDetail'>;
@@ -24,11 +23,9 @@ export const MatchChatRoomDetailScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RoutePropType>();
   const { room } = route.params;
+  const { currentUser } = useUserStore();
   
   const [joining, setJoining] = useState(false);
-  const [showJoinModal, setShowJoinModal] = useState(false);
-  const [nickname, setNickname] = useState('');
-  const [winRate, setWinRate] = useState('75');
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -42,40 +39,28 @@ export const MatchChatRoomDetailScreen = () => {
   };
 
   const handleJoinRoom = async () => {
-    if (!nickname.trim()) {
-      Alert.alert('알림', '닉네임을 입력해주세요.');
-      return;
-    }
-
-    if (!winRate || parseInt(winRate) < 0 || parseInt(winRate) > 100) {
-      Alert.alert('알림', '승률은 0-100 사이의 값을 입력해주세요.');
-      return;
-    }
-
     try {
       setJoining(true);
       
       const joinRequest = {
         matchId: room.matchId,
-        nickname: nickname.trim(),
-        winRate: parseInt(winRate),
-        profileImgUrl: 'https://example.com/profile.jpg', // 기본값
-        isVictoryFairy: false, // 기본값
+        nickname: 'eizimod',
+        winRate: 75,
+        profileImgUrl: 'https://example.com/profile.jpg',
+        isWinFairy: true,
       };
 
       const response = await chatRoomApi.joinMatchChat(joinRequest);
       
-      setShowJoinModal(false);
-      
       // 채팅방으로 이동
-      if (response.data.status === 'SUCCESS') {
+      if (response.status === 'SUCCESS') {
         navigation.navigate('MatchChatRoom', { 
           room,
           websocketUrl: response.data.websocketUrl,
           sessionToken: response.data.sessionToken
         });
       } else {
-        Alert.alert('오류', response.data.message || '채팅방 참여에 실패했습니다.');
+        Alert.alert('오류', response.message || '채팅방 참여에 실패했습니다.');
       }
       
     } catch (error) {
@@ -225,77 +210,19 @@ export const MatchChatRoomDetailScreen = () => {
           ) : (
             <TouchableOpacity
               style={[styles.joinButton, { backgroundColor: '#FF6B35' }]}
-              onPress={() => setShowJoinModal(true)}
+              onPress={handleJoinRoom}
+              disabled={joining}
               activeOpacity={0.8}
             >
-              <Text style={styles.joinButtonText}>⚾ 경기 참여하기! 🔥</Text>
+              <Text style={styles.joinButtonText}>
+                {joining ? '⏳ 참여중...' : '⚾ 경기 참여하기! 🔥'}
+              </Text>
               <Text style={styles.joinButtonSubtext}>지금 바로 선수 등록</Text>
             </TouchableOpacity>
           )}
         </View>
       </ScrollView>
 
-      {/* 입장 모달 */}
-      <Modal
-        visible={showJoinModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowJoinModal(false)}
-      >
-        <SafeAreaView style={styles.modalContainer}>
-          <View style={[styles.modalHeader, { backgroundColor: '#2E7D32' }]}>
-            <TouchableOpacity onPress={() => setShowJoinModal(false)}>
-              <Text style={styles.modalCancelButton}>✖️ 취소</Text>
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>⚾ 선수 등록</Text>
-            <TouchableOpacity onPress={handleJoinRoom} disabled={joining}>
-              <Text style={[styles.modalJoinButton, joining && styles.disabledButton]}>
-                {joining ? '⏳ 등록중...' : '🔥 등록'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView style={styles.modalContent}>
-            <View style={styles.playerCardContainer}>
-              <View style={[styles.playerCard, { backgroundColor: teamColors[0] }]}>
-                <Text style={styles.playerCardTitle}>🏆 선수 카드</Text>
-                <Text style={styles.playerCardSubtitle}>{room.teamId} 팬클럽</Text>
-              </View>
-            </View>
-
-            <View style={styles.modalSection}>
-              <Text style={styles.modalLabel}>⚾ 선수명 (닉네임) *</Text>
-              <TextInput
-                style={styles.modalInput}
-                value={nickname}
-                onChangeText={setNickname}
-                placeholder="경기에서 사용할 선수명을 입력하세요"
-                maxLength={20}
-              />
-            </View>
-
-            <View style={styles.modalSection}>
-              <Text style={styles.modalLabel}>📊 시즌 승률 (%)</Text>
-              <TextInput
-                style={styles.modalInput}
-                value={winRate}
-                onChangeText={setWinRate}
-                placeholder="승률을 입력하세요 (0-100)"
-                keyboardType="numeric"
-                maxLength={3}
-              />
-              <Text style={styles.modalHint}>
-                🏅 승률은 다른 선수들에게 표시되어 팀 전력을 보여줍니다.
-              </Text>
-            </View>
-
-            <View style={styles.modalRoomInfo}>
-              <Text style={styles.modalRoomTitle}>🔥 {room.matchTitle}</Text>
-              <Text style={styles.modalRoomDescription}>🏟️ {room.matchDescription}</Text>
-            </View>
-          </ScrollView>
-        </SafeAreaView>
-      </Modal>
     </SafeAreaView>
   );
 };

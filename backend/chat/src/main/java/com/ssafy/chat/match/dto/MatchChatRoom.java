@@ -25,6 +25,9 @@ public class MatchChatRoom {
     private int maxParticipants;
     private int currentParticipants;
     
+    // 최소 승률 조건
+    private int minWinRate;
+    
     // 생성 시간 (ISO String)
     private String createdAt;
     

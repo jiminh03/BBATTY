@@ -1,8 +1,12 @@
 package com.ssafy.chat.watch.service;
 
+import com.ssafy.chat.common.util.KSTTimeUtil;
+
 import com.ssafy.chat.common.util.ChatRoomTTLManager;
+import com.ssafy.chat.common.util.ChatRoomUtils;
 import com.ssafy.chat.common.util.JsonUtils;
 import com.ssafy.chat.common.util.RedisUtil;
+import com.ssafy.chat.config.ChatProperties;
 import com.ssafy.chat.global.constants.ChatRedisKey;
 import com.ssafy.chat.global.constants.ErrorCode;
 import com.ssafy.chat.global.exception.ApiException;
@@ -34,9 +38,8 @@ public class WatchChatServiceImpl implements WatchChatService {
     private final WatchChatRedisSub redisSub;
     private final RedisTemplate<String, Object> redisTemplate;
     private final RedisUtil redisUtil;
-    
-    private static final int TRAFFIC_SPIKE_THRESHOLD = 100; // 최근 3분간 100개 이상
-    private static final int TRAFFIC_WINDOW_MINUTES = 3;
+    private final ChatProperties chatProperties;
+    private final ChatRoomUtils chatRoomUtils;
     
     @Override
     public void addSessionToWatchRoom(String roomId, WebSocketSession session) {
@@ -74,7 +77,7 @@ public class WatchChatServiceImpl implements WatchChatService {
     @Override
     public void incrementTrafficCount(String roomId) {
         try {
-            String currentMinute = LocalDateTime.now()
+            String currentMinute = KSTTimeUtil.now()
                     .format(DateTimeFormatter.ofPattern("yyyyMMddHHmm"));
             String trafficKey = ChatRedisKey.getWatchTrafficKey(roomId, currentMinute);
             
@@ -92,12 +95,12 @@ public class WatchChatServiceImpl implements WatchChatService {
     @Override
     public void checkTrafficSpike(String roomId) {
         try {
-            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime nowTime = KSTTimeUtil.now();
             long totalMessages = 0;
             
             // 최근 N분간의 메시지 수 합계
-            for (int i = 0; i < TRAFFIC_WINDOW_MINUTES; i++) {
-                String minute = now.minusMinutes(i)
+            for (int i = 0; i < chatRoomUtils.getTrafficWindowMinutes(); i++) {
+                String minute = nowTime.minusMinutes(i)
                         .format(DateTimeFormatter.ofPattern("yyyyMMddHHmm"));
                 String key = ChatRedisKey.getWatchTrafficKey(roomId, minute);
                 
@@ -108,9 +111,9 @@ public class WatchChatServiceImpl implements WatchChatService {
             }
             
             // 임계값 초과 시 로그 출력
-            if (totalMessages > TRAFFIC_SPIKE_THRESHOLD) {
+            if (chatRoomUtils.isTrafficSpike(totalMessages)) {
                 log.warn("관전 채팅 트래픽 급증 감지 - roomId: {}, 최근 {}분간 메시지: {}개", 
-                        roomId, TRAFFIC_WINDOW_MINUTES, totalMessages);
+                        roomId, chatRoomUtils.getTrafficWindowMinutes(), totalMessages);
                 
                 // 필요하다면 여기서 알림이나 추가 처리 가능
                 // 예: 관리자 알림, 레이트 리미팅 등

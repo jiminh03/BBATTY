@@ -8,8 +8,6 @@ import { ProfileForm, NicknameConflictModal } from '../../../features/user-profi
 import { styles } from './SignUpScreen.style';
 import { usekakaoStore } from '../../../features/user-auth/model/kakaoStore';
 import { ProfileFormData } from '../../../features/user-profile/model/profileTypes';
-import { RegisterRequest } from '../../../features/user-auth';
-import { navigationRef } from '../../../navigation/navigationRefs';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useUserStore } from '../../../entities/user';
 import { useTokenStore } from '../../../shared/api/token/tokenStore';

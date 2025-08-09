@@ -20,6 +20,15 @@ export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnaut
         const token = useTokenStore.getState().getAccessToken();
         if (token && config.headers) {
           config.headers.Authorization = `Bearer ${token}`;
+          // 매치채팅 입장 시에만 전체 토큰 로깅
+          if (config.url?.includes('/api/match-chat/') || config.url?.includes('/api/watch-chat/')) {
+            console.log('매치채팅 API 요청 URL:', config.url);
+            console.log('전체 JWT 토큰:', token);
+            // 리프레시 토큰도 함께 로깅
+            tokenManager.getRefreshToken().then((refreshToken) => {
+              console.log('리프레시 토큰:', refreshToken || 'null');
+            });
+          }
         }
       }
 
@@ -39,7 +48,7 @@ export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnaut
           console.warn(`잘못된 api 형식 :`, response.data);
         }
       }
-      return response.data;
+      return response;
     },
     async (error: AxiosError) => {
       const originalRequest = error.config;
