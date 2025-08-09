@@ -28,6 +28,8 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Clock;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -39,7 +41,8 @@ import static org.mockito.BDDMockito.*;
 @ActiveProfiles("test")
 @TestPropertySource(properties = {
         "spring.kafka.enabled=false",
-        "spring.task.scheduling.enabled=false"
+        "spring.task.scheduling.enabled=false",
+        "embedded.redis.enabled=false"
 })
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
 class AttendanceServiceImplTest {
@@ -62,6 +65,8 @@ class AttendanceServiceImplTest {
     @InjectMocks
     private AttendanceServiceImpl attendanceService;
 
+    private final LocalDateTime FIXED_GAME_TIME = LocalDateTime.now().plusMinutes(30);
+
     @Test
     @DisplayName("직관 인증 성공 테스트")
     void verifyAttendance_success() {
@@ -74,7 +79,7 @@ class AttendanceServiceImplTest {
         User mockUser = createMockUser(userId, teamId);
         Team homeTeam = createMockTeam(teamId, "두산");
         Team awayTeam = createMockTeam(20L, "LG");
-        Game mockGame = createMockGame(gameId, homeTeam, awayTeam, LocalDateTime.now().plusHours(1));
+        Game mockGame = createMockGame(gameId, homeTeam, awayTeam, FIXED_GAME_TIME);
 
         given(userRepository.findById(userId)).willReturn(Optional.of(mockUser));
         given(gameRepository.findTeamGamesToday(eq(teamId), any(LocalDate.class), eq(GameStatus.SCHEDULED)))
@@ -147,7 +152,7 @@ class AttendanceServiceImplTest {
         User mockUser = createMockUser(userId, teamId);
         Team homeTeam = createMockTeam(teamId, "두산");
         Team awayTeam = createMockTeam(20L, "LG");
-        Game mockGame = createMockGame(gameId, homeTeam, awayTeam, LocalDateTime.now().plusHours(1));
+        Game mockGame = createMockGame(gameId, homeTeam, awayTeam, FIXED_GAME_TIME);
 
         given(userRepository.findById(userId)).willReturn(Optional.of(mockUser));
         given(activeGameRepository.findTeamGamesToday(eq(teamId), any(LocalDate.class)))
@@ -175,7 +180,7 @@ class AttendanceServiceImplTest {
         User mockUser = createMockUser(userId, teamId);
         Team homeTeam = createMockTeam(teamId, "두산");
         Team awayTeam = createMockTeam(20L, "LG");
-        Game mockGame = createMockGame(gameId, homeTeam, awayTeam, LocalDateTime.now().plusHours(1));
+        Game mockGame = createMockGame(gameId, homeTeam, awayTeam, FIXED_GAME_TIME);
 
         given(userRepository.findById(userId)).willReturn(Optional.of(mockUser));
         given(activeGameRepository.findTeamGamesToday(eq(teamId), any(LocalDate.class)))
@@ -206,13 +211,13 @@ class AttendanceServiceImplTest {
         User mockUser = createMockUser(userId, teamId);
         Team homeTeam = createMockTeam(teamId, "두산");
         Team awayTeam = createMockTeam(20L, "LG");
-        Game mockGame = createMockGame(gameId, homeTeam, awayTeam, LocalDateTime.now().plusHours(1));
+        Game mockGame = createMockGame(gameId, homeTeam, awayTeam, FIXED_GAME_TIME);
 
         ActiveGame activeGame = ActiveGame.builder()
                 .gameId(gameId)
                 .homeTeam("두산")
                 .awayTeam("LG")
-                .gameDateTime(LocalDateTime.now().plusHours(1))
+                .gameDateTime(FIXED_GAME_TIME)
                 .stadium("잠실야구장")
                 .status("SCHEDULED")
                 .stadiumLatitude(BigDecimal.valueOf(37.5122))
