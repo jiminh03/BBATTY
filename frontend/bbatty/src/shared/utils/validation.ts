@@ -156,13 +156,12 @@ export const combineValidators = <T = string>(...validators: ValidationRule<T>[]
   };
 };
 
-// 닉네임 전용 통합 검증
+// 닉네임 전용 통합 검증 (연속 문자 검증 제거)
 export const nicknameValidator = combineValidators(
   ValidationRules.required('닉네임을 입력해주세요'),
   ValidationRules.lengthRange(2, 10),
   ValidationRules.nicknameFormat(),
   ValidationRules.noIncompleteKorean(),
-  ValidationRules.noRepeatedChars(),
   ValidationRules.noMeaninglessPattern(),
   ValidationRules.noEmoji()
 );

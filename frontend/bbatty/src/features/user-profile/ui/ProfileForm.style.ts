@@ -52,23 +52,18 @@ export const styles = StyleSheet.create({
     backgroundColor: '#c4c4c4',
   },
 
+  checkButtonActive: {
+    backgroundColor: '#2a2a2aff',
+  },
+
+  checkButtonError: {
+    backgroundColor: '#c4c4c4',
+  },
+
   checkButtonText: {
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
-  },
-
-  // 닉네임 상태 메시지 컨테이너
-  nicknameStatusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-
-  nicknameStatusText: {
-    fontSize: 12,
-    marginLeft: 4,
-    color: '#666',
   },
 
   // 텍스트 영역
@@ -126,7 +121,7 @@ export const styles = StyleSheet.create({
   },
 
   submitButtonActive: {
-    backgroundColor: '#1D467F',
+    backgroundColor: '#2a2a2aff',
   },
 
   submitButtonDisabled: {
