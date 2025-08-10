@@ -5,6 +5,7 @@ import com.ssafy.schedule.domain.crawler.service.FinishedGameService;
 import com.ssafy.schedule.domain.crawler.service.ScheduledGameService;
 import com.ssafy.schedule.domain.crawler.service.TeamRankingService;
 import com.ssafy.schedule.domain.statistics.service.StatisticsUpdateService;
+import com.ssafy.schedule.domain.statistics.service.BadgeUpdateService;
 
 import com.ssafy.schedule.global.entity.Game;
 import com.ssafy.schedule.global.repository.GameRepository;
@@ -29,6 +30,7 @@ public class GameScheduler {
     private final FinishedGameService finishedGameService;
     private final ChatCreateScheduler gameEventScheduler;
     private final StatisticsUpdateService statisticsUpdateService;
+    private final BadgeUpdateService badgeUpdateService;
     private final TeamRankingService teamRankingService;
     private final GameRepository gameRepository;
     private final ChatEventKafkaProducer chatEventKafkaProducer;

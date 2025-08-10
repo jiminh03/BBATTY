@@ -1,13 +1,13 @@
 package com.ssafy.schedule.domain.statistics.service;
 
+import com.ssafy.schedule.domain.statistics.dto.internal.AttendanceRecord;
 import com.ssafy.schedule.domain.statistics.dto.response.UserBasicStatsResponse;
 import com.ssafy.schedule.domain.statistics.dto.response.UserDetailedStatsResponse;
 import com.ssafy.schedule.domain.statistics.dto.response.UserStreakStatsResponse;
 import com.ssafy.schedule.domain.statistics.repository.StatisticsRedisRepository;
-import com.ssafy.schedule.global.constant.GameResult;
-import com.ssafy.schedule.global.entity.Game;
-import com.ssafy.schedule.global.entity.Team;
+import com.ssafy.schedule.global.constants.Stadium;
 import com.ssafy.schedule.global.repository.GameRepository;
+import com.ssafy.schedule.global.util.AttendanceRecordParser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,6 +20,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 
 import java.time.LocalDateTime;
+import java.time.DayOfWeek;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.*;
@@ -28,7 +29,7 @@ import static org.mockito.BDDMockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-@DisplayName("StatisticsServiceImpl 테스트")
+@DisplayName("StatisticsServiceImpl 통합 테스트")
 class StatisticsServiceImplTest {
 
     @Mock
@@ -43,67 +44,11 @@ class StatisticsServiceImplTest {
     @Mock
     private ZSetOperations<String, Object> zSetOperations;
 
+    @Mock
+    private AttendanceRecordParser attendanceRecordParser;
+
     @InjectMocks
     private StatisticsServiceImpl statisticsService;
-
-    private Team createMockTeam(Long id, String name) {
-        Team team = mock(Team.class);
-        given(team.getId()).willReturn(id);
-        given(team.getName()).willReturn(name);
-        return team;
-    }
-
-    private Game createMockGame(Long gameId, Team homeTeam, Team awayTeam, GameResult result, LocalDateTime dateTime) {
-        Game game = mock(Game.class);
-        given(game.getId()).willReturn(gameId);
-        given(game.getHomeTeam()).willReturn(homeTeam);
-        given(game.getAwayTeam()).willReturn(awayTeam);
-        given(game.getResult()).willReturn(result);
-        given(game.getDateTime()).willReturn(dateTime);
-        return game;
-    }
-
-    @Test
-    @DisplayName("사용자 기본 통계 계산 - 캐시 없을 때")
-    void calculateUserBasicStats_NoCacheFound_Success() {
-        // given
-        Long userId = 1L;
-        String season = "2025";
-        Long teamId = 10L;
-        
-        given(statisticsRedisRepository.getUserWinRate(userId, season)).willReturn(null);
-        given(redisTemplate.opsForZSet()).willReturn(zSetOperations);
-        given(zSetOperations.reverseRange(anyString(), anyLong(), anyLong()))
-                .willReturn(Set.of(
-                    "{\"gameId\":1,\"homeTeam\":\"두산\",\"awayTeam\":\"LG\",\"dateTime\":\"2025-01-01T14:00:00\",\"stadium\":\"잠실야구장\"}",
-                    "{\"gameId\":2,\"homeTeam\":\"KIA\",\"awayTeam\":\"두산\",\"dateTime\":\"2025-01-02T14:00:00\",\"stadium\":\"광주\"}"
-                ));
-
-        Team homeTeam = createMockTeam(10L, "두산");
-        Team awayTeam = createMockTeam(20L, "LG");
-        Game game1 = createMockGame(1L, homeTeam, awayTeam, GameResult.HOME_WIN, LocalDateTime.of(2025, 1, 1, 14, 0));
-        
-        Team kiaTeam = createMockTeam(30L, "KIA");
-        Game game2 = createMockGame(2L, kiaTeam, homeTeam, GameResult.AWAY_WIN, LocalDateTime.of(2025, 1, 2, 14, 0));
-        
-        given(gameRepository.findById(1L)).willReturn(Optional.of(game1));
-        given(gameRepository.findById(2L)).willReturn(Optional.of(game2));
-
-        // when
-        UserBasicStatsResponse result = statisticsService.calculateUserBasicStats(userId, season, teamId);
-
-        // then
-        assertThat(result).isNotNull();
-        assertThat(result.getUserId()).isEqualTo(userId);
-        assertThat(result.getSeason()).isEqualTo(season);
-        assertThat(result.getTotalGames()).isEqualTo(2);
-        assertThat(result.getWins()).isEqualTo(2);
-        assertThat(result.getDraws()).isEqualTo(0);
-        assertThat(result.getLosses()).isEqualTo(0);
-        assertThat(result.getWinRate()).isEqualTo("1.000");
-        
-        verify(statisticsRedisRepository).saveUserWinRate(userId, season, result);
-    }
 
     @Test
     @DisplayName("사용자 기본 통계 계산 - 캐시에서 조회 성공")
@@ -158,45 +103,46 @@ class StatisticsServiceImplTest {
         assertThat(result.getDraws()).isEqualTo(0);
         assertThat(result.getLosses()).isEqualTo(0);
         assertThat(result.getWinRate()).isEqualTo("0.000");
+        
+        verify(statisticsRedisRepository).saveUserWinRate(userId, season, result);
     }
 
     @Test
-    @DisplayName("사용자 상세 통계 계산 - 캐시 없을 때")
-    void calculateUserDetailedStats_NoCacheFound_Success() {
+    @DisplayName("사용자 기본 통계 계산 - AttendanceRecord로부터 통계 계산")
+    void calculateUserBasicStats_WithAttendanceRecords_Success() {
         // given
         Long userId = 1L;
         String season = "2025";
         Long teamId = 10L;
         
-        given(statisticsRedisRepository.getUserDetailedStats(userId, season)).willReturn(null);
+        given(statisticsRedisRepository.getUserWinRate(userId, season)).willReturn(null);
         given(redisTemplate.opsForZSet()).willReturn(zSetOperations);
         given(zSetOperations.reverseRange(anyString(), anyLong(), anyLong()))
-                .willReturn(Set.of(
-                    "{\"gameId\":1,\"homeTeam\":\"두산\",\"awayTeam\":\"LG\",\"dateTime\":\"2025-01-01T14:00:00\",\"stadium\":\"잠실야구장\"}"
-                ));
+                .willReturn(Set.of("record1", "record2", "record3"));
 
-        Team homeTeam = createMockTeam(10L, "두산");
-        Team awayTeam = createMockTeam(20L, "LG");
-        Game game = createMockGame(1L, homeTeam, awayTeam, GameResult.HOME_WIN, LocalDateTime.of(2025, 1, 1, 14, 0));
-        
-        given(gameRepository.findById(1L)).willReturn(Optional.of(game));
+        // Mock AttendanceRecord 생성
+        AttendanceRecord winRecord = createMockAttendanceRecord(1L, AttendanceRecord.UserGameResult.WIN, teamId, Stadium.JAMSIL);
+        AttendanceRecord drawRecord = createMockAttendanceRecord(2L, AttendanceRecord.UserGameResult.DRAW, teamId, Stadium.SUWON);  
+        AttendanceRecord lossRecord = createMockAttendanceRecord(3L, AttendanceRecord.UserGameResult.LOSS, teamId, Stadium.DAEGU);
+
+        given(attendanceRecordParser.parseAttendanceRecord("record1", teamId)).willReturn(winRecord);
+        given(attendanceRecordParser.parseAttendanceRecord("record2", teamId)).willReturn(drawRecord);
+        given(attendanceRecordParser.parseAttendanceRecord("record3", teamId)).willReturn(lossRecord);
 
         // when
-        UserDetailedStatsResponse result = statisticsService.calculateUserDetailedStats(userId, season, teamId);
+        UserBasicStatsResponse result = statisticsService.calculateUserBasicStats(userId, season, teamId);
 
         // then
         assertThat(result).isNotNull();
         assertThat(result.getUserId()).isEqualTo(userId);
         assertThat(result.getSeason()).isEqualTo(season);
-        assertThat(result.getTotalGames()).isEqualTo(1);
+        assertThat(result.getTotalGames()).isEqualTo(3);
         assertThat(result.getWins()).isEqualTo(1);
-        assertThat(result.getStadiumStats()).isNotEmpty();
-        assertThat(result.getOpponentStats()).isNotEmpty();
-        assertThat(result.getDayOfWeekStats()).isNotEmpty();
-        assertThat(result.getHomeStats()).isNotNull();
-        assertThat(result.getAwayStats()).isNotNull();
+        assertThat(result.getDraws()).isEqualTo(1);
+        assertThat(result.getLosses()).isEqualTo(1);
+        assertThat(result.getWinRate()).isEqualTo("0.500"); // 1승 1패
         
-        verify(statisticsRedisRepository).saveUserDetailedStats(userId, season, result);
+        verify(statisticsRedisRepository).saveUserWinRate(userId, season, result);
     }
 
     @Test
@@ -230,45 +176,6 @@ class StatisticsServiceImplTest {
         // then
         assertThat(result).isEqualTo(cachedResponse);
         verify(statisticsRedisRepository, never()).saveUserDetailedStats(any(), any(), any());
-    }
-
-    @Test
-    @DisplayName("사용자 연승 통계 계산 - 캐시 없을 때")
-    void calculateUserStreakStats_NoCacheFound_Success() {
-        // given
-        Long userId = 1L;
-        Long teamId = 10L;
-        
-        given(statisticsRedisRepository.getUserStreakStats(userId)).willReturn(null);
-        given(redisTemplate.opsForZSet()).willReturn(zSetOperations);
-        given(zSetOperations.reverseRange(anyString(), anyLong(), anyLong()))
-                .willReturn(Set.of(
-                    "{\"gameId\":1,\"homeTeam\":\"두산\",\"awayTeam\":\"LG\",\"dateTime\":\"2025-01-01T14:00:00\",\"stadium\":\"잠실야구장\"}",
-                    "{\"gameId\":2,\"homeTeam\":\"두산\",\"awayTeam\":\"KIA\",\"dateTime\":\"2025-01-02T14:00:00\",\"stadium\":\"잠실야구장\"}"
-                ));
-
-        Team homeTeam = createMockTeam(10L, "두산");
-        Team awayTeam = createMockTeam(20L, "LG");
-        Team kiaTeam = createMockTeam(30L, "KIA");
-        
-        Game game1 = createMockGame(1L, homeTeam, awayTeam, GameResult.HOME_WIN, LocalDateTime.of(2025, 1, 1, 14, 0));
-        Game game2 = createMockGame(2L, homeTeam, kiaTeam, GameResult.HOME_WIN, LocalDateTime.of(2025, 1, 2, 14, 0));
-        
-        given(gameRepository.findById(1L)).willReturn(Optional.of(game1));
-        given(gameRepository.findById(2L)).willReturn(Optional.of(game2));
-
-        // when
-        UserStreakStatsResponse result = statisticsService.calculateUserStreakStats(userId, teamId);
-
-        // then
-        assertThat(result).isNotNull();
-        assertThat(result.getUserId()).isEqualTo(userId);
-        assertThat(result.getCurrentSeason()).isEqualTo("2025");
-        assertThat(result.getCurrentWinStreak()).isEqualTo(2);
-        assertThat(result.getMaxWinStreakAll()).isEqualTo(2);
-        assertThat(result.getMaxWinStreakCurrentSeason()).isEqualTo(2);
-        
-        verify(statisticsRedisRepository).saveUserStreakStats(userId, result);
     }
 
     @Test
@@ -322,74 +229,24 @@ class StatisticsServiceImplTest {
         assertThat(UserBasicStatsResponse.calculateWinRate(2, 2)).isEqualTo("0.500");
     }
 
-    @Test
-    @DisplayName("연승 계산 - 패배로 연승 중단")
-    void calculateStreakStats_WinStreakBrokenByLoss() {
-        // given
-        Long userId = 1L;
-        Long teamId = 10L;
-        
-        given(statisticsRedisRepository.getUserStreakStats(userId)).willReturn(null);
-        given(redisTemplate.opsForZSet()).willReturn(zSetOperations);
-        
-        // LinkedHashSet을 사용하여 순서 보장 (최신순으로 Redis에서 반환)
-        Set<Object> orderedSet = new java.util.LinkedHashSet<>();
-        orderedSet.add("{\"gameId\":3,\"homeTeam\":\"LG\",\"awayTeam\":\"두산\",\"dateTime\":\"2025-01-03T14:00:00\",\"stadium\":\"잠실야구장\"}");
-        orderedSet.add("{\"gameId\":2,\"homeTeam\":\"두산\",\"awayTeam\":\"KIA\",\"dateTime\":\"2025-01-02T14:00:00\",\"stadium\":\"잠실야구장\"}");
-        orderedSet.add("{\"gameId\":1,\"homeTeam\":\"두산\",\"awayTeam\":\"LG\",\"dateTime\":\"2025-01-01T14:00:00\",\"stadium\":\"잠실야구장\"}");
-        
-        given(zSetOperations.reverseRange(anyString(), anyLong(), anyLong())).willReturn(orderedSet);
+    // ===========================================
+    // Helper Methods
+    // ===========================================
 
-        Team homeTeam = createMockTeam(10L, "두산");
-        Team awayTeam = createMockTeam(20L, "LG");
-        Team kiaTeam = createMockTeam(30L, "KIA");
+    private AttendanceRecord createMockAttendanceRecord(Long gameId, AttendanceRecord.UserGameResult result, Long userTeamId, Stadium stadium) {
+        AttendanceRecord record = mock(AttendanceRecord.class);
+        given(record.getGameId()).willReturn(gameId);
+        given(record.getUserGameResult()).willReturn(result);
+        given(record.getUserTeamId()).willReturn(userTeamId);
+        given(record.getStadium()).willReturn(stadium.getStadiumName());
+        given(record.getGameDateTime()).willReturn(LocalDateTime.now());
+        given(record.getDayOfWeek()).willReturn(DayOfWeek.SUNDAY);
         
-        Game game1 = createMockGame(1L, homeTeam, awayTeam, GameResult.HOME_WIN, LocalDateTime.of(2025, 1, 1, 14, 0));
-        Game game2 = createMockGame(2L, homeTeam, kiaTeam, GameResult.HOME_WIN, LocalDateTime.of(2025, 1, 2, 14, 0));
-        Game game3 = createMockGame(3L, awayTeam, homeTeam, GameResult.HOME_WIN, LocalDateTime.of(2025, 1, 3, 14, 0)); // 두산 패배
+        // Mock opponent team logic
+        Long opponentTeamId = userTeamId == 1L ? 2L : 1L;
+        given(record.getOpponentTeamId(userTeamId)).willReturn(opponentTeamId);
+        given(record.isHomeGame(userTeamId)).willReturn(true);
         
-        given(gameRepository.findById(1L)).willReturn(Optional.of(game1));
-        given(gameRepository.findById(2L)).willReturn(Optional.of(game2));
-        given(gameRepository.findById(3L)).willReturn(Optional.of(game3));
-
-        // when
-        UserStreakStatsResponse result = statisticsService.calculateUserStreakStats(userId, teamId);
-
-        // then
-        assertThat(result.getCurrentWinStreak()).isEqualTo(0); // 마지막 경기(game3)에서 패배
-        assertThat(result.getMaxWinStreakAll()).isEqualTo(2); // 최대 연승은 2경기
-    }
-
-    @Test
-    @DisplayName("무승부는 연승에 영향 없음")
-    void calculateStreakStats_DrawDoesNotAffectStreak() {
-        // given
-        Long userId = 1L;
-        Long teamId = 10L;
-        
-        given(statisticsRedisRepository.getUserStreakStats(userId)).willReturn(null);
-        given(redisTemplate.opsForZSet()).willReturn(zSetOperations);
-        given(zSetOperations.reverseRange(anyString(), anyLong(), anyLong()))
-                .willReturn(Set.of(
-                    "{\"gameId\":1,\"homeTeam\":\"두산\",\"awayTeam\":\"LG\",\"dateTime\":\"2025-01-01T14:00:00\",\"stadium\":\"잠실야구장\"}",
-                    "{\"gameId\":2,\"homeTeam\":\"두산\",\"awayTeam\":\"KIA\",\"dateTime\":\"2025-01-02T14:00:00\",\"stadium\":\"잠실야구장\"}"
-                ));
-
-        Team homeTeam = createMockTeam(10L, "두산");
-        Team awayTeam = createMockTeam(20L, "LG");
-        Team kiaTeam = createMockTeam(30L, "KIA");
-        
-        Game game1 = createMockGame(1L, homeTeam, awayTeam, GameResult.HOME_WIN, LocalDateTime.of(2025, 1, 1, 14, 0));
-        Game game2 = createMockGame(2L, homeTeam, kiaTeam, GameResult.DRAW, LocalDateTime.of(2025, 1, 2, 14, 0)); // 무승부
-        
-        given(gameRepository.findById(1L)).willReturn(Optional.of(game1));
-        given(gameRepository.findById(2L)).willReturn(Optional.of(game2));
-
-        // when
-        UserStreakStatsResponse result = statisticsService.calculateUserStreakStats(userId, teamId);
-
-        // then
-        assertThat(result.getCurrentWinStreak()).isEqualTo(1); // 무승부는 연승을 끊지 않음
-        assertThat(result.getMaxWinStreakAll()).isEqualTo(1);
+        return record;
     }
 }

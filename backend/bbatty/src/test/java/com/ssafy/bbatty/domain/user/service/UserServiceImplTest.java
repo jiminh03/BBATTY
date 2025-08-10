@@ -287,6 +287,9 @@ class UserServiceImplTest {
         // given
         String nickname = "사용가능닉네임";
         Long userId = 1L;
+        User user = createTestUser(userId, "기존닉네임");
+        
+        given(userRepository.findById(userId)).willReturn(Optional.of(user));
         given(userRepository.existsByNickname(nickname)).willReturn(false);
 
         // when
@@ -298,20 +301,19 @@ class UserServiceImplTest {
 
     @Test
     @DisplayName("닉네임 중복 체크 - 본인 닉네임")
-    void isNicknameAvailable_OwnNickname_ReturnTrue() {
+    void isNicknameAvailable_OwnNickname_ReturnFalse() {
         // given
         String nickname = "본인닉네임";
         Long userId = 1L;
         User user = createTestUser(userId, nickname);
         
-        given(userRepository.existsByNickname(nickname)).willReturn(true);
-        given(userRepository.findByNickname(nickname)).willReturn(Optional.of(user));
+        given(userRepository.findById(userId)).willReturn(Optional.of(user));
 
         // when
         boolean result = userService.isNicknameAvailable(nickname, userId);
 
         // then
-        assertThat(result).isTrue();
+        assertThat(result).isFalse(); // 자신의 현재 닉네임과 동일하므로 변경 불필요
     }
 
     @Test
@@ -320,10 +322,10 @@ class UserServiceImplTest {
         // given
         String nickname = "사용중닉네임";
         Long userId = 1L;
-        User otherUser = createTestUser(2L, nickname);
+        User user = createTestUser(userId, "내닉네임");
         
+        given(userRepository.findById(userId)).willReturn(Optional.of(user));
         given(userRepository.existsByNickname(nickname)).willReturn(true);
-        given(userRepository.findByNickname(nickname)).willReturn(Optional.of(otherUser));
 
         // when
         boolean result = userService.isNicknameAvailable(nickname, userId);

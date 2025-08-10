@@ -5,9 +5,8 @@ import com.ssafy.schedule.domain.statistics.dto.response.UserBasicStatsResponse;
 import com.ssafy.schedule.domain.statistics.dto.response.UserDetailedStatsResponse;
 import com.ssafy.schedule.domain.statistics.dto.response.UserStreakStatsResponse;
 import com.ssafy.schedule.domain.statistics.repository.StatisticsRedisRepository;
-import com.ssafy.schedule.global.constant.GameResult;
-import com.ssafy.schedule.global.constant.RedisKey;
-import com.ssafy.schedule.global.entity.Game;
+import com.ssafy.schedule.global.util.AttendanceRecordParser;
+import com.ssafy.schedule.global.constants.RedisKey;
 import com.ssafy.schedule.global.repository.GameRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +29,7 @@ public class StatisticsServiceImpl implements StatisticsService {
     private final StatisticsRedisRepository statisticsRedisRepository;
     private final RedisTemplate<String, Object> redisTemplate;
     private final GameRepository gameRepository;
+    private final AttendanceRecordParser attendanceRecordParser;
 
     @Override
     public UserBasicStatsResponse calculateUserBasicStats(Long userId, String season, Long teamId) {
@@ -111,6 +111,7 @@ public class StatisticsServiceImpl implements StatisticsService {
         log.info("사용자 통계 재계산 완료: userId={}, currentSeason={}", userId, currentSeason);
     }
 
+
     // ===========================================
     // Private Helper Methods
     // ===========================================
@@ -138,7 +139,7 @@ public class StatisticsServiceImpl implements StatisticsService {
         for (Object recordObj : attendanceRecords) {
             try {
                 String recordJson = String.valueOf(recordObj);
-                AttendanceRecord record = parseAttendanceRecord(recordJson, teamId);
+                AttendanceRecord record = attendanceRecordParser.parseAttendanceRecord(recordJson, teamId);
                 if (record != null) {
                     records.add(record);
                 }
@@ -373,132 +374,4 @@ public class StatisticsServiceImpl implements StatisticsService {
         return String.valueOf(dateTime.getYear());
     }
 
-    /**
-     * 사용자 관점에서 경기 결과 계산 (팀 ID 기반)
-     */
-    private AttendanceRecord.UserGameResult calculateUserGameResult(GameResult gameResult, Long userTeamId, Long homeTeamId) {
-        if (gameResult == GameResult.DRAW) {
-            return AttendanceRecord.UserGameResult.DRAW;
-        }
-
-        boolean isUserTeamHome = userTeamId.equals(homeTeamId);
-        boolean isUserTeamWin = (isUserTeamHome && gameResult == GameResult.HOME_WIN) ||
-                (!isUserTeamHome && gameResult == GameResult.AWAY_WIN);
-
-        return isUserTeamWin ? AttendanceRecord.UserGameResult.WIN : AttendanceRecord.UserGameResult.LOSS;
-    }
-
-    /**
-     * JSON 문자열을 AttendanceRecord로 변환
-     * JSON 예시: {"gameId":123,"homeTeam":"KIA","awayTeam":"두산","dateTime":"2024-01-01T14:00:00","stadium":"광주","status":"FINISHED"}
-     */
-    private AttendanceRecord parseAttendanceRecord(String recordJson, Long userTeamId) {
-        try {
-            // gameId 추출
-            Long gameId = extractJsonLong(recordJson);
-            if (gameId == null) {
-                log.warn("JSON에서 gameId를 찾을 수 없음: {}", recordJson);
-                return null;
-            }
-
-            // 기본 정보 추출 (JSON에서)
-            String homeTeam = extractJsonString(recordJson, "homeTeam");
-            String awayTeam = extractJsonString(recordJson, "awayTeam");
-            String dateTimeStr = extractJsonString(recordJson, "dateTime");
-            String stadium = extractJsonString(recordJson, "stadium");
-
-            if (homeTeam == null || awayTeam == null || dateTimeStr == null || stadium == null) {
-                log.warn("JSON에서 필수 필드를 찾을 수 없음: {}", recordJson);
-                return null;
-            }
-
-            // 경기 시간 파싱
-            LocalDateTime gameDateTime = LocalDateTime.parse(dateTimeStr);
-
-            // DB에서 최신 경기 결과 조회 (경기 결과는 실시간으로 변할 수 있음)
-            Optional<Game> gameOpt = gameRepository.findById(gameId);
-            if (gameOpt.isEmpty()) {
-                log.warn("DB에서 게임을 찾을 수 없음: gameId={}", gameId);
-                return null;
-            }
-
-            Game game = gameOpt.get();
-
-
-            return AttendanceRecord.builder()
-                    .userId(null) // 통계 계산에서는 불필요
-                    .gameId(gameId)
-                    .gameDateTime(gameDateTime)
-                    .season(extractSeason(gameDateTime))
-                    .homeTeamId(game.getHomeTeam().getId())
-                    .awayTeamId(game.getAwayTeam().getId())
-                    .userTeamId(userTeamId)
-                    .gameResult(game.getResult()) // DB에서 최신 결과
-                    .stadium(stadium)
-                    .userGameResult(calculateUserGameResult(game.getResult(), userTeamId, game.getHomeTeam().getId()))
-                    .build();
-
-        } catch (Exception e) {
-            log.error("JSON 파싱 실패: {}", recordJson, e);
-            return null;
-        }
-    }
-
-    /**
-     * JSON에서 Long 값 추출
-     */
-    private Long extractJsonLong(String json) {
-        try {
-            String value = extractJsonValue(json, "gameId");
-            return value != null ? Long.valueOf(value) : null;
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    /**
-     * JSON에서 String 값 추출
-     */
-    private String extractJsonString(String json, String key) {
-        return extractJsonValue(json, key);
-    }
-
-    /**
-     * JSON에서 특정 키의 값 추출 (간단한 파서)
-     */
-    private String extractJsonValue(String json, String key) {
-        try {
-            String pattern = "\"" + key + "\":";
-            int startIndex = json.indexOf(pattern);
-            if (startIndex == -1) return null;
-
-            startIndex += pattern.length();
-
-            // 값의 시작 위치 찾기 (공백 제거)
-            while (startIndex < json.length() && Character.isWhitespace(json.charAt(startIndex))) {
-                startIndex++;
-            }
-
-            // 값의 끝 위치 찾기
-            int endIndex;
-            if (json.charAt(startIndex) == '"') {
-                // 문자열 값인 경우
-                startIndex++; // 시작 따옴표 제거
-                endIndex = json.indexOf('"', startIndex);
-            } else {
-                // 숫자 값인 경우
-                endIndex = json.indexOf(',', startIndex);
-                if (endIndex == -1) {
-                    endIndex = json.indexOf('}', startIndex);
-                }
-            }
-
-            if (endIndex == -1) return null;
-
-            return json.substring(startIndex, endIndex).trim();
-        } catch (Exception e) {
-            log.debug("JSON 값 추출 실패: key={}, json={}", key, json, e);
-            return null;
-        }
-    }
 }

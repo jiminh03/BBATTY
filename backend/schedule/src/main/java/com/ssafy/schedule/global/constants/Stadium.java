@@ -1,4 +1,4 @@
-package com.ssafy.schedule.global.constant;
+package com.ssafy.schedule.global.constants;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

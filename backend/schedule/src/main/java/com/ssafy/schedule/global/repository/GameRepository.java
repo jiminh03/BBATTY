@@ -2,7 +2,7 @@ package com.ssafy.schedule.global.repository;
 
 import com.ssafy.schedule.global.entity.Game;
 import com.ssafy.schedule.global.entity.Team;
-import com.ssafy.schedule.global.constant.GameStatus;
+import com.ssafy.schedule.global.constants.GameStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

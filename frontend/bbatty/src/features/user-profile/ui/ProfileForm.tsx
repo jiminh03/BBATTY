@@ -4,8 +4,6 @@ import { ProfileImagePicker } from './ProfileImagePicker';
 import { useProfileForm } from '../hooks/useProfileForm';
 import { styles } from './ProfileForm.style';
 import { ProfileFormData } from '../model/profileTypes';
-import { profileApi } from '../api/profileApi';
-import { isOk } from '../../../shared/utils/result';
 
 export interface ProfileFormProps {
   initialData?: Partial<ProfileFormData>;
@@ -20,72 +18,104 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
   isEditMode = false,
   showNicknameField = true,
 }) => {
-  // 커스텀 훅 사용
-  const { formData, errors, isNicknameAvailable, setIsNicknameAvailable, updateField, validate, setErrors } =
-    useProfileForm({
-      ...initialData,
-      nickname: isEditMode ? initialData.nickname || '' : '',
-    });
-
-  const [isCheckingNickname, setIsCheckingNickname] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  // 닉네임 중복 확인
-  const handleCheckNickname = async () => {
-    // 먼저 유효성 검사
-    if (errors.nickname) return;
+  // 개선된 커스텀 훅 사용
+  const { formData, errors, nicknameStatus, updateField, handleCheckNickname, validate } = useProfileForm({
+    ...initialData,
+    nickname: isEditMode ? initialData.nickname || '' : '',
+  });
 
-    setIsCheckingNickname(true);
-    try {
-      const result = await profileApi.checkNickname({ nickname: formData.nickname });
-
-      if (isOk(result)) {
-        console.log('닉네임 체크 성공:', result.data);
-        setIsNicknameAvailable(result.data.available);
-        if (!result.data.available) {
-          setErrors((prev) => ({ ...prev, nickname: '이미 사용 중인 닉네임입니다' }));
-        }
-      } else {
-        console.error('닉네임 체크 실패:', result.error);
-        setErrors((prev) => ({ ...prev, nickname: '닉네임 확인에 실패했습니다' }));
-      }
-    } catch (error) {
-      console.error('예외 발생:', error);
-    } finally {
-      setIsCheckingNickname(false);
+  // 닉네임 입력 필드 스타일 결정
+  const getNicknameInputStyle = () => {
+    if (errors.nickname) {
+      return [styles.input, styles.nicknameInput, styles.inputError];
     }
+
+    if (nicknameStatus.showSuccess) {
+      return [styles.input, styles.nicknameInput, styles.inputSuccess];
+    }
+
+    return [styles.input, styles.nicknameInput];
+  };
+
+  // 자기소개 입력 필드 스타일 결정
+  const getIntroductionInputStyle = () => {
+    if (errors.introduction) {
+      return [styles.input, styles.textArea, styles.inputError];
+    }
+
+    return [styles.input, styles.textArea];
+  };
+
+  // 닉네임 상태 메시지 렌더링
+  const renderNicknameStatus = () => {
+    if (errors.nickname) {
+      return <Text style={styles.errorText}>{errors.nickname}</Text>;
+    }
+
+    if (nicknameStatus.showSuccess) {
+      return <Text style={styles.successText}>사용 가능한 닉네임입니다</Text>;
+    }
+
+    return null;
+  };
+
+  // 중복체크 버튼 스타일 결정
+  const getCheckButtonStyle = () => {
+    if (!nicknameStatus.canCheck || nicknameStatus.isChecking) {
+      return [styles.checkButton, styles.checkButtonError];
+    }
+
+    if (nicknameStatus.hasError) {
+      return [styles.checkButton, styles.checkButtonError];
+    }
+
+    return [styles.checkButton, styles.checkButtonActive];
+  };
+
+  // 제출 버튼 활성화 상태 결정
+  const isSubmitDisabled = () => {
+    if (isSubmitting) return true;
+
+    // 닉네임 필드가 표시되는 경우
+    if (showNicknameField) {
+      // 편집 모드가 아닌 경우 (신규 가입) - 중복체크 완료 필요
+      if (!isEditMode) {
+        return !nicknameStatus.isAvailable;
+      }
+      // 편집 모드인 경우 - 유효한 닉네임이면 OK
+      return !nicknameStatus.isValid;
+    }
+
+    // 자기소개만 있는 경우
+    return !!errors.introduction;
+  };
+
+  // 제출 버튼 스타일 결정 - 중복체크 버튼과 같은 색상 체계
+  const getSubmitButtonStyle = () => {
+    const disabled = isSubmitDisabled();
+
+    return [styles.submitButton, disabled ? styles.submitButtonDisabled : styles.submitButtonActive];
   };
 
   // 제출
   const handleSubmit = async () => {
     // 전체 검증
     if (!validate()) {
-      console.log('유효하지 않음');
-      return;
-    }
-
-    // 닉네임 중복 확인 체크 (신규 가입 시)
-    if (showNicknameField && !isEditMode && isNicknameAvailable === null) {
-      setErrors((prev) => ({ ...prev, nickname: '닉네임 중복 확인을 해주세요' }));
-      return;
-    }
-
-    if (showNicknameField && !isEditMode && !isNicknameAvailable) {
+      console.log('유효성 검증 실패');
       return;
     }
 
     setIsSubmitting(true);
     try {
       await onSubmit(formData);
+    } catch (error) {
+      console.error('제출 실패:', error);
     } finally {
       setIsSubmitting(false);
     }
   };
-
-  // const isSubmitDisabled =
-  //   (showNicknameField && (!formData.nickname || !!errors.nickname || (!isEditMode && !isNicknameAvailable))) ||
-  //   !!errors.introduction ||
-  //   isSubmitting;
 
   return (
     <>
@@ -98,20 +128,22 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
           </Text>
           <View style={styles.nicknameContainer}>
             <TextInput
-              style={[styles.input, styles.nicknameInput]}
+              style={getNicknameInputStyle()}
               value={formData.nickname}
               onChangeText={(text) => updateField('nickname', text)}
-              placeholder='닉네임을 입력해주세요'
-              maxLength={10}
+              placeholder='2~10글자 사이로 입력해주세요'
+              maxLength={20} // 10글자 초과 입력 감지를 위해 여유있게 설정
               editable={!isEditMode}
+              autoCorrect={false}
+              autoCapitalize='none'
             />
             {!isEditMode && (
               <TouchableOpacity
-                style={styles.checkButton}
+                style={getCheckButtonStyle()}
                 onPress={handleCheckNickname}
-                disabled={!formData.nickname || !!errors.nickname || isCheckingNickname}
+                disabled={!nicknameStatus.canCheck || nicknameStatus.isChecking}
               >
-                {isCheckingNickname ? (
+                {nicknameStatus.isChecking ? (
                   <ActivityIndicator size='small' color='#FFFFFF' />
                 ) : (
                   <Text style={styles.checkButtonText}>중복확인</Text>
@@ -119,31 +151,32 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
               </TouchableOpacity>
             )}
           </View>
-          {errors.nickname && <Text style={styles.errorText}>{errors.nickname}</Text>}
-          {isNicknameAvailable && !isEditMode && <Text style={styles.successText}>사용 가능한 닉네임입니다</Text>}
+          {renderNicknameStatus()}
         </View>
       )}
 
       <View style={styles.inputSection}>
         <Text style={styles.label}>자기소개</Text>
         <TextInput
-          style={[styles.input, styles.textArea]}
+          style={getIntroductionInputStyle()}
           value={formData.introduction}
           onChangeText={(text) => updateField('introduction', text)}
-          placeholder='자기소개를 입력해주세요'
+          placeholder='간단한 자기소개를 입력해주세요'
           multiline
           maxLength={50}
           textAlignVertical='top'
         />
-        <Text style={styles.charCount}>{formData.introduction?.length}/50</Text>
-        {errors.introduction && <Text style={styles.errorText}>{errors.introduction}</Text>}
+        <View style={styles.introductionFooter}>
+          {errors.introduction ? (
+            <Text style={styles.errorText}>{errors.introduction}</Text>
+          ) : (
+            <View style={styles.introductionFooterEmpty} />
+          )}
+          <Text style={styles.charCount}>{formData.introduction?.length || 0}/50</Text>
+        </View>
       </View>
 
-      <TouchableOpacity
-        style={[styles.submitButton /*{ backgroundColor: isSubmitDisabled ? '#CCCCCC' : theme.colors.text.primary }*/]}
-        onPress={handleSubmit}
-        // disabled={isSubmitDisabled}
-      >
+      <TouchableOpacity style={getSubmitButtonStyle()} onPress={handleSubmit} disabled={isSubmitDisabled()}>
         {isSubmitting ? (
           <ActivityIndicator size='small' color='#FFFFFF' />
         ) : (
