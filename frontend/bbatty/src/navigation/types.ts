@@ -31,10 +31,8 @@ export type MainTabParamList = {
 // 홈 스택 파라미터
 export type HomeStackParamList = {
   Home: undefined;
-  PostForm: undefined;
-  PostList: {
-    teamId: number;
-  };
+  PostForm: { postId?: number } | undefined; 
+  PostList: {teamId?: number} | undefined;
   PostDetail: {
     postId: number;
   };

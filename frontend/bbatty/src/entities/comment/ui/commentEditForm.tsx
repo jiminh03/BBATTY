@@ -2,42 +2,33 @@
 import React, { useState } from 'react';
 import { View, TextInput, Button } from 'react-native';
 import { useUpdateComment } from '../queries/useCommentQueries';
-import { useCommentStore } from '../model/store';
 
 interface Props {
-  commentId: string;
+  postId: number;
+  commentId: string;           // ✅ string으로
   initialContent: string;
 }
 
-export const CommentEditForm: React.FC<Props> = ({ commentId, initialContent }) => {
+export const CommentEditForm: React.FC<Props> = ({ postId, commentId, initialContent }) => {
   const [content, setContent] = useState(initialContent);
-  const updateComment = useUpdateComment(/* postId 필요하면 prop으로 전달 */ 0);
-  const { setEditingCommentId } = useCommentStore();
+  const update = useUpdateComment(postId);
 
   const handleUpdate = () => {
-    if (!content.trim()) {
-      // 토스트 써도 됨
-      return;
-    }
-    updateComment.mutate(
-      { commentId, content },
-      {
-        onSuccess: () => setEditingCommentId(null),
-      }
-    );
+    const msg = content.trim();
+    if (!msg) return;
+    update.mutate({ commentId, content }); // ✅ string 그대로 전달
   };
 
   return (
     <View style={{ marginTop: 8 }}>
       <TextInput
-        multiline
+        style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 6, padding: 10, minHeight: 60 }}
         value={content}
         onChangeText={setContent}
-        style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 6, padding: 10, minHeight: 60 }}
+        multiline
       />
-      <View style={{ marginTop: 8 }}>
-        <Button title="저장" onPress={handleUpdate} />
-      </View>
+      <View style={{ height: 8 }} />
+      <Button title={update.isPending ? '저장 중...' : '저장'} onPress={handleUpdate} disabled={update.isPending} />
     </View>
   );
 };

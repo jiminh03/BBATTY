@@ -1,13 +1,20 @@
 // entities/comment/queries/useCommentQueries.ts
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { InfiniteData, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { commentApi } from '../api/api';
 import { CreateCommentPayload, DeleteCommentPayload, UpdateCommentPayload, CommentListResponse } from '../api/types';
 import { useUserStore } from '../../user/model/userStore'; // 카카오 로그인으로 저장된 유저
 
 export const useCommentListQuery = (postId: number, pageSize = 10) =>
-  useInfiniteQuery<CommentListResponse, Error, CommentListResponse, ['comments', number, number], number>({
+  useInfiniteQuery<
+    CommentListResponse,                // TQueryFnData
+    Error,                              // TError
+    InfiniteData<CommentListResponse>,  // TData ✅
+    ['comments', number, number],       // TQueryKey
+    number                              // TPageParam
+  >({
     queryKey: ['comments', postId, pageSize],
-    queryFn: ({ pageParam = 0 }) => commentApi.getComments({ postId, page: pageParam, size: pageSize }),
+    queryFn: ({ pageParam = 0 }) =>
+      commentApi.getComments({ postId, page: pageParam, size: pageSize }),
     initialPageParam: 0,
     getNextPageParam: (last) => (last.hasMore ? last.page + 1 : undefined),
   });
@@ -37,7 +44,9 @@ export const useCreateComment = (postId: number) => {
 export const useUpdateComment = (postId: number) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: UpdateCommentPayload) => commentApi.updateComment(payload),
+    // ✅ commentId: string 유지
+    mutationFn: (payload: { commentId: string; content: string }) =>
+      commentApi.updateComment(payload),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['comments', postId] }),
   });
 };
@@ -45,7 +54,9 @@ export const useUpdateComment = (postId: number) => {
 export const useDeleteComment = (postId: number) => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: DeleteCommentPayload) => commentApi.deleteComment(payload),
+    // ✅ commentId: string 유지
+    mutationFn: (payload: { commentId: string }) =>
+      commentApi.deleteComment(payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['comments', postId] });
       qc.invalidateQueries({ queryKey: ['post', postId] });
