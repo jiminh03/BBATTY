@@ -64,14 +64,10 @@ public class UserController {
     public ResponseEntity<ApiResponse<Object>> getUserStats(
             @RequestParam(required = false) Long userId,
             @RequestParam(required = false) String season,        // "total", "2025", "2024" 등 (디폴트: 현재 연도)
-            @RequestParam(required = false) String stadium,       // 구장별
-            @RequestParam(required = false) String opponent,      // 상대팀별  
-            @RequestParam(required = false) String dayOfWeek,     // 요일별
-            @RequestParam(required = false) String homeAway,      // "home" or "away"
+            @RequestParam(required = false) String type,          // "basic", "streak", "stadium", "opponent", "dayOfWeek", "homeAway"
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
         Long targetUserId = (userId != null) ? userId : userPrincipal.getUserId();
-        Object response = userService.getUserStats(targetUserId, userPrincipal.getUserId(), 
-                                                   season, stadium, opponent, dayOfWeek, homeAway);
+        Object response = userService.getUserStats(targetUserId, userPrincipal.getUserId(), season, type);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

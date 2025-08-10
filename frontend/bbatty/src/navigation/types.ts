@@ -7,6 +7,8 @@ import { CompositeScreenProps } from '@react-navigation/native';
 export type RootStackParamList = {
   AuthStack: NavigatorScreenParams<AuthStackParamList>;
   MainTabs: NavigatorScreenParams<MainTabParamList>;
+  // 직관 인증 화면
+  AttendanceVerification: undefined;
 };
 
 // 인증 스택 파라미터

@@ -4,14 +4,14 @@ import { CreatePostPayload, CursorPostListResponse } from '../api/types'
 import { Post } from '../model/types';
 
 // 무한스크롤 게시글 목록
-export const usePostListQuery = (teamId: number) => {           // ✅ teamId 받기
-  return useInfiniteQuery<CursorPostListResponse>({
-    queryKey: ['posts', teamId],
-    queryFn: ({ pageParam = undefined }) => postApi.getPosts(teamId, pageParam as number),
+export const usePostListQuery = (teamId: number) =>
+  useInfiniteQuery<CursorPostListResponse>({
+    queryKey: ['posts', teamId],                               // ✅ teamId 포함
+    queryFn: ({ pageParam = undefined }) =>
+      postApi.getPosts(teamId, pageParam as number | undefined),
     initialPageParam: undefined,
-    getNextPageParam: (lastPage) => (lastPage.hasNext ? lastPage.nextCursor : undefined),
+    getNextPageParam: (last) => (last?.hasNext ? last.nextCursor : undefined),
   });
-};
 
 // 게시글 생성
 export const useCreatePost = () => {

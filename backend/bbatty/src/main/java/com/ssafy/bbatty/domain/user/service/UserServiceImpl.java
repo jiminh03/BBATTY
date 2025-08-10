@@ -52,8 +52,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Object getUserStats(Long targetUserId, Long currentUserId, String season, String stadium, 
-                              String opponent, String dayOfWeek, String homeAway) {
+    public Object getUserStats(Long targetUserId, Long currentUserId, String season, String type) {
         // 본인이 아니면 statsPublic 검증
         if (!targetUserId.equals(currentUserId)) {
             User user = findUserById(targetUserId);
@@ -63,7 +62,7 @@ public class UserServiceImpl implements UserService {
         }
         
         // 레디스에서 사용자 통계 조회
-        return getUserStatsFromRedis(targetUserId, season, stadium, opponent, dayOfWeek, homeAway);
+        return getUserStatsFromRedis(targetUserId, season, type);
     }
 
     @Override
@@ -127,47 +126,121 @@ public class UserServiceImpl implements UserService {
     /**
      * 레디스에서 사용자 통계 조회
      */
-    private Map<String, Object> getUserStatsFromRedis(Long userId, String season, String stadium, 
-                                                     String opponent, String dayOfWeek, String homeAway) {
+    private Object getUserStatsFromRedis(Long userId, String season, String type) {
         // 시즌 기본값 설정 (현재 연도)
         if (season == null) {
             season = String.valueOf(LocalDate.now().getYear());
         }
         
-        String key = RedisKey.STATS_USER_DETAILED + userId + ":" + season;
-        Map<String, String> allStats = redisUtil.getHashAll(key);
+        // type 기본값 설정
+        if (type == null) {
+            type = "basic";
+        }
+
+        return switch (type) {
+            case "basic" -> getUserBasicStatsFromRedis(userId, season);
+            case "streak" -> getUserStreakStatsFromRedis(userId);
+            case "stadium" -> getCategoryStatsFromRedis(userId, season, "stadiumStats");
+            case "opponent" -> getCategoryStatsFromRedis(userId, season, "opponentStats");
+            case "dayOfWeek" -> getCategoryStatsFromRedis(userId, season, "dayOfWeekStats");
+            case "homeAway" -> getHomeAwayStatsFromRedis(userId, season);
+            default -> throw new ApiException(ErrorCode.BAD_REQUEST);
+        };
+    }
+    
+    /**
+     * 기본 통계 조회
+     */
+    private Object getUserBasicStatsFromRedis(Long userId, String season) {
+        String key = RedisKey.STATS_USER_WINRATE + userId + ":" + season;
+        Object cached = redisUtil.getValue(key, Object.class);
         
-        if (allStats.isEmpty()) {
+        if (cached == null) {
             return Map.of(
+                "userId", userId,
+                "season", season,
                 "totalGames", 0,
                 "wins", 0,
                 "draws", 0,
                 "losses", 0,
-                "winRate", 0.0
+                "winRate", "0.000"
             );
         }
         
-        // 필터링 적용
-        Map<String, Object> filteredStats = new HashMap<>();
+        return cached;
+    }
+    
+    /**
+     * 특정 카테고리 통계 조회 (구장별, 상대팀별, 요일별)
+     */
+    private Object getCategoryStatsFromRedis(Long userId, String season, String categoryKey) {
+        String key = RedisKey.STATS_USER_DETAILED + userId + ":" + season;
+        Object cached = redisUtil.getValue(key, Object.class);
         
-        // 전체 통계
-        if (stadium == null && opponent == null && dayOfWeek == null && homeAway == null) {
-            filteredStats.put("totalGames", Integer.parseInt(allStats.getOrDefault("totalGames", "0")));
-            filteredStats.put("wins", Integer.parseInt(allStats.getOrDefault("wins", "0")));
-            filteredStats.put("draws", Integer.parseInt(allStats.getOrDefault("draws", "0")));
-            filteredStats.put("losses", Integer.parseInt(allStats.getOrDefault("losses", "0")));
-            filteredStats.put("winRate", Double.parseDouble(allStats.getOrDefault("winRate", "0.0")));
-        } else {
-            // 필터링된 통계 (구장별, 상대팀별 등)
-            String filterKey = buildFilterKey(stadium, opponent, dayOfWeek, homeAway);
-            filteredStats.put("totalGames", Integer.parseInt(allStats.getOrDefault(filterKey + "_games", "0")));
-            filteredStats.put("wins", Integer.parseInt(allStats.getOrDefault(filterKey + "_wins", "0")));
-            filteredStats.put("draws", Integer.parseInt(allStats.getOrDefault(filterKey + "_draws", "0")));
-            filteredStats.put("losses", Integer.parseInt(allStats.getOrDefault(filterKey + "_losses", "0")));
-            filteredStats.put("winRate", Double.parseDouble(allStats.getOrDefault(filterKey + "_winRate", "0.0")));
+        if (cached == null) {
+            return Map.of(categoryKey, Map.of());
         }
         
-        return filteredStats;
+        // UserDetailedStatsResponse에서 해당 카테고리만 추출
+        if (cached instanceof Map) {
+            Map<String, Object> detailedStats = (Map<String, Object>) cached;
+            Object categoryStats = detailedStats.get(categoryKey);
+            return Map.of(categoryKey, categoryStats != null ? categoryStats : Map.of());
+        }
+        
+        return Map.of(categoryKey, Map.of());
+    }
+    
+    /**
+     * 홈/원정 통계 조회
+     */
+    private Object getHomeAwayStatsFromRedis(Long userId, String season) {
+        String key = RedisKey.STATS_USER_DETAILED + userId + ":" + season;
+        Object cached = redisUtil.getValue(key, Object.class);
+        
+        if (cached == null) {
+            return Map.of(
+                "homeStats", Map.of(),
+                "awayStats", Map.of()
+            );
+        }
+        
+        // UserDetailedStatsResponse에서 홈/원정 통계만 추출
+        if (cached instanceof Map) {
+            Map<String, Object> detailedStats = (Map<String, Object>) cached;
+            Object homeStats = detailedStats.get("homeStats");
+            Object awayStats = detailedStats.get("awayStats");
+            return Map.of(
+                "homeStats", homeStats != null ? homeStats : Map.of(),
+                "awayStats", awayStats != null ? awayStats : Map.of()
+            );
+        }
+        
+        return Map.of(
+            "homeStats", Map.of(),
+            "awayStats", Map.of()
+        );
+    }
+    
+    /**
+     * 연승 통계 조회
+     */
+    private Object getUserStreakStatsFromRedis(Long userId) {
+        String key = RedisKey.STATS_USER_STREAK + userId;
+        Object cached = redisUtil.getValue(key, Object.class);
+        
+        if (cached == null) {
+            return Map.of(
+                "userId", userId,
+                "currentSeason", String.valueOf(LocalDate.now().getYear()),
+                "currentWinStreak", 0,
+                "maxWinStreakAll", 0,
+                "maxWinStreakCurrentSeason", 0,
+                "maxWinStreakBySeason", Map.of()
+            );
+        }
+        
+        return cached;
     }
 
     /**
@@ -203,26 +276,7 @@ public class UserServiceImpl implements UserService {
                 result.put("nextCursor", lastScore);
             }
         }
-        
-        return result;
-    }
 
-    /**
-     * 필터 조건으로 키 생성
-     */
-    private String buildFilterKey(String stadium, String opponent, String dayOfWeek, String homeAway) {
-        StringBuilder sb = new StringBuilder();
-        
-        if (stadium != null) sb.append("stadium_").append(stadium).append("_");
-        if (opponent != null) sb.append("opponent_").append(opponent).append("_");
-        if (dayOfWeek != null) sb.append("day_").append(dayOfWeek).append("_");
-        if (homeAway != null) sb.append("location_").append(homeAway).append("_");
-        
-        // 마지막 언더스코어 제거
-        if (sb.length() > 0) {
-            sb.setLength(sb.length() - 1);
-        }
-        
-        return sb.toString();
+        return result;
     }
 }
