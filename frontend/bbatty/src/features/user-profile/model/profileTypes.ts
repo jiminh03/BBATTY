@@ -61,7 +61,7 @@ export interface KakaoUserInfo {
 }
 
 export interface CheckNicknameResponse {
-  data: boolean;
+  available: boolean;
 }
 
 export interface RegisterResponse {
