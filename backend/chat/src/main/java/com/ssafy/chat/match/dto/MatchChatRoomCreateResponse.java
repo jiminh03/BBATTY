@@ -20,6 +20,9 @@ public class MatchChatRoomCreateResponse {
         private String genderCondition;
         private int maxParticipants;
         private int currentParticipants;
+        
+        // 최소 승률 조건
+        private int minWinRate;
 
         // 생성 시간
         private String createdAt;

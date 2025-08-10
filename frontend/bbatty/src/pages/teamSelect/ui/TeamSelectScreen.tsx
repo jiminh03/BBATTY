@@ -6,7 +6,7 @@ import { AuthStackScreenProps } from '../../../navigation/types';
 import { haptic } from '../../../shared';
 import { TeamGrid } from './TeamGrid';
 import { TeamConfirmModal } from './TeamConfirmModal';
-import { TEAMS } from '../../../entities/team/model/teamTypes';
+import { TEAMS } from '../../../shared/team/teamTypes';
 import { styles } from './TeamSelectScreen.styles';
 
 export default function TeamSelectScreen() {
@@ -26,13 +26,10 @@ export default function TeamSelectScreen() {
     if (!selectedTeamId) return;
 
     try {
-      // 선택한 팀 정보 가져오기
+      // 선택한 팀 정보 가져오기, 수정
       const selectedTeam = TEAMS.find((team) => team.id === selectedTeamId)!;
-      navigation.navigate('AuthStack', {
-        screen: 'SignUp',
-        params: {
-          teamId: selectedTeam.id,
-        },
+      navigation.navigate('SignUp', {
+        teamId: selectedTeam.id,
       });
     } catch (error) {
       Alert.alert('오류', '팀 선택에 실패했습니다. 다시 시도해주세요.');

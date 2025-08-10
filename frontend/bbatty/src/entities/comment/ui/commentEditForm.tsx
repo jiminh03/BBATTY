@@ -1,58 +1,34 @@
-// comment/ui/CommentEditForm.tsx
-import React, { useState } from 'react'
-import { useUpdateComment } from '../queries/useCommentQueries'
-import { useCommentStore } from '../model/store'
-import { isValidComment } from '../utils/validation'
+// entities/comment/ui/commentEditForm.tsx
+import React, { useState } from 'react';
+import { View, TextInput, Button } from 'react-native';
+import { useUpdateComment } from '../queries/useCommentQueries';
 
-interface CommentEditFormProps {
-  commentId: string
-  initialContent: string
+interface Props {
+  postId: number;
+  commentId: string;           // ✅ string으로
+  initialContent: string;
 }
 
-export const CommentEditForm: React.FC<CommentEditFormProps> = ({
-  commentId,
-  initialContent,
-}) => {
-  const [content, setContent] = useState(initialContent)
-  const updateComment = useUpdateComment()
-  const { setEditingCommentId } = useCommentStore()
+export const CommentEditForm: React.FC<Props> = ({ postId, commentId, initialContent }) => {
+  const [content, setContent] = useState(initialContent);
+  const update = useUpdateComment(postId);
 
   const handleUpdate = () => {
-    if (!isValidComment(content)) {
-      alert('댓글은 1자 이상 200자 이하여야 합니다.')
-      return
-    }
-
-    updateComment.mutate(
-      { commentId, content },
-      {
-        onSuccess: () => {
-          setEditingCommentId(null) // 수정 종료
-        },
-      }
-    )
-  }
-
-  const handleCancel = () => {
-    setEditingCommentId(null)
-  }
+    const msg = content.trim();
+    if (!msg) return;
+    update.mutate({ commentId, content }); // ✅ string 그대로 전달
+  };
 
   return (
-    <div style={{ marginTop: '0.5rem' }}>
-      <textarea
+    <View style={{ marginTop: 8 }}>
+      <TextInput
+        style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 6, padding: 10, minHeight: 60 }}
         value={content}
-        onChange={(e) => setContent(e.target.value)}
-        rows={3}
-        style={{ width: '100%' }}
+        onChangeText={setContent}
+        multiline
       />
-      <div style={{ marginTop: '0.5rem' }}>
-        <button onClick={handleUpdate} style={{ marginRight: '0.5rem' }}>
-          저장
-        </button>
-        <button onClick={handleCancel} style={{ color: 'gray' }}>
-          취소
-        </button>
-      </div>
-    </div>
-  )
-}
+      <View style={{ height: 8 }} />
+      <Button title={update.isPending ? '저장 중...' : '저장'} onPress={handleUpdate} disabled={update.isPending} />
+    </View>
+  );
+};

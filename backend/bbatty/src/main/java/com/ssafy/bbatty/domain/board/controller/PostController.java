@@ -175,4 +175,19 @@ public class PostController {
         }
     }
 
+    /**
+     * 팀별 게시글 제목 검색
+     */
+    @GetMapping("/team/{teamId}/search")
+    public ResponseEntity<ApiResponse<PostListPageResponse>> searchPostsByTeam(
+            @PathVariable Long teamId,
+            @RequestParam String keyword,
+            @RequestParam(required = false) Long cursor) {
+        
+        PostListPageResponse response = postService.searchPostsByTeam(teamId, keyword, cursor);
+        
+        return ResponseEntity.status(SuccessCode.SUCCESS_DEFAULT.getStatus())
+                .body(ApiResponse.success(SuccessCode.SUCCESS_DEFAULT, response));
+    }
+
 }

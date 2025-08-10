@@ -232,5 +232,50 @@ public class PostServiceImpl implements PostService {
         return new PostListPageResponse(posts, hasNext, nextCursor);
     }
 
+    /*
+    팀별 게시글 제목 검색
+    */
+    @Override
+    public PostListPageResponse searchPostsByTeam(Long teamId, String keyword, Long cursor) {
+        // 검색 키워드 전처리
+        if (keyword == null || keyword.trim().isEmpty()) {
+            throw new ApiException(ErrorCode.BAD_REQUEST);
+        }
+        
+        // MySQL FULLTEXT 검색을 위한 키워드 포맷팅 - 여러 방법 시도
+        String formattedKeyword = keyword.trim();  // 일단 단순한 키워드로 시도
+        
+        Pageable pageable = PageRequest.of(0, PAGE_SIZE);
+        Page<Post> postPage;
+        log.info("[검색 디버깅] teamId : {}, keyword : {}, formattedKeyword : {}, pageable : {}", teamId, keyword, formattedKeyword, pageable);
+
+        if (cursor == null) {
+            // 첫 페이지 - 팀별 제목 검색
+            postPage = postRepository.findByTeamIdAndTitleSearchOrderByIdDesc(teamId, formattedKeyword, pageable);
+        } else {
+            // 다음 페이지 - 팀별 제목 검색 + 커서 기반 페이징
+            postPage = postRepository.findByTeamIdAndTitleSearchAndIdLessThanOrderByIdDesc(teamId, formattedKeyword, cursor, pageable);
+        }
+
+        List<PostListResponse> posts = postPage.getContent()
+                .stream()
+                .map(post -> {
+                    PostListResponse response = new PostListResponse(post);
+                    response.setViewCount(postCountService.getViewCount(post.getId()));
+                    response.setLikeCount(postCountService.getLikeCount(post.getId()));
+                    response.setCommentCount(postCountService.getCommentCount(post.getId()));
+                    return response;
+                })
+                .collect(Collectors.toList());
+
+        boolean hasNext = postPage.hasNext();
+        Long nextCursor = null;
+
+        if (hasNext && !posts.isEmpty()) {
+            nextCursor = posts.getLast().getId();
+        }
+
+        return new PostListPageResponse(posts, hasNext, nextCursor);
+    }
 
 }

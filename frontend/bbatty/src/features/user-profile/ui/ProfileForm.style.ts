@@ -1,5 +1,4 @@
 import { StyleSheet } from 'react-native';
-import { Colors } from 'react-native/Libraries/NewAppScreen';
 
 export const styles = StyleSheet.create({
   // 입력 필드
@@ -23,8 +22,10 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
+    borderColor: '#E0E0E0',
   },
 
+  // 닉네임 관련 스타일
   nicknameContainer: {
     flexDirection: 'row',
     gap: 8,
@@ -34,12 +35,29 @@ export const styles = StyleSheet.create({
     flex: 1,
   },
 
+  // 닉네임 입력 상태별 스타일
+  inputError: {
+    borderColor: '#dc4e4e',
+  },
+
+  inputSuccess: {
+    borderColor: '#25d231',
+  },
+
   checkButton: {
     paddingHorizontal: 20,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#c4c4c4ff',
+    backgroundColor: '#c4c4c4',
+  },
+
+  checkButtonActive: {
+    backgroundColor: '#2a2a2aff',
+  },
+
+  checkButtonError: {
+    backgroundColor: '#c4c4c4',
   },
 
   checkButtonText: {
@@ -48,25 +66,39 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
+  // 텍스트 영역
   textArea: {
     height: 100,
     paddingTop: 12,
+    textAlignVertical: 'top',
+  },
+
+  // 자기소개 하단 정보 컨테이너
+  introductionFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
+
+  introductionFooterEmpty: {
+    // 에러가 없을 때 빈 공간 유지용
   },
 
   charCount: {
     fontSize: 12,
     textAlign: 'right',
-    marginTop: 4,
+    color: '#666',
   },
 
+  // 상태별 텍스트 스타일
   errorText: {
-    color: '#dc4e4eff',
+    color: '#dc4e4e',
     fontSize: 12,
     marginTop: 4,
   },
 
   successText: {
-    color: '#25d231ff',
+    color: '#25d231',
     fontSize: 12,
     marginTop: 4,
   },
@@ -85,6 +117,14 @@ export const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#CCCCCC',
+  },
+
+  submitButtonActive: {
+    backgroundColor: '#2a2a2aff',
+  },
+
+  submitButtonDisabled: {
     backgroundColor: '#CCCCCC',
   },
 

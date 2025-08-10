@@ -5,7 +5,6 @@ export * from './types/errors';
 
 export * from './client/config';
 export * from './client/apiClient';
-export * from './client/tokenManager';
 
 export * from './utils/errorHandler';
 export * from './utils/retry';

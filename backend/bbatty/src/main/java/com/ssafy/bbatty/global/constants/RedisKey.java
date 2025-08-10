@@ -19,7 +19,7 @@ public class RedisKey {
     // ATTENDANCE 도메인 - 직관 인증 관련
     // ===========================================
 
-    /** 당일 직관 인증한 전체 사용자 목록: attendance:daily:attendees:{date} (Set) */
+    /** 당일 직관 인증한 전체 사용자 목록: attendance:daily:attendees:{date} (Hash - userId: teamId:gameId) */
     public static final String ATTENDANCE_DAILY_ATTENDEES = "attendance:daily:attendees:";
 
     /** 활성 경기 목록: attendance:active:games:{date} */
@@ -72,4 +72,17 @@ public class RedisKey {
 
     /** 팀내 백분위: ranking:percentile:team:{team_id}:{user_id} */
     public static final String RANKING_PERCENTILE_TEAM = "ranking:percentile:team:";
+
+    // ===========================================
+    // BADGE 도메인 - 뱃지 획득 여부
+    // ===========================================
+
+    /** 사용자 구장 뱃지 획득 여부: badge:stadium:{user_id}:{stadium_name} */
+    public static final String BADGE_STADIUM = "badge:stadium:";
+
+    /** 사용자 시즌 승리 뱃지 획득 여부: badge:wins:{user_id}:{season}:{win_count} */
+    public static final String BADGE_WINS = "badge:wins:";
+
+    /** 사용자 시즌 직관 경기 뱃지 획득 여부: badge:games:{user_id}:{season}:{game_count} */
+    public static final String BADGE_GAMES = "badge:games:";
 }

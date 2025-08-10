@@ -23,14 +23,6 @@ export const ErrorCodes = {
 
 export type ErrorCode = (typeof ErrorCodes)[keyof typeof ErrorCodes];
 
-export interface ApiError {
-  code: ErrorCode;
-  message: string;
-  details?: unknown;
-  statusCode?: number;
-  timestamp: string;
-}
-
 //Record : 모든 키에 대해 값이 존재함을 타입 레벨에서 보장
 export const ErrorMessages: Record<ErrorCode, string> = {
   // 인증 관련 에러

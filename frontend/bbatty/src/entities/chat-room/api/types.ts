@@ -8,11 +8,12 @@ export interface MatchChatJoinRequest {
   nickname: string;
   winRate: number;
   profileImgUrl: string;
-  isVictoryFairy: boolean;
+  isWinFairy: boolean;
 }
 
 export interface WatchChatJoinRequest {
-  gameId: string;
+  gameId: number;
+  teamId: number;
   isAttendanceVerified: boolean;
 }
 
@@ -46,14 +47,15 @@ export interface MatchChatRoomsResponse {
 }
 
 export interface CreateMatchChatRoomRequest {
-  gameId: string;
+  gameId: number;
   matchTitle: string;
   matchDescription: string;
-  teamId: string;
+  teamId: number;
   minAge: number;
   maxAge: number;
   genderCondition: 'ALL' | 'MALE' | 'FEMALE';
   maxParticipants: number;
+  nickname: string;
 }
 
 export interface CreateMatchChatRoomResponse {

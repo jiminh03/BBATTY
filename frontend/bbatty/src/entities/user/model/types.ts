@@ -45,21 +45,6 @@ export interface User extends BaseEntity {
   teamId: string;
 }
 
-export interface UserProfile {
-  userId: number;
-  nickname: string;
-  profileImg?: string;
-  teamId: number;
-  teamName: string;
-  introduction?: string;
-  age: number;
-  gender: string;
-}
-
-export interface DetailedUser extends User {
-  // 통계 엔티티에서 가져와야함
-}
-
 export interface UserSummary {
   nickname: string;
   profileImage?: string;

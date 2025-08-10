@@ -1,11 +1,22 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { HomeStackScreenProps } from '../../navigation/types';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useUserStore } from '../../entities/user/model/userStore';
 
 type Props = HomeStackScreenProps<'Home'>;
 
 export default function HomeScreen({ navigation, route }: Props) {
+  const teamId = useUserStore((s) => s.currentUser?.teamId);   // ✅ 하드코딩 제거
+
+  const goPostList = () => {
+    if (!teamId) {
+      Alert.alert('팀 선택 필요', '내 팀 정보가 없습니다. 로그인/팀 선택을 먼저 완료해주세요.');
+      return;
+    }
+    navigation.navigate('PostList', { teamId });
+  };
+  
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -47,18 +58,19 @@ export default function HomeScreen({ navigation, route }: Props) {
           <TouchableOpacity 
             style={styles.quickButton}
             onPress={() => {
-              // 채팅 탭으로 이동
-              navigation.navigate('ChatStack', { screen: 'MatchChatRoomList' });
+              // 직관 인증 페이지로 이동
+              navigation.navigate('AttendanceVerification' as never);
             }}
           >
-            <Text style={styles.quickButtonText}>매치 채팅 참여하기</Text>
+            <Text style={styles.quickButtonText}>🎯 직관 인증하기</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.quickButton}
-            onPress={() => navigation.navigate('PostList', { teamId: 1 })} // ✅ teamId 전달
+            style={[styles.quickButton, !teamId && { opacity: 0.5 }]}
+            disabled={!teamId}
+            onPress={goPostList}
           >
-            <Text style={styles.quickButtonText}>게시글 조회 </Text>
+            <Text style={styles.quickButtonText}>게시글 조회</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

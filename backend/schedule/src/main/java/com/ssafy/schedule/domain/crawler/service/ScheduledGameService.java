@@ -1,6 +1,6 @@
 package com.ssafy.schedule.domain.crawler.service;
 
-import com.ssafy.schedule.global.constant.GameStatus;
+import com.ssafy.schedule.global.constants.GameStatus;
 import com.ssafy.schedule.global.entity.Game;
 import com.ssafy.schedule.global.entity.Team;
 import com.ssafy.schedule.global.repository.GameRepository;
@@ -155,7 +155,7 @@ public class ScheduledGameService extends BaseCrawlerService {
             
             Game savedGame = gameRepository.save(game);
 
-            // 경기 시작 2시간 전 이벤트 스케줄 등록
+            // 경기 시작 3시간 전 이벤트 스케줄 등록
             gameEventScheduler.scheduleGameStartingEvent(savedGame);
 
             log.info("✅ 예정된 경기 일정 저장: {} vs {} at {}", 

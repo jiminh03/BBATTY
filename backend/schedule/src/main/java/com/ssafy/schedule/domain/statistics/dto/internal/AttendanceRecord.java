@@ -1,6 +1,6 @@
 package com.ssafy.schedule.domain.statistics.dto.internal;
 
-import com.ssafy.schedule.global.constant.GameResult;
+import com.ssafy.schedule.global.constants.GameResult;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;

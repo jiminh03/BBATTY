@@ -14,11 +14,13 @@ import type { StackNavigationProp } from '@react-navigation/stack';
 import { chatRoomApi } from '../../entities/chat-room/api/api';
 import type { MatchChatRoom } from '../../entities/chat-room/api/types';
 import type { ChatStackParamList } from '../../navigation/types';
+import { useUserStore } from '../../entities/user/model/userStore';
 
 type NavigationProp = StackNavigationProp<ChatStackParamList>;
 
 export const MatchChatRoomListScreen = () => {
   const navigation = useNavigation<NavigationProp>();
+  const getCurrentUser = useUserStore((state) => state.getCurrentUser);
   const [rooms, setRooms] = useState<MatchChatRoom[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -43,17 +45,13 @@ export const MatchChatRoomListScreen = () => {
     try {
       setLoading(true);
       const response = await chatRoomApi.getMatchChatRooms();
-      console.log('🔍 MatchChatRoomListScreen - 응답 구조:', JSON.stringify(response, null, 2));
-      console.log('🔍 response.rooms 존재 여부:', !!response.rooms);
-      console.log('🔍 response.rooms 길이:', response.rooms?.length);
       
-      // 실제 서버 응답 구조에 맞게 처리
-      if (response.rooms) {
-        console.log('🔍 rooms 설정 전:', rooms.length);
-        setRooms(response.rooms);
-        console.log('🔍 rooms 설정 완료');
+      if (response.data?.data?.rooms) {
+        setRooms(response.data.data.rooms);
+      } else if (response.data?.rooms) {
+        // 목 데이터 형식 (기존 호환성)
+        setRooms(response.data.rooms);
       } else {
-        console.log('🔍 response.rooms가 없음');
         Alert.alert('오류', '채팅방 목록을 불러오는데 실패했습니다.');
       }
     } catch (error) {
@@ -72,19 +70,28 @@ export const MatchChatRoomListScreen = () => {
 
   const handleWatchChatJoin = async () => {
     try {
+      const currentUser = getCurrentUser();
+      
+      if (!currentUser) {
+        Alert.alert('오류', '사용자 정보를 찾을 수 없습니다.');
+        return;
+      }
+
       const watchRequest = {
-        gameId: "game_001", // 기본 워치 채팅 (실제로는 현재 경기 또는 선택 가능)
+        gameId: 1258,
+        teamId: currentUser.teamId,
         isAttendanceVerified: true
       };
 
       const response = await chatRoomApi.joinWatchChat(watchRequest);
+      console.log('Watch chat API response:', response.data);
       
       if (response.data.status === 'SUCCESS') {
         // 워치 채팅방으로 이동 (매치 채팅과 동일한 화면 사용)
         navigation.navigate('MatchChatRoom', {
           room: {
             matchId: 'watch_chat_' + Date.now(),
-            gameId: watchRequest.gameId,
+            gameId: watchRequest.gameId.toString(),
             matchTitle: '📺 워치 채팅',
             matchDescription: '모든 팬들이 함께 경기를 시청하며 채팅하는 공간',
             teamId: '전체',
@@ -95,10 +102,10 @@ export const MatchChatRoomListScreen = () => {
             currentParticipants: 0,
             createdAt: new Date().toISOString(),
             status: 'ACTIVE',
-            websocketUrl: response.data.websocketUrl
+            websocketUrl: response.data.data.websocketUrl
           },
-          websocketUrl: response.data.websocketUrl,
-          sessionToken: response.data.sessionToken
+          websocketUrl: response.data.data.websocketUrl,
+          sessionToken: response.data.data.sessionToken
         });
       } else {
         Alert.alert('오류', response.data.message || '워치 채팅 참여에 실패했습니다.');

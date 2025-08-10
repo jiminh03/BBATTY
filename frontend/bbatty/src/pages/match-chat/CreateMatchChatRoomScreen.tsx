@@ -18,7 +18,7 @@ import type { StackNavigationProp } from '@react-navigation/stack';
 import { chatRoomApi } from '../../entities/chat-room/api/api';
 import { gameApi } from '../../entities/game';
 import type { CreateMatchChatRoomRequest } from '../../entities/chat-room/api/types';
-import type { Game, GamesByDate } from '../../entities/game';
+import type { Game } from '../../entities/game';
 import type { ChatStackParamList } from '../../navigation/types';
 
 type NavigationProp = StackNavigationProp<ChatStackParamList>;
@@ -26,6 +26,21 @@ type NavigationProp = StackNavigationProp<ChatStackParamList>;
 const TEAMS = [
   'LG', 'KT', 'SSG', 'NC', '두산', '기아', 'KIA', 'SK', '삼성', '롯데', '한화'
 ];
+
+// 팀 이름을 ID로 매핑
+const TEAM_ID_MAP: { [key: string]: number } = {
+  'LG': 1,
+  'KT': 2, 
+  'SSG': 3,
+  'NC': 4,
+  '두산': 5,
+  '기아': 6,
+  'KIA': 6, // 기아와 KIA는 같은 팀
+  'SK': 7,
+  '삼성': 8,
+  '롯데': 9,
+  '한화': 10
+};
 
 const GENDER_OPTIONS = [
   { value: 'ALL', label: '전체' },
@@ -38,18 +53,19 @@ export const CreateMatchChatRoomScreen = () => {
   const [loading, setLoading] = useState(false);
   const [gamesLoading, setGamesLoading] = useState(false);
   const [showGameModal, setShowGameModal] = useState(false);
-  const [gamesByDate, setGamesByDate] = useState<GamesByDate[]>([]);
+  const [games, setGames] = useState<Game[]>([]);
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   
   const [formData, setFormData] = useState<CreateMatchChatRoomRequest>({
-    gameId: '', // 경기 선택 후 설정
+    gameId: 0, // 경기 선택 후 설정
     matchTitle: '',
     matchDescription: '',
-    teamId: 'LG',
+    teamId: 1, // LG 팀 ID (실제 서버 팀 ID로 매핑 필요)
     minAge: 20,
     maxAge: 30,
     genderCondition: 'ALL',
     maxParticipants: 10,
+    nickname: '',
   });
 
   useEffect(() => {
@@ -60,8 +76,8 @@ export const CreateMatchChatRoomScreen = () => {
     try {
       setGamesLoading(true);
       const response = await gameApi.getGames();
-      if (response.data.status === 'SUCCESS') {
-        setGamesByDate(response.data.data);
+      if (response.status === 'SUCCESS') {
+        setGames(response.data);
       }
     } catch (error) {
       console.error('경기 목록 로드 실패:', error);
@@ -114,6 +130,11 @@ export const CreateMatchChatRoomScreen = () => {
       return;
     }
 
+    if (!formData.nickname.trim()) {
+      Alert.alert('알림', '닉네임을 입력해주세요.');
+      return;
+    }
+
     if (formData.minAge >= formData.maxAge) {
       Alert.alert('알림', '최대 나이는 최소 나이보다 커야 합니다.');
       return;
@@ -123,7 +144,9 @@ export const CreateMatchChatRoomScreen = () => {
       setLoading(true);
       const response = await chatRoomApi.createMatchChatRoom(formData);
       
-      if (response.data.status === 'SUCCESS') {
+      console.log('📱 CreateMatchChatRoom 화면에서 받은 응답:', response);
+      
+      if (response.data?.status === 'SUCCESS') {
         Alert.alert(
           '성공',
           '채팅방이 생성되었습니다!',
@@ -141,7 +164,7 @@ export const CreateMatchChatRoomScreen = () => {
           ]
         );
       } else {
-        Alert.alert('오류', response.data.message || '채팅방 생성에 실패했습니다.');
+        Alert.alert('오류', response.data?.message || '채팅방 생성에 실패했습니다.');
       }
     } catch (error) {
       console.error('채팅방 생성 실패:', error);
@@ -152,7 +175,13 @@ export const CreateMatchChatRoomScreen = () => {
   };
 
   const updateFormData = (key: keyof CreateMatchChatRoomRequest, value: any) => {
-    setFormData(prev => ({ ...prev, [key]: value }));
+    if (key === 'teamId' && typeof value === 'string') {
+      // 팀 이름을 ID로 변환
+      const teamId = TEAM_ID_MAP[value];
+      setFormData(prev => ({ ...prev, [key]: teamId || 1 }));
+    } else {
+      setFormData(prev => ({ ...prev, [key]: value }));
+    }
   };
 
   return (
@@ -199,9 +228,6 @@ export const CreateMatchChatRoomScreen = () => {
                       })} | {selectedGame.stadium}
                     </Text>
                   </View>
-                  <View style={[styles.gameStatusBadge, { backgroundColor: getGameStatusColor(selectedGame.status) }]}>
-                    <Text style={styles.gameStatusText}>{getGameStatusText(selectedGame.status)}</Text>
-                  </View>
                 </View>
               ) : (
                 <Text style={styles.gameSelectPlaceholder}>
@@ -242,13 +268,13 @@ export const CreateMatchChatRoomScreen = () => {
                   key={team}
                   style={[
                     styles.teamButton,
-                    formData.teamId === team && styles.selectedTeamButton
+                    formData.teamId === TEAM_ID_MAP[team] && styles.selectedTeamButton
                   ]}
                   onPress={() => updateFormData('teamId', team)}
                 >
                   <Text style={[
                     styles.teamButtonText,
-                    formData.teamId === team && styles.selectedTeamButtonText
+                    formData.teamId === TEAM_ID_MAP[team] && styles.selectedTeamButtonText
                   ]}>
                     {team}
                   </Text>
@@ -308,6 +334,17 @@ export const CreateMatchChatRoomScreen = () => {
           </View>
 
           <View style={styles.section}>
+            <Text style={styles.label}>닉네임 *</Text>
+            <TextInput
+              style={styles.textInput}
+              value={formData.nickname}
+              onChangeText={(text) => updateFormData('nickname', text)}
+              placeholder="채팅방에서 사용할 닉네임을 입력하세요"
+              maxLength={20}
+            />
+          </View>
+
+          <View style={styles.section}>
             <Text style={styles.label}>최대 참여 인원</Text>
             <View style={styles.participantContainer}>
               <TouchableOpacity
@@ -345,48 +382,33 @@ export const CreateMatchChatRoomScreen = () => {
           </View>
 
           <FlatList
-            data={gamesByDate}
-            keyExtractor={(item) => item.date}
-            renderItem={({ item: dateGroup }) => (
-              <View style={styles.dateGroup}>
-                <Text style={styles.dateHeader}>{dateGroup.date}</Text>
-                {dateGroup.games.map((game) => (
-                  <TouchableOpacity
-                    key={game.gameId}
-                    style={[
-                      styles.gameItem,
-                      selectedGame?.gameId === game.gameId && styles.selectedGameItem
-                    ]}
-                    onPress={() => handleGameSelect(game)}
-                  >
-                    <View style={styles.gameItemContent}>
-                      <View style={styles.gameTeamsContainer}>
-                        <Text style={styles.gameItemTeams}>
-                          {game.awayTeamName} vs {game.homeTeamName}
-                        </Text>
-                        <View style={[styles.gameStatusBadge, { backgroundColor: getGameStatusColor(game.status) }]}>
-                          <Text style={styles.gameStatusText}>{getGameStatusText(game.status)}</Text>
-                        </View>
-                      </View>
-                      
-                      <Text style={styles.gameItemDetails}>
-                        {new Date(game.dateTime).toLocaleString('ko-KR', {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })} | {game.stadium}
-                      </Text>
-                      
-                      {game.activeUserCount > 0 && (
-                        <Text style={styles.activeUserCount}>
-                          현재 {game.activeUserCount}명 참여중
-                        </Text>
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
+            data={games}
+            keyExtractor={(item) => item.gameId.toString()}
+            renderItem={({ item: game }) => (
+              <TouchableOpacity
+                style={[
+                  styles.gameItem,
+                  selectedGame?.gameId === game.gameId && styles.selectedGameItem
+                ]}
+                onPress={() => handleGameSelect(game)}
+              >
+                <View style={styles.gameItemContent}>
+                  <View style={styles.gameTeamsContainer}>
+                    <Text style={styles.gameItemTeams}>
+                      {game.awayTeamName} vs {game.homeTeamName}
+                    </Text>
+                  </View>
+                  
+                  <Text style={styles.gameItemDetails}>
+                    {new Date(game.dateTime).toLocaleString('ko-KR', {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })} | {game.stadium}
+                  </Text>
+                </View>
+              </TouchableOpacity>
             )}
             showsVerticalScrollIndicator={false}
           />

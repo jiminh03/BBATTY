@@ -41,12 +41,12 @@ interface ApiConfig {
 
 export const API_CONFIG: ApiConfig = {
   baseURL: 'http://i13a403.p.ssafy.io:8080', //Platform.OS === 'android' ? 'http://10.0.2.2:8080' : 'http://localhost:8080', // 일반 API 포트
-  chatBaseURL: Platform.OS === 'android' ? 'http://10.0.2.2:8084' : 'http://localhost:8084', // 채팅 API 포트
-  socketUrl: Platform.OS === 'android' ? 'ws://10.0.2.2:8084' : 'ws://localhost:8084',
+  chatBaseURL: 'http://i13a403.p.ssafy.io:8084', // 채팅 API 포트
+  socketUrl: 'ws://i13a403.p.ssafy.io:8084',
 
   timeout: {
-    default: 3000, // 3초
-    upload: 10000, // 파일 업로드는 10초
+    default: 10000, // 10초
+    upload: 30000, // 파일 업로드는 30초
   },
 
   retry: {

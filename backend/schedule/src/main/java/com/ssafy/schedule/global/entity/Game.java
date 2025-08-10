@@ -1,7 +1,7 @@
 package com.ssafy.schedule.global.entity;
 
-import com.ssafy.schedule.global.constant.GameResult;
-import com.ssafy.schedule.global.constant.GameStatus;
+import com.ssafy.schedule.global.constants.GameResult;
+import com.ssafy.schedule.global.constants.GameStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;

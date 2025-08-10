@@ -2,27 +2,30 @@ import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 
 import { ApiResponse } from '../types/response';
 import { API_CONFIG } from './config';
 import { setupInterceptors } from './interceptors';
-import { tokenManager } from './tokenManager';
+import { useTokenStore } from '../token/tokenStore';
 
 interface CustomAxiosInstance extends AxiosInstance {
-  get<T = unknown, R = ApiResponse<T>, D = any>(
+  get<T = unknown, R = AxiosResponse<ApiResponse<T>>, D = any>(
     url: string,
     config?: Partial<InternalAxiosRequestConfig<D>>
   ): Promise<R>;
 
-  post<T = unknown, R = ApiResponse<T>, D = any>(
+  post<T = unknown, R = AxiosResponse<ApiResponse<T>>, D = any>(
     url: string,
     data?: D,
     config?: InternalAxiosRequestConfig<D>
   ): Promise<R>;
 
-  put<T = unknown, R = ApiResponse<T>, D = any>(
+  put<T = unknown, R = AxiosResponse<ApiResponse<T>>, D = any>(
     url: string,
     data?: D,
     config?: InternalAxiosRequestConfig<D>
   ): Promise<R>;
 
-  delete<T = unknown, R = ApiResponse<T>, D = any>(url: string, config?: InternalAxiosRequestConfig<D>): Promise<R>;
+  delete<T = unknown, R = AxiosResponse<ApiResponse<T>>, D = any>(
+    url: string,
+    config?: InternalAxiosRequestConfig<D>
+  ): Promise<R>;
 }
 
 // 메인 클라 (일반 API용 - 8080 포트)
@@ -65,18 +68,33 @@ const applyTokenToClients = (token: string | null) => {
   }
 };
 
+// 로그아웃 처리를 위한 콜백 저장
+let onUnauthorizedCallback: (() => void) | null = null;
+
 // 401 에러 시 호출될 콜백
 const handleUnauthorized = async () => {
+  await useTokenStore.getState().clearTokens();
   applyTokenToClients(null);
+  // AppNavigator에서 설정한 콜백 호출 (인증 상태 변경)
+  if (onUnauthorizedCallback) {
+    onUnauthorizedCallback();
+  }
 };
 
-export const initializeApiClient = async (): Promise<void> => {
-  const token = await tokenManager.getToken();
+export const initializeApiClient = (): void => {
+  useTokenStore.getState().setApiClient(apiClient);
+
+  const token = useTokenStore.getState().getAccessToken();
   applyTokenToClients(token);
 
   setupInterceptors(apiClient, handleUnauthorized);
   setupInterceptors(chatApiClient, handleUnauthorized);
   setupInterceptors(uploadClient, handleUnauthorized);
+};
+
+// AppNavigator에서 호출할 함수
+export const setUnauthorizedCallback = (callback: () => void) => {
+  onUnauthorizedCallback = callback;
 };
 
 export { apiClient, chatApiClient, uploadClient };

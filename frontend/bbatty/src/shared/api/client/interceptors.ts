@@ -1,9 +1,10 @@
 import { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 import { Alert } from 'react-native';
-import { tokenManager } from './tokenManager';
+import { useTokenStore } from '../token/tokenStore';
 import { API_CONFIG } from './config';
 import { handleApiError } from '../utils/errorHandler';
 import { retryRequest } from '../utils/retry';
+import { isOk } from '../../utils/result';
 
 // 토큰 제거시 호출될 콜백
 type OnUnauthorizedCallback = () => Promise<void>;
@@ -16,9 +17,20 @@ export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnaut
       const isPublicEndpoint = /\/api\/(auth\/(signup|check-nickname|refresh))(\/.*)?$/.test(config.url || '');
 
       if (!isPublicEndpoint) {
-        const token = await tokenManager.getToken();
-        if (token && config.headers) {
-          config.headers.Authorization = `Bearer ${token}`;
+        // 토큰 만료 임박 시 선제 갱신
+        const checkResult = await useTokenStore.getState().checkAndRefreshIfNeeded();
+
+        if (isOk(checkResult) && checkResult.data) {
+          // 갱신된 토큰으로 헤더 설정
+          const token = useTokenStore.getState().getAccessToken();
+          if (token && config.headers) {
+            config.headers.Authorization = `Bearer ${token}`;
+          }
+        } else {
+          // 토큰 갱신 실패 시 인증 상태 초기화
+          console.warn('Token refresh failed in request interceptor');
+          await onUnauthorized();
+          return Promise.reject(new Error('Authentication failed'));
         }
       }
 
@@ -34,7 +46,7 @@ export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnaut
   client.interceptors.response.use(
     (response: AxiosResponse) => {
       if (response.data && typeof response.data === 'object') {
-        if (!('SUCCESS' in response.data)) {
+        if (!('status' in response.data)) {
           console.warn(`잘못된 api 형식 :`, response.data);
         }
       }
@@ -42,18 +54,26 @@ export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnaut
     },
     async (error: AxiosError) => {
       const originalRequest = error.config;
-
       // 토큰 만료 또는 인증 실패
       if (error.response?.status === 401 && originalRequest) {
-        // 토큰 제거
-        await tokenManager.removeToken();
+        // 토큰 갱신 시도
+        const refreshResult = await useTokenStore.getState().refreshTokens();
 
-        // 콜백이 제공된 경우 실행 (클라이언트 헤더 업데이트 등)
-        if (onUnauthorized) {
-          await onUnauthorized();
+        if (isOk(refreshResult) && refreshResult.data) {
+          // 토큰 갱신 성공 - 원래 요청 재시도
+          const newToken = useTokenStore.getState().getAccessToken();
+          if (originalRequest.headers && newToken) {
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          }
+          return client(originalRequest);
+        } else {
+          // 토큰 갱신 실패 - 콜백 실행
+          if (onUnauthorized) {
+            console.error('토큰 갱신에 실패하였습니다.');
+            await onUnauthorized();
+          }
         }
 
-        //  적절한 네비게이션 로직으로 대체해야 함
         return Promise.reject(error);
       }
 
