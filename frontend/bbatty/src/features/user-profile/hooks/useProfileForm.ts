@@ -1,8 +1,11 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { ValidationRules, combineValidators, nicknameValidator, filterNicknameInput } from '../../../shared';
 import { ProfileFormData } from '../model/profileTypes';
 import { profileApi } from '../api/profileApi';
 import { isOk } from '../../../shared/utils/result';
+
+// 오류 타입 정의
+type NicknameErrorType = 'LENGTH_OVER' | 'SPECIAL_CHARS' | 'VALIDATION' | 'NONE';
 
 export const useProfileForm = (initialData?: Partial<ProfileFormData>) => {
   const [formData, setFormData] = useState<ProfileFormData>({
@@ -15,9 +18,8 @@ export const useProfileForm = (initialData?: Partial<ProfileFormData>) => {
   const [isNicknameAvailable, setIsNicknameAvailable] = useState<boolean | null>(null);
   const [isCheckingNickname, setIsCheckingNickname] = useState(false);
 
-  // 디바운싱을 위한 타이머 참조 - 수정된 타입
-  const nicknameCheckTimer = useRef<any>(undefined);
-  const lastCheckedNickname = useRef<string>('');
+  // 닉네임 오류 타입 상태 추가
+  const [nicknameErrorType, setNicknameErrorType] = useState<NicknameErrorType>('NONE');
 
   // 검증 규칙
   const validators = {
@@ -25,112 +27,99 @@ export const useProfileForm = (initialData?: Partial<ProfileFormData>) => {
     introduction: ValidationRules.maxLength(50),
   };
 
-  // 닉네임 중복 확인 API 호출 - 실제 API 연결
-  const checkNicknameAvailability = useCallback(async (nickname: string): Promise<boolean> => {
+  // 중복 확인 버튼 클릭 핸들러
+  const handleCheckNickname = useCallback(async () => {
+    // 실제 표시된 값이 유효한지만 체크 (경고 메시지는 무시)
+    if (!formData.nickname || formData.nickname.length < 2 || formData.nickname.length > 10) {
+      return;
+    }
+
+    setIsCheckingNickname(true);
     try {
-      const result = await profileApi.checkNickname({ nickname });
+      const result = await profileApi.checkNickname({ nickname: formData.nickname });
 
       if (isOk(result)) {
         console.log('닉네임 체크 성공:', result.data);
-        return result.data.available;
-      } else {
-        console.error('닉네임 체크 실패:', result.error);
-        throw new Error(result.error.message || '닉네임 확인에 실패했습니다');
-      }
-    } catch (error) {
-      console.error('닉네임 중복 확인 실패:', error);
-      throw error;
-    }
-  }, []);
+        setIsNicknameAvailable(result.data.available);
 
-  // 디바운싱된 닉네임 중복 확인
-  const debouncedNicknameCheck = useCallback(
-    (nickname: string) => {
-      // 이전 타이머 취소
-      if (nicknameCheckTimer.current) {
-        clearTimeout(nicknameCheckTimer.current);
-      }
-
-      // 빈 값이거나 유효하지 않으면 중복 확인 안함
-      const validation = validators.nickname(nickname);
-      if (!nickname || !validation.isValid) {
-        setIsNicknameAvailable(null);
-        setIsCheckingNickname(false);
-        return;
-      }
-
-      // 이미 확인한 닉네임이면 skip
-      if (nickname === lastCheckedNickname.current) {
-        return;
-      }
-
-      setIsCheckingNickname(true);
-
-      // 1초 후 중복 확인 실행
-      nicknameCheckTimer.current = setTimeout(async () => {
-        try {
-          const isAvailable = await checkNicknameAvailability(nickname);
-          setIsNicknameAvailable(isAvailable);
-          lastCheckedNickname.current = nickname;
-
-          if (!isAvailable) {
-            setErrors((prev) => ({
-              ...prev,
-              nickname: '이미 사용 중인 닉네임입니다',
-            }));
-          }
-        } catch (error) {
+        if (result.data.available) {
+          // 중복 확인 성공 시 모든 경고 메시지 지우고 오류 타입 리셋
+          setNicknameErrorType('NONE');
           setErrors((prev) => ({
             ...prev,
-            nickname: '닉네임 확인 중 오류가 발생했습니다',
+            nickname: undefined,
           }));
-          setIsNicknameAvailable(null);
-        } finally {
-          setIsCheckingNickname(false);
+        } else {
+          // 중복된 닉네임인 경우
+          setErrors((prev) => ({
+            ...prev,
+            nickname: '이미 사용 중인 닉네임입니다',
+          }));
         }
-      }, 1000);
-    },
-    [checkNicknameAvailability, validators.nickname]
-  );
+      } else {
+        console.error('닉네임 체크 실패:', result.error);
+        setErrors((prev) => ({
+          ...prev,
+          nickname: '닉네임 확인에 실패했습니다',
+        }));
+        setIsNicknameAvailable(null);
+      }
+    } catch (error) {
+      console.error('예외 발생:', error);
+      setErrors((prev) => ({
+        ...prev,
+        nickname: '닉네임 확인 중 오류가 발생했습니다',
+      }));
+      setIsNicknameAvailable(null);
+    } finally {
+      setIsCheckingNickname(false);
+    }
+  }, [formData.nickname]);
 
   // 닉네임 실시간 필터링 및 업데이트
   const updateNickname = useCallback(
     (rawValue: string) => {
-      // 1. 실시간 필터링
-      const { value: filteredValue, hasInvalid } = filterNicknameInput(rawValue);
+      // 1. 원본 값으로 문제 상황 체크 (필터링 전에 먼저 체크)
+      const isOverLength = rawValue.length > 10;
+      const hasSpecialChars = /[^ㄱ-ㅎㅏ-ㅣ가-힣a-zA-Z0-9]/.test(rawValue);
 
-      // 2. 상태 업데이트
+      // 2. 실시간 필터링 (화면에는 필터링된 값 표시)
+      const { value: filteredValue } = filterNicknameInput(rawValue);
+
+      // 3. 상태 업데이트
       setFormData((prev) => ({ ...prev, nickname: filteredValue }));
 
-      // 3. 필터링 경고 메시지
-      if (hasInvalid) {
+      // 4. 중복 확인 상태 초기화 (닉네임이 변경되면 다시 확인 필요)
+      setIsNicknameAvailable(null);
+
+      // 5. 오류 타입 및 메시지 결정
+      if (isOverLength) {
+        setNicknameErrorType('LENGTH_OVER');
+        setErrors((prev) => ({
+          ...prev,
+          nickname: '2~10글자 사이로 입력해주세요',
+        }));
+      } else if (hasSpecialChars) {
+        setNicknameErrorType('SPECIAL_CHARS');
         setErrors((prev) => ({
           ...prev,
           nickname: '한글, 영문, 숫자만 사용 가능합니다 (특수기호, 공백 금지)',
         }));
-
-        // 2초 후 경고 메시지 제거 (유효성 검증 메시지로 대체)
-        setTimeout(() => {
-          const validation = validators.nickname(filteredValue);
-          setErrors((prev) => ({
-            ...prev,
-            nickname: validation.error,
-          }));
-        }, 2000);
       } else {
-        // 4. 일반 유효성 검증
+        // 정상적인 입력인 경우에만 오류 타입 초기화 및 일반 검증
+        if (nicknameErrorType !== 'NONE') {
+          setNicknameErrorType('NONE');
+        }
+
+        // 일반 유효성 검증
         const validation = validators.nickname(filteredValue);
         setErrors((prev) => ({
           ...prev,
           nickname: validation.error,
         }));
       }
-
-      // 5. 중복 확인 상태 초기화 및 디바운싱 시작
-      setIsNicknameAvailable(null);
-      debouncedNicknameCheck(filteredValue);
     },
-    [validators.nickname, debouncedNicknameCheck]
+    [validators.nickname, nicknameErrorType]
   );
 
   // 일반 필드 업데이트
@@ -183,16 +172,11 @@ export const useProfileForm = (initialData?: Partial<ProfileFormData>) => {
     isAvailable: isNicknameAvailable === true,
     isChecking: isCheckingNickname,
     showSuccess: isNicknameAvailable === true && !errors.nickname,
+    // 중복 확인 버튼 활성화 조건: 현재 표시된 값이 2-10글자면 항상 체크 가능
+    canCheck: formData.nickname.length >= 2 && formData.nickname.length <= 10,
+    // 에러 판정: 현재 표시된 값 기준으로만 판단 (오버타이핑 경고는 무시)
+    hasError: formData.nickname.length < 2 || formData.nickname.length > 10 || isNicknameAvailable === false,
   };
-
-  // 컴포넌트 언마운트 시 타이머 정리
-  useEffect(() => {
-    return () => {
-      if (nicknameCheckTimer.current) {
-        clearTimeout(nicknameCheckTimer.current);
-      }
-    };
-  }, []);
 
   return {
     formData,
@@ -200,6 +184,7 @@ export const useProfileForm = (initialData?: Partial<ProfileFormData>) => {
     isNicknameAvailable,
     nicknameStatus,
     updateField,
+    handleCheckNickname, // 중복 확인 버튼용 핸들러
     validate,
     setErrors,
   };

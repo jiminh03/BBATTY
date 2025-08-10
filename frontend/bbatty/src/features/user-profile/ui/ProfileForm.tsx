@@ -21,7 +21,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   // 개선된 커스텀 훅 사용
-  const { formData, errors, nicknameStatus, updateField, validate } = useProfileForm({
+  const { formData, errors, nicknameStatus, updateField, handleCheckNickname, validate } = useProfileForm({
     ...initialData,
     nickname: isEditMode ? initialData.nickname || '' : '',
   });
@@ -54,20 +54,24 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
       return <Text style={styles.errorText}>{errors.nickname}</Text>;
     }
 
-    if (nicknameStatus.isChecking) {
-      return (
-        <View style={styles.nicknameStatusContainer}>
-          <ActivityIndicator size='small' color='#666' />
-          <Text style={styles.nicknameStatusText}>사용 가능 여부 확인 중...</Text>
-        </View>
-      );
-    }
-
     if (nicknameStatus.showSuccess) {
       return <Text style={styles.successText}>사용 가능한 닉네임입니다</Text>;
     }
 
     return null;
+  };
+
+  // 중복체크 버튼 스타일 결정
+  const getCheckButtonStyle = () => {
+    if (!nicknameStatus.canCheck || nicknameStatus.isChecking) {
+      return [styles.checkButton, styles.checkButtonError];
+    }
+
+    if (nicknameStatus.hasError) {
+      return [styles.checkButton, styles.checkButtonError];
+    }
+
+    return [styles.checkButton, styles.checkButtonActive];
   };
 
   // 제출 버튼 활성화 상태 결정
@@ -76,11 +80,11 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
 
     // 닉네임 필드가 표시되는 경우
     if (showNicknameField) {
-      // 편집 모드가 아닌 경우 (신규 가입)
+      // 편집 모드가 아닌 경우 (신규 가입) - 중복체크 완료 필요
       if (!isEditMode) {
-        return !nicknameStatus.isValid || !nicknameStatus.isAvailable;
+        return !nicknameStatus.isAvailable;
       }
-      // 편집 모드인 경우
+      // 편집 모드인 경우 - 유효한 닉네임이면 OK
       return !nicknameStatus.isValid;
     }
 
@@ -88,7 +92,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
     return !!errors.introduction;
   };
 
-  // 제출 버튼 스타일 결정
+  // 제출 버튼 스타일 결정 - 중복체크 버튼과 같은 색상 체계
   const getSubmitButtonStyle = () => {
     const disabled = isSubmitDisabled();
 
@@ -128,16 +132,23 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
               value={formData.nickname}
               onChangeText={(text) => updateField('nickname', text)}
               placeholder='2~10글자 사이로 입력해주세요'
-              maxLength={10} // 하드 리미트
+              maxLength={20} // 10글자 초과 입력 감지를 위해 여유있게 설정
               editable={!isEditMode}
               autoCorrect={false}
               autoCapitalize='none'
             />
-            {/* 편집 모드가 아닐 때만 중복 확인 상태 표시 */}
-            {!isEditMode && nicknameStatus.isChecking && (
-              <View style={styles.checkButton}>
-                <ActivityIndicator size='small' color='#FFFFFF' />
-              </View>
+            {!isEditMode && (
+              <TouchableOpacity
+                style={getCheckButtonStyle()}
+                onPress={handleCheckNickname}
+                disabled={!nicknameStatus.canCheck || nicknameStatus.isChecking}
+              >
+                {nicknameStatus.isChecking ? (
+                  <ActivityIndicator size='small' color='#FFFFFF' />
+                ) : (
+                  <Text style={styles.checkButtonText}>중복확인</Text>
+                )}
+              </TouchableOpacity>
             )}
           </View>
           {renderNicknameStatus()}
