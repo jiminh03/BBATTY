@@ -1,10 +1,9 @@
 package com.ssafy.schedule.domain.crawler.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ssafy.schedule.global.constant.GameResult;
-import com.ssafy.schedule.global.constant.GameStatus;
+import com.ssafy.schedule.global.constants.GameResult;
+import com.ssafy.schedule.global.constants.GameStatus;
 import com.ssafy.schedule.global.entity.Game;
 import com.ssafy.schedule.global.entity.Team;
 import com.ssafy.schedule.global.repository.GameRepository;
@@ -15,7 +14,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 

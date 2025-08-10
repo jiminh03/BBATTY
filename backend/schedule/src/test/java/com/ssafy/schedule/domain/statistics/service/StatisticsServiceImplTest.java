@@ -4,7 +4,7 @@ import com.ssafy.schedule.domain.statistics.dto.response.UserBasicStatsResponse;
 import com.ssafy.schedule.domain.statistics.dto.response.UserDetailedStatsResponse;
 import com.ssafy.schedule.domain.statistics.dto.response.UserStreakStatsResponse;
 import com.ssafy.schedule.domain.statistics.repository.StatisticsRedisRepository;
-import com.ssafy.schedule.global.constant.GameResult;
+import com.ssafy.schedule.global.constants.GameResult;
 import com.ssafy.schedule.global.entity.Game;
 import com.ssafy.schedule.global.entity.Team;
 import com.ssafy.schedule.global.repository.GameRepository;
