@@ -18,8 +18,7 @@ public interface UserService {
     /**
      * 사용자 상세 통계 조회 (statsPublic 검증)
      */
-    Object getUserStats(Long targetUserId, Long currentUserId, String season, String stadium, 
-                       String opponent, String dayOfWeek, String homeAway);
+    Object getUserStats(Long targetUserId, Long currentUserId, String season, String type);
 
     /**
      * 사용자 직관 기록 조회 (attendanceRecordsPublic 검증)
