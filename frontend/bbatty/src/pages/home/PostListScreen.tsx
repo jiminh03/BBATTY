@@ -12,7 +12,9 @@ export const PostListScreen = ({ route }: HomeStackScreenProps<'PostList'>) => {
   const { data, fetchNextPage, hasNextPage, isLoading, isError, error } =
     usePostListQuery(teamId);
 
-  const posts = data?.pages.flatMap((p) => p.posts) ?? [];
+const posts = data?.pages?.flatMap(p => p?.posts ?? []) ?? []
+
+
 
   if (isLoading)
     return (
