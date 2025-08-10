@@ -4,13 +4,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { styles } from './SplashScreen.styles';
 import { screen } from '../../../shared';
 import { useTokenStore } from '../../../shared/api/token/tokenStore';
-import { useUserStore } from '../../../entities/user';
+import { useUserStore } from '../../../entities/user/model/userStore';
 import { isErr, isOk } from '../../../shared/utils/result';
+import { useTheme } from '../../../shared/team/ThemeContext';
+import { findTeamById } from '../../../shared/team/teamTypes';
 
 interface SplashScreenProps {
   onAnimationComplete?: () => void;
   onLoginSuccess?: (userInfo: any, accessToken: string) => void;
-  onAutoLoginSuccess?: () => void; // 자동로그인 성공 콜백
+  onAutoLoginSuccess?: () => void;
 }
 
 const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLoginSuccess, onAutoLoginSuccess }) => {
@@ -30,6 +32,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLogi
 
   const { refreshTokens, hasRefreshToken, isRefreshTokenExpired } = useTokenStore();
   const { hasUser, getCurrentUser } = useUserStore();
+  const { setCurrentTeam } = useTheme();
 
   useEffect(() => {
     initializeApp();
@@ -66,10 +69,19 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLogi
           startAnimationWithLogin();
           return;
         }
+
         const refreshResult = await refreshTokens();
 
         if (isOk(refreshResult) && refreshResult.data) {
-          // 자동로그인 성공 - 애니메이션 후 메인으로 이동
+          // 자동로그인 성공 - 사용자 정보로 팀 테마 설정
+          const currentUser = getCurrentUser();
+          if (currentUser?.teamId) {
+            const team = findTeamById(currentUser.teamId);
+            if (team) {
+              setCurrentTeam(team);
+            }
+          }
+
           console.log('Auto login successful');
           startAnimationAndComplete();
           return;
@@ -206,16 +218,15 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLogi
       if (!response.ok) {
         throw new Error('사용자 정보를 가져올 수 없습니다.');
       }
+
       const userInfo = await response.json();
-      // 로그인 성공 콜백 호출
+
       if (onLoginSuccess) {
         onLoginSuccess(userInfo, kakaoData.accessToken);
       } else {
-        // 애니메이션 완료 콜백 호출
         onAnimationComplete?.();
       }
     } catch (error: any) {
-      // 사용자에게 에러 메시지 표시
       Alert.alert('로그인 실패', error.message || '카카오 로그인에 실패했습니다. 다시 시도해주세요.', [
         { text: '확인' },
       ]);

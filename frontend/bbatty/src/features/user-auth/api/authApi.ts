@@ -5,7 +5,7 @@ import { RegisterRequest, RegisterResponse, LoginRequest, LoginResponse } from '
 
 export const authApi = {
   signup: (request: RegisterRequest): AsyncResult<RegisterResponse, ApiError> =>
-    wrapApiCall(() => apiClient.post('/api/auth/signup', request)),
+    wrapApiCall(() => apiClient.post('/api/auth/s ignup', request)),
 
   login: (request: LoginRequest): AsyncResult<LoginResponse, ApiError> =>
     wrapApiCall(() => apiClient.post('/api/auth/login', request)),

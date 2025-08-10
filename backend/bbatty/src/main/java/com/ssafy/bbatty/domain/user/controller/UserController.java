@@ -1,5 +1,6 @@
 package com.ssafy.bbatty.domain.user.controller;
 
+import com.ssafy.bbatty.domain.auth.dto.response.NicknameCheckResponse;
 import com.ssafy.bbatty.domain.user.dto.request.UserUpdateRequestDto;
 import com.ssafy.bbatty.domain.user.dto.response.UserResponseDto;
 import com.ssafy.bbatty.domain.user.service.UserService;
@@ -89,11 +90,14 @@ public class UserController {
      * 닉네임 중복 체크 (프로필 수정용)
      */
     @GetMapping("/check-nickname")
-    public ResponseEntity<ApiResponse<Boolean>> checkNicknameAvailability(
+    public ResponseEntity<ApiResponse<NicknameCheckResponse>> checkNicknameAvailability(
             @RequestParam String nickname,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
         boolean available = userService.isNicknameAvailable(nickname, userPrincipal.getUserId());
-        return ResponseEntity.ok(ApiResponse.success(available));
+        NicknameCheckResponse response = available 
+            ? NicknameCheckResponse.available()
+            : NicknameCheckResponse.unavailable();
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     /**

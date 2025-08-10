@@ -13,6 +13,8 @@ import { isErr, isOk } from '../shared/utils/result';
 import { Alert } from 'react-native';
 import { Token } from '../shared/api/token/tokenTypes';
 import { initializeApiClient } from '../shared/api/client/apiClient';
+import { useTheme } from '../shared/team/ThemeContext';
+import { findTeamById } from '../shared/team/teamTypes';
 
 const Stack = createStackNavigator();
 
@@ -22,16 +24,23 @@ export default function AppNavigator() {
   const [isExistingUser, setIsExistingUser] = useState(false);
 
   const { setKakaoUserInfo, setKakaoAccessToken } = usekakaoStore();
-  const { initializeTokens, refreshTokens, resetToken } = useTokenStore();
+  const { initializeTokens, resetToken } = useTokenStore();
   const { initializeUser, setCurrentUser, reset } = useUserStore();
+  const { setCurrentTeam } = useTheme();
 
   useEffect(() => {
     initializeApp();
   }, []);
 
+  const testReset = () => {
+    resetToken();
+    reset();
+  };
+
   const initializeApp = async () => {
     try {
       await Promise.all([initializeTokens(), initializeUser()]);
+      // testReset();
       initializeApiClient();
     } catch (error) {
       console.error('App initialization failed:', error);
@@ -87,8 +96,8 @@ export default function AppNavigator() {
           throw new Error('Token save failed');
         }
 
-        // 사용자 정보 업데이트
-        await setCurrentUser(userProfile);
+        // 사용자 정보 및 팀 테마 설정
+        await handleSetUserAndTeam(userProfile);
         setIsAuthenticated(true);
 
         console.log('Existing user login successful');
@@ -102,6 +111,18 @@ export default function AppNavigator() {
     }
   };
 
+  const handleSetUserAndTeam = async (userInfo: any) => {
+    await setCurrentUser(userInfo);
+
+    // 사용자 정보로부터 팀 설정
+    if (userInfo.teamId) {
+      const team = findTeamById(userInfo.teamId);
+      if (team) {
+        setCurrentTeam(team);
+      }
+    }
+  };
+
   // 회원가입 완료 시 호출
   const handleSignUpComplete = async (userInfo: any, tokens: Token) => {
     try {
@@ -111,7 +132,7 @@ export default function AppNavigator() {
         throw new Error('Token save failed');
       }
 
-      await setCurrentUser(userInfo);
+      await handleSetUserAndTeam(userInfo);
       setIsAuthenticated(true);
       setIsExistingUser(true);
     } catch (error) {

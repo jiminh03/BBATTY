@@ -3,6 +3,7 @@ package com.ssafy.bbatty.domain.auth.controller;
 import com.ssafy.bbatty.domain.auth.dto.request.KakaoLoginRequest;
 import com.ssafy.bbatty.domain.auth.dto.request.SignupRequest;
 import com.ssafy.bbatty.domain.auth.dto.response.AuthResponse;
+import com.ssafy.bbatty.domain.auth.dto.response.NicknameCheckResponse;
 import com.ssafy.bbatty.domain.auth.dto.response.TokenPair;
 import com.ssafy.bbatty.domain.auth.service.AuthService;
 import com.ssafy.bbatty.global.constants.ErrorCode;
@@ -91,14 +92,17 @@ public class AuthController {
      * 
      * 📝 프론트 처리:
      * - 닉네임 입력 후 중복 확인 버튼 클릭 시 호출
-     * - 사용 가능하면 true, 중복이면 false 반환
+     * - available: 사용 가능 여부, message: 안내 메시지
      */
     @GetMapping("/check-nickname")
-    public ResponseEntity<ApiResponse<Boolean>> checkNickname(
+    public ResponseEntity<ApiResponse<NicknameCheckResponse>> checkNickname(
             @RequestParam String nickname
     ) {
         boolean isAvailable = authService.isNicknameAvailable(nickname);
-        return ResponseEntity.ok(ApiResponse.success(isAvailable));
+        NicknameCheckResponse response = isAvailable 
+            ? NicknameCheckResponse.available()
+            : NicknameCheckResponse.unavailable();
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     /**
