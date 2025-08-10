@@ -3,6 +3,12 @@ package com.ssafy.bbatty.domain.user.service;
 import com.ssafy.bbatty.domain.board.service.PostService;
 import com.ssafy.bbatty.domain.user.dto.request.UserUpdateRequestDto;
 import com.ssafy.bbatty.domain.user.dto.response.UserResponseDto;
+import com.ssafy.bbatty.domain.user.dto.response.UserBadgeResponse;
+import com.ssafy.bbatty.domain.user.dto.response.BadgeCategoryResponse;
+import com.ssafy.bbatty.domain.user.dto.response.BadgeResponse;
+import com.ssafy.bbatty.global.constants.BadgeType;
+import com.ssafy.bbatty.global.constants.BadgeCategory;
+import com.ssafy.bbatty.global.constants.Stadium;
 import com.ssafy.bbatty.domain.user.entity.User;
 import com.ssafy.bbatty.domain.user.repository.UserRepository;
 import com.ssafy.bbatty.global.constants.ErrorCode;
@@ -14,9 +20,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -97,11 +103,15 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public boolean isNicknameAvailable(String nickname, Long currentUserId) {
-        return !userRepository.existsByNickname(nickname) || 
-               userRepository.findByNickname(nickname)
-                   .map(User::getId)
-                   .filter(id -> id.equals(currentUserId))
-                   .isPresent();
+        User currentUser = findUserById(currentUserId);
+        
+        // 현재 자신의 닉네임과 동일한 경우 사용 불가 (변경할 필요 없음)
+        if (currentUser.getNickname().equals(nickname)) {
+            return false;
+        }
+        
+        // 다른 사용자가 사용중인 닉네임인지 확인
+        return !userRepository.existsByNickname(nickname);
     }
 
     @Override
@@ -278,5 +288,68 @@ public class UserServiceImpl implements UserService {
         }
 
         return result;
+    }
+
+    @Override
+    public UserBadgeResponse getUserBadges(Long targetUserId, String season) {
+        // 시즌 기본값 설정 (현재 연도)
+        if (season == null) {
+            season = String.valueOf(LocalDate.now().getYear());
+        }
+
+        List<BadgeCategoryResponse> badgeCategories = new ArrayList<>();
+        
+        // 1. 구장 정복 뱃지 (영구)
+        List<BadgeResponse> stadiumBadges = getStadiumBadges(targetUserId);
+        badgeCategories.add(BadgeCategoryResponse.stadium(stadiumBadges));
+        
+        // 2. 시즌 승리 뱃지
+        List<BadgeResponse> winBadges = getSeasonBadges(targetUserId, season, BadgeCategory.SEASON_WINS);
+        badgeCategories.add(BadgeCategoryResponse.seasonal(BadgeCategory.SEASON_WINS, season, winBadges));
+        
+        // 3. 시즌 직관 뱃지 
+        List<BadgeResponse> gameBadges = getSeasonBadges(targetUserId, season, BadgeCategory.SEASON_GAMES);
+        badgeCategories.add(BadgeCategoryResponse.seasonal(BadgeCategory.SEASON_GAMES, season, gameBadges));
+        
+        return UserBadgeResponse.of(targetUserId, badgeCategories);
+    }
+    
+    /**
+     * 구장 뱃지 조회
+     */
+    private List<BadgeResponse> getStadiumBadges(Long userId) {
+        return Arrays.stream(BadgeType.values())
+            .filter(BadgeType::isStadiumBadge)
+            .map(badgeType -> {
+                Stadium stadium = (Stadium) badgeType.getRequirement();
+                String redisKey = RedisKey.BADGE_STADIUM + userId + ":" + stadium.name();
+                String timestamp = redisUtil.getValue(redisKey, String.class);
+                
+                return timestamp != null 
+                    ? BadgeResponse.acquired(badgeType, LocalDateTime.parse(timestamp))
+                    : BadgeResponse.notAcquired(badgeType);
+            })
+            .collect(Collectors.toList());
+    }
+    
+    /**
+     * 시즌별 뱃지 조회 (승리/직관)
+     */
+    private List<BadgeResponse> getSeasonBadges(Long userId, String season, BadgeCategory category) {
+        return Arrays.stream(BadgeType.values())
+            .filter(badgeType -> badgeType.getCategory() == category)
+            .map(badgeType -> {
+                Integer requirement = (Integer) badgeType.getRequirement();
+                String redisKey = (category == BadgeCategory.SEASON_WINS) 
+                    ? RedisKey.BADGE_WINS + userId + ":" + season + ":" + requirement
+                    : RedisKey.BADGE_GAMES + userId + ":" + season + ":" + requirement;
+                    
+                String timestamp = redisUtil.getValue(redisKey, String.class);
+                
+                return timestamp != null 
+                    ? BadgeResponse.acquired(badgeType, LocalDateTime.parse(timestamp))
+                    : BadgeResponse.notAcquired(badgeType);
+            })
+            .collect(Collectors.toList());
     }
 }

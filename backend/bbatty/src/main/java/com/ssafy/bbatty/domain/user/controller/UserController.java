@@ -1,6 +1,7 @@
 package com.ssafy.bbatty.domain.user.controller;
 
 import com.ssafy.bbatty.domain.auth.dto.response.NicknameCheckResponse;
+import com.ssafy.bbatty.domain.user.dto.response.UserBadgeResponse;
 import com.ssafy.bbatty.domain.user.dto.request.UserUpdateRequestDto;
 import com.ssafy.bbatty.domain.user.dto.response.UserResponseDto;
 import com.ssafy.bbatty.domain.user.service.UserService;
@@ -68,6 +69,20 @@ public class UserController {
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
         Long targetUserId = (userId != null) ? userId : userPrincipal.getUserId();
         Object response = userService.getUserStats(targetUserId, userPrincipal.getUserId(), season, type);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    /**
+     * 사용자 뱃지 조회
+     * userId가 없으면 본인 프로필, 있으면 해당 사용자 프로필 조회
+     */
+    @GetMapping("/badges")
+    public ResponseEntity<ApiResponse<UserBadgeResponse>> getUserBadges(
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) String season,        // "2025", "2024" 등 (디폴트: 현재 연도)
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        Long targetUserId = (userId != null) ? userId : userPrincipal.getUserId();
+        UserBadgeResponse response = userService.getUserBadges(targetUserId, season);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
