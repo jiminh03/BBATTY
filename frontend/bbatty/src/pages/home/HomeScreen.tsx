@@ -47,11 +47,11 @@ export default function HomeScreen({ navigation, route }: Props) {
           <TouchableOpacity 
             style={styles.quickButton}
             onPress={() => {
-              // 채팅 탭으로 이동
-              navigation.navigate('ChatStack', { screen: 'MatchChatRoomList' });
+              // 직관 인증 페이지로 이동
+              navigation.navigate('AttendanceVerification' as never);
             }}
           >
-            <Text style={styles.quickButtonText}>매치 채팅 참여하기</Text>
+            <Text style={styles.quickButtonText}>🎯 직관 인증하기</Text>
           </TouchableOpacity>
 
           <TouchableOpacity

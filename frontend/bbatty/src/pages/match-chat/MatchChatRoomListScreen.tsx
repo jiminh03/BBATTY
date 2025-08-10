@@ -14,11 +14,13 @@ import type { StackNavigationProp } from '@react-navigation/stack';
 import { chatRoomApi } from '../../entities/chat-room/api/api';
 import type { MatchChatRoom } from '../../entities/chat-room/api/types';
 import type { ChatStackParamList } from '../../navigation/types';
+import { useUserStore } from '../../entities/user/model/userStore';
 
 type NavigationProp = StackNavigationProp<ChatStackParamList>;
 
 export const MatchChatRoomListScreen = () => {
   const navigation = useNavigation<NavigationProp>();
+  const getCurrentUser = useUserStore((state) => state.getCurrentUser);
   const [rooms, setRooms] = useState<MatchChatRoom[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -68,9 +70,16 @@ export const MatchChatRoomListScreen = () => {
 
   const handleWatchChatJoin = async () => {
     try {
+      const currentUser = getCurrentUser();
+      
+      if (!currentUser) {
+        Alert.alert('오류', '사용자 정보를 찾을 수 없습니다.');
+        return;
+      }
+
       const watchRequest = {
         gameId: 1258,
-        teamId: 3,
+        teamId: currentUser.teamId,
         isAttendanceVerified: true
       };
 
