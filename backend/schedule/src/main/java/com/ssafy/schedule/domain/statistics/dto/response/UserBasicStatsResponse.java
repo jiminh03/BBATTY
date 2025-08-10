@@ -15,15 +15,15 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserBasicStatsResponse {
-    
+
     private Long userId;
     private String season; // "total", "2025" 등
     
     // 선택 시즌 승무패 정보
     private int totalGames;
     private int wins;
-    private int draws;
     private int losses;
+    private int draws;
     private String winRate; // "0.000" 형식 (할푼리)
     
     // 야구 승률 계산: 승 / (승 + 패) - 무승부 제외
