@@ -44,20 +44,16 @@ public class StatisticsUpdateService {
             String currentSeason = String.valueOf(LocalDate.now().getYear());
             
             // 각 사용자의 통계 캐시 무효화
-            int updatedCount = 0;
             for (Object memberObj : members) {
                 try {
                     String userIdStr = String.valueOf(memberObj);
                     Long userId = Long.valueOf(userIdStr);
                     statisticsRedisRepository.clearCurrentSeasonAndTotalStats(userId, currentSeason);
-                    updatedCount++;
                     log.debug("사용자 통계 캐시 삭제: userId={}, currentSeason={}", userId, currentSeason);
                 } catch (NumberFormatException e) {
                     log.warn("잘못된 userId 형식: {}", memberObj);
                 }
             }
-            
-            log.info("사용자 통계 업데이트 완료: date={}, users={}", date, updatedCount);
             
         } catch (Exception e) {
             log.error("사용자 통계 업데이트 실패: date={}", date, e);

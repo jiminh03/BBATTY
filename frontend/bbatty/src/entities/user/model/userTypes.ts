@@ -3,8 +3,8 @@ export interface User {
   nickname: string;
   profileImg?: string;
   teamId: number;
-  teamName: string;
-  introduction?: string;
+  // teamName: string;
+  // introduction?: string;
   age: number;
   gender: string;
 }

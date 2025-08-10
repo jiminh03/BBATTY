@@ -34,8 +34,6 @@ export default function SignUpScreen({
   const [isLoading, setIsLoading] = useState(false);
   const [showConflictModal, setShowConflictModal] = useState(false);
   const { kakaoUserInfo, kakaoAccessToken } = usekakaoStore();
-  const { setCurrentUser } = useUserStore();
-  const { setTokens } = useTokenStore();
 
   const teamId = route.params?.teamId;
   useEffect(() => {

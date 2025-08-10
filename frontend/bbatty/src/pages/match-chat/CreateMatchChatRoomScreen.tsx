@@ -27,6 +27,21 @@ const TEAMS = [
   'LG', 'KT', 'SSG', 'NC', '두산', '기아', 'KIA', 'SK', '삼성', '롯데', '한화'
 ];
 
+// 팀 이름을 ID로 매핑
+const TEAM_ID_MAP: { [key: string]: number } = {
+  'LG': 1,
+  'KT': 2, 
+  'SSG': 3,
+  'NC': 4,
+  '두산': 5,
+  '기아': 6,
+  'KIA': 6, // 기아와 KIA는 같은 팀
+  'SK': 7,
+  '삼성': 8,
+  '롯데': 9,
+  '한화': 10
+};
+
 const GENDER_OPTIONS = [
   { value: 'ALL', label: '전체' },
   { value: 'MALE', label: '남성만' },
@@ -42,10 +57,10 @@ export const CreateMatchChatRoomScreen = () => {
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
   
   const [formData, setFormData] = useState<CreateMatchChatRoomRequest>({
-    gameId: '', // 경기 선택 후 설정
+    gameId: 0, // 경기 선택 후 설정
     matchTitle: '',
     matchDescription: '',
-    teamId: 'LG',
+    teamId: 1, // LG 팀 ID (실제 서버 팀 ID로 매핑 필요)
     minAge: 20,
     maxAge: 30,
     genderCondition: 'ALL',
@@ -129,7 +144,9 @@ export const CreateMatchChatRoomScreen = () => {
       setLoading(true);
       const response = await chatRoomApi.createMatchChatRoom(formData);
       
-      if (response.status === 'SUCCESS') {
+      console.log('📱 CreateMatchChatRoom 화면에서 받은 응답:', response);
+      
+      if (response.data?.status === 'SUCCESS') {
         Alert.alert(
           '성공',
           '채팅방이 생성되었습니다!',
@@ -141,13 +158,13 @@ export const CreateMatchChatRoomScreen = () => {
                   navigation.goBack();
                 }
                 // 필요시 생성된 방으로 바로 이동
-                // navigation.navigate('MatchChatRoomDetail', { room: response.data });
+                // navigation.navigate('MatchChatRoomDetail', { room: response.data.data });
               },
             },
           ]
         );
       } else {
-        Alert.alert('오류', response.message || '채팅방 생성에 실패했습니다.');
+        Alert.alert('오류', response.data?.message || '채팅방 생성에 실패했습니다.');
       }
     } catch (error) {
       console.error('채팅방 생성 실패:', error);
@@ -158,7 +175,13 @@ export const CreateMatchChatRoomScreen = () => {
   };
 
   const updateFormData = (key: keyof CreateMatchChatRoomRequest, value: any) => {
-    setFormData(prev => ({ ...prev, [key]: value }));
+    if (key === 'teamId' && typeof value === 'string') {
+      // 팀 이름을 ID로 변환
+      const teamId = TEAM_ID_MAP[value];
+      setFormData(prev => ({ ...prev, [key]: teamId || 1 }));
+    } else {
+      setFormData(prev => ({ ...prev, [key]: value }));
+    }
   };
 
   return (
@@ -245,13 +268,13 @@ export const CreateMatchChatRoomScreen = () => {
                   key={team}
                   style={[
                     styles.teamButton,
-                    formData.teamId === team && styles.selectedTeamButton
+                    formData.teamId === TEAM_ID_MAP[team] && styles.selectedTeamButton
                   ]}
                   onPress={() => updateFormData('teamId', team)}
                 >
                   <Text style={[
                     styles.teamButtonText,
-                    formData.teamId === team && styles.selectedTeamButtonText
+                    formData.teamId === TEAM_ID_MAP[team] && styles.selectedTeamButtonText
                   ]}>
                     {team}
                   </Text>

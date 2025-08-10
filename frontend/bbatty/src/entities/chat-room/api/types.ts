@@ -47,10 +47,10 @@ export interface MatchChatRoomsResponse {
 }
 
 export interface CreateMatchChatRoomRequest {
-  gameId: string;
+  gameId: number;
   matchTitle: string;
   matchDescription: string;
-  teamId: string;
+  teamId: number;
   minAge: number;
   maxAge: number;
   genderCondition: 'ALL' | 'MALE' | 'FEMALE';
