@@ -1,4 +1,4 @@
-package com.ssafy.schedule.global.constant;
+package com.ssafy.schedule.global.constants;
 
 /**
  * Redis 키 상수
@@ -14,7 +14,7 @@ public class RedisKey {
     /** 사용자별 경기 직관 인증 여부: user:attendance:{user_id}:{game_id} */
     public static final String USER_ATTENDANCE_GAME = "user:attendance:";
     
-    /** 당일 직관 인증한 전체 사용자 목록: attendance:daily:attendees:{date} (Set) */
+    /** 당일 직관 인증한 전체 사용자 목록: attendance:daily:attendees:{date} (Hash - userId: teamId:gameId) */
     public static final String ATTENDANCE_DAILY_ATTENDEES = "attendance:daily:attendees:";
     
     /** 사용자별 직관 기록: user:attendance:records:{user_id}:{season} (Sorted Set) */
@@ -54,4 +54,17 @@ public class RedisKey {
     
     /** 팀내 백분위: ranking:percentile:team:{team_id}:{user_id} */
     public static final String RANKING_PERCENTILE_TEAM = "ranking:percentile:team:";
+    
+    // ===========================================
+    // BADGE 도메인 - 뱃지 획득 여부 캐싱
+    // ===========================================
+    
+    /** 사용자 구장 뱃지 획득 여부: badge:stadium:{user_id}:{stadium_name} */
+    public static final String BADGE_STADIUM = "badge:stadium:";
+    
+    /** 사용자 시즌 승리 뱃지 획득 여부: badge:wins:{user_id}:{season}:{win_count} */
+    public static final String BADGE_WINS = "badge:wins:";
+    
+    /** 사용자 시즌 직관 경기 뱃지 획득 여부: badge:games:{user_id}:{season}:{game_count} */
+    public static final String BADGE_GAMES = "badge:games:";
 }
