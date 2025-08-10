@@ -40,7 +40,7 @@ export default function AppNavigator() {
   const initializeApp = async () => {
     try {
       await Promise.all([initializeTokens(), initializeUser()]);
-      // testReset();
+      // await testReset();
       initializeApiClient();
     } catch (error) {
       console.error('App initialization failed:', error);
@@ -70,6 +70,7 @@ export default function AppNavigator() {
 
       // 기존 사용자라면 서버에 로그인 요청
       if (isExisting) {
+        console.error('기존 사용자임');
         await handleExistingUserLogin(accessToken);
       }
     } catch (error) {

@@ -3,7 +3,7 @@ import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { ThemeProvider } from './src/shared/styles';
+import { ThemeProvider } from './src/shared/team/ThemeContext';
 import { ToastProvider } from './src/app/providers/ToastProvider';
 import AppNavigator from './src/navigation/AppNavigator';
 /*

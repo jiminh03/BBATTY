@@ -68,6 +68,7 @@ export default function SignUpScreen({
 
   // 신규 회원가입
   const handleSignUp = async (formData: ProfileFormData) => {
+    console.log('제출2');
     if (!teamId) {
       Alert.alert('오류', '팀이 선택되지 않았습니다.');
       return;
@@ -85,10 +86,12 @@ export default function SignUpScreen({
       email: kakaoUserInfo.kakao_account?.email || '',
       gender: kakaoUserInfo.kakao_account?.gender,
       birthYear: kakaoUserInfo.kakao_account?.birthyear,
-      profileImg: formData.profileImage,
+      profileImg: '', //formData.profileImage,
       introduction: formData.introduction,
       teamId: teamId,
     });
+
+    console.log(result);
 
     if (isOk(result)) {
       const { userProfile, tokens } = result.data;

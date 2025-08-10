@@ -16,7 +16,7 @@ interface UserActions {
   getCurrentUser: () => User | null;
   setCurrentUser: (user: User | null) => Promise<Result<void, Error>>;
   logout: () => Promise<Result<void, Error>>;
-  reset: () => void;
+  reset: () => Promise<void>;
 }
 
 type UserStore = UserState & UserActions;
@@ -83,8 +83,10 @@ export const useUserStore = create<UserStore>((set, get) => ({
     return result;
   },
 
-  reset: () =>
+  reset: async () => {
     set({
       currentUser: null,
-    }),
+    });
+    await AsyncStorage.removeItem(STORAGE_KEYS.USER);
+  },
 }));

@@ -8,7 +8,7 @@ export interface Team {
 }
 
 // KBO 팀 데이터
-export const TEAMS: readonly Team[] = [
+export const TEAMS: Team[] = [
   {
     id: 1,
     name: '한화 이글스',

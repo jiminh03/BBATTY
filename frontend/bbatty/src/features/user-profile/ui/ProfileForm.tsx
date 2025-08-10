@@ -60,7 +60,10 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
   // 제출
   const handleSubmit = async () => {
     // 전체 검증
-    if (!validate()) return;
+    if (!validate()) {
+      console.log('유효하지 않음');
+      return;
+    }
 
     // 닉네임 중복 확인 체크 (신규 가입 시)
     if (showNicknameField && !isEditMode && isNicknameAvailable === null) {

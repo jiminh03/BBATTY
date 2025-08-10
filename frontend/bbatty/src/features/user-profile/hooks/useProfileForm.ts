@@ -6,7 +6,7 @@ export const useProfileForm = (initialData?: Partial<ProfileFormData>) => {
   const [formData, setFormData] = useState<ProfileFormData>({
     nickname: initialData?.nickname || '',
     profileImage: initialData?.profileImage,
-    introduction: initialData?.introduction,
+    introduction: initialData?.introduction || '',
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof ProfileFormData, string>>>({});
@@ -45,7 +45,6 @@ export const useProfileForm = (initialData?: Partial<ProfileFormData>) => {
   // 전체 검증
   const validate = (): boolean => {
     const newErrors: typeof errors = {};
-
     // 각 필드 검증
     (Object.keys(validators) as Array<keyof typeof validators>).forEach((field) => {
       const validation = validators[field](formData[field] as string);
@@ -53,7 +52,6 @@ export const useProfileForm = (initialData?: Partial<ProfileFormData>) => {
         newErrors[field] = validation.error;
       }
     });
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };

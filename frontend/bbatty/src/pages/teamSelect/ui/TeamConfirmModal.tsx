@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Modal, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { TEAMS } from '../../../entities/team/model/teamTypes';
+import { TEAMS } from '../../../shared/team/teamTypes';
 import { styles } from './TeamConfirmModal.style';
 
 interface TeamConfirmModalProps {
@@ -20,7 +20,7 @@ export const TeamConfirmModal: React.FC<TeamConfirmModalProps> = ({ visible, tea
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalTeamLogo}>
-            <Text style={styles.modalTeamEmoji}>{selectedTeam.logo}</Text>
+            <Text style={styles.modalTeamEmoji}>{selectedTeam.name}</Text>
           </View>
           <Text style={styles.modalTitle}>{selectedTeam.name}</Text>
           <Text style={styles.modalMessage}>
