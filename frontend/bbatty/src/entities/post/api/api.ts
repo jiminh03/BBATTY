@@ -7,10 +7,22 @@ import {
   GetPostsParams,
   PostListItem,
 } from './types';
-import { AxiosHeaders, AxiosResponse } from 'axios';
+import axios, { AxiosHeaders, AxiosResponse } from 'axios';
 import { Post } from '../model/types';
 import { CursorPostListResponse } from './types';
 import { PostStatus } from '../model/types';
+
+type UpdateBody = {
+  postId: number;
+  title: string;
+  content: string;
+  teamId?: number;
+  status?: string;      // 서버가 postStatus 라면 키만 바꿔주면 됨
+  postStatus?: string;  // <- 이 키가 맞다면 위 status 대신 이걸 쓰기
+};
+
+const clean = <T extends object>(obj: T): T =>
+  Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as T;
 
 export const postApi = {
   // 게시글 생성
@@ -18,8 +30,33 @@ export const postApi = {
     apiClient.post('/api/posts', payload),
 
   // 게시글 수정
-  updatePost: (postId: string, payload: UpdatePostPayload) => apiClient.put(`/api/posts/${postId}`, payload),
+  updatePost: async (
+    postId: number,
+    payload: { title: string; content: string; teamId?: number } // teamId까지 허용
+  ) => {
+    const body = {
+      title: payload.title,
+      content: payload.content,
+      ...(payload.teamId != null ? { teamId: payload.teamId } : {}),
+    };
 
+    try {
+      console.log('[updatePost] PUT /api/posts/%d body=', postId, body);
+      const res = await apiClient.put<any>(`/api/posts/${postId}`, body);
+      const apiRes: any = (res as any)?.data ?? res;
+      const data = 'data' in apiRes ? extractData<any>(apiRes) : apiRes;
+      console.log('[updatePost][OK]', data);
+      return data;
+    } catch (e) {
+      if (axios.isAxiosError(e)) {
+        console.log('[updatePost][AXIOS]', e.response?.status, e.response?.data);
+      } else {
+        console.log('[updatePost][ERROR]', e);
+      }
+      throw e;
+    }
+  },
+    
   // 게시글 삭제
   deletePost: (postId: string) => apiClient.delete(`/api/posts/${postId}`),
 
