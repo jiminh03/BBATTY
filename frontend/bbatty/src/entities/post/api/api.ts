@@ -25,31 +25,33 @@ export const postApi = {
 
   // 게시글 상세 조회
   getPostById: async (postId: number): Promise<Post> => {
-  // R 자리에 ApiResponse<Post>를 명시
-  const res = await apiClient.get<Post, ApiResponse<Post>>(`/api/posts/${postId}`);
-  const data = extractData<Post>(res);
-  if (!data) throw new Error(res.message ?? '게시글 상세 조회 실패');
-  return data;
+  const res = await apiClient.get(`/api/posts/${postId}`);
+  const api = (res as any).data as { status: string; message?: string; data?: Post };
+  if (api?.status !== 'SUCCESS' || !api?.data) {
+    throw new Error(api?.message ?? '게시글 상세 조회 실패');
+  }
+  return api.data;                 // ✅ Post
 },
 
   // 팀별 게시글 목록 조회 (cursor 기반)
-  getPosts: async (teamId: number, cursor?: number) => {
-  try {
-    const res = await apiClient.get<
-      CursorPostListResponse,
-      ApiResponse<CursorPostListResponse>
-    >(`/api/posts/team/${teamId}`, { params: cursor !== undefined ? { cursor } : {} });
+  getPosts: async (teamId: number, cursor?: number): Promise<CursorPostListResponse> => {
+    const res = await apiClient.get(`/api/posts/team/${teamId}`, {
+      params: cursor !== undefined ? { cursor } : {},
+    });
 
-    const data = extractData<CursorPostListResponse>(res);
-    if (!data) throw new Error(res.message ?? '게시글 목록 조회 실패');
-    return data;
-  } catch (e: any) {
-    if (e?.response?.status === 401) {
-      throw new Error('인증이 필요합니다. 다시 로그인 해주세요.');
+    // ✅ AxiosResponse → ApiResponse 형태로 직접 파싱
+    const api = (res as any).data as {
+      status: string;
+      message?: string;
+      data?: CursorPostListResponse;
+    };
+
+    if (api?.status !== 'SUCCESS' || !api?.data) {
+      throw new Error(api?.message ?? '게시글 목록 조회 실패');
     }
-    throw e;
-  }
-},
+    return api.data;                 // ✅ { posts, hasNext, nextCursor }
+  },
+
 
   // 인기 게시글 목록 조회
   getPopularPosts: ({ page = 0, size = 10, teamId }: GetPostsParams) =>
@@ -69,7 +71,7 @@ export const postApi = {
     apiClient.post<PresignedUrlResponse>('/api/posts/presigned-url', payload),
 
   // // 이미지 삭제
-  // deleteImage: (imageId: string) => apiClient.delete(`/api/images/${imageId}`),
+  deleteImage: (imageId: string) => apiClient.delete(`/api/images/${imageId}`),
 
 };
 
