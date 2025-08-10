@@ -41,7 +41,7 @@ export default function AppNavigator() {
   const initializeApp = async () => {
     try {
       await Promise.all([initializeTokens(), initializeUser()]);
-      //await testReset();
+      await testReset();
       initializeApiClient();
     } catch (error) {
       console.error('App initialization failed:', error);
