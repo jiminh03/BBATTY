@@ -10,59 +10,89 @@ import {
 import axios from 'axios';
 import { extractData } from '../../../shared/api/types/response';
 
+const unwrap = <T>(res: any) => (res?.data ?? res) as { status?: any; message?: string; data?: T };
+
 export const commentApi = {
   // 댓글 목록 (페이지네이션)
-  // GET /api/comments/post/{postId}/page?page=&size=
-  getComments: async (
-    { postId, page = 0, size = 10 }: GetCommentsParams
-  ): Promise<CommentListResponse> => {
+  async getComments({ postId, page = 0, size = 10 }: GetCommentsParams): Promise<CommentListResponse> {
     try {
-      const res = await apiClient.get<CommentListResponse>(
-        `/api/comments/post/${postId}/page`,              // ✅ /page 추가
-        { params: { page, size } }
-      );
-
-      // apiClient는 ApiResponse<T>를 반환하니까 res 자체가 ApiResponse<T>
-      const data = extractData<CommentListResponse>(res);
-      if (!data) throw new Error(res.message || '댓글 목록 조회 실패');
-
-      return data; // { comments, totalCount, page, limit, hasMore }
+      const res = await apiClient.get<CommentListResponse>(`/api/comments/post/${postId}/page`, {
+        params: { page, size },
+      });
+      const apiRes = unwrap<CommentListResponse>(res);
+      // ApiResponse 형태면 extractData로 data만 뽑고, 아니면 그대로 사용
+      const data = 'data' in apiRes ? extractData<CommentListResponse>(apiRes as any) : (apiRes as any);
+      if (!data) throw new Error((apiRes as any).message ?? '댓글 목록 조회 실패');
+      return data;
     } catch (e) {
-      // 서버가 "없음"을 404로 주면 빈 목록으로 매핑 (토스트 안 뜨게)
-      if (axios.isAxiosError(e) && e.response?.status === 404) {
-        return { comments: [], totalCount: 0, page, limit: size, hasMore: false };
+      if (axios.isAxiosError(e)) {
+        console.log('[getComments][AXIOS]', e.response?.status, e.response?.data);
+        if (e.response?.status === 404) {
+          return { comments: [], totalCount: 0, page, limit: size, hasMore: false };
+        }
+      } else {
+        console.log('[getComments][ERROR]', e);
       }
       throw e;
     }
   },
 
   // 댓글 생성
-  // POST /api/comments
-  createComment: async (payload: CreateCommentPayload): Promise<void> => {
-    console.log(payload);
-    const res = await apiClient.post<void>('/api/comments', payload);
-    if (res.status !== 'SUCCESS') {
-      throw new Error(res.message || '댓글 작성 실패');
+  async createComment(payload: CreateCommentPayload): Promise<void> {
+    try {
+      console.log('[createComment][payload]', payload);
+      const res = await apiClient.post<void>('/api/comments', payload);
+      const apiRes = unwrap<void>(res);
+      // 생성/수정/삭제는 data가 없을 수 있으니 status만 확인
+      if (apiRes.status && apiRes.status !== 'SUCCESS') {
+        throw new Error(apiRes.message ?? '댓글 작성 실패');
+      }
+      console.log('[createComment][OK]');
+    } catch (e) {
+      if (axios.isAxiosError(e)) {
+        console.log('[createComment][AXIOS]', e.response?.status, e.response?.data);
+      } else {
+        console.log('[createComment][ERROR]', e);
+      }
+      throw e;
     }
   },
 
   // 댓글 수정
-  // PUT /api/comments/{id}
-  updateComment: async (payload: UpdateCommentPayload): Promise<void> => {
-    const res = await apiClient.put<void>(`/api/comments/${payload.commentId}`, {
-      content: payload.content,
-    });
-    if (res.status !== 'SUCCESS') {
-      throw new Error(res.message || '댓글 수정 실패');
+  async updateComment(payload: UpdateCommentPayload): Promise<void> {
+    try {
+      const res = await apiClient.put<void>(`/api/comments/${payload.commentId}`, { content: payload.content });
+      const apiRes = unwrap<void>(res);
+      if (apiRes.status && apiRes.status !== 'SUCCESS') {
+        throw new Error(apiRes.message ?? '댓글 수정 실패');
+      }
+      console.log('[updateComment][OK]');
+    } catch (e) {
+      if (axios.isAxiosError(e)) {
+        console.log('[updateComment][AXIOS]', e.response?.status, e.response?.data);
+      } else {
+        console.log('[updateComment][ERROR]', e);
+      }
+      throw e;
     }
   },
 
   // 댓글 삭제
-  // DELETE /api/comments/{id}
-  deleteComment: async ({ commentId }: DeleteCommentPayload): Promise<void> => {
-    const res = await apiClient.delete<void>(`/api/comments/${commentId}`);
-    if (res.status !== 'SUCCESS') {
-      throw new Error(res.message || '댓글 삭제 실패');
+  async deleteComment({ commentId }: DeleteCommentPayload): Promise<void> {
+    try {
+      const res = await apiClient.delete<void>(`/api/comments/${commentId}`);
+      const apiRes = unwrap<void>(res);
+      if (apiRes.status && apiRes.status !== 'SUCCESS') {
+        throw new Error(apiRes.message ?? '댓글 삭제 실패');
+      }
+      console.log('[deleteComment][OK]');
+    } catch (e) {
+      if (axios.isAxiosError(e)) {
+        console.log('[deleteComment][AXIOS]', e.response?.status, e.response?.data);
+      } else {
+        console.log('[deleteComment][ERROR]', e);
+      }
+      throw e;
     }
   },
 };
