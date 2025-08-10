@@ -22,6 +22,7 @@ export default function MainNavigator() {
           borderTopColor: themeColor,
         },
       }}
+      initialRouteName='HomeStack'
     >
       <BottomTab.Screen
         name='HomeStack'
