@@ -31,8 +31,12 @@ export const MatchChatRoomScreen = () => {
   console.log('MatchChatRoomScreen route.params:', route.params);
   
   const [currentMessage, setCurrentMessage] = useState('');
-  const { currentUser } = useUserStore();
-  const currentUserId = currentUser?.id || '3658'; // fallback to test ID
+  const getCurrentUser = useUserStore((state) => state.getCurrentUser);
+  const currentUser = getCurrentUser();
+  const currentUserId = currentUser?.userId || 45; // fallback to test ID that matches log
+  
+  console.log('Current User:', currentUser);
+  console.log('Current User ID:', currentUserId);
   
   const scrollViewRef = useRef<ScrollView>(null);
 
