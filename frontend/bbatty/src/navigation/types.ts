@@ -5,12 +5,8 @@ import { CompositeScreenProps } from '@react-navigation/native';
 
 // 루트 스택 파라미터
 export type RootStackParamList = {
-  // 인증 스택
   AuthStack: NavigatorScreenParams<AuthStackParamList>;
-  // 메인 탭
   MainTabs: NavigatorScreenParams<MainTabParamList>;
-  // 모달 스크린
-  //TeamSelectModal: undefined;
 };
 
 // 인증 스택 파라미터
@@ -18,7 +14,6 @@ export type AuthStackParamList = {
   TeamSelect: undefined;
   SignUp: {
     teamId: number;
-    //추가
     onSignUpComplete?: () => void;
   };
 };
@@ -74,7 +69,6 @@ export type ChatStackParamList = {
   MatchingDetail: {
     matchingId: string;
   };
-  // 매치 채팅 관련
   MatchChatRoomList: undefined;
   CreateMatchChatRoom: undefined;
   MatchChatRoomDetail: {
@@ -115,18 +109,13 @@ export type ChatStackParamList = {
   };
 };
 
-// 마이페이지 스택 파라미터
+// 마이페이지 스택 파라미터 (간소화)
 export type MyPageStackParamList = {
-  MyPage: undefined;
   Profile: {
-    userId: string;
+    userId?: number; // undefined면 본인 프로필
   };
   ProfileEdit: undefined;
-  AttendanceHistory: undefined;
   Settings: undefined;
-  NotificationSettings: undefined;
-  BlockedUsers: undefined;
-  About: undefined;
 };
 
 // 스크린 Props 타입
@@ -161,19 +150,3 @@ export type MyPageStackScreenProps<T extends keyof MyPageStackParamList> = Compo
   StackScreenProps<MyPageStackParamList, T>,
   MainTabScreenProps<'MyPageStack'>
 >;
-
-// 네비게이션 헬퍼 타입
-export type NavigationRoute<T extends Record<string, any>> = {
-  key: string;
-  name: keyof T;
-  params?: T[keyof T];
-};
-
-// 딥링크 설정 타입
-export type DeepLinkConfig = {
-  [key: string]: {
-    path: string;
-    params?: Record<string, string>;
-    parse?: Record<string, (value: string) => any>;
-  };
-};
