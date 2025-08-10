@@ -15,6 +15,7 @@ import { Token } from '../shared/api/token/tokenTypes';
 import { initializeApiClient } from '../shared/api/client/apiClient';
 import { useTheme } from '../shared/team/ThemeContext';
 import { findTeamById } from '../shared/team/teamTypes';
+import { AttendanceVerificationScreen } from '../pages/attendance';
 
 const Stack = createStackNavigator();
 
@@ -40,7 +41,7 @@ export default function AppNavigator() {
   const initializeApp = async () => {
     try {
       await Promise.all([initializeTokens(), initializeUser()]);
-      // await testReset();
+      //await testReset();
       initializeApiClient();
     } catch (error) {
       console.error('App initialization failed:', error);
@@ -156,7 +157,10 @@ export default function AppNavigator() {
     <NavigationContainer ref={navigationRef} linking={linking}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {isAuthenticated ? (
-          <Stack.Screen name='MainTabs' component={MainNavigator} />
+          <>
+            <Stack.Screen name='MainTabs' component={MainNavigator} />
+            <Stack.Screen name='AttendanceVerification' component={AttendanceVerificationScreen} />
+          </>
         ) : (
           <Stack.Screen name='AuthStack'>
             {() => <AuthNavigator onSignUpComplete={handleSignUpComplete} isExistingUser={isExistingUser} />}

@@ -9,6 +9,8 @@ export type RootStackParamList = {
   AuthStack: NavigatorScreenParams<AuthStackParamList>;
   // 메인 탭
   MainTabs: NavigatorScreenParams<MainTabParamList>;
+  // 직관 인증 화면
+  AttendanceVerification: undefined;
   // 모달 스크린
   //TeamSelectModal: undefined;
 };
