@@ -1,6 +1,6 @@
 package com.ssafy.schedule.domain.crawler.service.base;
 
-import com.ssafy.schedule.global.constant.Stadium;
+import com.ssafy.schedule.global.constants.Stadium;
 import com.ssafy.schedule.global.entity.Game;
 import com.ssafy.schedule.global.entity.Team;
 import com.ssafy.schedule.global.repository.TeamRepository;

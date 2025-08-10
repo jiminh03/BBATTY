@@ -2,6 +2,7 @@ package com.ssafy.bbatty.domain.user.service;
 
 import com.ssafy.bbatty.domain.user.dto.request.UserUpdateRequestDto;
 import com.ssafy.bbatty.domain.user.dto.response.UserResponseDto;
+import com.ssafy.bbatty.domain.user.dto.response.UserBadgeResponse;
 
 public interface UserService {
 
@@ -44,4 +45,9 @@ public interface UserService {
      * 회원 탈퇴
      */
     void deleteUser(Long currentUserId);
+
+    /**
+     * 사용자 뱃지 조회
+     */
+    UserBadgeResponse getUserBadges(Long targetUserId, String season);
 }

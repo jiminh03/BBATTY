@@ -1,6 +1,6 @@
 package com.ssafy.schedule.domain.crawler.service;
 
-import com.ssafy.schedule.global.constant.GameStatus;
+import com.ssafy.schedule.global.constants.GameStatus;
 import com.ssafy.schedule.global.entity.Game;
 import com.ssafy.schedule.global.entity.Team;
 import com.ssafy.schedule.global.repository.GameRepository;

@@ -1,6 +1,6 @@
 package com.ssafy.schedule.domain.statistics.repository;
 
-import com.ssafy.schedule.global.constant.RedisKey;
+import com.ssafy.schedule.global.constants.RedisKey;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;

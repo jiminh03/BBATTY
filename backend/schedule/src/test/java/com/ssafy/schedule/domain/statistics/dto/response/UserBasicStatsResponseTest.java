@@ -213,7 +213,7 @@ class UserBasicStatsResponseTest {
     void createWithAllArgsConstructor_Success() {
         // when
         UserBasicStatsResponse response = new UserBasicStatsResponse(
-                2L, "2024", 15, 9, 2, 4, "0.692"
+                2L, "2024", 15, 9, 4, 2, "0.692"
         );
 
         // then

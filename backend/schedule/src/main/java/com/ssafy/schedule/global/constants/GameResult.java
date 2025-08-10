@@ -1,4 +1,4 @@
-package com.ssafy.schedule.global.constant;
+package com.ssafy.schedule.global.constants;
 
 /**
  * 경기 결과를 나타내는 열거형
