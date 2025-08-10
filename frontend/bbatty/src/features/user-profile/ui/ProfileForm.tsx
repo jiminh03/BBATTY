@@ -39,17 +39,16 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
     try {
       const result = await profileApi.checkNickname({ nickname: formData.nickname });
 
-      // if (isOk(result)) {
-      //   console.log('닉네임 체크 성공:', result.data);
-      //   setIsNicknameAvailable(result.data.data);
-      //   if (!result.data.data) {
-      //     setErrors((prev) => ({ ...prev, nickname: '이미 사용 중인 닉네임입니다' }));
-      //   }
-      // } else {
-      //   console.error('닉네임 체크 실패:', result.error);
-      //   setErrors((prev) => ({ ...prev, nickname: '닉네임 확인에 실패했습니다' }));
-      // }
-      setIsNicknameAvailable(true);
+      if (isOk(result)) {
+        console.log('닉네임 체크 성공:', result.data);
+        setIsNicknameAvailable(result.data.available);
+        if (!result.data.available) {
+          setErrors((prev) => ({ ...prev, nickname: '이미 사용 중인 닉네임입니다' }));
+        }
+      } else {
+        console.error('닉네임 체크 실패:', result.error);
+        setErrors((prev) => ({ ...prev, nickname: '닉네임 확인에 실패했습니다' }));
+      }
     } catch (error) {
       console.error('예외 발생:', error);
     } finally {
