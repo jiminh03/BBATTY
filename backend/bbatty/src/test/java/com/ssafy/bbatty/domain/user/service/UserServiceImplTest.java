@@ -185,17 +185,20 @@ class UserServiceImplTest {
         // given
         Long userId = 1L;
         String season = "2024";
-        Map<String, String> mockStats = new HashMap<>();
-        mockStats.put("totalGames", "10");
-        mockStats.put("wins", "7");
-        mockStats.put("draws", "1");
-        mockStats.put("losses", "2");
-        mockStats.put("winRate", "0.7");
+        String type = "basic";
+        Map<String, Object> mockStats = new HashMap<>();
+        mockStats.put("userId", userId);
+        mockStats.put("season", season);
+        mockStats.put("totalGames", 10);
+        mockStats.put("wins", 7);
+        mockStats.put("draws", 1);
+        mockStats.put("losses", 2);
+        mockStats.put("winRate", "0.700");
         
-        given(redisUtil.getHashAll(any())).willReturn(mockStats);
+        given(redisUtil.getValue(any(), eq(Object.class))).willReturn(mockStats);
 
         // when
-        Object result = userService.getUserStats(userId, userId, season, null, null, null, null);
+        Object result = userService.getUserStats(userId, userId, season, type);
 
         // then
         assertThat(result).isInstanceOf(Map.class);
@@ -203,7 +206,7 @@ class UserServiceImplTest {
         Map<String, Object> statsMap = (Map<String, Object>) result;
         assertThat(statsMap.get("totalGames")).isEqualTo(10);
         assertThat(statsMap.get("wins")).isEqualTo(7);
-        assertThat(statsMap.get("winRate")).isEqualTo(0.7);
+        assertThat(statsMap.get("winRate")).isEqualTo("0.700");
     }
 
     @Test
@@ -218,7 +221,7 @@ class UserServiceImplTest {
         given(userRepository.findById(targetUserId)).willReturn(Optional.of(user));
 
         // when & then
-        assertThatThrownBy(() -> userService.getUserStats(targetUserId, currentUserId, "2024", null, null, null, null))
+        assertThatThrownBy(() -> userService.getUserStats(targetUserId, currentUserId, "2024", ""))
                 .isInstanceOf(ApiException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.PRIVATE_CONTENT_ACCESS_DENIED);
     }
