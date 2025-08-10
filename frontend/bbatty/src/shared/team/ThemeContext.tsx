@@ -1,4 +1,3 @@
-// shared/context/ThemeContext.tsx
 import React, { createContext, useContext, useMemo, ReactNode } from 'react';
 import { Team } from './teamTypes';
 

@@ -11,4 +11,6 @@ export const authApi = {
     wrapApiCall(() => apiClient.post('/api/auth/login', request)),
 
   logout: (): AsyncResult<void, ApiError> => wrapApiCall(() => apiClient.post('/api/auth/logout')),
+
+  deleteAccount: (): AsyncResult<void, ApiError> => wrapApiCall(() => apiClient.delete('/api/user/account')),
 };
