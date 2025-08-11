@@ -65,6 +65,7 @@ export default function TeamRankingScreen({ navigation, route }: Props) {
     return TEAMS.find(t => t.name === teamName);
   };
 
+
   const getShortTeamName = (teamName: string) => {
     return teamName.split(' ')[0];
   };
@@ -80,8 +81,8 @@ export default function TeamRankingScreen({ navigation, route }: Props) {
   return (
     <View style={styles.tableContainer}>
         <View style={styles.tableHeader}>
-          <Text style={[styles.headerCell, { width: 35 }]}>순위</Text>
-          <Text style={[styles.headerCell, { width: 70 }]}>팀</Text>
+          <Text style={[styles.headerCell, { width: 25 }]}>순위</Text>
+          <Text style={[styles.headerCell, { width: 100 }]}>팀</Text>
           <Text style={[styles.headerCell, { width: 40 }]}>경기</Text>
           <Text style={[styles.headerCell, { width: 35 }]}>승</Text>
           <Text style={[styles.headerCell, { width: 25 }]}>무</Text>
@@ -96,15 +97,15 @@ export default function TeamRankingScreen({ navigation, route }: Props) {
             const teamInfo = getTeamInfo(team.teamName);
             return (
               <View key={team.teamName} style={styles.tableRow}>
-                <Text style={[styles.cell, { width: 35 }]}>{index + 1}</Text>
-                <View style={[styles.teamCellWithLogo, { width: 70 }]}>
+                <Text style={[styles.cell, { width: 25 }]}>{index + 1}</Text>
+                <View style={[styles.teamCellWithLogo, { width: 100 }]}>
                   {teamInfo && (
                     <Image 
-                      source={{ uri: teamInfo.imagePath }} 
+                      source={typeof teamInfo.imagePath === 'string' ? { uri: teamInfo.imagePath } : teamInfo.imagePath} 
                       style={styles.teamLogo}
+                      resizeMode="contain"
                     />
                   )}
-                  <Text style={styles.teamName}>{getShortTeamName(team.teamName)}</Text>
                 </View>
                 <Text style={[styles.cell, { width: 40 }]}>{team.games}</Text>
                 <Text style={[styles.cell, { width: 35 }]}>{team.wins}</Text>
@@ -158,7 +159,7 @@ const styles = StyleSheet.create({
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 12,
+    paddingVertical: 16,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#f1f3f4',
@@ -172,13 +173,11 @@ const styles = StyleSheet.create({
   teamCellWithLogo: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingLeft: 4,
+    justifyContent: 'center',
   },
   teamLogo: {
-    width: 16,
-    height: 16,
-    marginRight: 6,
+    width: 60,
+    height: 60,
   },
   teamName: {
     fontSize: 12,
