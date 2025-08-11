@@ -1,0 +1,20 @@
+config:
+  target: 'ws://localhost:8084'
+  phases:
+    - duration: 5
+      arrivalRate: 1
+      name: "디버그 테스트"
+  ws:
+    connect:
+      timeout: 10
+
+scenarios:
+  - name: "단순 WebSocket 연결 테스트"
+    engine: ws
+    flow:
+      - connect:
+          url: "/ws/watch-chat?sessionToken=test-debug-123&gameId=1&teamId=1"
+      - think: 1
+      - send:
+          payload: '디버그 메시지'
+      - think: 2

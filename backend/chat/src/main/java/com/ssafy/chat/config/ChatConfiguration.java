@@ -153,6 +153,11 @@ public class ChatConfiguration {
     private boolean distributedSessionEnabled = true;
     
     /**
+     * 🧪 테스트 모드 활성화 여부 (기본값: true - 개발 환경용)
+     */
+    private boolean testModeEnabled = true;
+    
+    /**
      * 분산 세션 하트비트 간격 (기본: 10초)
      */
     private Duration distributedSessionHeartbeatInterval = Duration.ofSeconds(10);
