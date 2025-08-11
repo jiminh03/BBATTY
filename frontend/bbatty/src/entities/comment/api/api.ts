@@ -15,18 +15,26 @@ const unwrap = <T>(res: any): { message?: string; data?: T; status?: string } =>
   (res?.data ?? res) as any;
 
 // 서버 응답을 CommentListResponse로 정규화 + 아이템 매핑
-// entities/comment/api/api.ts
 const normalizeList = (raw: any, page: number, size: number): CommentListResponse => {
   const rawComments: any[] = Array.isArray(raw?.comments) ? raw.comments : [];
 
-  const comments = rawComments.map((c) => ({
-    ...c,
-    id: Number(c.id ?? c.commentId),
-    authorId: c.authorId ?? c.userId,
-    createdAt: c.createdAt ?? c.created_at ?? c.createAt,
-    updatedAt: c.updatedAt ?? c.updated_at,
-    isDeleted: Number(c.is_deleted ?? c.isDeleted ?? 0) === 1 || Boolean(c.isDeleted),
-  }));
+  const comments = rawComments.map((c) => {
+    const del =
+      c.isDeleted === true ||
+      Number(c.isDeleted) === 1 ||
+      Number(c.is_deleted) === 1 ||
+      // 백엔드가 내용만 바꾸는 경우 대비
+      (typeof c.content === 'string' && /삭제된\s*댓글/.test(c.content));
+
+    return {
+      ...c,
+      id: Number(c.id ?? c.commentId),
+      authorId: c.authorId ?? c.userId,
+      createdAt: c.createdAt ?? c.created_at ?? c.createAt,
+      updatedAt: c.updatedAt ?? c.updated_at,
+      isDeleted: !!del, // ← 항상 boolean
+    };
+  });
 
   const hasMore =
     typeof raw?.hasMore === 'boolean'
@@ -43,6 +51,7 @@ const normalizeList = (raw: any, page: number, size: number): CommentListRespons
     hasMore,
   };
 };
+
 
 export const commentApi = {
   // 댓글 목록
