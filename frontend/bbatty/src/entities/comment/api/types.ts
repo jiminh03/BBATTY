@@ -8,12 +8,12 @@ export interface CreateCommentPayload {
 }
 
 export interface UpdateCommentPayload {
-  commentId: string
+  commentId: number
   content: string
 }
 
 export interface DeleteCommentPayload {
-  commentId: string
+  commentId: number
 }
 
 export interface GetCommentsParams {
