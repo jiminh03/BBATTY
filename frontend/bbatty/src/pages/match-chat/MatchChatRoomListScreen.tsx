@@ -15,6 +15,8 @@ import { chatRoomApi } from '../../entities/chat-room/api/api';
 import type { MatchChatRoom } from '../../entities/chat-room/api/types';
 import type { ChatStackParamList } from '../../navigation/types';
 import { useUserStore } from '../../entities/user/model/userStore';
+import { useThemeColor } from '../../shared/team/ThemeContext';
+import { BaseballAnimation } from '../../features/match-chat/components/BaseballAnimation';
 
 type NavigationProp = StackNavigationProp<ChatStackParamList>;
 
@@ -24,6 +26,8 @@ export const MatchChatRoomListScreen = () => {
   const [rooms, setRooms] = useState<MatchChatRoom[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [showAnimation, setShowAnimation] = useState(false);
+  const themeColor = useThemeColor();
 
   const getTeamColors = (teamId: string) => {
     const teamColorMap: { [key: string]: string } = {
@@ -46,7 +50,9 @@ export const MatchChatRoomListScreen = () => {
       setLoading(true);
       const response = await chatRoomApi.getMatchChatRooms();
       
-      if (response.data?.data?.rooms) {
+      if (response.data?.data?.chatRooms) {
+        setRooms(response.data.data.chatRooms);
+      } else if (response.data?.data?.rooms) {
         setRooms(response.data.data.rooms);
       } else if (response.data?.rooms) {
         // 목 데이터 형식 (기존 호환성)
@@ -69,6 +75,11 @@ export const MatchChatRoomListScreen = () => {
   };
 
   const handleWatchChatJoin = async () => {
+    // 애니메이션 시작
+    setShowAnimation(true);
+  };
+
+  const onNavigateToChat = async () => {
     try {
       const currentUser = getCurrentUser();
       
@@ -92,7 +103,7 @@ export const MatchChatRoomListScreen = () => {
           room: {
             matchId: 'watch_chat_' + Date.now(),
             gameId: watchRequest.gameId.toString(),
-            matchTitle: '📺 워치 채팅',
+            matchTitle: '직관채팅',
             matchDescription: '모든 팬들이 함께 경기를 시청하며 채팅하는 공간',
             teamId: '전체',
             minAge: 0,
@@ -114,6 +125,10 @@ export const MatchChatRoomListScreen = () => {
       console.error('워치 채팅 참여 실패:', error);
       Alert.alert('오류', '워치 채팅 참여에 실패했습니다.');
     }
+  };
+
+  const onAnimationComplete = () => {
+    setShowAnimation(false);
   };
 
   useEffect(() => {
@@ -139,67 +154,87 @@ export const MatchChatRoomListScreen = () => {
       onPress={() => navigation.navigate('MatchChatRoomDetail', { room: item })}
     >
       <View style={styles.roomHeader}>
-        <Text style={styles.roomTitle}>🔥 {item.matchTitle}</Text>
+        <View style={styles.titleContainer}>
+          <Text style={styles.roomTitle}>{item.matchTitle}</Text>
+          <Text style={styles.roomDescription} numberOfLines={1}>
+            {item.matchDescription}
+          </Text>
+        </View>
         <View style={[styles.teamBadge, { backgroundColor: getTeamColors(item.teamId) }]}>
-          <Text style={styles.teamText}>⚾ {item.teamId}</Text>
+          <Text style={styles.teamText}>{item.teamId}</Text>
         </View>
       </View>
       
-      <Text style={styles.roomDescription} numberOfLines={2}>
-        🏟️ {item.matchDescription}
-      </Text>
-      
       <View style={styles.roomInfo}>
-        <Text style={styles.ageRange}>
-          🎂 {item.minAge}-{item.maxAge}세
-        </Text>
-        <Text style={styles.participants}>
-          👥 {item.currentParticipants}/{item.maxParticipants}명
-        </Text>
-        <Text style={styles.createdAt}>
-          ⏰ {formatDate(item.createdAt)}
-        </Text>
+        <View style={styles.infoItem}>
+          <Text style={styles.infoLabel}>연령</Text>
+          <Text style={styles.infoValue}>{item.minAge}-{item.maxAge}세</Text>
+        </View>
+        <View style={styles.infoItem}>
+          <Text style={styles.infoLabel}>참여자</Text>
+          <Text style={[styles.infoValue, styles.participantCount]}>
+            {item.currentParticipants}/{item.maxParticipants}
+          </Text>
+        </View>
+        <View style={styles.infoItem}>
+          <Text style={styles.infoLabel}>성별</Text>
+          <Text style={styles.infoValue}>
+            {item.genderCondition === 'ALL' ? '전체' : 
+             item.genderCondition === 'MALE' ? '남성' : '여성'}
+          </Text>
+        </View>
       </View>
       
-      <View style={styles.genderBadge}>
-        <Text style={styles.genderText}>
-          {item.genderCondition === 'ALL' ? '전체' : 
-           item.genderCondition === 'MALE' ? '남성' : '여성'}
+      <View style={styles.roomFooter}>
+        <Text style={styles.createdAt}>
+          {formatDate(item.createdAt)}
         </Text>
+        <View style={[
+          styles.statusBadge, 
+          item.status === 'ACTIVE' ? styles.activeBadge : styles.inactiveBadge
+        ]}>
+          <Text style={styles.statusText}>
+            {item.status === 'ACTIVE' ? '모집중' : '마감'}
+          </Text>
+        </View>
       </View>
     </TouchableOpacity>
   );
 
   const EmptyComponent = () => (
     <View style={styles.emptyContainer}>
-      <Text style={styles.emptyIcon}>⚾</Text>
+      <View style={styles.emptyIconContainer}>
+        <Text style={styles.emptyIcon}>💬</Text>
+      </View>
       <Text style={styles.emptyText}>아직 생성된 매치룸이 없습니다</Text>
-      <Text style={styles.emptySubtext}>첫 번째 열정적인 매치룸을 만들어보세요!</Text>
+      <Text style={styles.emptySubtext}>첫 번째 매치룸을 만들어보세요!</Text>
       <TouchableOpacity
-        style={styles.createButton}
+        style={[styles.createButton, { backgroundColor: themeColor }]}
         onPress={() => navigation.navigate('CreateMatchChatRoom')}
       >
-        <Text style={styles.createButtonText}>🔥 첫 매치룸 개설하기</Text>
+        <Text style={styles.createButtonText}>매치룸 개설하기</Text>
       </TouchableOpacity>
     </View>
   );
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>⚾ 매치룸 리그</Text>
+      <View style={[styles.header, { backgroundColor: themeColor }]}>
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>매칭채팅</Text>
+        </View>
         <View style={styles.headerButtons}>
           <TouchableOpacity
             style={styles.watchChatButton}
             onPress={() => handleWatchChatJoin()}
           >
-            <Text style={styles.watchChatButtonText}>📺 워치파티</Text>
+            <Text style={styles.watchChatButtonText}>직관채팅</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.headerButton}
             onPress={() => navigation.navigate('CreateMatchChatRoom')}
           >
-            <Text style={styles.headerButtonText}>🔥 매치룸 개설</Text>
+            <Text style={styles.headerButtonText}>매치룸 개설</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -215,6 +250,14 @@ export const MatchChatRoomListScreen = () => {
         ListEmptyComponent={!loading ? EmptyComponent : null}
         showsVerticalScrollIndicator={false}
       />
+      
+      {/* 야구 애니메이션 */}
+      {showAnimation && (
+        <BaseballAnimation 
+          onAnimationComplete={onAnimationComplete}
+          onNavigate={onNavigateToChat}
+        />
+      )}
     </SafeAreaView>
   );
 };
@@ -222,58 +265,14 @@ export const MatchChatRoomListScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#ffffff',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  watchChatButton: {
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  watchChatButtonText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  headerButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  headerButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  listContent: {
-    padding: 16,
-  },
-  roomItem: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    paddingVertical: 16,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -281,88 +280,199 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    elevation: 4,
+  },
+  headerContent: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  watchChatButton: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  watchChatButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  headerButton: {
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+  },
+  headerButtonText: {
+    color: '#333',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  listContent: {
+    padding: 16,
+    paddingTop: 8,
+  },
+  roomItem: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#f1f3f4',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
     elevation: 3,
   },
   roomHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  titleContainer: {
+    flex: 1,
+    marginRight: 12,
   },
   roomTitle: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
-    flex: 1,
-    marginRight: 8,
-  },
-  teamBadge: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  teamText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
+    marginBottom: 4,
   },
   roomDescription: {
     fontSize: 14,
     color: '#666',
-    lineHeight: 20,
-    marginBottom: 12,
+    lineHeight: 18,
+  },
+  teamBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  teamText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   roomInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  infoItem: {
     alignItems: 'center',
-    marginBottom: 8,
+    flex: 1,
   },
-  ageRange: {
-    fontSize: 12,
+  infoLabel: {
+    fontSize: 11,
     color: '#999',
+    marginBottom: 2,
   },
-  participants: {
-    fontSize: 12,
-    color: '#007AFF',
+  infoValue: {
+    fontSize: 13,
     fontWeight: '600',
+    color: '#333',
+  },
+  participantCount: {
+    color: '#007AFF',
+  },
+  roomFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   createdAt: {
     fontSize: 12,
     color: '#999',
   },
-  genderBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#f0f0f0',
+  statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 8,
   },
-  genderText: {
-    fontSize: 12,
-    color: '#666',
+  activeBadge: {
+    backgroundColor: '#e8f5e8',
+  },
+  inactiveBadge: {
+    backgroundColor: '#f5f5f5',
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#4CAF50',
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 60,
+    paddingVertical: 80,
+    paddingHorizontal: 40,
+  },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#f8f9fa',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  emptyIcon: {
+    fontSize: 32,
   },
   emptyText: {
-    fontSize: 16,
-    color: '#999',
-    marginBottom: 20,
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
     textAlign: 'center',
   },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 32,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
   createButton: {
-    backgroundColor: '#007AFF',
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
   },
   createButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
 });

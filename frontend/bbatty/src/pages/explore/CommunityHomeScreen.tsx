@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
 import { ExploreStackScreenProps } from '../../navigation/types';
+import { useThemeColor } from '../../shared/team/ThemeContext';
 import TeamRankingContent from './TeamRankingScreen';
 import UserRankingContent from './UserRankingScreen';
 import TeamCommunityContent from './TeamCommunityScreen';
@@ -15,6 +16,7 @@ const tabs = [
 
 export default function CommunityHomeScreen({ navigation, route }: Props) {
   const [activeTab, setActiveTab] = useState('teamranking');
+  const themeColor = useThemeColor();
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -31,7 +33,7 @@ export default function CommunityHomeScreen({ navigation, route }: Props) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: themeColor }]}>
         <Text style={styles.headerTitle}>탐색</Text>
       </View>
       
@@ -39,10 +41,22 @@ export default function CommunityHomeScreen({ navigation, route }: Props) {
         {tabs.map((tab) => (
           <TouchableOpacity
             key={tab.id}
-            style={[styles.tab, activeTab === tab.id && styles.activeTab]}
+            style={[
+              styles.tab, 
+              activeTab === tab.id && { 
+                ...styles.activeTab, 
+                borderColor: themeColor 
+              }
+            ]}
             onPress={() => setActiveTab(tab.id)}
           >
-            <Text style={[styles.tabText, activeTab === tab.id && styles.activeTabText]}>
+            <Text style={[
+              styles.tabText, 
+              activeTab === tab.id && { 
+                ...styles.activeTabText, 
+                color: themeColor 
+              }
+            ]}>
               {tab.name}
             </Text>
           </TouchableOpacity>
@@ -62,7 +76,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   header: {
-    backgroundColor: '#DC143C',
     paddingHorizontal: 16,
     paddingVertical: 16,
     alignItems: 'center',
@@ -92,7 +105,6 @@ const styles = StyleSheet.create({
   },
   activeTab: {
     backgroundColor: '#ffffff',
-    borderColor: '#DC143C',
     borderWidth: 2,
   },
   tabText: {
@@ -101,7 +113,6 @@ const styles = StyleSheet.create({
     color: '#333333',
   },
   activeTabText: {
-    color: '#DC143C',
   },
   content: {
     flex: 1,
