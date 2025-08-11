@@ -5,10 +5,10 @@ import com.ssafy.chat.watch.dto.WatchChatJoinRequest;
 import java.util.Map;
 
 /**
- * 직관 채팅 인증 서비스 인터페이스
+ * 직관 채팅방 인증 서비스 인터페이스
  * 완전 무명 채팅 - 닉네임 없이 teamId만으로 식별
  */
-public interface WatchChatAuthService {
+public interface WatchChatRoomAuthService {
     
     /**
      * JWT 토큰과 직관 인증 정보로 세션 생성

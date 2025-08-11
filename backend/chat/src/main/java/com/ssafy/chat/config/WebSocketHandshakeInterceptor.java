@@ -1,7 +1,7 @@
 package com.ssafy.chat.config;
 
 import com.ssafy.chat.match.service.MatchChatRoomAuthService;
-import com.ssafy.chat.watch.service.WatchChatAuthService;
+import com.ssafy.chat.watch.service.WatchChatRoomAuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.server.ServerHttpRequest;
@@ -25,7 +25,7 @@ import java.util.Map;
 public class WebSocketHandshakeInterceptor implements HandshakeInterceptor {
 
     private final MatchChatRoomAuthService matchChatRoomAuthService;
-    private final WatchChatAuthService watchChatAuthService;
+    private final WatchChatRoomAuthService watchChatRoomAuthService;
 
     @Override
     public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response,
@@ -117,7 +117,7 @@ public class WebSocketHandshakeInterceptor implements HandshakeInterceptor {
     private boolean handleWatchChat(String sessionToken, String gameId, String teamId, Map<String, Object> attributes) {
         try {
             // 세션 토큰 유효성만 검증 (Redis 조회 최소화)
-            Map<String, Object> userInfo = watchChatAuthService.getUserInfoByToken(sessionToken);
+            Map<String, Object> userInfo = watchChatRoomAuthService.getUserInfoByToken(sessionToken);
             
             log.debug("직관 채팅 userInfo 조회 결과: {}", userInfo);
             

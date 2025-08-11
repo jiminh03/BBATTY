@@ -24,11 +24,10 @@ public class WebSocketConfig implements WebSocketConfigurer {
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         log.info("WebSocket 핸들러 등록 시작");
 
-        // 관전 채팅 WebSocket 엔드포인트
-        registry.addHandler(chatWebSocketHandler, "/ws/watch-chat")
+        // 관전 채팅 WebSocket 엔드포인트 (순수 WebSocket - React Native 지원)
+        registry.addHandler(chatWebSocketHandler, "/ws/watch-chat", "/ws/watch-chat/websocket")
                 .addInterceptors(webSocketHandshakeInterceptor) // 핸드셰이크 인터셉터 추가
-                .setAllowedOriginPatterns("*") // 인증정보 + 모든 사이트 요청 가능
-                .withSockJS(); // SockJS 지원
+                .setAllowedOriginPatterns("*"); // 인증정보 + 모든 사이트 요청 가능
 
         // 매칭 채팅 WebSocket 엔드포인트 (순수 WebSocket - React Native 지원)
         registry.addHandler(chatWebSocketHandler, "/ws/match-chat")
