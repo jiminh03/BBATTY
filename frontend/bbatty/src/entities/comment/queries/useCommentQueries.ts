@@ -61,3 +61,20 @@ export const useDeleteComment = (postId: number) => {
     },
   });
 };
+
+// 답글
+export const useCreateReply = (postId: number, parentId: number) => {
+  const qc = useQueryClient();
+  const userId = useUserStore((s) => s.currentUser?.userId);
+
+  return useMutation({
+    mutationFn: async (content: string) => {
+      if (!userId) throw new Error('로그인이 필요합니다.');
+      await commentApi.createComment({ postId, userId, content, parentId }); // 👈 parentId 포함
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['comments', postId] });
+      qc.invalidateQueries({ queryKey: ['post', postId] });
+    },
+  });
+};

@@ -30,6 +30,8 @@ const normalizeList = (raw: any, page: number, size: number): CommentListRespons
       ...c,
       id: Number(c.id ?? c.commentId),
       authorId: c.authorId ?? c.userId,
+      parentId: c.parentId != null ? Number(c.parentId) : null, // 👈 추가
+      depth: Number(c.depth ?? 0),              // 👈 여기 추가
       createdAt: c.createdAt ?? c.created_at ?? c.createAt,
       updatedAt: c.updatedAt ?? c.updated_at,
       isDeleted: !!del, // ← 항상 boolean
