@@ -4,10 +4,11 @@ import {
   Text,
   TouchableOpacity,
   FlatList,
-  StyleSheet,
   SafeAreaView,
   RefreshControl,
   Alert,
+  TextInput,
+  Keyboard,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
@@ -17,6 +18,7 @@ import type { ChatStackParamList } from '../../navigation/types';
 import { useUserStore } from '../../entities/user/model/userStore';
 import { useThemeColor } from '../../shared/team/ThemeContext';
 import { BaseballAnimation } from '../../features/match-chat/components/BaseballAnimation';
+import { styles } from './MatchChatRoomListScreen.styles';
 
 type NavigationProp = StackNavigationProp<ChatStackParamList>;
 
@@ -27,6 +29,8 @@ export const MatchChatRoomListScreen = () => {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showAnimation, setShowAnimation] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [isSearchMode, setIsSearchMode] = useState(false);
   const themeColor = useThemeColor();
 
   const getTeamColors = (teamId: string) => {
@@ -45,10 +49,10 @@ export const MatchChatRoomListScreen = () => {
     return teamColorMap[teamId] || '#007AFF';
   };
 
-  const loadRooms = async () => {
+  const loadRooms = async (keyword?: string) => {
     try {
       setLoading(true);
-      const response = await chatRoomApi.getMatchChatRooms();
+      const response = await chatRoomApi.getMatchChatRooms(keyword);
       
       if (response.data?.data?.chatRooms) {
         setRooms(response.data.data.chatRooms);
@@ -70,8 +74,30 @@ export const MatchChatRoomListScreen = () => {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadRooms();
+    await loadRooms(isSearchMode ? searchKeyword : undefined);
     setRefreshing(false);
+  };
+
+  const handleSearch = async (text: string) => {
+    setSearchKeyword(text);
+    if (text.trim()) {
+      setIsSearchMode(true);
+      await loadRooms(text.trim());
+    } else {
+      setIsSearchMode(false);
+      await loadRooms();
+    }
+  };
+
+  const toggleSearchMode = () => {
+    if (isSearchMode) {
+      setIsSearchMode(false);
+      setSearchKeyword('');
+      loadRooms();
+      Keyboard.dismiss();
+    } else {
+      setIsSearchMode(true);
+    }
   };
 
   const handleWatchChatJoin = async () => {
@@ -204,7 +230,7 @@ export const MatchChatRoomListScreen = () => {
   const EmptyComponent = () => (
     <View style={styles.emptyContainer}>
       <View style={styles.emptyIconContainer}>
-        <Text style={styles.emptyIcon}>💬</Text>
+        <Text style={styles.emptyIcon}>📝</Text>
       </View>
       <Text style={styles.emptyText}>아직 생성된 매치룸이 없습니다</Text>
       <Text style={styles.emptySubtext}>첫 번째 매치룸을 만들어보세요!</Text>
@@ -225,6 +251,14 @@ export const MatchChatRoomListScreen = () => {
         </View>
         <View style={styles.headerButtons}>
           <TouchableOpacity
+            style={styles.searchButton}
+            onPress={toggleSearchMode}
+          >
+            <Text style={styles.searchButtonText}>
+              {isSearchMode ? '취소' : '검색'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             style={styles.watchChatButton}
             onPress={() => handleWatchChatJoin()}
           >
@@ -238,6 +272,21 @@ export const MatchChatRoomListScreen = () => {
           </TouchableOpacity>
         </View>
       </View>
+
+      {isSearchMode && (
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="채팅방 제목, 설명, 팀명으로 검색..."
+            placeholderTextColor="#999"
+            value={searchKeyword}
+            onChangeText={handleSearch}
+            autoFocus={true}
+            returnKeyType="search"
+            onSubmitEditing={() => Keyboard.dismiss()}
+          />
+        </View>
+      )}
 
       <FlatList
         data={rooms}
@@ -262,217 +311,3 @@ export const MatchChatRoomListScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  headerContent: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#ffffff',
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  watchChatButton: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-  },
-  watchChatButtonText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  headerButton: {
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-  },
-  headerButtonText: {
-    color: '#333',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  listContent: {
-    padding: 16,
-    paddingTop: 8,
-  },
-  roomItem: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#f1f3f4',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  roomHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  titleContainer: {
-    flex: 1,
-    marginRight: 12,
-  },
-  roomTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
-  },
-  roomDescription: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 18,
-  },
-  teamBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  teamText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  roomInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  infoItem: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  infoLabel: {
-    fontSize: 11,
-    color: '#999',
-    marginBottom: 2,
-  },
-  infoValue: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#333',
-  },
-  participantCount: {
-    color: '#007AFF',
-  },
-  roomFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  createdAt: {
-    fontSize: 12,
-    color: '#999',
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  activeBadge: {
-    backgroundColor: '#e8f5e8',
-  },
-  inactiveBadge: {
-    backgroundColor: '#f5f5f5',
-  },
-  statusText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#4CAF50',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 80,
-    paddingHorizontal: 40,
-  },
-  emptyIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#f8f9fa',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-  },
-  emptyIcon: {
-    fontSize: 32,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 32,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  createButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  createButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-});
