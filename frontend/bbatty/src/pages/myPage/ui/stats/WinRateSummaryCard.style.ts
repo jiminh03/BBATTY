@@ -2,52 +2,54 @@ import { StyleSheet } from 'react-native';
 
 export const styles = StyleSheet.create({
   container: {
+    position: 'relative',
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 20,
     marginBottom: 12,
   },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333333',
-    marginBottom: 16,
+  progressCard: {
+    marginTop: 12,
+    position: 'relative',
   },
-  mainWinRate: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  overallRate: {
-    fontSize: 48,
-    fontWeight: 'bold',
-  },
-  overallLabel: {
-    fontSize: 16,
-    color: '#666666',
-    marginTop: 4,
-  },
-  detailRates: {
+  progressContainer: {
     flexDirection: 'row',
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
-  },
-  rateItem: {
-    flex: 1,
+    justifyContent: 'space-around',
     alignItems: 'center',
   },
-  rateNumber: {
-    fontSize: 24,
+  progressItem: {
+    alignItems: 'center',
+  },
+  progressCenter: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  progressPercentage: {
+    fontSize: 20,
     fontWeight: 'bold',
   },
-  rateLabel: {
-    fontSize: 14,
-    color: '#666666',
-    marginTop: 4,
+  progressLabel: {
+    fontSize: 16,
+    color: '#333333',
+    marginTop: 12,
+    fontWeight: '600',
   },
-  rateDivider: {
-    width: 1,
-    backgroundColor: '#E0E0E0',
-    marginHorizontal: 20,
+  circleBackground: {
+    backgroundColor: 'transparent',
+  },
+  circleProgress: {
+    overflow: 'hidden',
+  },
+  progressArc: {
+    backgroundColor: 'transparent',
+    borderTopColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: 'transparent',
+    borderLeftColor: 'transparent',
   },
 });
