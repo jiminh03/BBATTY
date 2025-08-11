@@ -1,0 +1,26 @@
+config:
+  target: 'ws://localhost:8084'
+  phases:
+    - duration: 10
+      arrivalRate: 2
+      name: "Legacy 스타일 테스트"
+  engines:
+    ws:
+      timeout: 10
+
+scenarios:
+  - name: "직관 채팅 연결"
+    engine: ws
+    flow:
+      - connect:
+          url: "/ws/watch-chat?sessionToken=test-legacy-{{ $randomInt(1, 1000) }}&gameId=1&teamId=1"
+      - send: "테스트 메시지"
+      - think: 2
+
+  - name: "매칭 채팅 연결"  
+    engine: ws
+    flow:
+      - connect:
+          url: "/ws/match-chat?sessionToken=test-legacy-{{ $randomInt(1, 1000) }}&matchId=match_1"
+      - send: "매칭 테스트"
+      - think: 2
