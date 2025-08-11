@@ -30,6 +30,17 @@ public class AttendanceRecordParser {
      * @return AttendanceRecord 또는 null (파싱 실패시)
      */
     public AttendanceRecord parseAttendanceRecord(String recordJson, Long userTeamId) {
+        return parseAttendanceRecord(recordJson, null, userTeamId);
+    }
+    
+    /**
+     * JSON 문자열을 AttendanceRecord로 변환 (userId 포함)
+     * @param recordJson JSON 문자열
+     * @param userId 사용자 ID
+     * @param userTeamId 사용자 팀 ID
+     * @return AttendanceRecord 또는 null (파싱 실패시)
+     */
+    public AttendanceRecord parseAttendanceRecord(String recordJson, Long userId, Long userTeamId) {
         try {
             // 필수 필드 추출
             Long gameId = extractJsonLong(recordJson, "gameId");
@@ -58,7 +69,7 @@ public class AttendanceRecordParser {
             Game game = gameOpt.get();
             
             return AttendanceRecord.builder()
-                    .userId(userTeamId) // 호환성을 위해 userTeamId를 userId에 저장
+                    .userId(userId != null ? userId : userTeamId) // userId가 있으면 사용, 없으면 기존 로직
                     .gameId(gameId)
                     .gameDateTime(gameDateTime)
                     .season(season)

@@ -44,6 +44,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 공개 API
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/migration/**").permitAll()  // 마이그레이션 API 허용
                         .requestMatchers("/public/**").permitAll()
                         .requestMatchers("/health").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
