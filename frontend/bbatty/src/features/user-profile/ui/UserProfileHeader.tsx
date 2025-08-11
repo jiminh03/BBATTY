@@ -2,11 +2,14 @@ import React from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { UserProfile } from '../model/profileTypes';
+import { BasicStats } from '../model/statsTypes';
 import { useThemeColor } from '../../../shared/team/ThemeContext';
+import { Format } from '../../../shared/utils/format';
 import { styles } from './UserProfileHeader.style';
 
 interface UserProfileHeaderProps {
   profile: UserProfile;
+  basicStats?: BasicStats;
   isOwner: boolean;
   onBackPress?: () => void;
   onSettingsPress?: () => void;
@@ -14,6 +17,7 @@ interface UserProfileHeaderProps {
 
 export const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
   profile,
+  basicStats,
   isOwner,
   onBackPress,
   onSettingsPress,
@@ -42,7 +46,7 @@ export const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
 
           <View style={styles.profileInfo}>
             <Text style={styles.nickname}>{profile.nickname}</Text>
-            <Text style={styles.winRate}>{profile.totalWinRate}% 승률</Text>
+            {basicStats && <Text style={styles.winRate}>{Format.winRate.toPercent(basicStats.winRate)}% 승률</Text>}
             {profile.introduction && <Text style={styles.introduction}>{profile.introduction}</Text>}
           </View>
         </View>

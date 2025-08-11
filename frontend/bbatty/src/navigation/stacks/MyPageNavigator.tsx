@@ -9,20 +9,11 @@ import SettingsScreen from '../../pages/myPage/ui/SettingsScreen';
 
 const Stack = createStackNavigator<MyPageStackParamList>();
 
+// MyPageNavigator.tsx
 export default function MyPageNavigator() {
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerShown: false,
-        gestureEnabled: true,
-      }}
-      initialRouteName='Profile'
-    >
-      <Stack.Screen
-        name='Profile'
-        component={UserProfileScreen}
-        initialParams={{}} // 본인 프로필로 시작
-      />
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name='Profile' component={UserProfileScreen} />
       <Stack.Screen name='ProfileEdit' component={EditProfileScreen} />
       <Stack.Screen name='Settings' component={SettingsScreen} />
     </Stack.Navigator>
