@@ -3,7 +3,7 @@ export { profileApi } from './api/profileApi';
 
 // Hooks
 export { useProfileForm } from './hooks/useProfileForm';
-export { useProfile } from './hooks/useProfile';
+export { useProfile, useAllUserStats } from './hooks/useProfile';
 
 // UI Components
 export { ProfileForm } from './ui/ProfileForm';

@@ -1,40 +1,44 @@
 import React from 'react';
-import { View, Text } from 'react-native';
-import { UserBadges } from '../../../features/user-stats/model/statsTypes';
+import { View, Text, ScrollView } from 'react-native';
+import { BadgeCategory } from '../../../features/user-profile/model/badgeTypes';
 import { useThemeColor } from '../../../shared/team/ThemeContext';
 import { styles } from './UserBadgesCard.style';
 
 interface UserBadgesCardProps {
-  badges: UserBadges;
+  badgeCategories: BadgeCategory[];
 }
 
-export const UserBadgesCard: React.FC<UserBadgesCardProps> = ({ badges }) => {
+export const UserBadgesCard: React.FC<UserBadgesCardProps> = ({ badgeCategories }) => {
   const themeColor = useThemeColor();
 
-  const badgeItems = [
-    { label: '방문구장', value: badges.visitedStadiums, unit: '곳' },
-    { label: '경기', value: badges.totalMatches, unit: '경기' },
-    { label: '승리', value: badges.totalWins, unit: '승' },
-  ];
+  const getAcquiredCount = (category: BadgeCategory) => {
+    return category.badges.filter((badge) => badge.acquired).length;
+  };
+
+  const getTotalCount = (category: BadgeCategory) => {
+    return category.badges.length;
+  };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>나의 뱃지</Text>
 
-      <View style={styles.badgeGrid}>
-        {badgeItems.map((item, index) => (
-          <View key={index} style={styles.badgeItem}>
-            <View style={[styles.badgeIcon, { backgroundColor: themeColor }]}>
-              <Text style={styles.badgeIconText}>✓</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <View style={styles.badgeGrid}>
+          {badgeCategories.map((category, index) => (
+            <View key={category.category} style={styles.badgeItem}>
+              <View style={[styles.badgeIcon, { backgroundColor: themeColor }]}>
+                <Text style={styles.badgeIconText}>{getAcquiredCount(category)}</Text>
+              </View>
+              <Text style={styles.badgeLabel}>{category.displayName}</Text>
+              <Text style={styles.badgeValue}>
+                {getAcquiredCount(category)}/{getTotalCount(category)}
+              </Text>
+              {category.season && <Text /*style={styles.badgeSeason}*/>{category.season}</Text>}
             </View>
-            <Text style={styles.badgeLabel}>{item.label}</Text>
-            <Text style={styles.badgeValue}>
-              {item.value}
-              {item.unit}
-            </Text>
-          </View>
-        ))}
-      </View>
+          ))}
+        </View>
+      </ScrollView>
     </View>
   );
 };

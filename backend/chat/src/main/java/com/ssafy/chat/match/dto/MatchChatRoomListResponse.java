@@ -15,7 +15,7 @@ import java.util.List;
 @AllArgsConstructor
 public class MatchChatRoomListResponse {
     
-    private List<MatchChatRoomCreateResponse> rooms;
+    private List<com.ssafy.chat.match.dto.MatchChatRoom> chatRooms;
     
     // 다음 페이지 요청에 사용할 cursor
     private String nextCursor;
@@ -25,4 +25,7 @@ public class MatchChatRoomListResponse {
     
     // 현재 응답에 포함된 방 개수
     private int count;
+    
+    // 전체 방 개수
+    private int totalCount;
 }

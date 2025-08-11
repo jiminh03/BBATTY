@@ -1,19 +1,14 @@
 import { User } from '../../../entities/user/model/userTypes';
 import { Token } from '../../../shared/api/token/tokenTypes';
 
-// 기존 타입들과 새로운 타입들 통합
-export interface UserProfile extends User {
+export interface UserProfile extends User, UserPrivacySettings {
   introduction?: string;
-  totalWinRate: number;
-  isFollowing?: boolean;
-  isOwner?: boolean;
-  privacySettings?: UserPrivacySettings;
 }
 
 export interface UserPrivacySettings {
-  allowViewPosts: boolean;
-  allowViewStats: boolean;
-  allowViewDirectViewHistory: boolean;
+  postsPublic: boolean;
+  statsPublic: boolean;
+  attendanceRecordsPublic: boolean;
 }
 
 // 프로필 폼 데이터
@@ -24,14 +19,14 @@ export interface ProfileFormData {
 }
 // ================================= Request =======================================
 
-export interface CheckNicknameRequest {
-  nickname: string;
-}
-
 export interface UpdateProfileRequest {
   nickname?: string;
   profileImg?: string;
   introduction?: string;
+}
+
+export interface CheckNicknameRequest {
+  nickname: string;
 }
 
 // ================================= Response ======================================

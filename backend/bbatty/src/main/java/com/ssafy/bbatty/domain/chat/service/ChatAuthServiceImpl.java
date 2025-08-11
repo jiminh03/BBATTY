@@ -40,8 +40,24 @@ public class ChatAuthServiceImpl implements ChatAuthService {
             // 2. 채팅방 정보 생성
             ChatAuthResponse.ChatRoomInfo chatRoomInfo = createChatRoomInfo(request);
             
-            // 3. 사용자 정보 생성 (전달받은 정보 사용)
-            ChatAuthResponse.UserInfo userInfo = createUserInfo(userId, userTeamId, userGender, userAge, userNickname);
+            // 3. 사용자 정보 생성 (JWT는 userId,teamId,gender,age만, 나머지는 클라이언트 정보 사용)
+            String clientNickname = userNickname; // JWT 기본값
+            String profileImgUrl = "";
+            
+            if (request.getRoomInfo() != null) {
+                // 클라이언트가 보낸 닉네임과 프로필 이미지 사용
+                String roomNickname = (String) request.getRoomInfo().get("nickname");
+                String roomProfileImgUrl = (String) request.getRoomInfo().get("profileImgUrl");
+                
+                if (roomNickname != null) {
+                    clientNickname = roomNickname;
+                }
+                if (roomProfileImgUrl != null) {
+                    profileImgUrl = roomProfileImgUrl;
+                }
+            }
+            
+            ChatAuthResponse.UserInfo userInfo = createUserInfo(userId, userTeamId, userGender, userAge, clientNickname, profileImgUrl);
             
             // 4. 게임 정보 생성 (매칭 채팅인 경우) - 분리된 서비스 사용
             Map<String, Object> gameInfo = null;
@@ -108,11 +124,11 @@ public class ChatAuthServiceImpl implements ChatAuthService {
     /**
      * 전달받은 정보로 UserInfo 생성
      */
-    private ChatAuthResponse.UserInfo createUserInfo(Long userId, Long teamId, String gender, int age, String nickname) {
+    private ChatAuthResponse.UserInfo createUserInfo(Long userId, Long teamId, String gender, int age, String nickname, String profileImgUrl) {
         return ChatAuthResponse.UserInfo.builder()
                 .userId(userId)
                 .nickname(nickname)
-                .profileImg("") // 프로필 이미지는 별도로 관리
+                .profileImgUrl(profileImgUrl != null ? profileImgUrl : "") // 클라이언트에서 받은 프로필 이미지 사용
                 .teamId(teamId)
                 .teamName("") // 팀명은 별도 조회 필요
                 .age(age)

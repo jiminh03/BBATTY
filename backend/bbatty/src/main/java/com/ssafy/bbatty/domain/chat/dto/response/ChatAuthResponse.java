@@ -30,7 +30,7 @@ public class ChatAuthResponse {
     public static class UserInfo {
         private Long userId;
         private String nickname;
-        private String profileImg;
+        private String profileImgUrl;
         private Long teamId;
         private String teamName;
         private int age;

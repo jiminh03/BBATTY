@@ -1,25 +1,26 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import { DayOfWeekStats } from '../../../../features/user-stats/model/statsTypes';
 import { useThemeColor } from '../../../../shared/team/ThemeContext';
+import { Format } from '../../../../shared';
 import { styles } from './DailyStatsGrid.style';
 
-interface DailyStatsGridProps {
-  dayStats: DayOfWeekStats[];
-  totalStats: {
-    overall: number;
-    home: number;
-    away: number;
-  };
+interface DayStats {
+  dayName: string;
+  matches: number;
+  wins: number;
+  winRate: number;
 }
-export const DailyStatsGrid: React.FC<DailyStatsGridProps> = ({ dayStats }) => {
+
+interface DailyStatsGrid {
+  dayStats: DayStats[];
+}
+
+export const DetailedStatsGrid: React.FC<DailyStatsGrid> = ({ dayStats }) => {
   const themeColor = useThemeColor();
 
-  // 월요일 제외한 6개 요일 (화~일)
   const weekdays = ['화', '수', '목', '금', '토', '일'];
-
-  const topRowDays = weekdays.slice(0, 3); // 화, 수, 목
-  const bottomRowDays = weekdays.slice(3); // 금, 토, 일
+  const topRowDays = weekdays.slice(0, 3);
+  const bottomRowDays = weekdays.slice(3);
 
   const getDayStats = (dayName: string) => {
     return dayStats.find((d) => d.dayName === dayName);
@@ -30,26 +31,28 @@ export const DailyStatsGrid: React.FC<DailyStatsGridProps> = ({ dayStats }) => {
       <Text style={styles.title}>요일별 승률</Text>
 
       <View style={styles.grid}>
-        {/* 상단 행: 화수목 */}
         <View style={styles.row}>
           {topRowDays.map((day) => {
             const stats = getDayStats(day);
+            const winRate = stats ? Format.percent.basic(stats.wins, stats.matches) : 0;
+
             return (
               <View key={day} style={styles.statCard}>
-                <Text style={[styles.statValue, { color: themeColor }]}>{stats?.winRate || 0}%</Text>
+                <Text style={[styles.statValue, { color: themeColor }]}>{winRate}%</Text>
                 <Text style={styles.statLabel}>{day}요일</Text>
               </View>
             );
           })}
         </View>
 
-        {/* 하단 행: 금토일 */}
         <View style={styles.row}>
           {bottomRowDays.map((day) => {
             const stats = getDayStats(day);
+            const winRate = stats ? Format.percent.basic(stats.wins, stats.matches) : 0;
+
             return (
               <View key={day} style={styles.statCard}>
-                <Text style={[styles.statValue, { color: themeColor }]}>{stats?.winRate || 0}%</Text>
+                <Text style={[styles.statValue, { color: themeColor }]}>{winRate}%</Text>
                 <Text style={styles.statLabel}>{day}요일</Text>
               </View>
             );

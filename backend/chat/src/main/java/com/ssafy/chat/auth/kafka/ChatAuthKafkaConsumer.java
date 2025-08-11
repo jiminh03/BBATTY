@@ -1,7 +1,6 @@
 package com.ssafy.chat.auth.kafka;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ssafy.chat.match.service.MatchChatAuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;

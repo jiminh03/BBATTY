@@ -1,113 +1,78 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, RefreshControl, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { useQuery } from '@tanstack/react-query';
 
 import { MyPageStackParamList } from '../../../navigation/types';
 import { useThemeColor } from '../../../shared/team/ThemeContext';
-import { useUserStore } from '../../../entities/user';
-import { profileApi } from '../../../features/user-profile';
-import { useUserStats, useDirectViewHistory } from '../../../features/user-stats/hooks/useUserStats';
-import { Season } from '../../../features/user-stats/model/statsTypes';
-import { isOk } from '../../../shared/utils/result';
+import { useProfile, useAllUserStats } from '../../../features/user-profile';
+import { Season } from '../../../shared';
 
 // Components
 import { SeasonSelector } from '../../../features/user-profile/ui/SeasonSelector';
-import { UserPostsPlaceholder } from '../../../features/post-search/ui/UserPostsPlaceholder';
+import { UserProfileHeader } from '../../../features/user-profile';
+import { ProfileTabs } from '../../../features/user-profile';
 import { UserBadgesCard } from './UserBadgesCard';
 import { WinRateSummaryCard } from './stats/WinRateSummaryCard';
-import { TeamStatsChart } from './stats/TeamStatsChart';
-import { StadiumMapStats } from './stats/StadiumMapStats';
-import { DailyStatsGrid } from './stats/DailyStatsGrid';
-import { AttendanceHistory } from './AttendanceHistory';
+import { DetailedStatsGrid } from './stats/DailyStatsGrid';
 
 import { styles } from './UserProfileScreen.style';
+import { TabType } from '../../../features/user-profile/ui/ProfileTabs';
+import { AttendanceHistory } from './AttendanceHistory';
 
 type UserProfileScreenNavigationProp = StackNavigationProp<MyPageStackParamList, 'Profile'>;
 type UserProfileScreenRouteProp = RouteProp<MyPageStackParamList, 'Profile'>;
 
-interface UserProfileScreenProps {
-  navigation: UserProfileScreenNavigationProp;
-  route: UserProfileScreenRouteProp;
-}
-
-type TabType = 'posts' | 'stats' | 'history';
-
-export default function UserProfileScreen({ navigation, route }: UserProfileScreenProps) {
+export default function UserProfileScreen() {
+  const navigation = useNavigation<UserProfileScreenNavigationProp>();
+  const route = useRoute<UserProfileScreenRouteProp>();
   const insets = useSafeAreaInsets();
   const themeColor = useThemeColor();
-  const { currentUser } = useUserStore();
 
-  // 파라미터에서 userId 가져오기 (없으면 내 프로필)
-  const targetUserId = route.params?.userId || currentUser?.userId;
-  const isOwner = !route.params?.userId || route.params?.userId === currentUser?.userId;
+  const targetUserId = route.params?.userId;
+  const isOwner = !targetUserId;
 
   const [activeTab, setActiveTab] = useState<TabType>('posts');
-  const [selectedSeason, setSelectedSeason] = useState<Season>('전체');
+  const [selectedSeason, setSelectedSeason] = useState<Season>('total');
 
-  // 사용자 프로필 정보 조회
+  // 프로필 조회
   const {
-    data: userProfile,
+    data: profile,
     isLoading: profileLoading,
+    error: profileError,
     refetch: refetchProfile,
-  } = useQuery({
-    queryKey: ['userProfile', targetUserId],
-    queryFn: async () => {
-      const result = await profileApi.getProfile(targetUserId);
-      if (isOk(result)) {
-        return result.data;
-      }
-      throw new Error(result.error.message);
-    },
-    enabled: !!targetUserId,
-  });
+  } = useProfile(targetUserId);
 
-  // 통계 데이터 조회
-  const { stats, isLoading: statsLoading, refetch: refetchStats } = useUserStats(targetUserId!, selectedSeason);
-
-  // 직관 기록 조회
+  // 모든 통계 조회
   const {
-    records,
-    isLoading: recordsLoading,
-    refetch: refetchRecords,
-  } = useDirectViewHistory(targetUserId!, selectedSeason);
+    basicStats,
+    homeAwayStats,
+    dayOfWeekStats,
+    badges,
+    isLoading: statsLoading,
+    isError: statsError,
+    refetchAll: refetchAllStats,
+  } = useAllUserStats(targetUserId, selectedSeason);
 
   const handleRefresh = async () => {
-    await Promise.all([refetchProfile(), refetchStats(), refetchRecords()]);
+    try {
+      await Promise.all([refetchProfile(), refetchAllStats()]);
+    } catch (error) {
+      Alert.alert('오류', '데이터를 새로고침하는데 실패했습니다.');
+    }
   };
 
-  const handleSeasonChange = (season: Season) => {
-    setSelectedSeason(season);
-  };
-
-  const handleEditProfile = () => {
-    navigation.navigate('ProfileEdit');
-  };
-
-  const handleSettings = () => {
-    navigation.navigate('Settings');
-  };
-
-  const handleRecordPress = (record: any) => {
-    // 경기 상세 모달 또는 페이지로 이동
-    console.log('Record pressed:', record);
-  };
-
-  const canViewContent = (type: 'posts' | 'stats' | 'history') => {
-    if (isOwner) return true;
-
-    if (!userProfile?.privacySettings) return true;
+  const canViewContent = (type: 'posts' | 'stats' | 'attendanceRecords') => {
+    if (isOwner || !profile) return true;
 
     switch (type) {
       case 'posts':
-        return userProfile.privacySettings.allowViewPosts;
+        return profile.postsPublic;
       case 'stats':
-        return userProfile.privacySettings.allowViewStats;
-      case 'history':
-        return userProfile.privacySettings.allowViewDirectViewHistory;
+        return profile.statsPublic;
+      case 'attendanceRecords':
+        return profile.attendanceRecordsPublic;
       default:
         return true;
     }
@@ -116,13 +81,21 @@ export default function UserProfileScreen({ navigation, route }: UserProfileScre
   const renderTabContent = () => {
     switch (activeTab) {
       case 'posts':
-        return <UserPostsPlaceholder userId={targetUserId!} canViewPosts={canViewContent('posts')} />;
+        return canViewContent('posts') ? (
+          <View /*style={styles.placeholderContent}*/>
+            <Text /*style={styles.placeholderText}*/>게시글 컴포넌트 자리</Text>
+          </View>
+        ) : (
+          <View style={styles.restrictedContent}>
+            <Text style={styles.restrictedText}>게시글 조회가 허용되지 않습니다</Text>
+          </View>
+        );
 
       case 'stats':
         if (!canViewContent('stats')) {
           return (
             <View style={styles.restrictedContent}>
-              <Text style={styles.restrictedText}>이 사용자는 통계 조회를 허용하지 않습니다</Text>
+              <Text style={styles.restrictedText}>통계 조회가 허용되지 않습니다</Text>
             </View>
           );
         }
@@ -130,39 +103,37 @@ export default function UserProfileScreen({ navigation, route }: UserProfileScre
         if (statsLoading) {
           return (
             <View style={styles.loadingContent}>
-              <Text>통계를 불러오는 중...</Text>
-            </View>
-          );
-        }
-
-        if (!stats) {
-          return (
-            <View style={styles.emptyContent}>
-              <Text>통계 데이터가 없습니다</Text>
+              <ActivityIndicator size='large' color={themeColor} />
+              <Text /*style={styles.loadingText}*/>통계를 불러오는 중...</Text>
             </View>
           );
         }
 
         return (
           <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
-            <UserBadgesCard badges={stats.badges} />
-            <WinRateSummaryCard winRates={stats.winRates} />
-            <TeamStatsChart teamStats={stats.teamStats} />
-            <StadiumMapStats stadiumStats={stats.stadiumStats} />
-            <DailyStatsGrid dayStats={stats.dayStats} totalStats={stats.winRates} />
+            {badges.data && <UserBadgesCard badgeCategories={badges.data.badgeCategories} />}
+            {basicStats.data && <WinRateSummaryCard basicStats={basicStats.data} homeAwayStats={homeAwayStats.data} />}
+            {dayOfWeekStats.data?.dayOfWeekStats && (
+              <DetailedStatsGrid
+                dayStats={Object.entries(dayOfWeekStats.data.dayOfWeekStats).map(([day, stats]: [string, any]) => ({
+                  dayName: day,
+                  matches: stats.totalGames || 0,
+                  wins: stats.wins || 0,
+                  winRate: Math.round((stats.winRate || 0) * 100),
+                }))}
+              />
+            )}
           </ScrollView>
         );
 
       case 'history':
-        if (!canViewContent('history')) {
-          return (
-            <View style={styles.restrictedContent}>
-              <Text style={styles.restrictedText}>이 사용자는 직관 기록 조회를 허용하지 않습니다</Text>
-            </View>
-          );
-        }
-
-        return <AttendanceHistory records={records || []} onRecordPress={handleRecordPress} />;
+        return canViewContent('attendanceRecords') ? (
+          <AttendanceHistory records={[]} onRecordPress={() => {}}></AttendanceHistory>
+        ) : (
+          <View style={styles.restrictedContent}>
+            <Text style={styles.restrictedText}>직관 기록 조회가 허용되지 않습니다</Text>
+          </View>
+        );
 
       default:
         return null;
@@ -172,82 +143,49 @@ export default function UserProfileScreen({ navigation, route }: UserProfileScre
   if (profileLoading) {
     return (
       <View style={[styles.container, styles.centerContent]}>
-        <Text>프로필을 불러오는 중...</Text>
+        <ActivityIndicator size='large' color={themeColor} />
+        <Text /*style={styles.loadingText}*/>프로필을 불러오는 중...</Text>
       </View>
     );
   }
 
-  if (!userProfile) {
+  if (profileError || !profile) {
     return (
       <View style={[styles.container, styles.centerContent]}>
-        <Text>사용자 정보를 찾을 수 없습니다</Text>
+        <Text /*style={styles.errorText}*/>사용자 정보를 찾을 수 없습니다</Text>
       </View>
     );
   }
-
-  const tabs = [
-    { key: 'posts' as TabType, label: '작성글' },
-    { key: 'stats' as TabType, label: '통계' },
-    { key: 'history' as TabType, label: '직관기록' },
-  ];
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: themeColor }]}>
-        <View style={styles.headerContent}>
-          {!isOwner && (
-            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-              <Ionicons name='chevron-back' size={24} color='#FFFFFF' />
-            </TouchableOpacity>
-          )}
+      <UserProfileHeader
+        profile={profile}
+        basicStats={basicStats.data}
+        isOwner={isOwner}
+        onBackPress={() => navigation.goBack()}
+        onSettingsPress={() => navigation.navigate('Settings')}
+      />
 
-          <View style={styles.profileSection}>
-            <View style={styles.profileImageContainer}>
-              {userProfile.profileImg ? (
-                <Image source={{ uri: userProfile.profileImg }} style={styles.profileImage} />
-              ) : (
-                <View style={styles.profileImagePlaceholder}>
-                  <Ionicons name='person' size={40} color='#CCCCCC' />
-                </View>
-              )}
-            </View>
+      <ProfileTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-            <View style={styles.profileInfo}>
-              <Text style={styles.nickname}>{userProfile.nickname}</Text>
-              <Text style={styles.winRate}>{userProfile.totalWinRate}% 승률</Text>
-              {userProfile.introduction && <Text style={styles.introduction}>{userProfile.introduction}</Text>}
-            </View>
-          </View>
+      {(activeTab === 'stats' || activeTab === 'history') &&
+        canViewContent(activeTab === 'stats' ? 'stats' : 'attendanceRecords') && (
+          <SeasonSelector selectedSeason={selectedSeason} onSeasonChange={setSelectedSeason} />
+        )}
 
-          {isOwner && (
-            <TouchableOpacity style={styles.settingsButton} onPress={handleSettings}>
-              <Ionicons name='settings-outline' size={24} color='#FFFFFF' />
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-
-      {/* Tabs */}
-      <View style={styles.tabsContainer}>
-        {tabs.map((tab) => (
-          <TouchableOpacity
-            key={tab.key}
-            style={[styles.tab, activeTab === tab.key && { borderBottomColor: themeColor }]}
-            onPress={() => setActiveTab(tab.key)}
-          >
-            <Text style={[styles.tabText, activeTab === tab.key && { color: themeColor }]}>{tab.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Season Selector (통계, 직관기록 탭에서만 표시) */}
-      {(activeTab === 'stats' || activeTab === 'history') && canViewContent(activeTab) && (
-        <SeasonSelector selectedSeason={selectedSeason} onSeasonChange={handleSeasonChange} />
-      )}
-
-      {/* Content */}
-      <View style={styles.contentContainer}>{renderTabContent()}</View>
+      <ScrollView
+        style={styles.contentContainer}
+        refreshControl={
+          <RefreshControl
+            refreshing={profileLoading || statsLoading}
+            onRefresh={handleRefresh}
+            tintColor={themeColor}
+          />
+        }
+      >
+        {renderTabContent()}
+      </ScrollView>
     </View>
   );
 }

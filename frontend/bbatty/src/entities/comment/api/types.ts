@@ -4,7 +4,7 @@ export interface CreateCommentPayload {
   postId: number
   userId: number
   content: string
-  parentId?: string | null
+  parentId?: number | null;
 }
 
 export interface UpdateCommentPayload {
