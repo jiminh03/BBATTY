@@ -1,5 +1,6 @@
 package com.ssafy.chat.watch.controller;
 
+import com.ssafy.chat.common.util.AuthenticationUtil;
 import com.ssafy.chat.common.util.ChatRoomUtils;
 import com.ssafy.chat.config.ChatProperties;
 import com.ssafy.chat.global.constants.ErrorCode;
@@ -28,6 +29,7 @@ public class WatchChatAuthController {
     private final WatchChatAuthService watchChatAuthService;
     private final ChatProperties chatProperties;
     private final ChatRoomUtils chatRoomUtils;
+    private final AuthenticationUtil authenticationUtil;
 
     /**
      * 직관 채팅방 입장 토큰 발급
@@ -42,7 +44,7 @@ public class WatchChatAuthController {
                 request.getGameId(), request.isAttendanceVerified());
 
         // JWT 토큰 추출
-        String jwtToken = extractTokenFromHeader(authHeader);
+        String jwtToken = authenticationUtil.extractJwtToken(authHeader);
         
         try {
             Map<String, Object> sessionData = watchChatAuthService.validateAndCreateSession(jwtToken, request);
@@ -93,10 +95,4 @@ public class WatchChatAuthController {
         }
     }
 
-    private String extractTokenFromHeader(String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new ApiException(ErrorCode.UNAUTHORIZED);
-        }
-        return authHeader.substring(7);
-    }
 }

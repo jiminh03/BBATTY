@@ -1,6 +1,6 @@
 package com.ssafy.chat.config;
 
-import com.ssafy.chat.match.service.MatchChatAuthService;
+import com.ssafy.chat.match.service.MatchChatRoomAuthService;
 import com.ssafy.chat.watch.service.WatchChatAuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +24,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class WebSocketHandshakeInterceptor implements HandshakeInterceptor {
 
-    private final MatchChatAuthService matchChatAuthService;
+    private final MatchChatRoomAuthService matchChatRoomAuthService;
     private final WatchChatAuthService watchChatAuthService;
 
     @Override
@@ -44,9 +44,9 @@ public class WebSocketHandshakeInterceptor implements HandshakeInterceptor {
             log.debug("쿼리 파라미터: {}", queryParams);
             
             // 필수 파라미터 검증
-            String sessionToken = queryParams.get("token");
+            String sessionToken = queryParams.get("sessionToken");
             if (sessionToken == null || sessionToken.trim().isEmpty()) {
-                log.warn("필수 파라미터 누락: token");
+                log.warn("필수 파라미터 누락: sessionToken");
                 return false;
             }
             
@@ -78,7 +78,7 @@ public class WebSocketHandshakeInterceptor implements HandshakeInterceptor {
     private boolean handleMatchChat(String sessionToken, String matchId, Map<String, Object> attributes) {
         try {
             // Redis에서 세션 토큰으로 사용자 정보 조회
-            Map<String, Object> userInfo = matchChatAuthService.getUserInfoByToken(sessionToken);
+            Map<String, Object> userInfo = matchChatRoomAuthService.getUserInfoByToken(sessionToken);
 
             // ✅ 조회된 userInfo 내용 확인
             log.debug("조회된 userInfo: {}", userInfo);

@@ -58,5 +58,18 @@ public class MatchChatRoomCreateRequest {
     @Min(value = 0, message = "승률은 0% 이상이어야 합니다.")
     @Max(value = 100, message = "승률은 100% 이하여야 합니다.")
     private int minWinRate;
+    
+    // 편의 메서드들 (기존 필드와 매핑)
+    public String getTitle() {
+        return matchTitle;
+    }
+    
+    public String getGenderRestriction() {
+        return genderCondition;
+    }
+    
+    public String getAgeRestriction() {
+        return minAge + "-" + maxAge;
+    }
 
 }

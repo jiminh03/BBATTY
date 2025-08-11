@@ -2,6 +2,9 @@ package com.ssafy.chat.common.service;
 
 import com.ssafy.chat.auth.kafka.ChatAuthRequestProducer;
 import com.ssafy.chat.auth.service.ChatAuthResultService;
+import com.ssafy.chat.common.dto.AuthResult;
+import com.ssafy.chat.common.dto.SessionInfo;
+import com.ssafy.chat.common.dto.UserInfo;
 import com.ssafy.chat.common.util.ChatRoomUtils;
 import com.ssafy.chat.common.util.RedisUtil;
 import com.ssafy.chat.config.ChatProperties;

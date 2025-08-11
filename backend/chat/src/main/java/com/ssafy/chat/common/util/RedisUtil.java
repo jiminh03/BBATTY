@@ -1,6 +1,7 @@
 package com.ssafy.chat.common.util;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
@@ -12,6 +13,7 @@ import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class RedisUtil {
 
     private final RedisTemplate<String, Object> redisTemplate;
@@ -123,7 +125,7 @@ public class RedisUtil {
                 }
             } catch (Exception fallbackException) {
                 // 로그만 남기고 빈 Set 반환
-                System.err.println("Redis SCAN과 keys() 모두 실패: " + fallbackException.getMessage());
+                log.error("Redis SCAN과 keys() 모두 실패", fallbackException);
             }
         }
         return keys;

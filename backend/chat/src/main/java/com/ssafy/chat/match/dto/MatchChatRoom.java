@@ -39,4 +39,8 @@ public class MatchChatRoom {
     
     // 방장 ID
     private String ownerId;
+    
+    // 방장 닉네임
+    private String creatorNickname;
+
 }
