@@ -1,5 +1,4 @@
 import { User } from '../../../entities/user/model/userTypes';
-import { Token } from '../../../shared/api/token/tokenTypes';
 
 export interface UserProfile extends User, UserPrivacySettings {
   introduction?: string;

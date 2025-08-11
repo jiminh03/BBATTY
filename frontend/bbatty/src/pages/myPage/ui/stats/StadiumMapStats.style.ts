@@ -2,6 +2,7 @@ import { StyleSheet } from 'react-native';
 
 export const styles = StyleSheet.create({
   container: {
+    position: 'relative',
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 20,
@@ -11,60 +12,64 @@ export const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333333',
-    marginBottom: 16,
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333333',
+    marginBottom: 2,
+  },
+  description: {
+    fontSize: 12,
+    color: '#666666',
+    marginBottom: 20,
   },
   mapContainer: {
-    height: 150,
+    height: 300,
     marginBottom: 16,
   },
-  mapPlaceholder: {
+  koreaMap: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
-    borderRadius: 8,
     position: 'relative',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    backgroundColor: '#E3F2FD',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  mapBackground: {
+    position: 'absolute',
+    top: '10%',
+    left: '25%',
+    width: '50%',
+    height: '80%',
+    backgroundColor: '#BBDEFB',
+    borderRadius: 20,
+    // 한국 모양을 흉내낸 배경
   },
   stadiumMarker: {
     position: 'absolute',
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    justifyContent: 'center',
     alignItems: 'center',
-  },
-  markerText: {
-    fontSize: 8,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  stadiumList: {
-    gap: 8,
-  },
-  stadiumItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
+    transform: [{ translateX: -12 }, { translateY: -12 }],
   },
   stadiumInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  stadiumIndicator: {
-    width: 12,
-    height: 12,
+    position: 'absolute',
+    top: 25,
+    left: -40,
+    width: 80,
+    backgroundColor: 'rgba(0,0,0,0.8)',
     borderRadius: 6,
-    marginRight: 12,
+    padding: 4,
+    alignItems: 'center',
   },
-  stadiumName: {
-    fontSize: 14,
-    color: '#333333',
+  stadiumLabel: {
+    fontSize: 8,
+    color: 'white',
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
   stadiumWinRate: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333333',
+    fontSize: 7,
+    color: 'white',
+    textAlign: 'center',
   },
 });
