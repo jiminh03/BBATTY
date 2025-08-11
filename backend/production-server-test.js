@@ -1,4 +1,5 @@
 const AdvancedChatPerformanceTest = require('./advanced-chat-performance-test.js');
+const WebSocket = require('ws');
 
 /**
  * 🌐 실제 프로덕션 서버 성능 테스트
