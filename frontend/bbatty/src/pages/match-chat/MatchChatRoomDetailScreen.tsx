@@ -23,7 +23,7 @@ export const MatchChatRoomDetailScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RoutePropType>();
   const { room } = route.params;
-  const { currentUser } = useUserStore();
+  const getCurrentUser = useUserStore((state) => state.getCurrentUser);
   
   const [joining, setJoining] = useState(false);
 
@@ -42,12 +42,19 @@ export const MatchChatRoomDetailScreen = () => {
     try {
       setJoining(true);
       
+      const currentUser = getCurrentUser();
+      
+      if (!currentUser) {
+        Alert.alert('오류', '사용자 정보를 찾을 수 없습니다.');
+        return;
+      }
+      
       const joinRequest = {
         matchId: room.matchId,
-        nickname: 'eizimod',
-        winRate: 75,
-        profileImgUrl: 'https://example.com/profile.jpg',
-        isWinFairy: true,
+        nickname: currentUser.nickname,
+        winRate: 75, // TODO: 실제 승률 데이터 연결
+        profileImgUrl: currentUser.profileImageURL || 'https://example.com/profile.jpg',
+        isWinFairy: false, // TODO: 실제 승부요정 여부 연결
       };
 
       const response = await chatRoomApi.joinMatchChat(joinRequest);
