@@ -137,8 +137,8 @@ export default function SettingsScreen() {
         <View style={styles.settingItem}>
           <Text style={styles.settingLabel}>게시글 조회 허용</Text>
           <Switch
-            value={privacySettings?.allowViewPosts || false}
-            onValueChange={(value) => updatePrivacySetting('allowViewPosts', value)}
+            value={privacySettings?.postsPublic || false}
+            onValueChange={(value) => updatePrivacySetting('postsPublic', value)}
             trackColor={{ false: '#E0E0E0', true: themeColor }}
             disabled={updatePrivacyMutation.isPending}
           />
@@ -147,8 +147,8 @@ export default function SettingsScreen() {
         <View style={styles.settingItem}>
           <Text style={styles.settingLabel}>통계 조회 허용</Text>
           <Switch
-            value={privacySettings?.allowViewStats || false}
-            onValueChange={(value) => updatePrivacySetting('allowViewStats', value)}
+            value={privacySettings?.statsPublic || false}
+            onValueChange={(value) => updatePrivacySetting('statsPublic', value)}
             trackColor={{ false: '#E0E0E0', true: themeColor }}
             disabled={updatePrivacyMutation.isPending}
           />
@@ -157,8 +157,8 @@ export default function SettingsScreen() {
         <View style={styles.settingItem}>
           <Text style={styles.settingLabel}>직관기록 조회 허용</Text>
           <Switch
-            value={privacySettings?.allowViewDirectViewHistory || false}
-            onValueChange={(value) => updatePrivacySetting('allowViewDirectViewHistory', value)}
+            value={privacySettings?.attendanceRecordsPublic || false}
+            onValueChange={(value) => updatePrivacySetting('attendanceRecordsPublic', value)}
             trackColor={{ false: '#E0E0E0', true: themeColor }}
             disabled={updatePrivacyMutation.isPending}
           />

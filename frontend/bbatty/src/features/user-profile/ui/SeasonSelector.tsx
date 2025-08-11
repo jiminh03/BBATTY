@@ -1,23 +1,17 @@
 import React from 'react';
 import { View, TouchableOpacity, Text, ScrollView } from 'react-native';
-import { Season } from '../../user-stats/model/statsTypes';
+import { Season, generateSeasons, formatSeasonDisplay } from '../../../shared/utils/date';
 import { useThemeColor } from '../../../shared/team/ThemeContext';
 import { styles } from './SeasonSelector.style';
 
 interface SeasonSelectorProps {
   selectedSeason: Season;
   onSeasonChange: (season: Season) => void;
-  seasons?: Season[];
 }
 
-const DEFAULT_SEASONS: Season[] = ['전체', '2024', '2023', '2022'];
-
-export const SeasonSelector: React.FC<SeasonSelectorProps> = ({
-  selectedSeason,
-  onSeasonChange,
-  seasons = DEFAULT_SEASONS,
-}) => {
+export const SeasonSelector: React.FC<SeasonSelectorProps> = ({ selectedSeason, onSeasonChange }) => {
   const themeColor = useThemeColor();
+  const seasons = generateSeasons(); // 동적 생성
 
   return (
     <View style={styles.container}>
@@ -35,7 +29,9 @@ export const SeasonSelector: React.FC<SeasonSelectorProps> = ({
             onPress={() => onSeasonChange(season)}
             activeOpacity={0.7}
           >
-            <Text style={[styles.seasonText, selectedSeason === season && styles.seasonTextActive]}>{season}</Text>
+            <Text style={[styles.seasonText, selectedSeason === season && styles.seasonTextActive]}>
+              {formatSeasonDisplay(season)}
+            </Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
