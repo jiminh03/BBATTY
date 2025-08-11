@@ -98,7 +98,9 @@ export const postApi = {
     }),
 
   // 게시글 좋아요
-  likePost: (postId: string) => apiClient.post(`/api/posts/${postId}/like`),
+    likePost(postId: number) {
+      return apiClient.post(`/api/posts/${postId}/like`); // 성공 코드만 내려옴
+    },
 
   // 게시글 좋아요 취소
   unlikePost: (postId: string) => apiClient.delete(`/api/posts/${postId}/like`),
