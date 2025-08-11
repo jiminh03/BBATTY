@@ -1,5 +1,6 @@
 package com.ssafy.chat.common.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.ssafy.chat.common.enums.MessageType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -15,6 +16,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ChatMessage {
     // 메시지 타입 (CHAT, SYSTEM, USER_JOIN 등)
     private MessageType messageType;
@@ -26,6 +28,6 @@ public class ChatMessage {
     private String content;
 
     // 메시지 전송시간 (서버에서 설정)
-    private LocalDateTime timestamp;
+    private Long timestamp;
 
 }

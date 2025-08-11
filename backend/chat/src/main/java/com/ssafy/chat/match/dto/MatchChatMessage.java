@@ -1,5 +1,6 @@
 package com.ssafy.chat.match.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.ssafy.chat.common.dto.ChatMessage;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -10,8 +11,9 @@ import lombok.NoArgsConstructor;
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class MatchChatMessage extends ChatMessage {
-    // 사용자 ID (메인 서버 프로필 조회용)
+    // 사용자 ID
     private Long userId;
     
     // 사용자 닉네임
