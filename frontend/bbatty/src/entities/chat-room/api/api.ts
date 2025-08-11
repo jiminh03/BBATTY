@@ -50,10 +50,26 @@ export const chatRoomApi = {
   // 매치 채팅 참여 - 직접 타입 정의
   joinMatchChat: async (request: MatchChatJoinRequest): Promise<{ status: string; message: string; data: AuthResponse }> => {
     try {
+      console.log('🚀 매치 채팅 참여 요청:', request);
       const response = await chatApiClient.post('/api/match-chat/join', request);
-      return response;
-    } catch (error) {
-      console.warn('서버 연결 실패, 목 데이터 반환:', error);
+      console.log('✅ 매치 채팅 참여 성공:', response.data);
+      return response.data; // response.data로 수정
+    } catch (error: any) {
+      console.error('❌ 매치 채팅 참여 에러:', error);
+      
+      // 에러 객체에서 실제 응답 데이터를 추출 시도
+      if (error.response && error.response.data) {
+        console.log('서버 응답 데이터 확인:', error.response.data);
+        // 서버가 실제 데이터를 보냈지만 네트워크 레벨에서 에러로 처리된 경우
+        if (error.response.data.status === 'SUCCESS') {
+          console.log('✅ 서버 응답은 성공이므로 데이터 사용:', error.response.data);
+          return error.response.data;
+        }
+        throw error;
+      }
+      
+      // 진짜 네트워크 연결 문제인 경우만 목 데이터 사용
+      console.warn('네트워크 연결 실패, 목 데이터 반환:', error);
       const sessionToken = 'mock_session_token_' + Date.now();
       return {
         status: 'SUCCESS',

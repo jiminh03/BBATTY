@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { ExploreStackScreenProps } from '../../navigation/types';
 import { TEAMS } from '../../shared/team/teamTypes';
+import { useThemeColor } from '../../shared/team/ThemeContext';
 
 interface UserRanking {
   rank: number;
@@ -20,6 +21,7 @@ export default function UserRankingScreen({ navigation, route }: Props) {
   const [userRankings, setUserRankings] = useState<UserRanking[]>([]);
   const [selectedTeamFilter, setSelectedTeamFilter] = useState('ALL');
   const [loading, setLoading] = useState(false);
+  const themeColor = useThemeColor();
 
   const fetchUserRankings = () => {
     setLoading(true);
@@ -72,8 +74,27 @@ export default function UserRankingScreen({ navigation, route }: Props) {
     );
   }
 
-  const top10Users = userRankings.filter(user => user.rank <= 10 && !user.isCurrentUser);
+  const top3Users = userRankings.filter(user => user.rank <= 3 && !user.isCurrentUser);
+  const restUsers = userRankings.filter(user => user.rank > 3 && user.rank <= 10 && !user.isCurrentUser);
   const currentUser = userRankings.find(user => user.isCurrentUser);
+
+  const getPodiumHeight = (rank: number) => {
+    switch (rank) {
+      case 1: return 120;
+      case 2: return 100;
+      case 3: return 80;
+      default: return 80;
+    }
+  };
+
+  const getMedalColor = (rank: number) => {
+    switch (rank) {
+      case 1: return '#FFD700';
+      case 2: return '#C0C0C0';
+      case 3: return '#CD7F32';
+      default: return '#999999';
+    }
+  };
 
   return (
     <View style={styles.userRankingContainer}>
@@ -85,31 +106,104 @@ export default function UserRankingScreen({ navigation, route }: Props) {
                 key={filter.id}
                 style={[
                   styles.teamFilterItem,
-                  selectedTeamFilter === filter.id && styles.selectedTeamFilter
+                  selectedTeamFilter === filter.id && {
+                    ...styles.selectedTeamFilter,
+                    borderColor: themeColor,
+                  }
                 ]}
                 onPress={() => setSelectedTeamFilter(filter.id)}
               >
                 {filter.logo ? (
-                  <Image source={{ uri: filter.logo }} style={styles.teamFilterLogo} />
+                  <Image source={typeof filter.logo === 'string' ? { uri: filter.logo } : filter.logo} style={styles.teamFilterLogo} resizeMode="contain" />
                 ) : (
-                  <View style={styles.allFilterIcon}>
+                  <View style={styles.allFilterContainer}>
                     <Text style={styles.allFilterText}>ALL</Text>
                   </View>
                 )}
-                <Text style={[
-                  styles.teamFilterName,
-                  selectedTeamFilter === filter.id && styles.selectedTeamFilterName
-                ]}>
-                  {filter.name}
-                </Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
         </View>
 
-        {/* 유저 랭킹 리스트 */}
         <ScrollView style={styles.userRankingList}>
-          {top10Users.map((user) => (
+          {/* 상위 3명 시상대 */}
+          {top3Users.length > 0 && (
+            <View style={styles.podiumContainer}>
+              <View style={styles.podiumWrapper}>
+                {/* 2위 */}
+                {top3Users.find(u => u.rank === 2) && (
+                  <View style={styles.podiumPosition}>
+                    <View style={styles.userProfile}>
+                      <View style={[styles.medal, { backgroundColor: getMedalColor(2) }]}>
+                        <Text style={styles.medalText}>2</Text>
+                      </View>
+                      <Text style={styles.podiumUsername} numberOfLines={1}>
+                        {top3Users.find(u => u.rank === 2)?.username}
+                      </Text>
+                      <Text style={styles.podiumTeam}>
+                        {getShortTeamName(top3Users.find(u => u.rank === 2)?.teamName || '')}
+                      </Text>
+                      <Text style={styles.podiumWinRate}>
+                        {((top3Users.find(u => u.rank === 2)?.winRate || 0) * 100).toFixed(1)}%
+                      </Text>
+                    </View>
+                    <View style={[styles.podium, { height: getPodiumHeight(2), backgroundColor: getMedalColor(2) }]}>
+                      <Text style={styles.podiumRank}>2</Text>
+                    </View>
+                  </View>
+                )}
+                
+                {/* 1위 (중앙) */}
+                {top3Users.find(u => u.rank === 1) && (
+                  <View style={styles.podiumPosition}>
+                    <View style={styles.userProfile}>
+                      <View style={[styles.medal, { backgroundColor: getMedalColor(1) }]}>
+                        <Text style={styles.medalText}>1</Text>
+                      </View>
+                      <Text style={styles.podiumUsername} numberOfLines={1}>
+                        {top3Users.find(u => u.rank === 1)?.username}
+                      </Text>
+                      <Text style={styles.podiumTeam}>
+                        {getShortTeamName(top3Users.find(u => u.rank === 1)?.teamName || '')}
+                      </Text>
+                      <Text style={styles.podiumWinRate}>
+                        {((top3Users.find(u => u.rank === 1)?.winRate || 0) * 100).toFixed(1)}%
+                      </Text>
+                    </View>
+                    <View style={[styles.podium, { height: getPodiumHeight(1), backgroundColor: getMedalColor(1) }]}>
+                      <Text style={styles.podiumRank}>1</Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* 3위 */}
+                {top3Users.find(u => u.rank === 3) && (
+                  <View style={styles.podiumPosition}>
+                    <View style={styles.userProfile}>
+                      <View style={[styles.medal, { backgroundColor: getMedalColor(3) }]}>
+                        <Text style={styles.medalText}>3</Text>
+                      </View>
+                      <Text style={styles.podiumUsername} numberOfLines={1}>
+                        {top3Users.find(u => u.rank === 3)?.username}
+                      </Text>
+                      <Text style={styles.podiumTeam}>
+                        {getShortTeamName(top3Users.find(u => u.rank === 3)?.teamName || '')}
+                      </Text>
+                      <Text style={styles.podiumWinRate}>
+                        {((top3Users.find(u => u.rank === 3)?.winRate || 0) * 100).toFixed(1)}%
+                      </Text>
+                    </View>
+                    <View style={[styles.podium, { height: getPodiumHeight(3), backgroundColor: getMedalColor(3) }]}>
+                      <Text style={styles.podiumRank}>3</Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
+
+          {/* 4-10위 일반 리스트 */}
+          {restUsers.map((user) => (
             <View key={user.rank} style={styles.userRankingItem}>
               <View style={styles.userRankInfo}>
                 <Text style={styles.userRank}>{user.rank}</Text>
@@ -171,10 +265,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   teamFilterContainer: {
-    paddingVertical: 16,
+    paddingVertical: 8,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f3f4',
+    backgroundColor: '#ffffff',
   },
   teamFilterScroll: {
     flexDirection: 'row',
@@ -185,28 +278,37 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 20,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
   },
   selectedTeamFilter: {
-    backgroundColor: '#DC143C',
+    borderWidth: 2,
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 10,
   },
   teamFilterLogo: {
-    width: 20,
-    height: 20,
-    marginBottom: 4,
+    width: 64,
+    height: 64,
   },
-  allFilterIcon: {
-    width: 20,
-    height: 20,
-    backgroundColor: '#666666',
-    borderRadius: 10,
+  allFilterContainer: {
+    width: 64,
+    height: 64,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 4,
   },
   allFilterText: {
-    fontSize: 8,
-    color: '#ffffff',
+    fontSize: 24,
+    color: '#333333',
     fontWeight: 'bold',
   },
   teamFilterName: {
@@ -220,6 +322,7 @@ const styles = StyleSheet.create({
   userRankingList: {
     flex: 1,
     paddingHorizontal: 16,
+    paddingTop: 20,
   },
   userRankingItem: {
     flexDirection: 'row',
@@ -281,6 +384,92 @@ const styles = StyleSheet.create({
   dividerText: {
     fontSize: 18,
     color: '#cccccc',
+    fontWeight: 'bold',
+  },
+  podiumContainer: {
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    backgroundColor: '#f8f9fa',
+    marginBottom: 16,
+    borderRadius: 12,
+    marginHorizontal: 16,
+  },
+  podiumWrapper: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+    height: 200,
+  },
+  podiumPosition: {
+    alignItems: 'center',
+    flex: 1,
+    marginHorizontal: 4,
+  },
+  userProfile: {
+    alignItems: 'center',
+    marginBottom: 8,
+    minHeight: 100,
+  },
+  medal: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  medalText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  podiumUsername: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#333333',
+    marginBottom: 2,
+    textAlign: 'center',
+    maxWidth: 80,
+  },
+  podiumTeam: {
+    fontSize: 10,
+    color: '#666666',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  podiumWinRate: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#DC143C',
+    textAlign: 'center',
+  },
+  podium: {
+    width: '100%',
+    maxWidth: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  podiumRank: {
+    color: '#ffffff',
+    fontSize: 24,
     fontWeight: 'bold',
   },
 });
