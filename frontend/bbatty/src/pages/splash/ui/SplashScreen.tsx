@@ -1,17 +1,26 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, Animated, Dimensions, TouchableOpacity, AppState, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { styles } from './SplashScreen.styles';
 import { screen } from '../../../shared';
+import { useTokenStore } from '../../../shared/api/token/tokenStore';
+import { useUserStore } from '../../../entities/user/model/userStore';
+import { isErr, isOk } from '../../../shared/utils/result';
+import { useTheme } from '../../../shared/team/ThemeContext';
+import { findTeamById } from '../../../shared/team/teamTypes';
 
 interface SplashScreenProps {
   onAnimationComplete?: () => void;
   onLoginSuccess?: (userInfo: any, accessToken: string) => void;
+  onAutoLoginSuccess?: () => void;
 }
 
-const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLoginSuccess }) => {
+const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLoginSuccess, onAutoLoginSuccess }) => {
   const insets = useSafeAreaInsets();
   const { width } = screen;
+
+  const [shouldShowLogin, setShouldShowLogin] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   // 애니메이션 값들
   const ballPosition = useRef(new Animated.Value(-100)).current;
@@ -21,10 +30,18 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLogi
   const buttonOpacity = useRef(new Animated.Value(0)).current;
   const buttonTranslateY = useRef(new Animated.Value(20)).current;
 
+  const { refreshTokens, hasRefreshToken, isRefreshTokenExpired } = useTokenStore();
+  const { hasUser, getCurrentUser } = useUserStore();
+  const { setCurrentTeam } = useTheme();
+
   useEffect(() => {
-    initializeKakao();
-    startAnimation();
+    initializeApp();
   }, []);
+
+  const initializeApp = async () => {
+    await initializeKakao();
+    await checkAutoLogin();
+  };
 
   const initializeKakao = async () => {
     try {
@@ -35,9 +52,59 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLogi
     }
   };
 
-  const startAnimation = () => {
+  const checkAutoLogin = async () => {
+    try {
+      setIsCheckingAuth(true);
+
+      // 1. 사용자 정보 확인
+      const hasUserResult = await hasUser();
+      const userExists = isOk(hasUserResult) && hasUserResult.data;
+
+      // 2. 토큰 유효성 확인 및 갱신 시도
+      if (userExists && hasRefreshToken()) {
+        // Refresh 토큰 만료 여부 추가 체크
+        if (isRefreshTokenExpired()) {
+          console.log('Refresh token expired, requiring login');
+          setShouldShowLogin(true);
+          startAnimationWithLogin();
+          return;
+        }
+
+        const refreshResult = await refreshTokens();
+
+        if (isOk(refreshResult) && refreshResult.data) {
+          // 자동로그인 성공 - 사용자 정보로 팀 테마 설정
+          const currentUser = getCurrentUser();
+          if (currentUser?.teamId) {
+            const team = findTeamById(currentUser.teamId);
+            if (team) {
+              setCurrentTeam(team);
+            }
+          }
+
+          console.log('Auto login successful');
+          startAnimationAndComplete();
+          return;
+        } else {
+          console.log('Token refresh failed:', refreshResult.error);
+        }
+      }
+
+      // 자동로그인 실패 - 로그인 버튼 표시
+      setShouldShowLogin(true);
+      startAnimationWithLogin();
+    } catch (error) {
+      console.error('Auto login check failed:', error);
+      setShouldShowLogin(true);
+      startAnimationWithLogin();
+    } finally {
+      setIsCheckingAuth(false);
+    }
+  };
+
+  const startAnimationAndComplete = () => {
     const animationSequence = Animated.sequence([
-      // 1. 야구공이 날아오면서 회전
+      // 야구공 애니메이션
       Animated.parallel([
         Animated.timing(ballPosition, {
           toValue: width / 2 + 20,
@@ -51,7 +118,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLogi
         }),
       ]),
 
-      // 2. 티를 팅으로 교체
+      // 티를 팅으로 교체
       Animated.sequence([
         Animated.timing(tiOpacity, {
           toValue: 0,
@@ -65,10 +132,53 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLogi
         }),
       ]),
 
-      // 3. 잠시 대기
+      // 잠시 대기 후 자동으로 메인으로 이동
+      Animated.delay(800),
+    ]);
+
+    animationSequence.start(() => {
+      if (onAutoLoginSuccess) {
+        onAutoLoginSuccess();
+      } else {
+        onAnimationComplete?.();
+      }
+    });
+  };
+
+  const startAnimationWithLogin = () => {
+    const animationSequence = Animated.sequence([
+      // 야구공 애니메이션
+      Animated.parallel([
+        Animated.timing(ballPosition, {
+          toValue: width / 2 + 20,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(ballRotation, {
+          toValue: 3,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+      ]),
+
+      // 티를 팅으로 교체
+      Animated.sequence([
+        Animated.timing(tiOpacity, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(tingOpacity, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]),
+
+      // 잠시 대기
       Animated.delay(500),
 
-      // 4. 로그인 버튼 표시
+      // 로그인 버튼 표시
       Animated.parallel([
         Animated.timing(buttonOpacity, {
           toValue: 1,
@@ -108,16 +218,15 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLogi
       if (!response.ok) {
         throw new Error('사용자 정보를 가져올 수 없습니다.');
       }
+
       const userInfo = await response.json();
-      // 로그인 성공 콜백 호출
+
       if (onLoginSuccess) {
         onLoginSuccess(userInfo, kakaoData.accessToken);
       } else {
-        // 애니메이션 완료 콜백 호출
         onAnimationComplete?.();
       }
     } catch (error: any) {
-      // 사용자에게 에러 메시지 표시
       Alert.alert('로그인 실패', error.message || '카카오 로그인에 실패했습니다. 다시 시도해주세요.', [
         { text: '확인' },
       ]);
@@ -174,21 +283,23 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLogi
         <View style={[styles.baseballStitch, styles.baseballStitchVertical]} />
       </Animated.View>
 
-      {/* 카카오 로그인 버튼 */}
-      <Animated.View
-        style={[
-          styles.loginButtonContainer,
-          {
-            opacity: buttonOpacity,
-            transform: [{ translateY: buttonTranslateY }],
-          },
-        ]}
-      >
-        <TouchableOpacity style={styles.loginButton} onPress={handleKakaoLoginPress}>
-          <Text style={styles.kakaoIcon}>💬</Text>
-          <Text style={styles.loginButtonText}>카카오 로그인</Text>
-        </TouchableOpacity>
-      </Animated.View>
+      {/* 카카오 로그인 버튼 - 조건부 렌더링 */}
+      {shouldShowLogin && (
+        <Animated.View
+          style={[
+            styles.loginButtonContainer,
+            {
+              opacity: buttonOpacity,
+              transform: [{ translateY: buttonTranslateY }],
+            },
+          ]}
+        >
+          <TouchableOpacity style={styles.loginButton} onPress={handleKakaoLoginPress}>
+            <Text style={styles.kakaoIcon}>💬</Text>
+            <Text style={styles.loginButtonText}>카카오 로그인</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      )}
     </View>
   );
 };

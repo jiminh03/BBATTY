@@ -8,8 +8,6 @@ export const linking: LinkingOptions<RootStackParamList> = {
     screens: {
       AuthStack: {
         screens: {
-          Landing: 'welcome',
-          Login: 'login',
           SignUp: 'signup',
           TeamSelect: 'team-select',
         },

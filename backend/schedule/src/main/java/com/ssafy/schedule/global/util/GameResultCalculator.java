@@ -1,6 +1,6 @@
 package com.ssafy.schedule.global.util;
 
-import com.ssafy.schedule.global.constant.GameResult;
+import com.ssafy.schedule.global.constants.GameResult;
 
 /**
  * 경기 결과 계산을 위한 유틸리티 클래스

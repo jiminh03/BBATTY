@@ -4,16 +4,16 @@ export interface CreateCommentPayload {
   postId: number
   userId: number
   content: string
-  parentId?: string | null
+  parentId?: number | null;
 }
 
 export interface UpdateCommentPayload {
-  commentId: string
+  commentId: number
   content: string
 }
 
 export interface DeleteCommentPayload {
-  commentId: string
+  commentId: number
 }
 
 export interface GetCommentsParams {

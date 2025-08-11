@@ -62,20 +62,6 @@ public class AuthResponse {
         private final Long teamId;
 
         /**
-         * 응원팀 이름
-         * 🔹 JWT 토큰에 포함되지 않음
-         * 📱 사용처: 팀 브랜딩, 프로필에 "한화 이글스 팬" 표시
-         */
-        private final String teamName;
-
-        /**
-         * 자기소개
-         * 🔹 JWT 토큰에 포함되지 않음
-         * 📱 사용처: 프로필 화면 자기소개란
-         */
-        private final String introduction;
-
-        /**
          * 나이
          * 🔹 JWT 토큰에도 포함됨 (age 클레임)
          * 📱 사용처: 필터링

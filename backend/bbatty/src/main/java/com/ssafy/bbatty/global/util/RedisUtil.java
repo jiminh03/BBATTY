@@ -75,6 +75,13 @@ public class RedisUtil {
     // ===========================================
     
     /**
+     * Hash에 필드-값 저장
+     */
+    public void putToHash(String key, String field, Object value) {
+        redisTemplate.opsForHash().put(key, field, value);
+    }
+    
+    /**
      * Hash의 모든 필드와 값 조회
      */
     public java.util.Map<String, String> getHashAll(String key) {

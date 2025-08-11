@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Animated, Image } from 'react-native';
-import { Team } from '../../../entities/team/model/teamTypes';
+import { Team } from '../../../shared/team/teamTypes';
 import { styles } from './TeamGrid.styles';
 
 interface TeamGridProps {
@@ -46,7 +46,7 @@ export const TeamGrid: React.FC<TeamGridProps> = ({ teams, onSelectTeam, selecte
               <View style={[styles.teamLogoContainer, isSelected && styles.teamLogoContainerSelected]}>
                 {/* 실제로는 Image 컴포넌트 사용 */}
                 {/* <Image source={{ uri: team.logoUrl }} style={styles.teamLogo} /> */}
-                <Text style={styles.teamLogoEmoji}>{team.logo}</Text>
+                <Text style={styles.teamLogoEmoji}>{team.imagePath}</Text>
               </View>
               <Text style={[styles.teamName, isSelected && styles.teamNameSelected]}>{team.name}</Text>
             </Animated.View>

@@ -101,18 +101,24 @@ export const useMatchChatWebSocket = ({
         updateConnectionStatus('CONNECTED');
         console.log('웹소켓 연결 성공');
         
-        // 서버에 사용자 인증 정보 전송
-        const matchId = new URL(wsUrl).searchParams.get('matchId');
-        const authData = {
-          matchId: matchId,
-          nickname: userNickname,
-          winRate: 75, // TODO: 실제 승률 데이터로 대체
-          profileImgUrl: profileImgUrl || '',
-          isWinFairy: false // TODO: 실제 승부요정 여부로 대체
-        };
+        // watch chat의 경우 사용자 정보 전송하지 않음
+        const isWatchChat = wsUrl.includes('/ws/watch-chat/') || (wsUrl.includes('gameId=') && wsUrl.includes('teamId='));
         
-        websocket.send(JSON.stringify(authData));
-        console.log('사용자 인증 정보 전송:', authData);
+        if (!isWatchChat) {
+          // 매치 채팅의 경우만 사용자 인증 정보 전송
+          const matchIdMatch = wsUrl.match(/matchId=([^&]*)/);
+          const matchId = matchIdMatch ? matchIdMatch[1] : null;
+          
+          const authData = {
+            matchId: matchId,
+            nickname: userNickname,
+            winRate: 75,
+            profileImgUrl: profileImgUrl || '',
+            isWinFairy: false
+          };
+          
+          websocket.send(JSON.stringify(authData));
+        }
       };
 
       websocket.onmessage = (event) => {

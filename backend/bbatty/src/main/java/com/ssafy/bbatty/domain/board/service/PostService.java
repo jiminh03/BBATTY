@@ -1,6 +1,7 @@
 package com.ssafy.bbatty.domain.board.service;
 
 import com.ssafy.bbatty.domain.board.dto.request.PostCreateRequest;
+import com.ssafy.bbatty.domain.board.dto.request.PostUpdateRequest;
 import com.ssafy.bbatty.domain.board.dto.response.PostCreateResponse;
 import com.ssafy.bbatty.domain.board.dto.response.PostDetailResponse;
 import com.ssafy.bbatty.domain.board.dto.response.PostListPageResponse;
@@ -11,6 +12,8 @@ public interface PostService {
     
     void deletePost(Long postId, Long userId);
 
+    void updatePost(Long postId, PostUpdateRequest request, Long userId);
+
     PostListPageResponse getPostList(Long cursor);
     
     PostListPageResponse getPostListByTeam(Long teamId, Long cursor);
@@ -18,5 +21,8 @@ public interface PostService {
     PostDetailResponse getPostDetail(Long postId, Long userId);
     
     PostListPageResponse getPostListByUser(Long userId, Long cursor);
+
+    // 검색 기능
+    PostListPageResponse searchPostsByTeam(Long teamId, String keyword, Long cursor);
 
 }

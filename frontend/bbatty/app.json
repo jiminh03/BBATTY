@@ -13,7 +13,10 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "config": {
+        "googleMapsApiKey": "AIzaSyA9pv5VDiiDgUgEssoorchl1Ga_6y3E_Sw"
+      }
     },
     "android": {
       "package": "com.forbidden.bbatty",
@@ -30,7 +33,12 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyA9pv5VDiiDgUgEssoorchl1Ga_6y3E_Sw"
+        }
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -59,10 +67,13 @@
         "expo-build-properties",
         {
           "android": {
-            "extraMavenRepos": ["https://devrepo.kakao.com/nexus/content/groups/public/"]
+            "extraMavenRepos": [
+              "https://devrepo.kakao.com/nexus/content/groups/public/"
+            ]
           }
         }
-      ]
+      ],
+      "expo-maps"
     ]
   }
 }

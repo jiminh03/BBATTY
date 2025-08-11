@@ -14,11 +14,13 @@ import type { StackNavigationProp } from '@react-navigation/stack';
 import { chatRoomApi } from '../../entities/chat-room/api/api';
 import type { MatchChatRoom } from '../../entities/chat-room/api/types';
 import type { ChatStackParamList } from '../../navigation/types';
+import { useUserStore } from '../../entities/user/model/userStore';
 
 type NavigationProp = StackNavigationProp<ChatStackParamList>;
 
 export const MatchChatRoomListScreen = () => {
   const navigation = useNavigation<NavigationProp>();
+  const getCurrentUser = useUserStore((state) => state.getCurrentUser);
   const [rooms, setRooms] = useState<MatchChatRoom[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -68,15 +70,23 @@ export const MatchChatRoomListScreen = () => {
 
   const handleWatchChatJoin = async () => {
     try {
+      const currentUser = getCurrentUser();
+      
+      if (!currentUser) {
+        Alert.alert('오류', '사용자 정보를 찾을 수 없습니다.');
+        return;
+      }
+
       const watchRequest = {
-        gameId: 11,
-        teamId: 8,
+        gameId: 1258,
+        teamId: currentUser.teamId,
         isAttendanceVerified: true
       };
 
       const response = await chatRoomApi.joinWatchChat(watchRequest);
+      console.log('Watch chat API response:', response.data);
       
-      if (response.status === 'SUCCESS') {
+      if (response.data.status === 'SUCCESS') {
         // 워치 채팅방으로 이동 (매치 채팅과 동일한 화면 사용)
         navigation.navigate('MatchChatRoom', {
           room: {
@@ -92,13 +102,13 @@ export const MatchChatRoomListScreen = () => {
             currentParticipants: 0,
             createdAt: new Date().toISOString(),
             status: 'ACTIVE',
-            websocketUrl: response.data.websocketUrl
+            websocketUrl: response.data.data.websocketUrl
           },
-          websocketUrl: response.data.websocketUrl,
-          sessionToken: response.data.sessionToken
+          websocketUrl: response.data.data.websocketUrl,
+          sessionToken: response.data.data.sessionToken
         });
       } else {
-        Alert.alert('오류', response.message || '워치 채팅 참여에 실패했습니다.');
+        Alert.alert('오류', response.data.message || '워치 채팅 참여에 실패했습니다.');
       }
     } catch (error) {
       console.error('워치 채팅 참여 실패:', error);

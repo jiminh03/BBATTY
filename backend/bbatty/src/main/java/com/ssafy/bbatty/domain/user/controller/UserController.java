@@ -1,5 +1,7 @@
 package com.ssafy.bbatty.domain.user.controller;
 
+import com.ssafy.bbatty.domain.auth.dto.response.NicknameCheckResponse;
+import com.ssafy.bbatty.domain.user.dto.response.UserBadgeResponse;
 import com.ssafy.bbatty.domain.user.dto.request.UserUpdateRequestDto;
 import com.ssafy.bbatty.domain.user.dto.response.UserResponseDto;
 import com.ssafy.bbatty.domain.user.service.UserService;
@@ -63,14 +65,24 @@ public class UserController {
     public ResponseEntity<ApiResponse<Object>> getUserStats(
             @RequestParam(required = false) Long userId,
             @RequestParam(required = false) String season,        // "total", "2025", "2024" 등 (디폴트: 현재 연도)
-            @RequestParam(required = false) String stadium,       // 구장별
-            @RequestParam(required = false) String opponent,      // 상대팀별  
-            @RequestParam(required = false) String dayOfWeek,     // 요일별
-            @RequestParam(required = false) String homeAway,      // "home" or "away"
+            @RequestParam(required = false) String type,          // "basic", "streak", "stadium", "opponent", "dayOfWeek", "homeAway"
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
         Long targetUserId = (userId != null) ? userId : userPrincipal.getUserId();
-        Object response = userService.getUserStats(targetUserId, userPrincipal.getUserId(), 
-                                                   season, stadium, opponent, dayOfWeek, homeAway);
+        Object response = userService.getUserStats(targetUserId, userPrincipal.getUserId(), season, type);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    /**
+     * 사용자 뱃지 조회
+     * userId가 없으면 본인 프로필, 있으면 해당 사용자 프로필 조회
+     */
+    @GetMapping("/badges")
+    public ResponseEntity<ApiResponse<UserBadgeResponse>> getUserBadges(
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) String season,        // "2025", "2024" 등 (디폴트: 현재 연도)
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        Long targetUserId = (userId != null) ? userId : userPrincipal.getUserId();
+        UserBadgeResponse response = userService.getUserBadges(targetUserId, season);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -93,11 +105,14 @@ public class UserController {
      * 닉네임 중복 체크 (프로필 수정용)
      */
     @GetMapping("/check-nickname")
-    public ResponseEntity<ApiResponse<Boolean>> checkNicknameAvailability(
+    public ResponseEntity<ApiResponse<NicknameCheckResponse>> checkNicknameAvailability(
             @RequestParam String nickname,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
         boolean available = userService.isNicknameAvailable(nickname, userPrincipal.getUserId());
-        return ResponseEntity.ok(ApiResponse.success(available));
+        NicknameCheckResponse response = available 
+            ? NicknameCheckResponse.available()
+            : NicknameCheckResponse.unavailable();
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     /**

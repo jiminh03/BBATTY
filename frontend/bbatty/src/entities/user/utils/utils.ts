@@ -47,10 +47,3 @@ export const userUtils = {
 };
 
 // ===================================== 추가 ==========================================
-
-// 굳이 변환하는 이유가 뭐임? 걍 user 쓰면 안됨?
-export const toUserSummary = (user: User): UserSummary => ({
-  id: user.id,
-  nickName: user.nickname,
-  profileImage: user.profileImageURL,
-});

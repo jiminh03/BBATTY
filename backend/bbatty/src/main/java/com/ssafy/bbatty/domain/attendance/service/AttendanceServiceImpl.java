@@ -88,10 +88,11 @@ public class AttendanceServiceImpl implements AttendanceService {
         Duration ttlUntilMidnight = DateUtil.calculateTTLUntilMidnight();
         redisUtil.setValue(attendanceGameKey, "ATTENDED", ttlUntilMidnight);
         
-        // 당일 인증자 목록에 추가 (이틀 TTL)
+        // 당일 인증자 목록에 추가 (userId: teamId:gameId Hash 구조, 이틀 TTL)
         String dailyAttendeesKey = RedisKey.ATTENDANCE_DAILY_ATTENDEES + today;
         Duration weekTTL = Duration.ofDays(2);
-        redisUtil.addToSet(dailyAttendeesKey, userId.toString());
+        String teamGameValue = teamId + ":" + verifiedGame.getId();
+        redisUtil.putToHash(dailyAttendeesKey, userId.toString(), teamGameValue);
         redisUtil.expire(dailyAttendeesKey, weekTTL);
         
         log.info("Redis에 직관 인증 저장: key={}, gameId={}, TTL={}초", 
@@ -100,6 +101,7 @@ public class AttendanceServiceImpl implements AttendanceService {
         
         // 6. 응답 생성
         Stadium stadium = Stadium.findByName(verifiedGame.getStadium());
+        
         LocationUtil.LocationValidationResult locationResult = 
                 LocationUtil.validateStadiumLocation(request.latitude(), request.longitude(), stadium);
         

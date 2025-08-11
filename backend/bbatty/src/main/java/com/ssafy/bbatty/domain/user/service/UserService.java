@@ -2,6 +2,7 @@ package com.ssafy.bbatty.domain.user.service;
 
 import com.ssafy.bbatty.domain.user.dto.request.UserUpdateRequestDto;
 import com.ssafy.bbatty.domain.user.dto.response.UserResponseDto;
+import com.ssafy.bbatty.domain.user.dto.response.UserBadgeResponse;
 
 public interface UserService {
 
@@ -18,8 +19,7 @@ public interface UserService {
     /**
      * 사용자 상세 통계 조회 (statsPublic 검증)
      */
-    Object getUserStats(Long targetUserId, Long currentUserId, String season, String stadium, 
-                       String opponent, String dayOfWeek, String homeAway);
+    Object getUserStats(Long targetUserId, Long currentUserId, String season, String type);
 
     /**
      * 사용자 직관 기록 조회 (attendanceRecordsPublic 검증)
@@ -45,4 +45,9 @@ public interface UserService {
      * 회원 탈퇴
      */
     void deleteUser(Long currentUserId);
+
+    /**
+     * 사용자 뱃지 조회
+     */
+    UserBadgeResponse getUserBadges(Long targetUserId, String season);
 }

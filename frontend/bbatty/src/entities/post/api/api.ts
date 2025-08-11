@@ -7,10 +7,22 @@ import {
   GetPostsParams,
   PostListItem,
 } from './types';
-import { AxiosHeaders, AxiosResponse } from 'axios';
+import axios, { AxiosHeaders, AxiosResponse } from 'axios';
 import { Post } from '../model/types';
 import { CursorPostListResponse } from './types';
 import { PostStatus } from '../model/types';
+
+type UpdateBody = {
+  postId: number;
+  title: string;
+  content: string;
+  teamId?: number;
+  status?: string;      // 서버가 postStatus 라면 키만 바꿔주면 됨
+  postStatus?: string;  // <- 이 키가 맞다면 위 status 대신 이걸 쓰기
+};
+
+const clean = <T extends object>(obj: T): T =>
+  Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as T;
 
 export const postApi = {
   // 게시글 생성
@@ -18,29 +30,63 @@ export const postApi = {
     apiClient.post('/api/posts', payload),
 
   // 게시글 수정
-  updatePost: (postId: string, payload: UpdatePostPayload) => apiClient.put(`/api/posts/${postId}`, payload),
+  updatePost: async (
+    postId: number,
+    payload: { title: string; content: string; teamId?: number } // teamId까지 허용
+  ) => {
+    const body = {
+      title: payload.title,
+      content: payload.content,
+      ...(payload.teamId != null ? { teamId: payload.teamId } : {}),
+    };
 
+    try {
+      console.log('[updatePost] PUT /api/posts/%d body=', postId, body);
+      const res = await apiClient.put<any>(`/api/posts/${postId}`, body);
+      const apiRes: any = (res as any)?.data ?? res;
+      const data = 'data' in apiRes ? extractData<any>(apiRes) : apiRes;
+      console.log('[updatePost][OK]', data);
+      return data;
+    } catch (e) {
+      if (axios.isAxiosError(e)) {
+        console.log('[updatePost][AXIOS]', e.response?.status, e.response?.data);
+      } else {
+        console.log('[updatePost][ERROR]', e);
+      }
+      throw e;
+    }
+  },
+    
   // 게시글 삭제
   deletePost: (postId: string) => apiClient.delete(`/api/posts/${postId}`),
 
   // 게시글 상세 조회
   getPostById: async (postId: number): Promise<Post> => {
-    // ⬇️ 여기서 제네릭은 "실데이터 타입"만!
-    const res = await apiClient.get<Post>(`/api/posts/${postId}`);
-    const data = extractData<Post>(res);  // ApiResponse<Post> → Post | null
-    if (!data) throw new Error(res.message || '게시글 상세 조회 실패');
-    return data;
-  },
+  const res = await apiClient.get(`/api/posts/${postId}`);
+  const api = (res as any).data as { status: string; message?: string; data?: Post };
+  if (api?.status !== 'SUCCESS' || !api?.data) {
+    throw new Error(api?.message ?? '게시글 상세 조회 실패');
+  }
+  return api.data;                 // ✅ Post
+},
 
   // 팀별 게시글 목록 조회 (cursor 기반)
   getPosts: async (teamId: number, cursor?: number): Promise<CursorPostListResponse> => {
-    const res = await apiClient.get<CursorPostListResponse>(
-      `/api/posts/team/${teamId}`,
-      { params: cursor !== undefined ? { cursor } : {} }
-    );
-    const data = extractData<CursorPostListResponse>(res);
-    if (!data) throw new Error(res.message || '게시글 목록 조회 실패');
-    return data; // 타입 OK
+    const res = await apiClient.get(`/api/posts/team/${teamId}`, {
+      params: cursor !== undefined ? { cursor } : {},
+    });
+
+    // ✅ AxiosResponse → ApiResponse 형태로 직접 파싱
+    const api = (res as any).data as {
+      status: string;
+      message?: string;
+      data?: CursorPostListResponse;
+    };
+
+    if (api?.status !== 'SUCCESS' || !api?.data) {
+      throw new Error(api?.message ?? '게시글 목록 조회 실패');
+    }
+    return api.data;                 // ✅ { posts, hasNext, nextCursor }
   },
 
 
@@ -62,7 +108,7 @@ export const postApi = {
     apiClient.post<PresignedUrlResponse>('/api/posts/presigned-url', payload),
 
   // // 이미지 삭제
-  // deleteImage: (imageId: string) => apiClient.delete(`/api/images/${imageId}`),
+  deleteImage: (imageId: string) => apiClient.delete(`/api/images/${imageId}`),
 
 };
 

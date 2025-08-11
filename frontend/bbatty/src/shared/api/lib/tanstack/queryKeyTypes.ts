@@ -26,8 +26,13 @@ export class QueryKeys {
   }
 
   // 통계 키
-  static stats(entityName: string, type = 'general'): QueryKey {
-    return [...QueryKeys.entity(entityName), 'stats', type];
+  static stats(entityName: string, type = 'general', params: Record<string, unknown> = {}): QueryKey {
+    return [...QueryKeys.entity(entityName), 'stats', type, params];
+  }
+
+  // 뱃지 키
+  static badges(entityName: string, params: Record<string, unknown> = {}): QueryKey {
+    return [...QueryKeys.entity(entityName), 'badges', params];
   }
 }
 
@@ -71,6 +76,13 @@ export class QueryInvalidator {
   static async invalidateStats(queryClient: QueryClient, entityName: string): Promise<void> {
     await queryClient.invalidateQueries({
       queryKey: [...QueryKeys.entity(entityName), 'stats'],
+    });
+  }
+
+  // 뱃지 캐시 무효화
+  static async invalidateBadges(queryClient: QueryClient, entityName: string): Promise<void> {
+    await queryClient.invalidateQueries({
+      queryKey: [...QueryKeys.entity(entityName), 'badges'],
     });
   }
 }

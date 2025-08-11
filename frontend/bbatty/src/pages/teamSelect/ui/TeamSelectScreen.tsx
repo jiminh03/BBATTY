@@ -6,7 +6,7 @@ import { AuthStackScreenProps } from '../../../navigation/types';
 import { haptic } from '../../../shared';
 import { TeamGrid } from './TeamGrid';
 import { TeamConfirmModal } from './TeamConfirmModal';
-import { TEAMS } from '../../../entities/team/model/teamTypes';
+import { TEAMS } from '../../../shared/team/teamTypes';
 import { styles } from './TeamSelectScreen.styles';
 
 export default function TeamSelectScreen() {

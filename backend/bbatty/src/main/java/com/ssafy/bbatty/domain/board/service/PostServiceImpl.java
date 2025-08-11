@@ -1,6 +1,7 @@
 package com.ssafy.bbatty.domain.board.service;
 
 import com.ssafy.bbatty.domain.board.dto.request.PostCreateRequest;
+import com.ssafy.bbatty.domain.board.dto.request.PostUpdateRequest;
 import com.ssafy.bbatty.domain.board.dto.response.PostCreateResponse;
 import com.ssafy.bbatty.domain.board.dto.response.PostDetailResponse;
 import com.ssafy.bbatty.domain.board.dto.response.PostListPageResponse;
@@ -83,6 +84,37 @@ public class PostServiceImpl implements PostService {
         postImageService.softDeleteImagesForPost(postId);
 
         post.setIsDeleted(true);
+        postRepository.save(post);
+    }
+
+    /*
+    게시물 수정 메서드
+     */
+    @Override
+    @Transactional
+    public void updatePost(Long postId, PostUpdateRequest request, Long userId) {
+        // 게시글 확인
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND));
+
+        // 이미 삭제된 게시글인지 확인
+        if (post.getIsDeleted()) {
+            throw new ApiException(ErrorCode.NOT_FOUND);
+        }
+
+        // 작성자 본인인지 확인
+        if (!post.getUser().getId().equals(userId)) {
+            throw new ApiException(ErrorCode.FORBIDDEN);
+        }
+
+        // 게시글 내용 업데이트
+        post.setTitle(request.getTitle());
+        post.setContent(request.getContent());
+        post.setIsSameTeam(request.getIsSameTeam());
+
+        // 새로운 내용의 이미지들을 처리
+        postImageService.processImagesInContent(request.getContent(), post);
+
         postRepository.save(post);
     }
 
@@ -232,5 +264,50 @@ public class PostServiceImpl implements PostService {
         return new PostListPageResponse(posts, hasNext, nextCursor);
     }
 
+    /*
+    팀별 게시글 제목 검색
+    */
+    @Override
+    public PostListPageResponse searchPostsByTeam(Long teamId, String keyword, Long cursor) {
+        // 검색 키워드 전처리
+        if (keyword == null || keyword.trim().isEmpty()) {
+            throw new ApiException(ErrorCode.BAD_REQUEST);
+        }
+        
+        // MySQL FULLTEXT 검색을 위한 키워드 포맷팅
+        String formattedKeyword = keyword.trim();
+        
+        Pageable pageable = PageRequest.of(0, PAGE_SIZE);
+        Page<Post> postPage;
+        log.info("[검색 디버깅] teamId : {}, keyword : {}, formattedKeyword : {}, pageable : {}", teamId, keyword, formattedKeyword, pageable);
+
+        if (cursor == null) {
+            // 첫 페이지 - 팀별 제목 검색
+            postPage = postRepository.findByTeamIdAndTitleSearchOrderByIdDesc(teamId, formattedKeyword, pageable);
+        } else {
+            // 다음 페이지 - 팀별 제목 검색 + 커서 기반 페이징
+            postPage = postRepository.findByTeamIdAndTitleSearchAndIdLessThanOrderByIdDesc(teamId, formattedKeyword, cursor, pageable);
+        }
+
+        List<PostListResponse> posts = postPage.getContent()
+                .stream()
+                .map(post -> {
+                    PostListResponse response = new PostListResponse(post);
+                    response.setViewCount(postCountService.getViewCount(post.getId()));
+                    response.setLikeCount(postCountService.getLikeCount(post.getId()));
+                    response.setCommentCount(postCountService.getCommentCount(post.getId()));
+                    return response;
+                })
+                .collect(Collectors.toList());
+
+        boolean hasNext = postPage.hasNext();
+        Long nextCursor = null;
+
+        if (hasNext && !posts.isEmpty()) {
+            nextCursor = posts.getLast().getId();
+        }
+
+        return new PostListPageResponse(posts, hasNext, nextCursor);
+    }
 
 }
