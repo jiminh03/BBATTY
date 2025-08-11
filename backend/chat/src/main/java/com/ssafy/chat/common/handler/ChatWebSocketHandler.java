@@ -6,6 +6,7 @@ import com.ssafy.chat.common.dto.SessionTokenInfo;
 import com.ssafy.chat.common.service.DistributedSessionManagerService;
 import com.ssafy.chat.common.service.SessionTokenService;
 import com.ssafy.chat.common.util.KSTTimeUtil;
+import com.ssafy.chat.common.util.TestModeUtil;
 import com.ssafy.chat.common.enums.MessageType;
 import com.ssafy.chat.match.service.MatchChatService;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final DistributedSessionManagerService sessionManager;
     private final ObjectMapper objectMapper;
     private final MatchChatService matchChatService;
+    private final TestModeUtil testModeUtil;
     
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -46,11 +48,22 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 return;
             }
             
-            // 2. sessionToken 검증 (이미 방 존재 여부까지 확인된 토큰)
-            SessionTokenInfo tokenInfo = sessionTokenService.validateToken(sessionToken);
-            if (tokenInfo == null || !tokenInfo.isValid()) {
-                sendErrorAndClose(session, "INVALID_SESSION_TOKEN", "유효하지 않은 세션 토큰입니다.");
-                return;
+            // 🧪 테스트 모드 체크 및 처리
+            SessionTokenInfo tokenInfo;
+            if (testModeUtil.isTestMode(sessionToken)) {
+                log.info("🧪 WebSocket 핸들러 테스트 모드 활성화 - sessionToken: {}", sessionToken);
+                tokenInfo = testModeUtil.createTestTokenInfo(sessionToken, session);
+                if (tokenInfo == null) {
+                    sendErrorAndClose(session, "TEST_TOKEN_ERROR", "테스트 토큰 생성에 실패했습니다.");
+                    return;
+                }
+            } else {
+                // 2. sessionToken 검증 (이미 방 존재 여부까지 확인된 토큰)
+                tokenInfo = sessionTokenService.validateToken(sessionToken);
+                if (tokenInfo == null || !tokenInfo.isValid()) {
+                    sendErrorAndClose(session, "INVALID_SESSION_TOKEN", "유효하지 않은 세션 토큰입니다.");
+                    return;
+                }
             }
             
             // 3. 세션 정보 생성
@@ -84,7 +97,14 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             // 세션 토큰에서 룸 정보 추출
             String sessionToken = extractSessionToken(session);
             if (sessionToken != null) {
-                SessionTokenInfo tokenInfo = sessionTokenService.validateToken(sessionToken);
+                // 🧪 테스트 모드 체크 및 처리
+                SessionTokenInfo tokenInfo;
+                if (testModeUtil.isTestMode(sessionToken)) {
+                    tokenInfo = testModeUtil.createTestTokenInfo(sessionToken, session);
+                } else {
+                    tokenInfo = sessionTokenService.validateToken(sessionToken);
+                }
+                
                 if (tokenInfo != null) {
                     // 분산 세션 매니저에서 해제
                     sessionManager.unregisterSession(tokenInfo.getRoomId(), session.getId());
@@ -120,10 +140,20 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 return;
             }
             
-            SessionTokenInfo tokenInfo = sessionTokenService.validateToken(sessionToken);
-            if (tokenInfo == null) {
-                sendError(session, "SESSION_EXPIRED", "세션이 만료되었습니다.");
-                return;
+            // 🧪 테스트 모드 체크 및 처리  
+            SessionTokenInfo tokenInfo;
+            if (testModeUtil.isTestMode(sessionToken)) {
+                tokenInfo = testModeUtil.createTestTokenInfo(sessionToken, session);
+                if (tokenInfo == null) {
+                    sendError(session, "TEST_TOKEN_ERROR", "테스트 토큰 생성에 실패했습니다.");
+                    return;
+                }
+            } else {
+                tokenInfo = sessionTokenService.validateToken(sessionToken);
+                if (tokenInfo == null) {
+                    sendError(session, "SESSION_EXPIRED", "세션이 만료되었습니다.");
+                    return;
+                }
             }
             
             // 단순 텍스트 메시지 처리
