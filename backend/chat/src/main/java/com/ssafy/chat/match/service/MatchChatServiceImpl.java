@@ -17,7 +17,6 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -220,16 +219,18 @@ public class MatchChatServiceImpl implements MatchChatService {
             consumer.seekToEnd(Collections.singletonList(partition));
             
             long endOffset = consumer.position(partition);
+            log.info("🔥 토픽 offset 정보 - topic: {}, endOffset: {}", topicName, endOffset);
             if (endOffset == 0) {
-                log.debug("토픽에 메시지가 없음 - topic: {}", topicName);
+                log.info("🔥 토픽에 메시지가 없음 - topic: {}", topicName);
                 return messages;
             }
             
             long startOffset = Math.max(0, endOffset - limit);
             consumer.seek(partition, startOffset);
-            log.debug("offset 설정 - topic: {}, start: {}, end: {}", topicName, startOffset, endOffset);
+            log.info("🔥 offset 설정 - topic: {}, start: {}, end: {}", topicName, startOffset, endOffset);
             
             ConsumerRecords<String, String> records = consumer.poll(Duration.ofSeconds(5));
+            log.info("🔥 poll 결과 - topic: {}, records count: {}", topicName, records.count());
             
             for (ConsumerRecord<String, String> record : records) {
                 try {
