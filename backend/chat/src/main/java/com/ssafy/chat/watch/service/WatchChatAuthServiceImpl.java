@@ -68,6 +68,7 @@ public class WatchChatAuthServiceImpl extends AbstractChatAuthService implements
         sessionInfo.put("nickname", userInfo.get("nickname"));
         sessionInfo.put("teamId", ((Number) userInfo.get("teamId")).longValue());
         sessionInfo.put("teamName", userInfo.get("teamName"));
+        sessionInfo.put("profileImgUrl", userInfo.get("profileImgUrl")); // profileImgUrl 추가
         sessionInfo.put("gameId", request.getGameId());
         sessionInfo.put("chatType", "WATCH");
         sessionInfo.put("createdAt", System.currentTimeMillis());
@@ -101,6 +102,7 @@ public class WatchChatAuthServiceImpl extends AbstractChatAuthService implements
         response.put("nickname", userInfo.get("nickname"));
         response.put("teamId", ((Number) userInfo.get("teamId")).longValue());
         response.put("teamName", userInfo.get("teamName"));
+        response.put("profileImgUrl", userInfo.get("profileImgUrl")); // profileImgUrl 추가
         response.put("gameId", request.getGameId());
         response.put("expiresIn", SESSION_EXPIRE_TIME.getSeconds());
         
