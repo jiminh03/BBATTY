@@ -8,23 +8,39 @@ import { ProfileFormData } from '../model/profileTypes';
 export interface ProfileFormProps {
   initialData?: Partial<ProfileFormData>;
   onSubmit: (data: ProfileFormData) => Promise<void>;
-  isEditMode?: boolean;
   showNicknameField?: boolean;
+  originalNickname?: string; // 편집 모드에서 기존 닉네임
 }
 
 export const ProfileForm: React.FC<ProfileFormProps> = ({
   initialData = {},
   onSubmit,
-  isEditMode = false,
   showNicknameField = true,
+  originalNickname,
 }) => {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  // 개선된 커스텀 훅 사용
-  const { formData, errors, nicknameStatus, updateField, handleCheckNickname, validate } = useProfileForm({
-    ...initialData,
-    nickname: isEditMode ? initialData.nickname || '' : '',
-  });
+  // 개선된 커스텀 훅 사용 - initialData가 이미 초기 상태로 설정됨
+  const { formData, errors, nicknameStatus, updateField, handleCheckNickname, validate } = useProfileForm(initialData, originalNickname);
+
+  // 현재 닉네임이 기존 닉네임과 동일한지 체크
+  const isNicknameSameAsOriginal = () => {
+    return originalNickname && formData.nickname === originalNickname;
+  };
+
+  // 현재 자기소개가 기존 자기소개와 동일한지 체크
+  const isIntroductionSameAsOriginal = () => {
+    return formData.introduction === (initialData?.introduction || '');
+  };
+
+  // 아무 필드도 변경되지 않았는지 체크
+  const isDataUnchanged = () => {
+    const nicknameUnchanged = originalNickname ? isNicknameSameAsOriginal() : formData.nickname === (initialData?.nickname || '');
+    const introductionUnchanged = isIntroductionSameAsOriginal();
+    const imageUnchanged = formData.profileImage === (initialData?.profileImage || '');
+    
+    return nicknameUnchanged && introductionUnchanged && imageUnchanged;
+  };
 
   // 닉네임 입력 필드 스타일 결정
   const getNicknameInputStyle = () => {
@@ -63,6 +79,11 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
 
   // 중복체크 버튼 스타일 결정
   const getCheckButtonStyle = () => {
+    // 기존 닉네임과 동일하면 비활성화
+    if (isNicknameSameAsOriginal()) {
+      return [styles.checkButton, styles.checkButtonError];
+    }
+
     if (!nicknameStatus.canCheck || nicknameStatus.isChecking) {
       return [styles.checkButton, styles.checkButtonError];
     }
@@ -77,19 +98,22 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
   // 제출 버튼 활성화 상태 결정
   const isSubmitDisabled = () => {
     if (isSubmitting) return true;
+    
+    // 아무것도 변경되지 않았으면 비활성화
+    if (isDataUnchanged()) return true;
 
     // 닉네임 필드가 표시되는 경우
     if (showNicknameField) {
-      // 편집 모드가 아닌 경우 (신규 가입) - 중복체크 완료 필요
-      if (!isEditMode) {
-        return !nicknameStatus.isAvailable;
+      // 기존 닉네임과 동일하면 중복체크 없이도 제출 가능
+      if (isNicknameSameAsOriginal()) {
+        return !!errors.nickname; // 자기소개 에러는 제외 (자동 조정되므로)
       }
-      // 편집 모드인 경우 - 유효한 닉네임이면 OK
-      return !nicknameStatus.isValid;
+      // 기존 닉네임과 다르면 중복체크 완료 필요
+      return !nicknameStatus.isAvailable;
     }
 
-    // 자기소개만 있는 경우
-    return !!errors.introduction;
+    // 자기소개만 있는 경우 - 자기소개 에러는 버튼 비활성화에 영향 안 줌
+    return false;
   };
 
   // 제출 버튼 스타일 결정 - 중복체크 버튼과 같은 색상 체계
@@ -133,23 +157,21 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
               onChangeText={(text) => updateField('nickname', text)}
               placeholder='2~10글자 사이로 입력해주세요'
               maxLength={20} // 10글자 초과 입력 감지를 위해 여유있게 설정
-              editable={!isEditMode}
+              editable={true}
               autoCorrect={false}
               autoCapitalize='none'
             />
-            {!isEditMode && (
-              <TouchableOpacity
-                style={getCheckButtonStyle()}
-                onPress={handleCheckNickname}
-                disabled={!nicknameStatus.canCheck || nicknameStatus.isChecking}
-              >
-                {nicknameStatus.isChecking ? (
-                  <ActivityIndicator size='small' color='#FFFFFF' />
-                ) : (
-                  <Text style={styles.checkButtonText}>중복확인</Text>
-                )}
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              style={getCheckButtonStyle()}
+              onPress={handleCheckNickname}
+              disabled={isNicknameSameAsOriginal() || !nicknameStatus.canCheck || nicknameStatus.isChecking}
+            >
+              {nicknameStatus.isChecking ? (
+                <ActivityIndicator size='small' color='#FFFFFF' />
+              ) : (
+                <Text style={styles.checkButtonText}>중복확인</Text>
+              )}
+            </TouchableOpacity>
           </View>
           {renderNicknameStatus()}
         </View>
@@ -163,7 +185,6 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
           onChangeText={(text) => updateField('introduction', text)}
           placeholder='간단한 자기소개를 입력해주세요'
           multiline
-          maxLength={50}
           textAlignVertical='top'
         />
         <View style={styles.introductionFooter}>
@@ -180,7 +201,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
         {isSubmitting ? (
           <ActivityIndicator size='small' color='#FFFFFF' />
         ) : (
-          <Text style={styles.submitButtonText}>{isEditMode ? '변경하기' : '가입하기'}</Text>
+          <Text style={styles.submitButtonText}>{originalNickname ? '변경하기' : '가입하기'}</Text>
         )}
       </TouchableOpacity>
     </>

@@ -260,17 +260,7 @@ export default function UserProfileScreen() {
           );
         }
 
-
-        return (
-          <AttendanceHistory
-            userId={targetUserId}
-            season={selectedSeason}
-            onRecordPress={(record) => {
-              // 직관 기록 상세 보기 로직 추가 가능
-              console.log('직관 기록 클릭:', record);
-            }}
-          />
-        );
+        return null; // AttendanceHistory는 ScrollView 밖에서 렌더링
 
       default:
         return null;
@@ -313,18 +303,29 @@ export default function UserProfileScreen() {
         </View>
       )}
 
-      <ScrollView
-        style={styles.contentContainer}
-        refreshControl={
-          <RefreshControl
-            refreshing={profileLoading || statsLoading}
-            onRefresh={handleRefresh}
-            tintColor={themeColor}
-          />
-        }
-      >
-        {renderTabContent()}
-      </ScrollView>
+      {/* AttendanceHistory는 ScrollView 밖에서 렌더링 (VirtualizedList 중첩 방지) */}
+      {activeTab === 'history' && canViewContent('attendanceRecords') ? (
+        <AttendanceHistory
+          userId={targetUserId}
+          season={selectedSeason}
+          onRecordPress={(record) => {
+            console.log('직관 기록 클릭:', record);
+          }}
+        />
+      ) : (
+        <ScrollView
+          style={styles.contentContainer}
+          refreshControl={
+            <RefreshControl
+              refreshing={profileLoading || statsLoading}
+              onRefresh={handleRefresh}
+              tintColor={themeColor}
+            />
+          }
+        >
+          {renderTabContent()}
+        </ScrollView>
+      )}
     </View>
   );
 }
