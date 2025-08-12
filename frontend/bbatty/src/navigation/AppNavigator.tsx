@@ -68,7 +68,6 @@ export default function AppNavigator() {
 
       setIsExistingUser(isExisting);
       setShowSplash(false);
-
       // 기존 사용자라면 서버에 로그인 요청
       if (isExisting) {
         console.error('기존 사용자임');
