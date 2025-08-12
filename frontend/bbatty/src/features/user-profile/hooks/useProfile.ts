@@ -46,8 +46,6 @@ export const useUpdateProfile = () => {
 
 // 프라이버시 설정 업데이트
 export const useUpdatePrivacySettings = () => {
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (settings: UserPrivacySettings) => {
       const result = await profileApi.updatePrivacySettings(settings);
@@ -56,11 +54,7 @@ export const useUpdatePrivacySettings = () => {
       }
       throw new Error(result.error.message);
     },
-    onSuccess: (newSettings) => {
-      queryClient.setQueryData(QueryKeys.detail(PROFILE_ENTITY, 'me'), (oldProfile: any) =>
-        oldProfile ? { ...oldProfile, ...newSettings } : oldProfile
-      );
-    },
+    // 깜빡임 방지를 위해 캐시 업데이트 제거 (로컬 상태로 UI 관리)
   });
 };
 
@@ -76,6 +70,7 @@ export const useUserBadges = (userId?: number, season?: Season) => {
     queryFn: async () => {
       const result = await statsApi.getBadges(userId, season);
       if (isOk(result)) {
+        console.log('🏆 [UserBadges] 뱃지 데이터:', result.data);
         return result.data;
       }
       throw new Error(result.error.message);
@@ -121,6 +116,7 @@ export const useDetailedStats = <T = any>(
   return useQuery({
     queryKey: QueryKeys.stats(PROFILE_ENTITY, type, params),
     queryFn: async () => {
+      console.log('승률통계 : ', type, userId, season);
       const result = await statsApi.getDetailedStats<T>(type, userId, season);
       if (isOk(result)) {
         return result.data;

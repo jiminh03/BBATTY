@@ -3,7 +3,13 @@ import { Season } from '../../../shared/utils/date';
 import { wrapApiCall, ApiError } from '../../../shared/api/utils/apiWrapper';
 import { AsyncResult } from '../../../shared/utils/result';
 import { UserBadges } from '../model/badgeTypes';
-import { StatsType, BasicStats, DetailedUserStats, DirectViewRecord, AttendanceRecordsResponse } from '../model/statsTypes';
+import {
+  StatsType,
+  BasicStats,
+  DetailedUserStats,
+  DirectViewRecord,
+  AttendanceRecordsResponse,
+} from '../model/statsTypes';
 
 export const statsApi = {
   getBadges: (userId?: number, season?: Season): AsyncResult<UserBadges, ApiError> =>

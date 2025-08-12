@@ -136,7 +136,7 @@ export default function SignUpScreen({
           <Text style={styles.backButtonText}>{'<'} 회원가입</Text>
         </TouchableOpacity>
 
-        <ProfileForm onSubmit={handleSignUp} showNicknameField={true} isEditMode={false} />
+        <ProfileForm onSubmit={handleSignUp} showNicknameField={true} />
       </ScrollView>
 
       <NicknameConflictModal visible={showConflictModal} onConfirm={() => setShowConflictModal(false)} />
