@@ -52,6 +52,20 @@ public class RedisUtil {
     }
 
     /**
+     * 키 삭제
+     */
+    public void deleteValue(String key) {
+        redisTemplate.delete(key);
+    }
+
+    /**
+     * 패턴에 매칭되는 키들 삭제 (와일드카드 지원)
+     */
+    public void deleteByPattern(String pattern) {
+        redisTemplate.delete(Objects.requireNonNull(redisTemplate.keys(pattern)));
+    }
+
+    /**
      * 키에 TTL 설정
      */
     public void expire(String key, Duration timeout) {

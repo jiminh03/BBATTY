@@ -13,6 +13,7 @@ import com.ssafy.bbatty.domain.user.entity.User;
 import com.ssafy.bbatty.domain.user.entity.UserInfo;
 import com.ssafy.bbatty.domain.user.repository.UserInfoRepository;
 import com.ssafy.bbatty.domain.user.repository.UserRepository;
+import com.ssafy.bbatty.domain.user.service.UserService;
 import com.ssafy.bbatty.global.constants.ErrorCode;
 import com.ssafy.bbatty.global.constants.Gender;
 import com.ssafy.bbatty.global.constants.Role;
@@ -45,6 +46,7 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final UserInfoRepository userInfoRepository;
     private final TeamRepository teamRepository;
+    private final UserService userService;
 
     /**
      * 카카오 로그인 처리
@@ -133,21 +135,18 @@ public class AuthServiceImpl implements AuthService {
     }
 
     /**
-     * 로그아웃
+     * 회원 탈퇴
      */
     @Transactional
-    public void logout(String accessToken, String refreshToken) {
-        // Access Token 블랙리스트 추가
-        if (accessToken != null && jwtProvider.validateAccessToken(accessToken)) {
-            authCacheService.blacklistToken(accessToken, jwtProvider.getExpiration(accessToken));
-        }
+    public void withdraw(Long userId) {
+        // 사용자 존재 확인
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
 
-        // Refresh Token 블랙리스트 추가
-        if (refreshToken != null && jwtProvider.validateRefreshToken(refreshToken)) {
-            authCacheService.blacklistToken(refreshToken, jwtProvider.getExpiration(refreshToken));
-        }
+        // UserService의 deleteUser 메서드를 통해 관련 데이터 삭제
+        userService.deleteUser(userId);
 
-        log.info("로그아웃 완료");
+        log.info("회원 탈퇴 완료: userId={}", userId);
     }
 
     // Private 헬퍼 메서드들
