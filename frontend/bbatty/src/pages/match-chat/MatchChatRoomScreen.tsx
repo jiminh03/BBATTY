@@ -249,7 +249,7 @@ export const MatchChatRoomScreen = () => {
         showConnectionNotification('CONNECTED');
         
         // 대기 중인 메시지들 재전송 시도
-        await flushQueue();
+        // await flushQueue();
         
         // 인증 데이터 전송 (기존 로직 유지)
         let authData;
