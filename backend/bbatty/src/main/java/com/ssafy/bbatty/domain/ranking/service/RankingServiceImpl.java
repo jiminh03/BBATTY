@@ -17,9 +17,12 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -52,6 +55,16 @@ public class RankingServiceImpl implements RankingService {
         AtomicInteger rank = new AtomicInteger(1);
         boolean foundCurrentUser = false;
         
+        // 모든 userId를 먼저 수집
+        List<Long> userIds = rankingData.stream()
+                .map(tuple -> Long.valueOf(tuple.getValue().toString()))
+                .toList();
+        
+        // 한 번에 모든 사용자 조회
+        List<User> users = userRepository.findAllById(userIds);
+        Map<Long, User> userMap = users.stream()
+                .collect(Collectors.toMap(User::getId, Function.identity()));
+        
         for (ZSetOperations.TypedTuple<Object> tuple : rankingData) {
             Long userId = Long.valueOf(tuple.getValue().toString());
             Double winRate = tuple.getScore();
@@ -61,9 +74,8 @@ public class RankingServiceImpl implements RankingService {
                 foundCurrentUser = true;
             }
             
-            Optional<User> userOpt = userRepository.findById(userId);
-            if (userOpt.isPresent()) {
-                User user = userOpt.get();
+            User user = userMap.get(userId);
+            if (user != null) {
                 rankings.add(UserRankingDto.builder()
                         .userId(userId)
                         .nickname(user.getNickname())
@@ -118,6 +130,16 @@ public class RankingServiceImpl implements RankingService {
         AtomicInteger rank = new AtomicInteger(1);
         boolean foundCurrentUser = false;
         
+        // 모든 userId를 먼저 수집
+        List<Long> userIds = rankingData.stream()
+                .map(tuple -> Long.valueOf(tuple.getValue().toString()))
+                .toList();
+        
+        // 한 번에 모든 사용자 조회
+        List<User> users = userRepository.findAllById(userIds);
+        Map<Long, User> userMap = users.stream()
+                .collect(Collectors.toMap(User::getId, Function.identity()));
+        
         for (ZSetOperations.TypedTuple<Object> tuple : rankingData) {
             Long userId = Long.valueOf(tuple.getValue().toString());
             Double winRate = tuple.getScore();
@@ -127,9 +149,8 @@ public class RankingServiceImpl implements RankingService {
                 foundCurrentUser = true;
             }
             
-            Optional<User> userOpt = userRepository.findById(userId);
-            if (userOpt.isPresent()) {
-                User user = userOpt.get();
+            User user = userMap.get(userId);
+            if (user != null) {
                 rankings.add(UserRankingDto.builder()
                         .userId(userId)
                         .nickname(user.getNickname())
