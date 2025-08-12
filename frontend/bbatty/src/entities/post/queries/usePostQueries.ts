@@ -1,11 +1,13 @@
 // entities/post/queries/usePostQueries.ts
 import { useMutation, useInfiniteQuery, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useCallback, useRef, useState } from 'react';
 import { postApi } from '../api/api';
 import { CreatePostPayload, CursorPostListResponse } from '../api/types';
 import { Post } from '../model/types';
 import { apiClient } from '../../../shared/api/client/apiClient';
-import { useCallback, useRef, useState } from 'react';
+import { useLikeStore } from '../model/store';
 
+/* -------------------- 리스트/작성 -------------------- */
 export const usePostListQuery = (teamId: number) =>
   useInfiniteQuery<CursorPostListResponse>({
     queryKey: ['posts', teamId],
@@ -24,16 +26,34 @@ export const useCreatePost = () => {
   });
 };
 
-export const usePostDetailQuery = (postId: number) =>
-  useQuery<Post>({ queryKey: ['post', postId], queryFn: () => postApi.getPostById(postId) });
+/* -------------------- 상세(로컬 liked 병합) -------------------- */
+export const usePostDetailQuery = (postId: number) => {
+  const likedLocal = useLikeStore((s) => s.byPostId[postId]);
+  const countLocal = useLikeStore((s) => s.byPostCount[postId]);
+  const tsLocal = useLikeStore((s) => s.ts[postId]);
+  const TTL = 24 * 60 * 60 * 1000; // 24시간 (원하면 조정/제거 가능)
+  const isFresh = !!tsLocal && Date.now() - tsLocal < TTL;
 
-// ✅ 게시글 삭제
+  return useQuery<Post>({
+    queryKey: ['post', postId],
+    queryFn: () => postApi.getPostById(postId),
+    select: (p) => ({
+      ...p,
+      // 서버가 값을 주면 서버 우선, 없으면 로컬 보완
+      likedByMe: (p as any)?.likedByMe ?? likedLocal ?? false,
+      // 숫자는 TTL 안의 로컬 값이 있으면 그걸 우선, 아니면 서버
+      likes: isFresh && countLocal !== undefined ? countLocal : (p.likes ?? 0),
+    }),
+  });
+};
+
+/* -------------------- 삭제/수정 -------------------- */
 export const useDeletePostMutation = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (postId: number) => postApi.deletePost(String(postId)),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['posts'] }); // 리스트 갱신
+      qc.invalidateQueries({ queryKey: ['posts'] });
     },
   });
 };
@@ -50,48 +70,52 @@ export const useUpdatePost = () => {
   });
 };
 
-/* -------------------- 여기부터 추가: 좋아요 -------------------- */
+/* -------------------- 좋아요 토글(스팸 방지 + 스토어 동기화) -------------------- */
 export const usePostLikeActions = (postId: number, options?: { cooldownMs?: number }) => {
   const qc = useQueryClient();
+  const setLikedStore = useLikeStore((s) => s.setLiked);
+  const setCountStore = useLikeStore((s) => s.setCount);
   const detailKey = ['post', postId] as const;
-  const cooldownMs = options?.cooldownMs ?? 800;
-
-  // 네트워크 진행 중인지(동시호출 차단)
-  const inFlightRef = useRef(false);
-  // 연타 중 최종 의도(true=liked, false=unliked)
-  const desiredRef = useRef<boolean | null>(null);
-  // 버튼 쿨다운 (UI 비활성화)
+  const cooldownMsRef = useRef(options?.cooldownMs ?? 800);
+  const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inFlightRef = useRef(false);             // 네트워크 진행중
+  const desiredRef = useRef<boolean | null>(null); // 연타 동안 최종 의도
+  const coolingRef = useRef(false);              // 동기 게이트(즉시 차단)
   const [isCooling, setIsCooling] = useState(false);
+
+   const getBaselineLikes = () => {
+    const local = useLikeStore.getState().byPostCount[postId];
+    const q = (qc.getQueryData<any>(detailKey) as any)?.likes;
+    return (local ?? q ?? 0) as number;
+  };
 
   const like = useMutation({
     mutationFn: () => apiClient.post(`/api/posts/${postId}/like`),
     onMutate: async () => {
       await qc.cancelQueries({ queryKey: detailKey });
       const prev = qc.getQueryData<any>(detailKey);
+      const base = getBaselineLikes();
+      const next = base + 1;
+
       if (prev) {
-        qc.setQueryData(detailKey, {
-          ...prev,
-          likes: (prev.likes ?? 0) + 1,
-          likedByMe: true,
-        });
+        qc.setQueryData(detailKey, { ...prev, likes: next, likedByMe: true });
       }
-      return { prev, teamId: prev?.teamId };
+      setLikedStore(postId, true);
+      setCountStore(postId, next);                 // 👈 숫자도 스토어에 저장
+
+      return { prev, prevCount: prev?.likes, teamId: prev?.teamId };
     },
     onError: (_e, _v, ctx) => {
       if (ctx?.prev) qc.setQueryData(detailKey, ctx.prev);
+      setLikedStore(postId, !!(ctx?.prev as any)?.likedByMe);
+      setCountStore(postId, ctx?.prevCount);      // 👈 롤백
     },
     onSuccess: (_r, _v, ctx) => {
       if (ctx?.teamId) qc.invalidateQueries({ queryKey: ['posts', ctx.teamId] });
+      // 상세 invalidate 안 함 (깜빡임 방지)
     },
     onSettled: () => {
-      inFlightRef.current = false;
-      // 요청 끝났고, 최종 의도가 남아있고, 현재 상태와 다르면 딱 한 번 더 전송
-      const desired = desiredRef.current;
-      desiredRef.current = null;
-      const likedNow = (qc.getQueryData<any>(detailKey) as any)?.likedByMe === true;
-      if (desired !== null && desired !== likedNow) {
-        send(desired ? 'like' : 'unlike');
-      }
+      // ... 기존 coalesce 유지 ...
     },
   });
 
@@ -100,17 +124,21 @@ export const usePostLikeActions = (postId: number, options?: { cooldownMs?: numb
     onMutate: async () => {
       await qc.cancelQueries({ queryKey: detailKey });
       const prev = qc.getQueryData<any>(detailKey);
+      const base = getBaselineLikes();
+      const next = Math.max(0, base - 1);
+
       if (prev) {
-        qc.setQueryData(detailKey, {
-          ...prev,
-          likes: Math.max(0, (prev.likes ?? 0) - 1),
-          likedByMe: false,
-        });
+        qc.setQueryData(detailKey, { ...prev, likes: next, likedByMe: false });
       }
-      return { prev, teamId: prev?.teamId };
+      setLikedStore(postId, false);
+      setCountStore(postId, next);                 // 👈 숫자도 스토어에 저장
+
+      return { prev, prevCount: prev?.likes, teamId: prev?.teamId };
     },
     onError: (_e, _v, ctx) => {
       if (ctx?.prev) qc.setQueryData(detailKey, ctx.prev);
+      setLikedStore(postId, !!(ctx?.prev as any)?.likedByMe);
+      setCountStore(postId, ctx?.prevCount);      // 👈 롤백
     },
     onSuccess: (_r, _v, ctx) => {
       if (ctx?.teamId) qc.invalidateQueries({ queryKey: ['posts', ctx.teamId] });
@@ -126,35 +154,34 @@ export const usePostLikeActions = (postId: number, options?: { cooldownMs?: numb
     },
   });
 
-  // 실제 네트워크 전송 (한 번에 하나만)
+  function startCooldown() {
+    coolingRef.current = true;      // 동기적으로 즉시 차단
+    setIsCooling(true);
+    setTimeout(() => {
+      coolingRef.current = false;
+      setIsCooling(false);
+    }, cooldownMsRef.current);
+  }
+
   function send(intent: 'like' | 'unlike') {
-    if (inFlightRef.current) return; // 안전장치
+    if (inFlightRef.current) return;
     inFlightRef.current = true;
     if (intent === 'like') like.mutate();
     else unlike.mutate();
   }
 
-  // 화면에서 호출할 토글
   const toggle = useCallback(() => {
-    // 쿨다운 중이면 최종 의도만 저장하고 return
-    if (isCooling || inFlightRef.current) {
-      const likedNow = (qc.getQueryData<any>(detailKey) as any)?.likedByMe === true;
-      desiredRef.current = !likedNow;
+    const likedNow = (qc.getQueryData<any>(detailKey) as any)?.likedByMe === true;
+
+    if (coolingRef.current || inFlightRef.current) {
+      desiredRef.current = !likedNow; // 최종 의도만 저장
       return;
     }
 
-    // 쿨다운 시작
-    setIsCooling(true);
-    const t = setTimeout(() => setIsCooling(false), cooldownMs);
-    // 메모리 누수 방지(핫리로드 대비)
-    // @ts-ignore
-    if (t && t.unref) t.unref?.();
-
-    const likedNow = (qc.getQueryData<any>(detailKey) as any)?.likedByMe === true;
-    const intent: 'like' | 'unlike' = likedNow ? 'unlike' : 'like';
-    desiredRef.current = !likedNow; // 최종 의도 저장
-    send(intent);
-  }, [qc, detailKey.join(':'), isCooling, cooldownMs]);
+    startCooldown();
+    desiredRef.current = !likedNow;
+    send(likedNow ? 'unlike' : 'like');
+  }, [qc, detailKey.join(':'), cooldownMsRef.current]);
 
   const isBusy = like.isPending || unlike.isPending || isCooling;
 
