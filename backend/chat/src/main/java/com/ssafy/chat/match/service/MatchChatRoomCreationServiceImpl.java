@@ -15,6 +15,9 @@ import com.ssafy.chat.global.exception.ApiException;
 import com.ssafy.chat.match.dto.MatchChatRoom;
 import com.ssafy.chat.match.dto.MatchChatRoomCreateRequest;
 import com.ssafy.chat.match.dto.MatchChatRoomCreateResponse;
+import com.ssafy.chat.match.kafka.MatchChatKafkaProducer;
+import com.ssafy.chat.match.dto.MatchChatMessage;
+import com.ssafy.chat.common.enums.MessageType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -37,6 +40,7 @@ public class MatchChatRoomCreationServiceImpl implements MatchChatRoomCreationSe
     private final ChatAuthResultService chatAuthResultService;
     private final ChatConfiguration chatConfiguration;
     private final ChatRoomUtils chatRoomUtils;
+    private final MatchChatKafkaProducer matchChatKafkaProducer;
 
     @Override
     public MatchChatRoomCreateResponse createMatchChatRoom(MatchChatRoomCreateRequest request, String jwtToken) {
@@ -55,7 +59,10 @@ public class MatchChatRoomCreationServiceImpl implements MatchChatRoomCreationSe
             // 4. Redis에 저장
             saveChatRoomToRedis(chatRoom, getGameDateStr(authResult));
 
-            // 5. 응답 변환
+            // 5. 🚀 토픽 Pre-creation: 즉시 초기화 메시지 전송으로 Consumer 활성화
+            sendInitializationMessage(chatRoom, authResult.getUserInfo());
+
+            // 6. 응답 변환
             return convertToResponse(chatRoom);
 
         } catch (ApiException e) {
@@ -222,6 +229,33 @@ public class MatchChatRoomCreationServiceImpl implements MatchChatRoomCreationSe
      */
     private String generateMatchId(Long gameId) {
         return "match_" + gameId + "_" + Long.toHexString(System.currentTimeMillis());
+    }
+
+    /**
+     * 🚀 토픽 Pre-creation: 초기화 메시지 전송으로 Consumer가 새 토픽을 즉시 인식하게 함
+     */
+    private void sendInitializationMessage(MatchChatRoom chatRoom, UserInfo creator) {
+        try {
+            // 채팅방 생성 시스템 메시지 생성
+            MatchChatMessage initMessage = new MatchChatMessage();
+            initMessage.setMessageType(MessageType.SYSTEM);
+            initMessage.setRoomId(chatRoom.getMatchId());
+            initMessage.setUserId(creator.getUserId());
+            initMessage.setNickname("시스템");
+            initMessage.setContent("🎯 " + chatRoom.getMatchTitle() + " 채팅방이 생성되었습니다!");
+            initMessage.setTimestamp(KSTTimeUtil.nowAsTimestamp());
+            initMessage.setWinFairy(false);
+            
+            // Kafka로 즉시 전송하여 토픽 생성 및 Consumer 활성화
+            matchChatKafkaProducer.sendChatMessage(chatRoom.getMatchId(), initMessage);
+            
+            log.info("🚀 토픽 Pre-creation 완료 - matchId: {}, 토픽: match-chat-{}", 
+                    chatRoom.getMatchId(), chatRoom.getMatchId());
+            
+        } catch (Exception e) {
+            // 초기화 메시지 실패해도 채팅방 생성은 계속 진행
+            log.error("🚨 토픽 초기화 메시지 전송 실패 - matchId: {}", chatRoom.getMatchId(), e);
+        }
     }
 
 
