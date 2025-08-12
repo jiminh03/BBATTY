@@ -62,6 +62,8 @@ export const useUserStore = create<UserStore>((set, get) => ({
   hasUser: async () => {
     const result = await wrapAsync(async () => {
       const data = await AsyncStorage.getItem(STORAGE_KEYS.USER);
+
+      console.log('hasUserResult :', data);
       return data !== null;
     });
 

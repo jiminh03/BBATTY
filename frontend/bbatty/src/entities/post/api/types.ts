@@ -56,6 +56,6 @@ export interface PostListItem {
 export interface CursorPostListResponse {
   posts: PostListItem[];
   hasNext: boolean;
-  nextCursor: number;
-}
+  nextCursor?: number | null;
+} 
 

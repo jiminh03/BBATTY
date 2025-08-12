@@ -11,10 +11,19 @@ import { useLikeStore } from '../model/store';
 export const usePostListQuery = (teamId: number) =>
   useInfiniteQuery<CursorPostListResponse>({
     queryKey: ['posts', teamId],
-    queryFn: ({ pageParam = undefined }) => postApi.getPosts(teamId, pageParam as number | undefined),
+    queryFn: ({ pageParam }) => {
+      const cursor =
+        typeof pageParam === 'string' ? Number(pageParam) : (pageParam as number | undefined);
+      return postApi.getPosts(teamId, cursor);
+    },
     initialPageParam: undefined,
-    getNextPageParam: (last) => (last?.hasNext ? last.nextCursor : undefined),
+    getNextPageParam: (last) => {
+      if (!last?.hasNext) return undefined;
+      const fallback = last.posts?.length ? last.posts[last.posts.length - 1].id : undefined;
+      return (last.nextCursor ?? fallback) as number | undefined;
+    },
   });
+
 
 export const useCreatePost = () => {
   const qc = useQueryClient();
@@ -205,3 +214,25 @@ export const useTeamPopularPostsQuery = (teamId: number, limit = 5) =>
     queryFn: () => postApi.getPopularByTeam(teamId, limit), // 홈 미리보기 5개
   });
 
+/** 팀별 게시글 검색(무한 스크롤) */
+export const useTeamPostSearchInfinite = (teamId: number, keyword: string) =>
+  useInfiniteQuery<CursorPostListResponse>({
+    queryKey: ['teamSearch', teamId, keyword],
+    enabled: !!teamId && !!keyword?.trim(),
+    queryFn: ({ pageParam = undefined }) =>
+      postApi.getTeamSearchPosts(teamId, keyword.trim(), pageParam as number | undefined),
+    initialPageParam: undefined,
+    getNextPageParam: (last) => (last?.hasNext ? last.nextCursor : undefined),
+    staleTime: 60_000,
+  });
+
+export const useTeamSearchPostsInfinite = (teamId: number, q: string) =>
+  useInfiniteQuery<CursorPostListResponse>({
+    queryKey: ['searchPosts', teamId, (q ?? '').trim()],
+    enabled: (teamId ?? 0) > 0 && !!(q ?? '').trim(),
+    queryFn: ({ pageParam }) =>
+      postApi.searchTeamPosts(teamId, (q ?? '').trim(), pageParam as number | undefined),
+    initialPageParam: undefined,
+    getNextPageParam: (last) => (last?.hasNext ? last.nextCursor : undefined),
+    staleTime: 60_000,
+  });

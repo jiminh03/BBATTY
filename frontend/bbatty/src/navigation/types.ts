@@ -40,6 +40,7 @@ export type HomeStackParamList = {
   PostCreate: {
     category?: string;
   };
+  TeamPostSearch: { teamId: number; initialKeyword?:string}
   Notifications: undefined;
   Search: {
     initialQuery?: string;

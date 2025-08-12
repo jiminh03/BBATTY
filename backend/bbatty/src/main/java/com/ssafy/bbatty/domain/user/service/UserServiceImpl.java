@@ -11,6 +11,12 @@ import com.ssafy.bbatty.global.constants.BadgeCategory;
 import com.ssafy.bbatty.global.constants.Stadium;
 import com.ssafy.bbatty.domain.user.entity.User;
 import com.ssafy.bbatty.domain.user.repository.UserRepository;
+import com.ssafy.bbatty.domain.user.repository.UserInfoRepository;
+import com.ssafy.bbatty.domain.attendance.repository.UserAttendedRepository;
+import com.ssafy.bbatty.domain.board.repository.PostRepository;
+import com.ssafy.bbatty.domain.board.repository.CommentRepository;
+import com.ssafy.bbatty.domain.board.repository.PostLikeRepository;
+import com.ssafy.bbatty.domain.board.repository.PostViewRepository;
 import com.ssafy.bbatty.global.constants.ErrorCode;
 import com.ssafy.bbatty.global.constants.RedisKey;
 import com.ssafy.bbatty.global.exception.ApiException;
@@ -36,6 +42,9 @@ public class UserServiceImpl implements UserService {
     private final PostService postService;
     private final RedisUtil redisUtil;
     private final ObjectMapper objectMapper;
+    
+    private final UserInfoRepository userInfoRepository;
+    private final UserAttendedRepository userAttendedRepository;
 
     @Override
     public UserResponseDto getUserProfile(Long targetUserId, Long currentUserId) {
@@ -129,11 +138,90 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public void deleteUser(Long currentUserId) {
         User user = findUserById(currentUserId);
-        user.delete(); // 소프트 딜리트 수행
+        
+        // 1. 개인정보 하드 삭제 (GDPR, 개인정보보호법 준수)
+        deletePersonalInformation(currentUserId);
+        
+        // 2. 사용자 소프트 삭제 (게시물, 댓글은 "탈퇴한 사용자"로 표시됨)
+        user.delete();
+        
+        // 3. Redis 캐시 데이터 정리
+        clearUserDataFromRedis(currentUserId);
+        
+        log.info("회원 탈퇴 처리 완료: userId={} (개인정보 완전 삭제)", currentUserId);
+    }
+    
+    /**
+     * 개인정보 하드 삭제 (GDPR, 개인정보보호법 준수)
+     * - UserInfo: 카카오 ID, 이메일 등 개인식별정보
+     * - UserAttended: 개인의 직관 활동 기록
+     */
+    @Transactional
+    public void deletePersonalInformation(Long userId) {
+        try {
+            // UserInfo 하드 삭제 (카카오 ID, 이메일 등 개인식별정보)
+            userInfoRepository.deleteByUserId(userId);
+            log.info("UserInfo 삭제 완료: userId={}", userId);
+            
+            // UserAttended 하드 삭제 (개인의 직관 기록)
+            userAttendedRepository.deleteByUserId(userId);
+            log.info("UserAttended 삭제 완료: userId={}", userId);
+            
+        } catch (Exception e) {
+            log.error("개인정보 삭제 중 오류 발생: userId={}, error={}", userId, e.getMessage(), e);
+            throw new ApiException(ErrorCode.USER_DELETION_FAILED);
+        }
+    }
+    
+    /**
+     * Redis에서 사용자 관련 데이터 정리
+     */
+    private void clearUserDataFromRedis(Long userId) {
+        try {
+            // 모든 시즌의 사용자 통계 삭제
+            String currentYear = String.valueOf(LocalDate.now().getYear());
+            for (int year = 2020; year <= Integer.parseInt(currentYear); year++) {
+                String season = String.valueOf(year);
+                
+                // 기본 통계
+                redisUtil.deleteValue(RedisKey.STATS_USER_WINRATE + userId + ":" + season);
+                
+                // 상세 통계
+                redisUtil.deleteValue(RedisKey.STATS_USER_DETAILED + userId + ":" + season);
+                
+                // 연승 통계
+                redisUtil.deleteValue(RedisKey.STATS_USER_STREAK + userId + ":" + season);
+                
+                // 직관 기록
+                redisUtil.deleteValue(RedisKey.USER_ATTENDANCE_RECORDS + userId + ":" + season);
+            }
+            
+            // 뱃지 데이터 삭제 (구장별)
+            Arrays.stream(Stadium.values()).forEach(stadium -> {
+                redisUtil.deleteValue(RedisKey.BADGE_STADIUM + userId + ":" + stadium.name());
+            });
+            
+            // 시즌별 뱃지 삭제 (승리/게임)
+            for (int year = 2020; year <= Integer.parseInt(currentYear); year++) {
+                String season = String.valueOf(year);
+                
+                // 승리 뱃지 - 패턴 삭제
+                redisUtil.deleteByPattern(RedisKey.BADGE_WINS + userId + ":" + season + ":*");
+                
+                // 게임 뱃지 - 패턴 삭제
+                redisUtil.deleteByPattern(RedisKey.BADGE_GAMES + userId + ":" + season + ":*");
+            }
+            
+            log.info("Redis 사용자 데이터 정리 완료: userId={}", userId);
+            
+        } catch (Exception e) {
+            log.warn("Redis 사용자 데이터 정리 중 오류 발생: userId={}, error={}", userId, e.getMessage());
+        }
     }
 
     private User findUserById(Long userId) {
         return userRepository.findById(userId)
+            .filter(user -> !user.isDeleted())
             .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
     }
 
