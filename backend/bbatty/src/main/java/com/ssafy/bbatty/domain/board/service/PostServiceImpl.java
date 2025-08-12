@@ -1,6 +1,7 @@
 package com.ssafy.bbatty.domain.board.service;
 
 import com.ssafy.bbatty.domain.board.dto.request.PostCreateRequest;
+import com.ssafy.bbatty.domain.board.dto.request.PostUpdateRequest;
 import com.ssafy.bbatty.domain.board.dto.response.PostCreateResponse;
 import com.ssafy.bbatty.domain.board.dto.response.PostDetailResponse;
 import com.ssafy.bbatty.domain.board.dto.response.PostListPageResponse;
@@ -83,6 +84,37 @@ public class PostServiceImpl implements PostService {
         postImageService.softDeleteImagesForPost(postId);
 
         post.setIsDeleted(true);
+        postRepository.save(post);
+    }
+
+    /*
+    게시물 수정 메서드
+     */
+    @Override
+    @Transactional
+    public void updatePost(Long postId, PostUpdateRequest request, Long userId) {
+        // 게시글 확인
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new ApiException(ErrorCode.NOT_FOUND));
+
+        // 이미 삭제된 게시글인지 확인
+        if (post.getIsDeleted()) {
+            throw new ApiException(ErrorCode.NOT_FOUND);
+        }
+
+        // 작성자 본인인지 확인
+        if (!post.getUser().getId().equals(userId)) {
+            throw new ApiException(ErrorCode.FORBIDDEN);
+        }
+
+        // 게시글 내용 업데이트
+        post.setTitle(request.getTitle());
+        post.setContent(request.getContent());
+        post.setIsSameTeam(request.getIsSameTeam());
+
+        // 새로운 내용의 이미지들을 처리
+        postImageService.processImagesInContent(request.getContent(), post);
+
         postRepository.save(post);
     }
 
@@ -242,8 +274,8 @@ public class PostServiceImpl implements PostService {
             throw new ApiException(ErrorCode.BAD_REQUEST);
         }
         
-        // MySQL FULLTEXT 검색을 위한 키워드 포맷팅 - 여러 방법 시도
-        String formattedKeyword = keyword.trim();  // 일단 단순한 키워드로 시도
+        // MySQL FULLTEXT 검색을 위한 키워드 포맷팅
+        String formattedKeyword = keyword.trim();
         
         Pageable pageable = PageRequest.of(0, PAGE_SIZE);
         Page<Post> postPage;

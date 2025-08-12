@@ -1,7 +1,8 @@
 package com.ssafy.chat.config;
 
-import com.ssafy.chat.match.service.MatchChatAuthService;
-import com.ssafy.chat.watch.service.WatchChatAuthService;
+import com.ssafy.chat.match.service.MatchChatRoomAuthService;
+import com.ssafy.chat.watch.service.WatchChatRoomAuthService;
+import com.ssafy.chat.common.util.TestModeUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.server.ServerHttpRequest;
@@ -24,8 +25,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class WebSocketHandshakeInterceptor implements HandshakeInterceptor {
 
-    private final MatchChatAuthService matchChatAuthService;
-    private final WatchChatAuthService watchChatAuthService;
+    private final MatchChatRoomAuthService matchChatRoomAuthService;
+    private final WatchChatRoomAuthService watchChatRoomAuthService;
+    private final TestModeUtil testModeUtil;
 
     @Override
     public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response,
@@ -44,10 +46,16 @@ public class WebSocketHandshakeInterceptor implements HandshakeInterceptor {
             log.debug("쿼리 파라미터: {}", queryParams);
             
             // 필수 파라미터 검증
-            String sessionToken = queryParams.get("token");
+            String sessionToken = queryParams.get("sessionToken");
             if (sessionToken == null || sessionToken.trim().isEmpty()) {
-                log.warn("필수 파라미터 누락: token");
+                log.warn("필수 파라미터 누락: sessionToken");
                 return false;
+            }
+            
+            // 🧪 테스트 모드 체크 및 처리
+            if (testModeUtil.isTestMode(sessionToken)) {
+                log.info("🧪 핸드셰이크 테스트 모드 활성화 - sessionToken: {}", sessionToken);
+                return handleTestMode(sessionToken, queryParams, attributes);
             }
             
             // 채팅 타입 구분 (matchId 있으면 매칭채팅, gameId 있으면 직관채팅)
@@ -78,7 +86,7 @@ public class WebSocketHandshakeInterceptor implements HandshakeInterceptor {
     private boolean handleMatchChat(String sessionToken, String matchId, Map<String, Object> attributes) {
         try {
             // Redis에서 세션 토큰으로 사용자 정보 조회
-            Map<String, Object> userInfo = matchChatAuthService.getUserInfoByToken(sessionToken);
+            Map<String, Object> userInfo = matchChatRoomAuthService.getUserInfoByToken(sessionToken);
 
             // ✅ 조회된 userInfo 내용 확인
             log.debug("조회된 userInfo: {}", userInfo);
@@ -117,7 +125,7 @@ public class WebSocketHandshakeInterceptor implements HandshakeInterceptor {
     private boolean handleWatchChat(String sessionToken, String gameId, String teamId, Map<String, Object> attributes) {
         try {
             // 세션 토큰 유효성만 검증 (Redis 조회 최소화)
-            Map<String, Object> userInfo = watchChatAuthService.getUserInfoByToken(sessionToken);
+            Map<String, Object> userInfo = watchChatRoomAuthService.getUserInfoByToken(sessionToken);
             
             log.debug("직관 채팅 userInfo 조회 결과: {}", userInfo);
             
@@ -138,6 +146,60 @@ public class WebSocketHandshakeInterceptor implements HandshakeInterceptor {
             
         } catch (Exception e) {
             log.error("직관 채팅 핸드셰이크 실패", e);
+            return false;
+        }
+    }
+
+    /**
+     * 🧪 테스트 모드 처리 메서드
+     * sessionToken이 "test-"로 시작하면 인증을 우회하고 더미 데이터 설정
+     */
+    private boolean handleTestMode(String sessionToken, Map<String, String> queryParams, Map<String, Object> attributes) {
+        try {
+            // 매칭 채팅 테스트 모드
+            String matchId = queryParams.get("matchId");
+            if (matchId != null && !matchId.trim().isEmpty()) {
+                attributes.put("chatType", "match");
+                attributes.put("userId", 99999L);
+                attributes.put("matchId", matchId);
+                attributes.put("nickname", "테스터" + System.currentTimeMillis() % 1000);
+                attributes.put("winRate", 75.5);
+                attributes.put("profileImgUrl", "https://example.com/test-profile.jpg");
+                attributes.put("isWinFairy", false);
+                attributes.put("gender", "M");
+                attributes.put("age", 25);
+                attributes.put("teamId", 1L);
+                
+                log.info("🧪 매칭 채팅 테스트 모드 설정 완료 - matchId: {}, nickname: {}", 
+                        matchId, attributes.get("nickname"));
+                return true;
+            }
+            
+            // 직관 채팅 테스트 모드
+            String gameId = queryParams.get("gameId");
+            String teamId = queryParams.get("teamId");
+            if (gameId != null && teamId != null) {
+                attributes.put("chatType", "watch");
+                attributes.put("userId", 88888L);
+                attributes.put("teamId", Long.parseLong(teamId));
+                attributes.put("gameId", Long.parseLong(gameId));
+                attributes.put("isAttendanceVerified", true);
+                
+                log.info("🧪 직관 채팅 테스트 모드 설정 완료 - gameId: {}, teamId: {}", 
+                        gameId, teamId);
+                return true;
+            }
+            
+            // 기본 테스트 모드 (파라미터 없는 경우)
+            attributes.put("chatType", "test");
+            attributes.put("userId", 77777L);
+            attributes.put("nickname", "익명테스터");
+            
+            log.info("🧪 기본 테스트 모드 설정 완료");
+            return true;
+            
+        } catch (Exception e) {
+            log.error("🚨 테스트 모드 처리 실패", e);
             return false;
         }
     }

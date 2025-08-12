@@ -2,10 +2,10 @@ import { StyleSheet } from 'react-native';
 
 export const styles = StyleSheet.create({
   header: {
+    paddingTop: 20,
     paddingHorizontal: 20,
     paddingBottom: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    minHeight: 120, // Fixed height to accommodate 3 lines of bio
   },
   headerContent: {
     flexDirection: 'row',
@@ -54,6 +54,8 @@ export const styles = StyleSheet.create({
   introduction: {
     fontSize: 12,
     color: 'rgba(255, 255, 255, 0.8)',
+    lineHeight: 16,
+    maxHeight: 48, // 3 lines max (16 * 3)
   },
   settingsButton: {
     padding: 8,

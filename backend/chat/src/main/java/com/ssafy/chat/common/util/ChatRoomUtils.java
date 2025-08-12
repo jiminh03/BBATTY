@@ -38,10 +38,10 @@ public class ChatRoomUtils {
     }
 
     /**
-     * 관전 채팅방 WebSocket URL 생성
+     * 관전 채팅방 WebSocket URL 생성 (React Native용 순수 WebSocket)
      */
     public String buildWatchChatWebSocketUrl(String token, Long gameId, Long teamId) {
-        return buildWebSocketUrl("/ws/watch-chat/websocket?token=%s&gameId=%s&teamId=%s", 
+        return buildWebSocketUrl("/ws/watch-chat?sessionToken=%s&gameId=%s&teamId=%s", 
                 token, gameId, teamId);
     }
 

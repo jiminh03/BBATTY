@@ -1,15 +1,17 @@
-// 댓글 단일 타입
+// entities/comment/model/types.ts
 export interface Comment {
-  id: string
-  postId: string
-  authorId: string
-  authorNickname: string
-  authorProfileImage?: string
-  content: string
-  createdAt: string
-  updatedAt: string
-  isDeleted: boolean
-  isMine?: boolean
-  parentId?: string | null
-  depth?: number
+  id: number | string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+  isDeleted: boolean;
+  authorNickname: string;
+  userId: number;
+  
+  // 서버가 줄 수도, 안 줄 수도 있는 필드들
+  depth?: number;
+  parentId?: number | null;
+  isMine?: boolean;
+  authorId?: number | string;
+  writerId?: number | string;
 }

@@ -4,12 +4,12 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
-  StyleSheet,
   SafeAreaView,
   Alert,
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  AppState,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
@@ -19,6 +19,8 @@ import type { MatchChatRoom } from '../../entities/chat-room/api/types';
 import type { ChatMessage, MatchChatMessage, SystemMessage } from '../../features/match-chat';
 import type { ChatStackParamList } from '../../navigation/types';
 import { useUserStore } from '../../entities/user/model/userStore';
+import { useThemeColor } from '../../shared/team/ThemeContext';
+import { styles } from './MatchChatRoomScreen.styles';
 
 type NavigationProp = StackNavigationProp<ChatStackParamList>;
 type RoutePropType = RouteProp<ChatStackParamList, 'MatchChatRoom'>;
@@ -27,6 +29,10 @@ export const MatchChatRoomScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RoutePropType>();
   const { room, websocketUrl, sessionToken } = route.params;
+  const themeColor = useThemeColor();
+  
+  // 워치채팅 여부 확인
+  const isWatchChat = websocketUrl.includes('/ws/watch-chat/') || (websocketUrl.includes('gameId=') && websocketUrl.includes('teamId='));
   
   console.log('MatchChatRoomScreen route.params:', route.params);
   
@@ -51,6 +57,8 @@ export const MatchChatRoomScreen = () => {
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'ERROR'>('DISCONNECTED');
   const [sentMessages, setSentMessages] = useState<Set<string>>(new Set());
+  const [appState, setAppState] = useState(AppState.currentState);
+  const [isReconnecting, setIsReconnecting] = useState(false);
 
   const addMessage = (message: ChatMessage, isMyMessage: boolean = false) => {
     setMessages(prev => {
@@ -93,8 +101,40 @@ export const MatchChatRoomScreen = () => {
         wsUrl = wsUrl.replace('localhost', '10.0.2.2');
       }
       
+      // WebSocket URL 검증 및 수정
+      if (wsUrl && !wsUrl.startsWith('ws://') && !wsUrl.startsWith('wss://')) {
+        if (wsUrl.startsWith('http://')) {
+          wsUrl = wsUrl.replace('http://', 'ws://');
+        } else if (wsUrl.startsWith('https://')) {
+          wsUrl = wsUrl.replace('https://', 'wss://');
+        }
+      }
+      
+      // 서버 연결 문제로 인한 임시 우회: 데모용 WebSocket 연결 시뮬레이션
+      // mock 토큰이 있는 경우에만 데모 모드 사용
+      if (wsUrl && wsUrl.includes('i13a403.p.ssafy.io:8084') && sessionToken && sessionToken.startsWith('mock_session_token')) {
+        console.log('⚠️ 서버 WebSocket 연결 문제로 인한 임시 데모 모드 (목 토큰 감지)');
+        // 연결 성공으로 시뮬레이션
+        setTimeout(() => {
+          setConnectionStatus('CONNECTED');
+          console.log('📡 데모 모드: 연결 성공으로 시뮬레이션됨');
+          
+          // 샘플 메시지 추가
+          const welcomeMessage = {
+            messageType: 'SYSTEM' as const,
+            content: '채팅방에 연결되었습니다. (데모 모드)',
+            timestamp: new Date().toISOString(),
+            userId: 'system',
+            nickname: 'System'
+          };
+          addMessage(welcomeMessage, false);
+        }, 1000);
+        
+        return;
+      }
+      
       console.log('웹소켓 연결 시작');
-      console.log('websocketUrl:', websocketUrl);
+      console.log('원본 websocketUrl:', websocketUrl);
       console.log('sessionToken:', sessionToken);
       console.log(`최종 wsUrl: ${wsUrl}`);
 
@@ -104,6 +144,7 @@ export const MatchChatRoomScreen = () => {
         return;
       }
 
+      // WebSocket 연결 (React Native에서는 옵션 객체를 지원하지 않음)
       const websocket = new WebSocket(wsUrl);
       setWs(websocket);
 
@@ -111,21 +152,31 @@ export const MatchChatRoomScreen = () => {
         setConnectionStatus('CONNECTED');
         console.log('웹소켓 연결 성공');
         
-        // watch chat의 경우 사용자 정보 전송하지 않음
+        // 매치채팅과 직관채팅 모두 사용자 정보 전송
         const isWatchChat = wsUrl.includes('/ws/watch-chat/') || (wsUrl.includes('gameId=') && wsUrl.includes('teamId='));
         
-        if (!isWatchChat) {
-          // 매치 채팅의 경우만 사용자 인증 정보 전송
-          const authData = {
+        let authData;
+        if (isWatchChat) {
+          // 직관채팅용 인증 데이터
+          authData = {
+            gameId: room.gameId || '1258',
+            teamId: currentUser?.teamId || 3,
+            nickname: currentUser?.nickname || 'Anonymous',
+            userId: currentUser?.userId || currentUserId
+          };
+        } else {
+          // 매치채팅용 인증 데이터
+          authData = {
             matchId: room.matchId,
             nickname: currentUser?.nickname || 'Anonymous',
             winRate: 75,
             profileImgUrl: currentUser?.profileImageURL || '',
             isWinFairy: false
           };
-          
-          websocket.send(JSON.stringify(authData));
         }
+        
+        console.log('🔐 WebSocket 인증 데이터 전송 (', isWatchChat ? '직관채팅' : '매치채팅', '):', JSON.stringify(authData, null, 2));
+        websocket.send(JSON.stringify(authData));
       };
 
       websocket.onmessage = (event) => {
@@ -133,11 +184,33 @@ export const MatchChatRoomScreen = () => {
           const messageData = JSON.parse(event.data);
           console.log('메시지 수신:', messageData);
           
+          // timestamp 형식 통일 (숫자인 경우 ISO 문자열로 변환)
+          if (typeof messageData.timestamp === 'number') {
+            messageData.timestamp = new Date(messageData.timestamp).toISOString();
+          }
+          
           const messageKey = `${messageData.content}_${messageData.timestamp}`;
           const isMyMessage = sentMessages.has(messageKey);
           
-          if (messageData.messageType === 'CHAT') {
-            addMessage(messageData, isMyMessage);
+          // 매치채팅: messageType === 'CHAT', 직관채팅: type === 'CHAT_MESSAGE'
+          if (messageData.messageType === 'CHAT' || messageData.type === 'CHAT_MESSAGE') {
+            // 서버 버그로 인해 JSON 객체 자체가 메시지 내용으로 오는 경우 필터링
+            const content = messageData.content || '';
+            const isJsonMessage = typeof content === 'string' && (
+              content.startsWith('{') || 
+              content.includes('"messageType"') ||
+              content.includes('"nickname"') ||
+              content.includes('"userId"') ||
+              content.includes('"roomId"') ||
+              content.includes('"timestamp"')
+            );
+              
+            if (!isJsonMessage) {
+              addMessage(messageData, isMyMessage);
+              console.log('✅ 정상 메시지 추가:', content);
+            } else {
+              console.log('🚫 JSON 객체 메시지 필터링됨:', content);
+            }
             
             if (isMyMessage) {
               setSentMessages(prev => {
@@ -160,24 +233,36 @@ export const MatchChatRoomScreen = () => {
       websocket.onclose = (event) => {
         setConnectionStatus('DISCONNECTED');
         console.log(`웹소켓 연결 종료: ${event.code} - ${event.reason}`);
+        
+        // 정상 종료(1000)가 아닌 경우 재연결 시도
+        if (event.code !== 1000 && !isReconnecting && appState === 'active') {
+          setIsReconnecting(true);
+          console.log('🔄 비정상 종료로 인한 재연결 시도...');
+          setTimeout(() => {
+            if (appState === 'active') {
+              connectToWebSocket();
+            }
+            setIsReconnecting(false);
+          }, 3000);
+        }
       };
 
       websocket.onerror = (error) => {
         setConnectionStatus('ERROR');
         console.error('웹소켓 오류:', error);
+        console.log('웹소켓 오류 상세:', JSON.stringify(error, null, 2));
         
-        // WebSocket 서버가 실행되지 않은 경우 안내 메시지
-        setTimeout(() => {
-          Alert.alert(
-            '채팅 서버 연결 실패', 
-            'WebSocket 서버(8084 포트)가 실행되지 않았습니다.\n\n백엔드 채팅 서버를 먼저 실행해주세요.',
-            [{ text: '확인', onPress: () => {
-              if (navigation.canGoBack()) {
-                navigation.goBack();
-              }
-            }}]
-          );
-        }, 1000);
+        // 재연결 중이 아니고 앱이 활성 상태일 때만 재연결 시도
+        if (!isReconnecting && appState === 'active') {
+          setIsReconnecting(true);
+          setTimeout(() => {
+            if (appState === 'active') {
+              console.log('🔄 에러로 인한 재연결 시도...');
+              connectToWebSocket();
+            }
+            setIsReconnecting(false);
+          }, 3000);
+        }
       };
 
     } catch (error) {
@@ -299,6 +384,34 @@ export const MatchChatRoomScreen = () => {
     };
   }, []);
 
+  // 앱 상태 변화 감지
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: string) => {
+      console.log('📱 앱 상태 변화:', appState, '→', nextAppState);
+      
+      if (appState.match(/inactive|background/) && nextAppState === 'active') {
+        console.log('📱 백그라운드에서 복귀 - WebSocket 재연결 시도');
+        // 백그라운드에서 포그라운드로 돌아왔을 때
+        if (ws && ws.readyState !== WebSocket.OPEN) {
+          setTimeout(() => {
+            connectToWebSocket();
+          }, 1000);
+        }
+      } else if (nextAppState.match(/inactive|background/)) {
+        console.log('📱 백그라운드로 이동 - WebSocket 연결 정리');
+        // 백그라운드로 갈 때 연결 정리
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.close(1000, 'App going to background');
+        }
+      }
+      
+      setAppState(nextAppState);
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription?.remove();
+  }, [appState, ws]);
+
   useEffect(() => {
     const unsubscribe = navigation.addListener('beforeRemove', () => {
       disconnect();
@@ -313,7 +426,7 @@ export const MatchChatRoomScreen = () => {
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: themeColor }]}>
           <TouchableOpacity onPress={() => {
             if (navigation.canGoBack()) {
               navigation.goBack();
@@ -321,7 +434,9 @@ export const MatchChatRoomScreen = () => {
           }}>
             <Text style={styles.backButton}>← 나가기</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>{room.matchTitle}</Text>
+          <Text style={styles.title}>
+            {isWatchChat ? '직관채팅' : room.matchTitle}
+          </Text>
           <View style={styles.statusContainer}>
             <View style={[
               styles.statusIndicator,
@@ -380,174 +495,3 @@ export const MatchChatRoomScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    backgroundColor: '#f8f9fa',
-  },
-  backButton: {
-    color: '#007AFF',
-    fontSize: 16,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    flex: 1,
-    textAlign: 'center',
-    marginHorizontal: 16,
-  },
-  statusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statusIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 6,
-  },
-  statusText: {
-    fontSize: 12,
-    color: '#666',
-  },
-  messagesContainer: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  messagesContent: {
-    padding: 16,
-    flexGrow: 1,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#999',
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  messageContainer: {
-    marginBottom: 12,
-    maxWidth: '80%',
-  },
-  myMessageContainer: {
-    alignSelf: 'flex-end',
-    alignItems: 'flex-end',
-  },
-  otherMessageContainer: {
-    alignSelf: 'flex-start',
-    alignItems: 'flex-start',
-  },
-  nicknameText: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
-    marginLeft: 4,
-  },
-  messageBubble: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 18,
-    maxWidth: '100%',
-  },
-  myMessageBubble: {
-    backgroundColor: '#007AFF',
-    borderBottomRightRadius: 4,
-  },
-  otherMessageBubble: {
-    backgroundColor: '#fff',
-    borderBottomLeftRadius: 4,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  messageText: {
-    fontSize: 16,
-    lineHeight: 20,
-    marginBottom: 4,
-  },
-  myMessageText: {
-    color: '#fff',
-  },
-  otherMessageText: {
-    color: '#333',
-  },
-  timeText: {
-    fontSize: 10,
-    alignSelf: 'flex-end',
-  },
-  myTimeText: {
-    color: 'rgba(255, 255, 255, 0.7)',
-  },
-  otherTimeText: {
-    color: '#999',
-  },
-  systemMessageContainer: {
-    alignItems: 'center',
-    marginVertical: 8,
-  },
-  systemMessageText: {
-    fontSize: 12,
-    color: '#999',
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    padding: 16,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    alignItems: 'flex-end',
-  },
-  textInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 16,
-    maxHeight: 80,
-    marginRight: 8,
-    backgroundColor: '#f8f9fa',
-  },
-  sendButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sendButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  sendButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-});

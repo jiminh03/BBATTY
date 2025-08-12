@@ -2,13 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { MyPageStackParamList } from '../../../navigation/types';
 import { useThemeColor } from '../../../shared/team/ThemeContext';
-import { profileApi } from '../../../features/user-profile';
+import { useProfile, useUpdatePrivacySettings } from '../../../features/user-profile';
 import { UserPrivacySettings } from '../../../features/user-profile';
 import { useTokenStore } from '../../../shared/api/token/tokenStore';
 import { resetToAuth } from '../../../navigation/navigationRefs';
@@ -23,36 +22,38 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const themeColor = useThemeColor();
   const { clearTokens } = useTokenStore();
-  const queryClient = useQueryClient();
 
-  // 프라이버시 설정 조회
-  const { data: privacySettings, isLoading } = useQuery({
-    queryKey: ['privacySettings'],
-    queryFn: async () => {
-      const result = await profileApi.getPrivacySettings();
-      if (isOk(result)) {
-        return result.data;
-      }
-      throw new Error(result.error.message);
-    },
-  });
+  // 프로필 및 프라이버시 설정 훅 사용
+  const { data: profile, isLoading: isProfileLoading } = useProfile();
+  const updatePrivacyMutation = useUpdatePrivacySettings();
 
-  // 프라이버시 설정 업데이트
-  const updatePrivacyMutation = useMutation({
-    mutationFn: async (settings: UserPrivacySettings) => {
-      const result = await profileApi.updatePrivacySettings(settings);
-      if (isOk(result)) {
-        return result.data;
+  // 프라이버시 설정 가져오기
+  const privacySettings = profile ? {
+    postsPublic: profile.postsPublic,
+    statsPublic: profile.statsPublic,
+    attendanceRecordsPublic: profile.attendanceRecordsPublic,
+  } : null;
+
+  // 화면 포커스 시 하단 탭 숨기기
+  useFocusEffect(
+    React.useCallback(() => {
+      const parent = navigation.getParent();
+      if (parent) {
+        parent.setOptions({
+          tabBarStyle: { display: 'none' },
+        });
       }
-      throw new Error(result.error.message);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['privacySettings'] });
-    },
-    onError: (error) => {
-      Alert.alert('오류', '설정 업데이트에 실패했습니다.');
-    },
-  });
+
+      // 화면 블러 시 하단 탭 다시 보이기
+      return () => {
+        if (parent) {
+          parent.setOptions({
+            tabBarStyle: { display: 'flex' },
+          });
+        }
+      };
+    }, [navigation])
+  );
 
   const updatePrivacySetting = (field: keyof UserPrivacySettings, value: boolean) => {
     if (!privacySettings) return;
@@ -62,7 +63,11 @@ export default function SettingsScreen() {
       [field]: value,
     };
 
-    updatePrivacyMutation.mutate(newSettings);
+    updatePrivacyMutation.mutate(newSettings, {
+      onError: () => {
+        Alert.alert('오류', '설정 업데이트에 실패했습니다.');
+      },
+    });
   };
 
   const handleLogout = () => {
@@ -98,10 +103,18 @@ export default function SettingsScreen() {
     ]);
   };
 
-  if (isLoading) {
+  if (isProfileLoading) {
     return (
       <View style={[styles.container, styles.centerContent]}>
         <Text>설정을 불러오는 중...</Text>
+      </View>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <View style={[styles.container, styles.centerContent]}>
+        <Text>프로필을 찾을 수 없습니다.</Text>
       </View>
     );
   }
@@ -137,8 +150,8 @@ export default function SettingsScreen() {
         <View style={styles.settingItem}>
           <Text style={styles.settingLabel}>게시글 조회 허용</Text>
           <Switch
-            value={privacySettings?.allowViewPosts || false}
-            onValueChange={(value) => updatePrivacySetting('allowViewPosts', value)}
+            value={privacySettings?.postsPublic || false}
+            onValueChange={(value) => updatePrivacySetting('postsPublic', value)}
             trackColor={{ false: '#E0E0E0', true: themeColor }}
             disabled={updatePrivacyMutation.isPending}
           />
@@ -147,8 +160,8 @@ export default function SettingsScreen() {
         <View style={styles.settingItem}>
           <Text style={styles.settingLabel}>통계 조회 허용</Text>
           <Switch
-            value={privacySettings?.allowViewStats || false}
-            onValueChange={(value) => updatePrivacySetting('allowViewStats', value)}
+            value={privacySettings?.statsPublic || false}
+            onValueChange={(value) => updatePrivacySetting('statsPublic', value)}
             trackColor={{ false: '#E0E0E0', true: themeColor }}
             disabled={updatePrivacyMutation.isPending}
           />
@@ -157,8 +170,8 @@ export default function SettingsScreen() {
         <View style={styles.settingItem}>
           <Text style={styles.settingLabel}>직관기록 조회 허용</Text>
           <Switch
-            value={privacySettings?.allowViewDirectViewHistory || false}
-            onValueChange={(value) => updatePrivacySetting('allowViewDirectViewHistory', value)}
+            value={privacySettings?.attendanceRecordsPublic || false}
+            onValueChange={(value) => updatePrivacySetting('attendanceRecordsPublic', value)}
             trackColor={{ false: '#E0E0E0', true: themeColor }}
             disabled={updatePrivacyMutation.isPending}
           />
