@@ -1,15 +1,3 @@
-// 추후 활용법
-// const client = new SocketClient({
-//   url: 'ws://localhost:8084/ws/game-chat',
-//   options: {
-//     auth: { sessionToken: 'your-token' },
-//     query: { userId: '123', teamId: '1' }
-//   }
-// });
-
-// await client.connect();
-// client.sendChatMessage('안녕하세요!');
-
 import { SocketConfig, WebSocketMessage } from './types';
 import { getErrorMessage, logChatError, calculateRetryDelay, canRetry, ChatError } from '../../../utils/error';
 
