@@ -16,4 +16,9 @@ public interface UserAttendedRepository extends JpaRepository<UserAttended, User
      * 중복 인증 방지용
      */
     boolean existsByUserIdAndGameId(Long userId, Long gameId);
+    
+    /**
+     * 회원 탈퇴 시 사용자의 모든 직관 기록 하드 삭제
+     */
+    void deleteByUserId(Long userId);
 }

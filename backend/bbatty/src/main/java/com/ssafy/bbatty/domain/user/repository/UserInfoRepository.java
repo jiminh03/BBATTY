@@ -32,4 +32,9 @@ public interface UserInfoRepository extends JpaRepository<UserInfo,Long> {
      * 사용자 ID로 UserInfo 조회 (회원탈퇴 시 사용)
      */
     Optional<UserInfo> findByUserId(Long userId);
+    
+    /**
+     * 회원 탈퇴 시 개인정보 하드 삭제
+     */
+    void deleteByUserId(Long userId);
 }
