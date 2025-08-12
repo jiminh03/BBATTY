@@ -23,11 +23,8 @@ export const wrapApiCall = <T>(apicall: () => Promise<AxiosResponse<ApiResponse<
     async () => {
       const response = await apicall();
       const apiResponse = response.data;
-      console.log('apiResponse : ', apiResponse);
 
       if (apiResponse.status === 'SUCCESS') {
-        console.log('status : ', apiResponse.status);
-        console.log('data : ', apiResponse.data);
         return apiResponse.data;
       } else {
         throw createApiError(
@@ -39,7 +36,6 @@ export const wrapApiCall = <T>(apicall: () => Promise<AxiosResponse<ApiResponse<
       }
     },
     (error: any) => {
-      console.log('error : ', error);
       // Axios 에러 또는 기타 에러 처리
       if (error.type === 'API_ERROR') {
         return error; // 이미 우리가 만든 ApiError

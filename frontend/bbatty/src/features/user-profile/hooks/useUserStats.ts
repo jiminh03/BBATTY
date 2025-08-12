@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
-import { userStatsApi } from '../api/userStatsApi';
-import { Season } from '../model/statsTypes';
+import { statsApi } from '../api/statsApi';
+import { Season } from '../../../shared/utils/date';
 import { isOk } from '../../../shared/utils/result';
 
-export const useUserStats = (userId: number, season: Season = '전체') => {
+export const useUserStats = (userId: number, season: Season = 'total') => {
   const {
     data: stats,
     isLoading,
@@ -12,7 +12,7 @@ export const useUserStats = (userId: number, season: Season = '전체') => {
   } = useQuery({
     queryKey: ['userStats', userId, season],
     queryFn: async () => {
-      const result = await userStatsApi.getUserStats(userId, season);
+      const result = await statsApi.getBasicStats(userId, season);
       if (isOk(result)) {
         return result.data;
       }
@@ -29,7 +29,7 @@ export const useUserStats = (userId: number, season: Season = '전체') => {
   };
 };
 
-export const useDirectViewHistory = (userId: number, season: Season = '전체') => {
+export const useDirectViewHistory = (userId: number, season: Season = 'total') => {
   const {
     data: records,
     isLoading,
@@ -38,7 +38,7 @@ export const useDirectViewHistory = (userId: number, season: Season = '전체') 
   } = useQuery({
     queryKey: ['directViewHistory', userId, season],
     queryFn: async () => {
-      const result = await userStatsApi.getDirectViewHistory(userId, season);
+      const result = await statsApi.getDirectViewHistory(userId, season);
       if (isOk(result)) {
         return result.data;
       }

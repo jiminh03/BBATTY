@@ -5,6 +5,7 @@ import { Season } from '../../../shared';
 import { StatsType } from '../model/statsTypes';
 import { QueryKeys, QueryInvalidator } from '../../../shared/api/lib/tanstack/queryKeyTypes';
 import { isOk } from '../../../shared/utils/result';
+import { statsApi } from '../api/statsApi';
 
 const PROFILE_ENTITY = 'profile';
 
@@ -73,7 +74,7 @@ export const useUserBadges = (userId?: number, season?: Season) => {
   return useQuery({
     queryKey: QueryKeys.badges(PROFILE_ENTITY, params),
     queryFn: async () => {
-      const result = await profileApi.getBadges(userId, season);
+      const result = await statsApi.getBadges(userId, season);
       if (isOk(result)) {
         return result.data;
       }
@@ -94,7 +95,7 @@ export const useBasicStats = (userId?: number, season?: Season) => {
   return useQuery({
     queryKey: QueryKeys.stats(PROFILE_ENTITY, 'basic', params),
     queryFn: async () => {
-      const result = await profileApi.getBasicStats(userId, season);
+      const result = await statsApi.getBasicStats(userId, season);
       if (isOk(result)) {
         return result.data;
       }
@@ -120,7 +121,7 @@ export const useDetailedStats = <T = any>(
   return useQuery({
     queryKey: QueryKeys.stats(PROFILE_ENTITY, type, params),
     queryFn: async () => {
-      const result = await profileApi.getDetailedStats<T>(type, userId, season);
+      const result = await statsApi.getDetailedStats<T>(type, userId, season);
       if (isOk(result)) {
         return result.data;
       }

@@ -1,3 +1,4 @@
+//feature/user-stats/model/statsType
 export interface UserBadges {
   visitedStadiums: number;
   totalMatches: number;
@@ -24,10 +25,6 @@ export interface StadiumStats {
   matches: number;
   wins: number;
   winRate: number;
-  location: {
-    latitude: number;
-    longitude: number;
-  };
 }
 
 export interface DayOfWeekStats {
@@ -56,5 +53,3 @@ export interface DirectViewRecord {
   isWin: boolean;
   season: string;
 }
-
-export type Season = '2024' | '2023' | '2022' | '전체';

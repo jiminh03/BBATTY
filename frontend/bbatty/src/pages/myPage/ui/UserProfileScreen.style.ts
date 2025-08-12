@@ -85,12 +85,34 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#666666',
   },
+  dropdownContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    gap: 12,
+  },
+  statsContentContainer: {
+    flex: 1,
+    backgroundColor: '#F8F9FA',
+  },
+  winRateFiltersContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
   contentContainer: {
     flex: 1,
   },
   tabContent: {
     flex: 1,
     padding: 20,
+  },
+  statsTabContent: {
+    backgroundColor: '#F8F9FA',
+    padding: 16,
   },
   restrictedContent: {
     flex: 1,

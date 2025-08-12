@@ -154,22 +154,32 @@ export const chatRoomApi = {
   },
 
   // 매치 채팅방 목록 조회 - 직접 타입 정의
-  getMatchChatRooms: async (): Promise<MatchChatRoomsResponse> => {
+  getMatchChatRooms: async (keyword?: string): Promise<MatchChatRoomsResponse> => {
     try {
-      const response = await chatApiClient.get('/api/match-chat-rooms');
+      const url = keyword ? `/api/match-chat-rooms?keyword=${encodeURIComponent(keyword)}` : '/api/match-chat-rooms';
+      const response = await chatApiClient.get(url);
       return response;
     } catch (error: any) {
       console.warn('서버 연결 실패, 목 데이터 반환:', error);
       
+      // 검색 키워드가 있으면 필터링된 목 데이터 반환
+      const filteredRooms = keyword 
+        ? MOCK_ROOMS.filter(room => 
+            room.matchTitle.toLowerCase().includes(keyword.toLowerCase()) ||
+            room.matchDescription.toLowerCase().includes(keyword.toLowerCase()) ||
+            room.teamId.toLowerCase().includes(keyword.toLowerCase())
+          )
+        : MOCK_ROOMS;
+      
       // 목 응답 반환
       return {
         status: 'SUCCESS',
-        message: '채팅방 목록 조회 성공 (목 데이터)',
+        message: `채팅방 목록 조회 성공 (목 데이터)${keyword ? ` - 검색: ${keyword}` : ''}`,
         data: {
-          rooms: MOCK_ROOMS,
+          rooms: filteredRooms,
           nextCursor: null,
           hasMore: false,
-          count: MOCK_ROOMS.length
+          count: filteredRooms.length
         }
       };
     }
