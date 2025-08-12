@@ -16,7 +16,8 @@ public interface RankingService {
      * 팀별 승률 랭킹 조회 (TOP 10 + 내 순위)
      * @param teamId 팀 ID
      * @param currentUserId 현재 사용자 ID
+     * @param currentUserTeamId 현재 사용자의 팀 ID
      * @return 팀별 승률 랭킹 + 내 순위
      */
-    TeamRankingResponse getTeamWinRateRankingWithMyRank(Long teamId, Long currentUserId);
+    TeamRankingResponse getTeamWinRateRankingWithMyRank(Long teamId, Long currentUserId, Long currentUserTeamId);
 }

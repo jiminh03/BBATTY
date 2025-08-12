@@ -11,7 +11,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class UserRankingDto {
     private Long userId;
-    private String nickname;
     private Double winRate;
     private Integer rank;
     private Double percentile;
