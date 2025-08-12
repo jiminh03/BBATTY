@@ -13,7 +13,7 @@ interface UserRanking {
   rank: number;
   percentile: number | null;
   isCurrentUser: boolean;
-  teamId?: number;
+  userTeamId?: number;
 }
 
 interface RankingResponse {
@@ -239,7 +239,7 @@ export default function UserRankingScreen({ navigation, route }: Props) {
                 {/* 2위 */}
                 {(() => {
                   const user = top3Users.find(u => u.rank === 2);
-                  const team = findTeamById(user?.teamId || 0);
+                  const team = findTeamById(user?.userTeamId || 0);
                   return user && (
                     <View style={styles.podiumPosition}>
                       <View style={styles.userProfile}>
@@ -273,7 +273,7 @@ export default function UserRankingScreen({ navigation, route }: Props) {
                 {/* 1위 (중앙) */}
                 {(() => {
                   const user = top3Users.find(u => u.rank === 1);
-                  const team = findTeamById(user?.teamId || 0);
+                  const team = findTeamById(user?.userTeamId || 0);
                   return user && (
                     <View style={styles.podiumPosition}>
                       <View style={styles.userProfile}>
@@ -309,30 +309,38 @@ export default function UserRankingScreen({ navigation, route }: Props) {
                 })()}
 
                 {/* 3위 */}
-                {top3Users.find(u => u.rank === 3) && (
-                  <View style={styles.podiumPosition}>
-                    <View style={styles.userProfile}>
-                      <View style={[styles.crownContainer, { backgroundColor: getMedalColor(3) }]}>
-                        <Text style={styles.crownText}>👑</Text>
-                        <Text style={styles.rankNumber}>3</Text>
-                      </View>
-                      <Text style={styles.podiumUsername} numberOfLines={1}>
-                        {top3Users.find(u => u.rank === 3)?.nickname}
-                      </Text>
-                      {getTeamNameByUserId(top3Users.find(u => u.rank === 3)?.userId || 0) ? (
-                        <Text style={styles.podiumTeam}>
-                          {getTeamNameByUserId(top3Users.find(u => u.rank === 3)?.userId || 0)}
+                {(() => {
+                  const user = top3Users.find(u => u.rank === 3);
+                  const team = findTeamById(user?.userTeamId || 0);
+                  return user && (
+                    <View style={styles.podiumPosition}>
+                      <View style={styles.userProfile}>
+                        <View style={[styles.crownContainer, { backgroundColor: getMedalColor(3) }]}>
+                          <Text style={styles.crownText}>👑</Text>
+                          <Text style={styles.rankNumber}>3</Text>
+                        </View>
+                        <View style={styles.podiumUserInfo}>
+                          {team && (
+                            <Image 
+                              source={team.imagePath}
+                              style={styles.podiumTeamLogo}
+                              resizeMode="contain"
+                            />
+                          )}
+                          <Text style={styles.podiumUsername} numberOfLines={1}>
+                            {user.nickname}
+                          </Text>
+                        </View>
+                        <Text style={styles.podiumWinRate}>
+                          {(user.winRate * 100).toFixed(1)}%
                         </Text>
-                      ) : null}
-                      <Text style={styles.podiumWinRate}>
-                        {((top3Users.find(u => u.rank === 3)?.winRate || 0) * 100).toFixed(1)}%
-                      </Text>
+                      </View>
+                      <View style={[styles.podium, { height: getPodiumHeight(3), backgroundColor: getMedalColor(3) }]}>
+                        <Text style={styles.podiumRank}>3rd</Text>
+                      </View>
                     </View>
-                    <View style={[styles.podium, { height: getPodiumHeight(3), backgroundColor: getMedalColor(3) }]}>
-                      <Text style={styles.podiumRank}>3rd</Text>
-                    </View>
-                  </View>
-                )}
+                  );
+                })()}
               </View>
             </View>
           )}
@@ -351,23 +359,19 @@ export default function UserRankingScreen({ navigation, route }: Props) {
 
           {/* 4-10위 일반 리스트 */}
           {restUsers.map((user) => {
-            const team = findTeamById(user.teamId || 0);
+            const team = findTeamById(user.userTeamId || 0);
             return (
               <View key={user.rank} style={styles.userRankingItem}>
-                <View style={styles.userRankInfo}>
+                <View style={styles.userLeftInfo}>
                   <Text style={styles.userRank}>{user.rank}</Text>
-                </View>
-                <View style={styles.userMainInfo}>
-                  <View style={styles.userNameContainer}>
-                    {team && (
-                      <Image 
-                        source={team.imagePath}
-                        style={styles.userTeamLogo}
-                        resizeMode="contain"
-                      />
-                    )}
-                    <Text style={styles.username}>{user.nickname}</Text>
-                  </View>
+                  {team && (
+                    <Image 
+                      source={team.imagePath}
+                      style={styles.userTeamLogo}
+                      resizeMode="contain"
+                    />
+                  )}
+                  <Text style={styles.username}>{user.nickname}</Text>
                 </View>
                 <View style={styles.userStats}>
                   <Text style={styles.userWinRate}>{(user.winRate * 100).toFixed(1)}%</Text>
@@ -378,27 +382,23 @@ export default function UserRankingScreen({ navigation, route }: Props) {
           
           {/* 내 정보 (10위 밖인 경우) */}
           {currentUserRanking && currentUserRanking.rank > 10 && (() => {
-            const team = findTeamById(currentUserRanking.teamId || 0);
+            const team = findTeamById(currentUserRanking.userTeamId || 0);
             return (
               <>
                 <View style={styles.divider}>
                   <Text style={styles.dividerText}>...</Text>
                 </View>
                 <View style={[styles.userRankingItem, styles.currentUserItem]}>
-                  <View style={styles.userRankInfo}>
+                  <View style={styles.userLeftInfo}>
                     <Text style={styles.userRank}>{currentUserRanking.rank}</Text>
-                  </View>
-                  <View style={styles.userMainInfo}>
-                    <View style={styles.userNameContainer}>
-                      {team && (
-                        <Image 
-                          source={team.imagePath}
-                          style={styles.userTeamLogo}
-                          resizeMode="contain"
-                        />
-                      )}
-                      <Text style={styles.username}>{currentUserRanking.nickname}</Text>
-                    </View>
+                    {team && (
+                      <Image 
+                        source={team.imagePath}
+                        style={styles.userTeamLogo}
+                        resizeMode="contain"
+                      />
+                    )}
+                    <Text style={styles.username}>{currentUserRanking.nickname}</Text>
                   </View>
                   <View style={styles.userStats}>
                     <Text style={styles.userWinRate}>{(currentUserRanking.winRate * 100).toFixed(1)}%</Text>
@@ -529,7 +529,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff8e1',
     borderColor: '#ffb300',
   },
-  userRankInfo: {
+  userLeftInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
@@ -539,15 +539,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333333',
     width: 30,
-  },
-  userDetails: {
-    marginLeft: 12,
+    marginRight: 8,
   },
   username: {
     fontSize: 14,
     fontWeight: '600',
     color: '#333333',
-    marginBottom: 2,
+    marginLeft: 8,
   },
   userTeam: {
     fontSize: 12,
@@ -726,5 +724,19 @@ const styles = StyleSheet.create({
     color: '#999999',
     textAlign: 'center',
     lineHeight: 20,
+  },
+  podiumUserInfo: {
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  podiumTeamLogo: {
+    width: 20,
+    height: 20,
+    marginBottom: 4,
+  },
+  userTeamLogo: {
+    width: 16,
+    height: 16,
+    marginRight: 8,
   },
 });
