@@ -37,7 +37,8 @@ public class MatchChatKafkaComsumer {
 
             // 먼저 Map으로 파싱해서 중첩 구조 처리
             Map<String, Object> rawData = objectMapper.readValue(messageJson, Map.class);
-            
+
+
             // roomCreateInfo 중첩 데이터를 플랫 구조로 변환
             Map<String, Object> flattenedData = flattenRoomCreateInfo(rawData);
             

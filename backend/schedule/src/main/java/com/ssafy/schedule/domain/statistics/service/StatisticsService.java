@@ -31,10 +31,11 @@ public interface StatisticsService {
     /**
      * 사용자 연승 통계 계산 및 캐싱
      * @param userId 사용자 ID
+     * @param season 시즌 ("total" 또는 "2025" 등)
      * @param teamId 사용자 응원팀 ID
      * @return 연승 통계 (현재 연승, 최장 연승 등)
      */
-    UserStreakStatsResponse calculateUserStreakStats(Long userId, Long teamId);
+    UserStreakStatsResponse calculateUserStreakStats(Long userId, String season, Long teamId);
     
     /**
      * 사용자의 모든 통계 재계산
