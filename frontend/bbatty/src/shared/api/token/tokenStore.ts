@@ -170,6 +170,7 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
       return Ok(true);
     }
 
+    console.log('10분전 미리 갱신 ');
     console.log('Access token expiring soon, attempting refresh...');
     return await refreshTokens();
   },
