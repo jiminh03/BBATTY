@@ -74,7 +74,7 @@ public class ChatAuthServiceImpl implements ChatAuthService {
             return ChatAuthResponse.success(request.getRequestId(), userInfo, chatRoomInfo);
             
         } catch (ApiException e) {
-            log.warn("채팅 인증 실패: userId={}, error={}", userId, e.getMessage());
+            log.warn("채팅 인증 실패: userId={}, errorCode={}, error={}", userId, e.getErrorCode().name(), e.getMessage());
             
             // Kafka로 인증 실패 결과 전송 (분리된 서비스 사용)
             messageSenderService.sendAuthFailureToKafka(request.getRequestId(), e.getMessage());
