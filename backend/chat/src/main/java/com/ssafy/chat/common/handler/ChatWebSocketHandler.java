@@ -239,11 +239,11 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 return;
             }
             
-            // 매치 채팅인 경우 매치 채팅 서비스로 위임
+            // 매치 채팅인 경우 Kafka를 통한 처리
             if (tokenInfo.isMatchRoom()) {
                 handleMatchChatMessage(session, tokenInfo, content.trim());
             } else {
-                // 다른 타입의 채팅은 분산 세션 매니저를 통해 브로드캐스트
+                // 관전 채팅은 분산 세션 매니저를 통해 직접 브로드캐스트
                 String broadcastMessage = createBroadcastMessage(tokenInfo, content.trim());
                 sessionManager.broadcastToRoom(tokenInfo.getRoomId(), broadcastMessage, null);
             }
