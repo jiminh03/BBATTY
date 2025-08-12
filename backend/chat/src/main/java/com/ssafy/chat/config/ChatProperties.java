@@ -21,7 +21,7 @@ public class ChatProperties {
     @Getter
     @Setter
     public static class Websocket {
-        private String baseUrl = "ws://i13a403.p.ssafy.io:8084";
+        private String baseUrl = "ws://i13a403.p.ssafy.io:8083";
     }
 
     @Getter
