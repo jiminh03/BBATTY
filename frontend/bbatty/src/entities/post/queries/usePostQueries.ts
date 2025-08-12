@@ -2,7 +2,7 @@
 import { useMutation, useInfiniteQuery, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useCallback, useRef, useState } from 'react';
 import { postApi } from '../api/api';
-import { CreatePostPayload, CursorPostListResponse } from '../api/types';
+import { CreatePostPayload, CursorPostListResponse, PostListItem } from '../api/types';
 import { Post } from '../model/types';
 import { apiClient } from '../../../shared/api/client/apiClient';
 import { useLikeStore } from '../model/store';
@@ -187,3 +187,21 @@ export const usePostLikeActions = (postId: number, options?: { cooldownMs?: numb
 
   return { like, unlike, toggle, isBusy };
 };
+
+// entities/post/queries/usePostQueries.ts
+export const usePopularPostsQuery = (teamId: number) =>
+  useQuery<PostListItem[]>({
+    queryKey: ['popularPostsAll', teamId],          // (키 분리하면 캐시 혼동 방지)
+    enabled: !!teamId,
+    staleTime: 60_000,
+    queryFn: () => postApi.getPopularByTeam(teamId, 20), // ✅ 최대 20개
+  });
+
+export const useTeamPopularPostsQuery = (teamId: number, limit = 5) =>
+  useQuery<PostListItem[]>({
+    queryKey: ['popularPostsPreview', teamId, limit],
+    enabled: !!teamId,
+    staleTime: 60_000,
+    queryFn: () => postApi.getPopularByTeam(teamId, limit), // 홈 미리보기 5개
+  });
+
