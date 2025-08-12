@@ -15,7 +15,9 @@ import com.ssafy.bbatty.global.constants.ErrorCode;
 import com.ssafy.bbatty.global.constants.RedisKey;
 import com.ssafy.bbatty.global.exception.ApiException;
 import com.ssafy.bbatty.global.util.RedisUtil;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +26,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -32,6 +35,7 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final PostService postService;
     private final RedisUtil redisUtil;
+    private final ObjectMapper objectMapper;
 
     @Override
     public UserResponseDto getUserProfile(Long targetUserId, Long currentUserId) {
@@ -149,7 +153,7 @@ public class UserServiceImpl implements UserService {
 
         return switch (type) {
             case "basic" -> getUserBasicStatsFromRedis(userId, season);
-            case "streak" -> getUserStreakStatsFromRedis(userId);
+            case "streak" -> getUserStreakStatsFromRedis(userId, season);
             case "stadium" -> getCategoryStatsFromRedis(userId, season, "stadiumStats");
             case "opponent" -> getCategoryStatsFromRedis(userId, season, "opponentStats");
             case "dayOfWeek" -> getCategoryStatsFromRedis(userId, season, "dayOfWeekStats");
@@ -235,18 +239,22 @@ public class UserServiceImpl implements UserService {
     /**
      * 연승 통계 조회
      */
-    private Object getUserStreakStatsFromRedis(Long userId) {
-        String key = RedisKey.STATS_USER_STREAK + userId;
+    private Object getUserStreakStatsFromRedis(Long userId, String season) {
+        String key = RedisKey.STATS_USER_STREAK + userId + ":" + season;
         Object cached = redisUtil.getValue(key, Object.class);
         
         if (cached == null) {
             return Map.of(
                 "userId", userId,
-                "currentSeason", String.valueOf(LocalDate.now().getYear()),
+                "currentSeason", season,
                 "currentWinStreak", 0,
                 "maxWinStreakAll", 0,
                 "maxWinStreakCurrentSeason", 0,
-                "maxWinStreakBySeason", Map.of()
+                "maxWinStreakBySeason", Map.of(),
+                "totalGames", 0,
+                "wins", 0,
+                "draws", 0,
+                "losses", 0
             );
         }
         
@@ -274,8 +282,20 @@ public class UserServiceImpl implements UserService {
             records = redisUtil.reverseRangeByScore(key, 0, cursor - 1, 20);
         }
         
+        // JSON 문자열을 객체로 파싱
+        List<Object> parsedRecords = records.stream()
+            .map(recordJson -> {
+                try {
+                    return objectMapper.readValue(recordJson, Object.class);
+                } catch (Exception e) {
+                    log.warn("직관 기록 JSON 파싱 실패: {}", recordJson);
+                    return recordJson; // 파싱 실패 시 원본 문자열 반환
+                }
+            })
+            .collect(Collectors.toList());
+        
         Map<String, Object> result = new HashMap<>();
-        result.put("records", records);
+        result.put("records", parsedRecords);
         result.put("hasMore", records.size() == 20);
         
         // 다음 페이지를 위한 cursor 설정

@@ -14,4 +14,6 @@ public class UserRankingDto {
     private String nickname;
     private Double winRate;
     private Integer rank;
+    private Double percentile;
+    private Boolean isCurrentUser;
 }
