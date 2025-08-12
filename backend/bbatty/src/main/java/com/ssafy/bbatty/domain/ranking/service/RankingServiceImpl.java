@@ -5,8 +5,6 @@ import com.ssafy.bbatty.domain.ranking.dto.response.TeamRankingResponse;
 import com.ssafy.bbatty.domain.ranking.dto.response.UserRankingDto;
 import com.ssafy.bbatty.domain.team.entity.Team;
 import com.ssafy.bbatty.domain.team.repository.TeamRepository;
-import com.ssafy.bbatty.domain.user.entity.User;
-import com.ssafy.bbatty.domain.user.repository.UserRepository;
 import com.ssafy.bbatty.global.constants.RedisKey;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,12 +15,9 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -30,7 +25,6 @@ import java.util.stream.Collectors;
 public class RankingServiceImpl implements RankingService {
     
     private final RedisTemplate<String, Object> redisTemplate;
-    private final UserRepository userRepository;
     private final TeamRepository teamRepository;
     
     
@@ -55,16 +49,6 @@ public class RankingServiceImpl implements RankingService {
         AtomicInteger rank = new AtomicInteger(1);
         boolean foundCurrentUser = false;
         
-        // 모든 userId를 먼저 수집
-        List<Long> userIds = rankingData.stream()
-                .map(tuple -> Long.valueOf(tuple.getValue().toString()))
-                .toList();
-        
-        // 한 번에 모든 사용자 조회
-        List<User> users = userRepository.findAllById(userIds);
-        Map<Long, User> userMap = users.stream()
-                .collect(Collectors.toMap(User::getId, Function.identity()));
-        
         for (ZSetOperations.TypedTuple<Object> tuple : rankingData) {
             Long userId = Long.valueOf(tuple.getValue().toString());
             Double winRate = tuple.getScore();
@@ -74,17 +58,13 @@ public class RankingServiceImpl implements RankingService {
                 foundCurrentUser = true;
             }
             
-            User user = userMap.get(userId);
-            if (user != null) {
-                rankings.add(UserRankingDto.builder()
-                        .userId(userId)
-                        .nickname(user.getNickname())
-                        .winRate(winRate)
-                        .rank(rank.getAndIncrement())
-                        .percentile(isCurrentUser ? calculatePercentile(globalRankingKey, currentUserId) : null)
-                        .isCurrentUser(isCurrentUser)
-                        .build());
-            }
+            rankings.add(UserRankingDto.builder()
+                    .userId(userId)
+                    .winRate(winRate)
+                    .rank(rank.getAndIncrement())
+                    .percentile(isCurrentUser ? calculatePercentile(globalRankingKey, currentUserId) : null)
+                    .isCurrentUser(isCurrentUser)
+                    .build());
         }
         
         UserRankingDto myRanking = null;
@@ -103,7 +83,7 @@ public class RankingServiceImpl implements RankingService {
     
     
     @Override
-    public TeamRankingResponse getTeamWinRateRankingWithMyRank(Long teamId, Long currentUserId) {
+    public TeamRankingResponse getTeamWinRateRankingWithMyRank(Long teamId, Long currentUserId, Long currentUserTeamId) {
         log.info("팀별 승률 랭킹 조회 시작: teamId={}, userId={}", teamId, currentUserId);
         
         String teamRankingKey = RedisKey.RANKING_TEAM_TOP10 + teamId + ":top10";
@@ -124,21 +104,11 @@ public class RankingServiceImpl implements RankingService {
                     .build();
         }
         
-        boolean isMyTeam = isUserTeam(currentUserId, teamId);
+        boolean isMyTeam = teamId.equals(currentUserTeamId);
         
         List<UserRankingDto> rankings = new ArrayList<>();
         AtomicInteger rank = new AtomicInteger(1);
         boolean foundCurrentUser = false;
-        
-        // 모든 userId를 먼저 수집
-        List<Long> userIds = rankingData.stream()
-                .map(tuple -> Long.valueOf(tuple.getValue().toString()))
-                .toList();
-        
-        // 한 번에 모든 사용자 조회
-        List<User> users = userRepository.findAllById(userIds);
-        Map<Long, User> userMap = users.stream()
-                .collect(Collectors.toMap(User::getId, Function.identity()));
         
         for (ZSetOperations.TypedTuple<Object> tuple : rankingData) {
             Long userId = Long.valueOf(tuple.getValue().toString());
@@ -149,17 +119,13 @@ public class RankingServiceImpl implements RankingService {
                 foundCurrentUser = true;
             }
             
-            User user = userMap.get(userId);
-            if (user != null) {
-                rankings.add(UserRankingDto.builder()
-                        .userId(userId)
-                        .nickname(user.getNickname())
-                        .winRate(winRate)
-                        .rank(rank.getAndIncrement())
-                        .percentile((isCurrentUser && isMyTeam) ? calculatePercentile(teamRankingKey, currentUserId) : null)
-                        .isCurrentUser(isCurrentUser && isMyTeam)
-                        .build());
-            }
+            rankings.add(UserRankingDto.builder()
+                    .userId(userId)
+                    .winRate(winRate)
+                    .rank(rank.getAndIncrement())
+                    .percentile((isCurrentUser && isMyTeam) ? calculatePercentile(teamRankingKey, currentUserId) : null)
+                    .isCurrentUser(isCurrentUser && isMyTeam)
+                    .build());
         }
         
         UserRankingDto myRanking = null;
@@ -181,13 +147,6 @@ public class RankingServiceImpl implements RankingService {
                 .build();
     }
     
-    private boolean isUserTeam(Long userId, Long teamId) {
-        Optional<User> userOpt = userRepository.findById(userId);
-        if (!userOpt.isPresent()) return false;
-        
-        User user = userOpt.get();
-        return user.getTeam() != null && user.getTeam().getId().equals(teamId);
-    }
     
     private Double calculatePercentile(String rankingKey, Long userId) {
         Long userRank = redisTemplate.opsForZSet().reverseRank(rankingKey, userId.toString());
@@ -244,13 +203,8 @@ public class RankingServiceImpl implements RankingService {
         Long rank = redisTemplate.opsForZSet().reverseRank(allRankingKey, userId.toString());
         if (rank == null) return null;
         
-        Optional<User> userOpt = userRepository.findById(userId);
-        if (!userOpt.isPresent()) return null;
-        
-        User user = userOpt.get();
         return UserRankingDto.builder()
                 .userId(userId)
-                .nickname(user.getNickname())
                 .winRate(winRate)
                 .rank((int) (rank + 1))
                 .percentile(calculatePercentileFromAllRanking(rankingKey, userId))
