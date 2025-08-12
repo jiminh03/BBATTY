@@ -10,19 +10,6 @@ import {
 import axios, { AxiosHeaders, AxiosResponse } from 'axios';
 import { Post } from '../model/types';
 import { CursorPostListResponse } from './types';
-import { PostStatus } from '../model/types';
-
-type UpdateBody = {
-  postId: number;
-  title: string;
-  content: string;
-  teamId?: number;
-  status?: string;      // 서버가 postStatus 라면 키만 바꿔주면 됨
-  postStatus?: string;  // <- 이 키가 맞다면 위 status 대신 이걸 쓰기
-};
-
-const clean = <T extends object>(obj: T): T =>
-  Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as T;
 
 export const postApi = {
   // 게시글 생성
@@ -91,45 +78,44 @@ export const postApi = {
 
 
   // 인기 게시글 목록 조회
-  // api.ts
-async getPopularByTeam(teamId: number, limit = 20) {
-  let cursor: number | undefined;
-  const acc: PostListItem[] = [];
-  const seen = new Set<number>();
+  async getPopularByTeam(teamId: number, limit = 20) {
+    let cursor: number | undefined;
+    const acc: PostListItem[] = [];
+    const seen = new Set<number>();
 
-  while (acc.length < limit) {
-    const res = await apiClient.get(`/api/posts/team/${teamId}/popular`,
-      { params: cursor !== undefined ? { cursor } : {} }
-    );
-    const api = (res as any).data as any;
+    while (acc.length < limit) {
+      const res = await apiClient.get(`/api/posts/team/${teamId}/popular`,
+        { params: cursor !== undefined ? { cursor } : {} }
+      );
+      const api = (res as any).data as any;
 
-    const page: PostListItem[] = Array.isArray(api.data)
-      ? api.data
-      : (api.data?.posts ?? []);
+      const page: PostListItem[] = Array.isArray(api.data)
+        ? api.data
+        : (api.data?.posts ?? []);
 
-    console.log('[popular][page]', {
-      got: page.length,
-      hasNext: api.data?.hasNext,
-      nextCursor: api.data?.nextCursor,
-      acc: acc.length,
-    });
+      console.log('[popular][page]', {
+        got: page.length,
+        hasNext: api.data?.hasNext,
+        nextCursor: api.data?.nextCursor,
+        acc: acc.length,
+      });
 
-    for (const p of page) {
-      if (!seen.has(p.id)) {
-        acc.push(p);
-        seen.add(p.id);
-        if (acc.length >= limit) break;
+      for (const p of page) {
+        if (!seen.has(p.id)) {
+          acc.push(p);
+          seen.add(p.id);
+          if (acc.length >= limit) break;
+        }
       }
+
+      const hasNext = !Array.isArray(api.data) && api.data?.hasNext === true;
+      cursor = !Array.isArray(api.data) ? api.data?.nextCursor : undefined;
+      if (!hasNext) break;
     }
 
-    const hasNext = !Array.isArray(api.data) && api.data?.hasNext === true;
-    cursor = !Array.isArray(api.data) ? api.data?.nextCursor : undefined;
-    if (!hasNext) break;
-  }
-
-  console.log('[popular][done] total=', acc.length);
-  return acc.slice(0, limit);
-},
+    console.log('[popular][done] total=', acc.length);
+    return acc.slice(0, limit);
+  },
 
 
   // 게시글 좋아요
@@ -144,8 +130,44 @@ async getPopularByTeam(teamId: number, limit = 20) {
   createPresignedUrl: (payload: PresignedUrlPayload) =>
     apiClient.post<PresignedUrlResponse>('/api/posts/presigned-url', payload),
 
-  // // 이미지 삭제
+  // 이미지 삭제
   deleteImage: (imageId: string) => apiClient.delete(`/api/images/${imageId}`),
 
+  // 팀 별 게시글 검색
+  async getTeamSearchPosts(
+    teamId: number,
+    keyword: string,
+    cursor?: number
+  ): Promise<CursorPostListResponse> {
+    const res = await apiClient.get(`/api/posts/team/${teamId}/search`, {
+      params: {
+        keyword,                       // optional이지만 빈문자면 서버에서 전체검색 취급할 수도 있으니 trim 권장
+        ...(cursor !== undefined ? { cursor } : {}),
+      },
+    });
+
+    // 서버 공통 포맷 파싱 (SUCCESS / ERROR)
+    const api = (res as any).data as {
+      status: string; message?: string; data?: CursorPostListResponse;
+    };
+
+    if (api?.status !== 'SUCCESS' || !api?.data) {
+      throw new Error(api?.message ?? '검색 실패');
+    }
+    return api.data; // { posts, hasNext, nextCursor }
+  },
+
+    async searchTeamPosts(teamId: number, q: string, cursor?: number) {
+    const res = await apiClient.get(`/api/posts/team/${teamId}/search`, {
+      params: cursor !== undefined ? { q, cursor } : { q },
+    });
+    const api = (res as any).data as {
+      status: string; message?: string; data?: CursorPostListResponse;
+    };
+    if (api?.status !== 'SUCCESS' || !api?.data) {
+      throw new Error(api?.message ?? '검색 실패');
+    }
+    return api.data; // { posts, hasNext, nextCursor }
+  },
 };
 
