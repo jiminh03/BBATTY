@@ -173,9 +173,11 @@ public class RankingServiceImpl implements RankingService {
         if (userRank == null) return null;
         
         Long totalUsers = redisTemplate.opsForZSet().zCard(rankingKey);
-        if (totalUsers == null || totalUsers == 0) return null;
+        if (totalUsers == null || totalUsers <= 1) return null;
         
-        return ((double) (totalUsers - userRank - 1) / totalUsers) * 100.0;
+        // 상위 백분위 계산: (실제 순위 / 전체 사용자 수) * 100
+        int actualRank = userRank.intValue() + 1;
+        return ((double) actualRank / totalUsers) * 100.0;
     }
     
     /**
@@ -188,11 +190,14 @@ public class RankingServiceImpl implements RankingService {
         if (userRank == null) return null;
         
         Long totalUsers = redisTemplate.opsForZSet().zCard(allRankingKey);
-        if (totalUsers == null || totalUsers == 0) return null;
+        if (totalUsers == null || totalUsers <= 1) return null;
         
-        // 백분위 계산: (나보다 낮은 사람 수 / 전체 사람 수) * 100
-        // userRank는 0-based이므로 userRank가 곧 나보다 좋은 사람의 수
-        return ((double) userRank / (totalUsers - 1)) * 100.0;
+        // 백분위 계산: 상위 몇 %인지 계산
+        // userRank는 0-based이므로 실제 순위 = userRank + 1
+        // 상위 백분위 = (실제 순위 / 전체 사용자 수) * 100
+        // 예: 전체 10명 중 4위 → (4 / 10) * 100 = 40% (상위 40%)
+        int actualRank = userRank.intValue() + 1;
+        return ((double) actualRank / totalUsers) * 100.0;
     }
     
     /**
