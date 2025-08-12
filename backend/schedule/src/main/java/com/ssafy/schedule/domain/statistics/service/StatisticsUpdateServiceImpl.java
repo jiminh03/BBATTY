@@ -94,7 +94,7 @@ public class StatisticsUpdateServiceImpl implements StatisticsUpdateService {
             statisticsRedisRepository.clearCurrentSeasonAndTotalStats(userId, currentSeason);
             var basicStats = statisticsService.calculateUserBasicStats(userId, currentSeason, teamId);
             statisticsService.calculateUserDetailedStats(userId, currentSeason, teamId);
-            statisticsService.calculateUserStreakStats(userId, teamId);
+            statisticsService.calculateUserStreakStats(userId, currentSeason, teamId);
             statisticsUpdated = true;
             
             // 2. 랭킹 업데이트 (최소 경기 수 이상일 때만)

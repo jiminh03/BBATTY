@@ -16,4 +16,5 @@ public class TeamRankingResponse {
     private String teamName;
     private String season;
     private List<UserRankingDto> rankings;
+    private UserRankingDto myRanking;
 }

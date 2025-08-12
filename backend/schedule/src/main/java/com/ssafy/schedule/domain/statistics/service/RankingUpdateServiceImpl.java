@@ -35,7 +35,7 @@ public class RankingUpdateServiceImpl implements RankingUpdateService {
         boolean teamUpdated = false;
         
         try {
-            // 전체 랭킹 업데이트
+            // 전체 랭킹 업데이트 (TOP 10 + 전체 랭킹)
             updateGlobalRanking(userId, winRate);
             globalUpdated = true;
             
@@ -44,7 +44,7 @@ public class RankingUpdateServiceImpl implements RankingUpdateService {
         }
         
         try {
-            // 팀별 랭킹 업데이트
+            // 팀별 랭킹 업데이트 (TOP 10 + 전체 팀 랭킹)
             if (teamId != null) {
                 updateTeamRanking(userId, teamId, winRate);
                 teamUpdated = true;
@@ -63,19 +63,24 @@ public class RankingUpdateServiceImpl implements RankingUpdateService {
     private void updateGlobalRanking(Long userId, double winRate) {
         try {
             String globalRankingKey = RedisKey.RANKING_GLOBAL_TOP10;
+            String globalAllRankingKey = "ranking:global:all";
             
             // Redis 연결 상태 및 키 유효성 검증
             if (globalRankingKey == null || globalRankingKey.trim().isEmpty()) {
                 throw new IllegalStateException("전체 랭킹 Redis 키가 비어있음");
             }
             
+            // TOP 10 랭킹에 추가
             redisTemplate.opsForZSet().add(globalRankingKey, userId, winRate);
             
-            // Top 랭킹만 유지
+            // 전체 사용자 랭킹에 추가 (모든 사용자 포함)
+            redisTemplate.opsForZSet().add(globalAllRankingKey, userId, winRate);
+            
+            // Top 랭킹만 유지 (TOP 10 키에서만)
             Long totalCount = redisTemplate.opsForZSet().zCard(globalRankingKey);
             if (totalCount != null && totalCount > TOP_RANKING_COUNT) {
                 long removeCount = redisTemplate.opsForZSet().removeRange(globalRankingKey, 0, totalCount - TOP_RANKING_COUNT - 1);
-                log.debug("전체 랭킹 정리: {}+개 제거", removeCount);
+                log.debug("전체 랭킹 TOP10 정리: {}+개 제거", removeCount);
             }
             
             log.debug("전체 랭킹 업데이트 성공: userId={}, winRate={}", userId, winRate);
@@ -96,13 +101,19 @@ public class RankingUpdateServiceImpl implements RankingUpdateService {
             }
             
             String teamRankingKey = RedisKey.RANKING_TEAM_TOP10 + teamId + ":top10";
+            String teamAllRankingKey = "ranking:team:" + teamId + ":all";
+            
+            // TOP 10 팀별 랭킹에 추가
             redisTemplate.opsForZSet().add(teamRankingKey, userId, winRate);
             
-            // Top 랭킹만 유지
+            // 전체 팀원 랭킹에 추가 (모든 팀원 포함)
+            redisTemplate.opsForZSet().add(teamAllRankingKey, userId, winRate);
+            
+            // Top 랭킹만 유지 (TOP 10 키에서만)
             Long teamTotalCount = redisTemplate.opsForZSet().zCard(teamRankingKey);
             if (teamTotalCount != null && teamTotalCount > TOP_RANKING_COUNT) {
                 long removeCount = redisTemplate.opsForZSet().removeRange(teamRankingKey, 0, teamTotalCount - TOP_RANKING_COUNT - 1);
-                log.debug("팀별 랭킹 정리: teamId={}, {}+개 제거", teamId, removeCount);
+                log.debug("팀별 랭킹 TOP10 정리: teamId={}, {}+개 제거", teamId, removeCount);
             }
             
             log.debug("팀별 랭킹 업데이트 성공: userId={}, teamId={}, winRate={}", userId, teamId, winRate);

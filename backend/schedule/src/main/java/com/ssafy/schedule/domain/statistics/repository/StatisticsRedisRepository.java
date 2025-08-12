@@ -43,17 +43,17 @@ public class StatisticsRedisRepository {
     /**
      * 사용자 연승 통계 저장
      */
-    public void saveUserStreakStats(Long userId, Object streakStats) {
-        String key = RedisKey.STATS_USER_STREAK + userId;
+    public void saveUserStreakStats(Long userId, String season, Object streakStats) {
+        String key = RedisKey.STATS_USER_STREAK + userId + ":" + season;
         redisTemplate.opsForValue().set(key, streakStats, Duration.ofDays(30));
-        log.debug("사용자 연승 통계 저장: userId={}", userId);
+        log.debug("사용자 연승 통계 저장: userId={}, season={}", userId, season);
     }
     
     /**
      * 사용자 연승 통계 조회
      */
-    public Object getUserStreakStats(Long userId) {
-        String key = RedisKey.STATS_USER_STREAK + userId;
+    public Object getUserStreakStats(Long userId, String season) {
+        String key = RedisKey.STATS_USER_STREAK + userId + ":" + season;
         return redisTemplate.opsForValue().get(key);
     }
     

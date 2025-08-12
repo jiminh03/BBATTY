@@ -19,23 +19,25 @@ public class RankingController {
     private final RankingService rankingService;
     
     /**
-     * 전체 승률 랭킹 조회 (TOP 10)
-     * GET /api/ranking/global
+     * 전체 승률 랭킹 조회 (TOP 10 + MY RANK)
+     * GET /api/ranking/global/{userId}
      */
-    @GetMapping("/global")
-    public ResponseEntity<ApiResponse<GlobalRankingResponse>> getGlobalWinRateRanking() {
-        GlobalRankingResponse response = rankingService.getGlobalWinRateRanking();
+    @GetMapping("/global/{userId}")
+    public ResponseEntity<ApiResponse<GlobalRankingResponse>> getGlobalWinRateRanking(
+            @PathVariable Long userId) {
+        GlobalRankingResponse response = rankingService.getGlobalWinRateRankingWithMyRank(userId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
     
     /**
-     * 팀별 승률 랭킹 조회 (TOP 10)
-     * GET /api/ranking/team/{teamId}
+     * 팀별 승률 랭킹 조회 (TOP 10 + MY RANK when my team)
+     * GET /api/ranking/team/{teamId}/{userId}
      */
-    @GetMapping("/team/{teamId}")
+    @GetMapping("/team/{teamId}/{userId}")
     public ResponseEntity<ApiResponse<TeamRankingResponse>> getTeamWinRateRanking(
-            @PathVariable Long teamId) {
-        TeamRankingResponse response = rankingService.getTeamWinRateRanking(teamId);
+            @PathVariable Long teamId,
+            @PathVariable Long userId) {
+        TeamRankingResponse response = rankingService.getTeamWinRateRankingWithMyRank(teamId, userId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

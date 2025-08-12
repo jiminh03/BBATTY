@@ -6,15 +6,17 @@ import com.ssafy.bbatty.domain.ranking.dto.response.TeamRankingResponse;
 public interface RankingService {
     
     /**
-     * 전체 승률 랭킹 조회 (TOP 10)
-     * @return 전체 승률 랭킹
+     * 전체 승률 랭킹 조회 (TOP 10 + 내 순위)
+     * @param currentUserId 현재 사용자 ID
+     * @return 전체 승률 랭킹 + 내 순위
      */
-    GlobalRankingResponse getGlobalWinRateRanking();
+    GlobalRankingResponse getGlobalWinRateRankingWithMyRank(Long currentUserId);
     
     /**
-     * 팀별 승률 랭킹 조회 (TOP 10)
+     * 팀별 승률 랭킹 조회 (TOP 10 + 내 순위)
      * @param teamId 팀 ID
-     * @return 팀별 승률 랭킹
+     * @param currentUserId 현재 사용자 ID
+     * @return 팀별 승률 랭킹 + 내 순위
      */
-    TeamRankingResponse getTeamWinRateRanking(Long teamId);
+    TeamRankingResponse getTeamWinRateRankingWithMyRank(Long teamId, Long currentUserId);
 }
