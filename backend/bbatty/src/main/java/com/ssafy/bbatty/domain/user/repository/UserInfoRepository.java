@@ -3,6 +3,7 @@ package com.ssafy.bbatty.domain.user.repository;
 import com.ssafy.bbatty.domain.user.entity.UserInfo;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -34,7 +35,9 @@ public interface UserInfoRepository extends JpaRepository<UserInfo,Long> {
     Optional<UserInfo> findByUserId(Long userId);
     
     /**
-     * 회원 탈퇴 시 개인정보 하드 삭제
+     * 회원 탈퇴 시 개인정보 하드 삭제 (물리적 삭제)
      */
-    void deleteByUserId(Long userId);
+    @Modifying
+    @Query("DELETE FROM UserInfo ui WHERE ui.user.id = :userId")
+    void deleteByUserId(@Param("userId") Long userId);
 }
