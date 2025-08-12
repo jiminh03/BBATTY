@@ -31,6 +31,13 @@ export default function HomeScreen({ navigation }: Props) {
   navigation.navigate('PopularPosts', { teamId });
 };
 
+  const goSearch = () => {
+    if (!teamId) {
+      Alert.alert('팀 선택 필요', '내 팀 정보가 없습니다. 로그인/팀 선택을 먼저 완료해주세요.');
+      return;
+    }
+    navigation.navigate('TeamPostSearch', { teamId });
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -51,7 +58,7 @@ export default function HomeScreen({ navigation }: Props) {
             <Text style={styles.gameTime}>19:30 | 잠실야구장</Text>
           </View>
         </View>
-
+        
         {/* ✅ 인기 게시글 (미리보기) */}
         <View style={styles.section}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -83,23 +90,33 @@ export default function HomeScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>💬 빠른 기능</Text>
+        <Text style={styles.sectionTitle}>💬 빠른 기능</Text>
 
-          <TouchableOpacity
-            style={styles.quickButton}
-            onPress={() => navigation.navigate('AttendanceVerification' as never)}
-          >
-            <Text style={styles.quickButtonText}>🎯 직관 인증하기</Text>
-          </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.quickButton}
+          onPress={() => navigation.navigate('AttendanceVerification' as never)}
+        >
+          <Text style={styles.quickButtonText}>🎯 직관 인증하기</Text>
+        </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.quickButton, !teamId && { opacity: 0.5 }]}
-            disabled={!teamId}
-            onPress={goPostList}
-          >
-            <Text style={styles.quickButtonText}>게시글 조회</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={[styles.quickButton, !teamId && { opacity: 0.5 }]}
+          disabled={!teamId}
+          onPress={goPostList}
+        >
+          <Text style={styles.quickButtonText}>게시글 조회</Text>
+        </TouchableOpacity>
+
+        {/* ✅ 여기 추가 */}
+        <TouchableOpacity
+          style={[styles.quickButton, { marginTop: 8 }, !teamId && { opacity: 0.5 }]}
+          disabled={!teamId}
+          onPress={goSearch}
+        >
+          <Text style={styles.quickButtonText}>게시글 검색</Text>
+        </TouchableOpacity>
+      </View>
+
       </ScrollView>
     </SafeAreaView>
   );

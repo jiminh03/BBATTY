@@ -52,7 +52,7 @@ export const PostListScreen = ({ route }: HomeStackScreenProps<'PostList'>) => {
             fetchNextPage();
           }
         }}
-        onEndReachedThreshold={0.1}
+        onEndReachedThreshold={0.5}
       />
     </View>
   );

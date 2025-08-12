@@ -205,3 +205,14 @@ export const useTeamPopularPostsQuery = (teamId: number, limit = 5) =>
     queryFn: () => postApi.getPopularByTeam(teamId, limit), // 홈 미리보기 5개
   });
 
+/** 팀별 게시글 검색(무한 스크롤) */
+export const useTeamSearchPostsInfinite = (teamId: number, q: string) =>
+  useInfiniteQuery<CursorPostListResponse>({
+    queryKey: ['searchPosts', teamId, q],
+    enabled: !!teamId && !!q,                   // ✅ 버튼으로 submitted 세팅되기 전엔 실행 X
+    queryFn: ({ pageParam = undefined }) =>
+      postApi.searchTeamPosts(teamId, q, pageParam as number | undefined),
+    initialPageParam: undefined,
+    getNextPageParam: (last) => (last?.hasNext ? last.nextCursor : undefined),
+    staleTime: 60_000,
+  });
