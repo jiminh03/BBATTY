@@ -4,9 +4,9 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   Alert,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import type { RouteProp } from '@react-navigation/native';
@@ -26,6 +26,7 @@ export const MatchChatRoomDetailScreen = () => {
   const { room } = route.params;
   const getCurrentUser = useUserStore((state) => state.getCurrentUser);
   const themeColor = useThemeColor();
+  const insets = useSafeAreaInsets();
   
   const [joining, setJoining] = useState(false);
 
@@ -92,26 +93,39 @@ export const MatchChatRoomDetailScreen = () => {
   const isRoomFull = room.currentParticipants >= room.maxParticipants;
   const isRoomActive = room.status === 'ACTIVE';
 
-  const getTeamColors = (teamId: string) => {
-    const teamColorMap: { [key: string]: string[] } = {
-      'LG': ['#C30452', '#8B0000'],
-      '두산': ['#131230', '#000080'],
-      'KIA': ['#EA0029', '#DC143C'],
-      '삼성': ['#074CA1', '#0066CC'],
-      '롯데': ['#041E42', '#000080'],
-      'SSG': ['#CE0E2D', '#B22222'],
-      'KT': ['#000000', '#2F2F2F'],
-      '한화': ['#FF6600', '#FF4500'],
-      'NC': ['#315288', '#4169E1'],
-      '키움': ['#570514', '#8B0000'],
+  const getTeamInfo = (teamId: string | number) => {
+    const teamInfoMap: { [key: string]: { name: string; colors: string[] } } = {
+      // 숫자 ID로 매핑
+      '1': { name: 'KIA', colors: ['#EA0029', '#DC143C'] },
+      '2': { name: '삼성', colors: ['#074CA1', '#0066CC'] },
+      '3': { name: 'LG', colors: ['#C30452', '#8B0000'] },
+      '4': { name: '두산', colors: ['#131230', '#000080'] },
+      '5': { name: 'KT', colors: ['#000000', '#2F2F2F'] },
+      '6': { name: 'SSG', colors: ['#CE0E2D', '#B22222'] },
+      '7': { name: '롯데', colors: ['#041E42', '#000080'] },
+      '8': { name: '한화', colors: ['#FF6600', '#FF4500'] },
+      '9': { name: 'NC', colors: ['#315288', '#4169E1'] },
+      '10': { name: '키움', colors: ['#570514', '#8B0000'] },
+      // 문자열 ID도 지원 (기존 호환성)
+      'LG': { name: 'LG', colors: ['#C30452', '#8B0000'] },
+      '두산': { name: '두산', colors: ['#131230', '#000080'] },
+      'KIA': { name: 'KIA', colors: ['#EA0029', '#DC143C'] },
+      '삼성': { name: '삼성', colors: ['#074CA1', '#0066CC'] },
+      '롯데': { name: '롯데', colors: ['#041E42', '#000080'] },
+      'SSG': { name: 'SSG', colors: ['#CE0E2D', '#B22222'] },
+      'KT': { name: 'KT', colors: ['#000000', '#2F2F2F'] },
+      '한화': { name: '한화', colors: ['#FF6600', '#FF4500'] },
+      'NC': { name: 'NC', colors: ['#315288', '#4169E1'] },
+      '키움': { name: '키움', colors: ['#570514', '#8B0000'] },
     };
-    return teamColorMap[teamId] || ['#007AFF', '#0066CC'];
+    const key = String(teamId);
+    return teamInfoMap[key] || { name: `팀 ${teamId}`, colors: ['#007AFF', '#0066CC'] };
   };
 
-  const teamColors = getTeamColors(room.teamId);
+  const teamInfo = getTeamInfo(room.teamId);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={[styles.header, { backgroundColor: themeColor }]}>
         <TouchableOpacity onPress={() => {
           if (navigation.canGoBack()) {
@@ -134,8 +148,8 @@ export const MatchChatRoomDetailScreen = () => {
                   {room.currentParticipants}/{room.maxParticipants} 선수
                 </Text>
               </View>
-              <View style={[styles.teamBadge, { backgroundColor: teamColors[0] }]}>
-                <Text style={styles.teamText}>{room.teamId}</Text>
+              <View style={[styles.teamBadge, { backgroundColor: teamInfo.colors[0] }]}>
+                <Text style={styles.teamText}>{teamInfo.name}</Text>
               </View>
             </View>
             
@@ -227,7 +241,7 @@ export const MatchChatRoomDetailScreen = () => {
         </View>
       </ScrollView>
 
-    </SafeAreaView>
+    </View>
   );
 };
 

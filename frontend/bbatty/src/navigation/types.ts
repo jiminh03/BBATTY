@@ -110,6 +110,7 @@ export type ChatStackParamList = {
     websocketUrl: string;
     sessionToken: string;
   };
+  ChatRoomSearch: undefined;
 };
 
 // 마이페이지 스택 파라미터 (간소화)

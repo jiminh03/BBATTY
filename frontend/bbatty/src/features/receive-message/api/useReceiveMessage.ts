@@ -96,7 +96,7 @@ export const useReceiveMessage = (roomId: string): UseReceiveMessageReturn => {
       // 채팅 타입에 따른 WebSocket URL 결정
       const wsUrl = currentRoom.type === 'game' 
         ? 'ws://i13a403.p.ssafy.io:8084/ws/game-chat'
-        : 'ws://i13a403.p.ssafy.io:8084/ws/match-chat';
+        : 'ws://i13a403.p.ssafy.io:8083/ws/match-chat';
 
       // 게임 채팅의 경우 추가 파라미터 필요
       const queryParams = currentRoom.type === 'game' 
