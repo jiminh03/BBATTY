@@ -2,6 +2,7 @@ package com.ssafy.bbatty.domain.user.controller;
 
 import com.ssafy.bbatty.domain.auth.dto.response.NicknameCheckResponse;
 import com.ssafy.bbatty.domain.user.dto.response.UserBadgeResponse;
+import com.ssafy.bbatty.domain.user.dto.request.PrivacyUpdateRequestDto;
 import com.ssafy.bbatty.domain.user.dto.request.UserUpdateRequestDto;
 import com.ssafy.bbatty.domain.user.dto.response.UserResponseDto;
 import com.ssafy.bbatty.domain.user.service.UserService;
@@ -120,15 +121,13 @@ public class UserController {
      */
     @PutMapping("/privacy")
     public ResponseEntity<ApiResponse<Void>> updatePrivacySettings(
-            @RequestParam Boolean postsPublic,
-            @RequestParam Boolean statsPublic, 
-            @RequestParam Boolean attendanceRecordsPublic,
+            @RequestBody PrivacyUpdateRequestDto request,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
         userService.updatePrivacySettings(
             userPrincipal.getUserId(), 
-            postsPublic, 
-            statsPublic, 
-            attendanceRecordsPublic
+            request.getPostsPublic(), 
+            request.getStatsPublic(), 
+            request.getAttendanceRecordsPublic()
         );
         return ResponseEntity.ok(ApiResponse.success());
     }

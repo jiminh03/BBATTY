@@ -27,8 +27,8 @@ public class ChatProperties {
     @Getter
     @Setter
     public static class Traffic {
-        private int spikeThreshold = 100;
-        private int windowMinutes = 3;
+        private int spikeThreshold = 50;
+        private int windowMinutes = 1;
     }
 
     @Getter

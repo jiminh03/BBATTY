@@ -292,6 +292,59 @@ public class DistributedSessionManagerServiceImpl implements DistributedSessionM
     }
     
     @Override
+    public int cleanupRoomSessions(String roomId) {
+        try {
+            // 1. 해당 채팅방의 모든 세션 ID 조회
+            String roomSessionsKey = ROOM_SESSIONS_KEY + roomId;
+            Set<Object> sessionIdObjects = redisTemplate.opsForSet().members(roomSessionsKey);
+            Set<String> sessionIds = sessionIdObjects != null ? 
+                sessionIdObjects.stream().map(Object::toString).collect(Collectors.toSet()) : 
+                Collections.emptySet();
+            
+            if (sessionIds == null || sessionIds.isEmpty()) {
+                log.info("정리할 채팅방 세션이 없음 - roomId: {}", roomId);
+                return 0;
+            }
+            
+            log.info("채팅방 세션 정리 시작 - roomId: {}, 세션 수: {}", roomId, sessionIds.size());
+            
+            int cleanedCount = 0;
+            
+            // 2. 각 세션을 로컬 캐시와 WebSocket에서 정리
+            for (String sessionId : sessionIds) {
+                try {
+                    // 로컬 세션 캐시에서 WebSocket 세션 찾기
+                    WebSocketSession webSocketSession = localSessions.get(sessionId);
+                    if (webSocketSession != null && webSocketSession.isOpen()) {
+                        // WebSocket 세션 강제 종료
+                        webSocketSession.close();
+                        log.debug("WebSocket 세션 강제 종료 - sessionId: {}", sessionId);
+                    }
+                    
+                    // 분산 세션에서 해제
+                    unregisterSessionFromAllRooms(sessionId);
+                    cleanedCount++;
+                    
+                } catch (Exception e) {
+                    log.error("개별 세션 정리 실패 - sessionId: {}", sessionId, e);
+                }
+            }
+            
+            // 3. 채팅방 세션 목록 키 삭제
+            redisUtil.deleteKey(roomSessionsKey);
+            
+            log.info("채팅방 세션 정리 완료 - roomId: {}, 정리된 세션 수: {}", 
+                    roomId, cleanedCount);
+            
+            return cleanedCount;
+            
+        } catch (Exception e) {
+            log.error("채팅방 세션 정리 실패 - roomId: {}", roomId, e);
+            return 0;
+        }
+    }
+    
+    @Override
     public void broadcastToRoom(String roomId, String message, String excludeInstanceId) {
         try {
             // Redis Pub/Sub을 통한 다른 인스턴스에 브로드캐스트

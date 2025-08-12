@@ -77,24 +77,27 @@ public class StatisticsServiceImpl implements StatisticsService {
     }
 
     @Override
-    public UserStreakStatsResponse calculateUserStreakStats(Long userId, Long teamId) {
-        log.info("사용자 연승 통계 계산 시작: userId={}, teamId={}", userId, teamId);
+    public UserStreakStatsResponse calculateUserStreakStats(Long userId, String season, Long teamId) {
+        log.info("사용자 연승 통계 계산 시작: userId={}, season={}, teamId={}", userId, season, teamId);
 
-        // 캐시 확인
-        Object cached = statisticsRedisRepository.getUserStreakStats(userId);
+        // 캐시 확인 (시즌별로 캐시)
+        Object cached = statisticsRedisRepository.getUserStreakStats(userId, season);
         if (cached instanceof UserStreakStatsResponse) {
             return (UserStreakStatsResponse) cached;
         }
 
         // 통산 직관 기록 조회 (연승 계산을 위해)
         List<AttendanceRecord> allRecords = getAttendanceRecords(userId, "total", teamId);
+        
+        // 선택 시즌 직관 기록 조회 (승무패 정보를 위해)
+        List<AttendanceRecord> seasonRecords = getAttendanceRecords(userId, season, teamId);
 
-        UserStreakStatsResponse response = buildStreakStats(userId, allRecords);
+        UserStreakStatsResponse response = buildStreakStats(userId, season, allRecords, seasonRecords);
 
         // 캐시 저장
-        statisticsRedisRepository.saveUserStreakStats(userId, response);
+        statisticsRedisRepository.saveUserStreakStats(userId, season, response);
 
-        log.info("사용자 연승 통계 계산 완료: userId={}, currentStreak={}", userId, response.getCurrentWinStreak());
+        log.info("사용자 연승 통계 계산 완료: userId={}, season={}, currentStreak={}", userId, season, response.getCurrentWinStreak());
         return response;
     }
 
@@ -139,7 +142,7 @@ public class StatisticsServiceImpl implements StatisticsService {
         for (Object recordObj : attendanceRecords) {
             try {
                 String recordJson = String.valueOf(recordObj);
-                AttendanceRecord record = attendanceRecordParser.parseAttendanceRecord(recordJson, teamId);
+                AttendanceRecord record = attendanceRecordParser.parseAttendanceRecord(recordJson, userId, teamId);
                 if (record != null) {
                     records.add(record);
                 }
@@ -206,9 +209,9 @@ public class StatisticsServiceImpl implements StatisticsService {
             // 구장별 통계
             updateCounters(stadiumCounters, record.getStadium(), record.getUserGameResult());
 
-            // 상대팀별 통계 (팀 ID 사용)
+            // 상대팀별 통계 (팀 ID 사용) - 자기 팀은 제외
             Long opponentTeamId = record.getOpponentTeamId(record.getUserTeamId());
-            if (opponentTeamId != null) {
+            if (opponentTeamId != null && !opponentTeamId.equals(record.getUserTeamId())) {
                 updateCounters(opponentCounters, String.valueOf(opponentTeamId), record.getUserGameResult());
             }
 
@@ -251,13 +254,13 @@ public class StatisticsServiceImpl implements StatisticsService {
     /**
      * 연승 통계 빌드
      */
-    private UserStreakStatsResponse buildStreakStats(Long userId, List<AttendanceRecord> allRecords) {
+    private UserStreakStatsResponse buildStreakStats(Long userId, String season, List<AttendanceRecord> allRecords, List<AttendanceRecord> seasonRecords) {
         String currentSeason = getCurrentSeason();
 
         // 연승 계산을 위해 시간 순서대로 정렬 (오래된 것부터)
         allRecords.sort((r1, r2) -> r1.getGameDateTime().compareTo(r2.getGameDateTime()));
 
-        int currentWinStreak;
+        int currentWinStreak = 0;
         int maxWinStreakAll = 0;
         int maxWinStreakCurrentSeason = 0;
         Map<String, Integer> maxWinStreakBySeason = new HashMap<>();
@@ -291,16 +294,45 @@ public class StatisticsServiceImpl implements StatisticsService {
             // 무승부는 연승에 영향 없음
         }
 
-        // 현재 연승은 마지막 연승 기록
-        currentWinStreak = tempStreak;
+        // 현재 연승 기록 설정 - 현재 시즌일 때만 실제 진행 중인 연승 기록을 보여줌
+        if (season.equals(currentSeason)) {
+            currentWinStreak = tempStreak; // 현재 진행 중인 연승 기록
+        } else {
+            currentWinStreak = 0; // 과거 시즌이나 통산일 때는 0
+        }
+
+        // 선택 시즌의 승무패 정보 계산
+        int seasonWins = 0;
+        int seasonDraws = 0;
+        int seasonLosses = 0;
+        
+        for (AttendanceRecord record : seasonRecords) {
+            switch (record.getUserGameResult()) {
+                case WIN -> seasonWins++;
+                case DRAW -> seasonDraws++;
+                case LOSS -> seasonLosses++;
+            }
+        }
+
+        // 선택 시즌에 따른 최장 연승 기록 설정
+        int selectedSeasonMaxStreak = 0;
+        if (season.equals("total")) {
+            selectedSeasonMaxStreak = maxWinStreakAll; // 통산 최장 연승
+        } else {
+            selectedSeasonMaxStreak = maxWinStreakBySeason.getOrDefault(season, 0); // 해당 시즌 최장 연승
+        }
 
         return UserStreakStatsResponse.builder()
                 .userId(userId)
-                .currentSeason(currentSeason)
+                .currentSeason(season)
                 .currentWinStreak(currentWinStreak)
                 .maxWinStreakAll(maxWinStreakAll)
-                .maxWinStreakCurrentSeason(maxWinStreakCurrentSeason)
+                .maxWinStreakCurrentSeason(selectedSeasonMaxStreak) // 선택한 시즌의 최장 연승으로 변경
                 .maxWinStreakBySeason(maxWinStreakBySeason)
+                .totalGames(seasonRecords.size())
+                .wins(seasonWins)
+                .draws(seasonDraws)
+                .losses(seasonLosses)
                 .build();
     }
 

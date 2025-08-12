@@ -15,6 +15,9 @@ import com.ssafy.chat.global.exception.ApiException;
 import com.ssafy.chat.match.dto.MatchChatRoom;
 import com.ssafy.chat.match.dto.MatchChatRoomCreateRequest;
 import com.ssafy.chat.match.dto.MatchChatRoomCreateResponse;
+import com.ssafy.chat.match.kafka.MatchChatKafkaProducer;
+import com.ssafy.chat.match.dto.MatchChatMessage;
+import com.ssafy.chat.common.enums.MessageType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -37,6 +40,7 @@ public class MatchChatRoomCreationServiceImpl implements MatchChatRoomCreationSe
     private final ChatAuthResultService chatAuthResultService;
     private final ChatConfiguration chatConfiguration;
     private final ChatRoomUtils chatRoomUtils;
+    private final MatchChatKafkaProducer matchChatKafkaProducer;
 
     @Override
     public MatchChatRoomCreateResponse createMatchChatRoom(MatchChatRoomCreateRequest request, String jwtToken) {
@@ -55,7 +59,10 @@ public class MatchChatRoomCreationServiceImpl implements MatchChatRoomCreationSe
             // 4. Redis에 저장
             saveChatRoomToRedis(chatRoom, getGameDateStr(authResult));
 
-            // 5. 응답 변환
+            // 5. 🚀 토픽 Pre-creation: 즉시 초기화 메시지 전송으로 Consumer 활성화
+            sendInitializationMessage(chatRoom, authResult.getUserInfo());
+
+            // 6. 응답 변환
             return convertToResponse(chatRoom);
 
         } catch (ApiException e) {
@@ -224,6 +231,33 @@ public class MatchChatRoomCreationServiceImpl implements MatchChatRoomCreationSe
         return "match_" + gameId + "_" + Long.toHexString(System.currentTimeMillis());
     }
 
+    /**
+     * 🚀 토픽 Pre-creation: 초기화 메시지 전송으로 Consumer가 새 토픽을 즉시 인식하게 함
+     */
+    private void sendInitializationMessage(MatchChatRoom chatRoom, UserInfo creator) {
+        try {
+            // 채팅방 생성 시스템 메시지 생성
+            MatchChatMessage initMessage = new MatchChatMessage();
+            initMessage.setMessageType(MessageType.SYSTEM);
+            initMessage.setRoomId(chatRoom.getMatchId());
+            initMessage.setUserId(creator.getUserId());
+            initMessage.setNickname("시스템");
+            initMessage.setContent("🎯 " + chatRoom.getMatchTitle() + " 채팅방이 생성되었습니다!");
+            initMessage.setTimestamp(KSTTimeUtil.nowAsTimestamp());
+            initMessage.setWinFairy(false);
+            
+            // Kafka로 즉시 전송하여 토픽 생성 및 Consumer 활성화
+            matchChatKafkaProducer.sendChatMessage(chatRoom.getMatchId(), initMessage);
+            
+            log.info("🚀 토픽 Pre-creation 완료 - matchId: {}, 토픽: match-chat-{}", 
+                    chatRoom.getMatchId(), chatRoom.getMatchId());
+            
+        } catch (Exception e) {
+            // 초기화 메시지 실패해도 채팅방 생성은 계속 진행
+            log.error("🚨 토픽 초기화 메시지 전송 실패 - matchId: {}", chatRoom.getMatchId(), e);
+        }
+    }
+
 
     /**
      * Map을 AuthResult로 변환
@@ -251,11 +285,16 @@ public class MatchChatRoomCreationServiceImpl implements MatchChatRoomCreationSe
                 .isWinFairy(userInfoMap.get("isWinFairy") != null ? (Boolean) userInfoMap.get("isWinFairy") : false)
                 .build();
 
+        // additionalInfo 설정 (게임 날짜 포함)
+        @SuppressWarnings("unchecked")
+        Map<String, Object> additionalInfo = (Map<String, Object>) authResultMap.get("additionalInfo");
+
         return AuthResult.builder()
                 .success(success)
                 .userInfo(userInfo)
                 .requestId((String) authResultMap.get("requestId"))
                 .timestamp(System.currentTimeMillis())
+                .additionalInfo(additionalInfo)
                 .build();
     }
 
@@ -263,7 +302,17 @@ public class MatchChatRoomCreationServiceImpl implements MatchChatRoomCreationSe
      * 게임 날짜 문자열 추출
      */
     private String getGameDateStr(AuthResult authResult) {
-        // AuthResult에서 게임 날짜 정보를 추출하거나 현재 날짜 사용
+        try {
+            // AuthResult에서 게임 날짜 정보를 추출
+            if (authResult.getAdditionalInfo() != null && 
+                authResult.getAdditionalInfo().containsKey("gameDate")) {
+                return authResult.getAdditionalInfo().get("gameDate").toString();
+            }
+        } catch (Exception e) {
+            log.warn("게임 날짜 추출 실패, 현재 날짜 사용 - error: {}", e.getMessage());
+        }
+        
+        // 실패 시 현재 날짜 사용 (fallback)
         return KSTTimeUtil.todayAsString();
     }
 

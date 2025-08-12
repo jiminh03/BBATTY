@@ -14,4 +14,5 @@ import java.util.List;
 public class GlobalRankingResponse {
     private String season;
     private List<UserRankingDto> rankings;
+    private UserRankingDto myRanking;
 }
