@@ -7,6 +7,7 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
@@ -176,53 +177,78 @@ export const MatchChatRoomListScreen = () => {
       <TouchableOpacity
         style={styles.roomItem}
         onPress={() => navigation.navigate('MatchChatRoomDetail', { room: item })}
+        activeOpacity={0.9}
       >
-        <View style={styles.roomHeader}>
+        <View style={styles.topSection}>
+          <LinearGradient
+            colors={['#049fbb', '#50f6ff']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.gradientBackground}
+          />
+          
+          {/* 장식적 테두리 요소 */}
+          <View style={styles.borderElement} />
+          
+          {/* 헤더 영역 */}
+          <View style={styles.roomHeader}>
+            <View style={styles.logoContainer}>
+              <View style={[styles.teamBadge, { backgroundColor: teamInfo.color }]}>
+                <Text style={styles.teamText}>{teamInfo.name}</Text>
+              </View>
+            </View>
+            <View style={styles.socialMediaContainer}>
+              <Text style={[styles.statusText, { color: '#ffffff' }]}>
+                {item.status === 'ACTIVE' ? '모집중' : '마감'}
+              </Text>
+            </View>
+          </View>
+
+          {/* 제목 영역 */}
           <View style={styles.titleContainer}>
             <Text style={styles.roomTitle}>{item.matchTitle}</Text>
-            <Text style={styles.roomDescription} numberOfLines={1}>
+            <Text style={styles.roomDescription} numberOfLines={2}>
               {item.matchDescription}
             </Text>
           </View>
-          <View style={[styles.teamBadge, { backgroundColor: teamInfo.color }]}>
-            <Text style={styles.teamText}>{teamInfo.name}</Text>
+        </View>
+
+        <View style={styles.bottomContent}>
+          <View style={styles.roomInfo}>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>연령</Text>
+              <Text style={styles.infoValue}>{item.minAge}-{item.maxAge}세</Text>
+            </View>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>참여자</Text>
+              <Text style={[styles.infoValue, styles.participantCount]}>
+                {item.currentParticipants}/{item.maxParticipants}
+              </Text>
+            </View>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>성별</Text>
+              <Text style={styles.infoValue}>
+                {item.genderCondition === 'ALL' ? '전체' : 
+                 item.genderCondition === 'MALE' ? '남성' : '여성'}
+              </Text>
+            </View>
+          </View>
+          
+          <View style={styles.roomFooter}>
+            <Text style={styles.createdAt}>
+              {formatDate(item.createdAt)}
+            </Text>
+            <View style={[
+              styles.statusBadge, 
+              item.status === 'ACTIVE' ? styles.activeBadge : styles.inactiveBadge
+            ]}>
+              <Text style={[styles.statusText, { color: item.status === 'ACTIVE' ? '#4CAF50' : '#999' }]}>
+                {item.status === 'ACTIVE' ? '입장 가능' : '마감됨'}
+              </Text>
+            </View>
           </View>
         </View>
-      
-      <View style={styles.roomInfo}>
-        <View style={styles.infoItem}>
-          <Text style={styles.infoLabel}>연령</Text>
-          <Text style={styles.infoValue}>{item.minAge}-{item.maxAge}세</Text>
-        </View>
-        <View style={styles.infoItem}>
-          <Text style={styles.infoLabel}>참여자</Text>
-          <Text style={[styles.infoValue, styles.participantCount]}>
-            {item.currentParticipants}/{item.maxParticipants}
-          </Text>
-        </View>
-        <View style={styles.infoItem}>
-          <Text style={styles.infoLabel}>성별</Text>
-          <Text style={styles.infoValue}>
-            {item.genderCondition === 'ALL' ? '전체' : 
-             item.genderCondition === 'MALE' ? '남성' : '여성'}
-          </Text>
-        </View>
-      </View>
-      
-      <View style={styles.roomFooter}>
-        <Text style={styles.createdAt}>
-          {formatDate(item.createdAt)}
-        </Text>
-        <View style={[
-          styles.statusBadge, 
-          item.status === 'ACTIVE' ? styles.activeBadge : styles.inactiveBadge
-        ]}>
-          <Text style={styles.statusText}>
-            {item.status === 'ACTIVE' ? '모집중' : '마감'}
-          </Text>
-        </View>
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
     );
   };
 

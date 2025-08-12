@@ -180,4 +180,105 @@ export const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 14,
   },
+  
+  // 새로 추가된 스타일들
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  headerContent: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  backButtonText: {
+    color: '#ffffff',
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  messagesList: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  messagesContent: {
+    padding: 16,
+    flexGrow: 1,
+  },
+  messageItem: {
+    marginVertical: 4,
+  },
+  chatMessage: {
+    backgroundColor: '#ffffff',
+    padding: 12,
+    borderRadius: 12,
+    marginVertical: 2,
+    maxWidth: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  myMessage: {
+    alignSelf: 'flex-end',
+    backgroundColor: '#007AFF',
+  },
+  pendingMessage: {
+    opacity: 0.8,
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    borderStyle: 'dashed',
+  },
+  messageHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  messageNickname: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+  },
+  messageContent: {
+    fontSize: 16,
+    lineHeight: 20,
+    color: '#333',
+    marginBottom: 4,
+  },
+  messageTime: {
+    fontSize: 10,
+    color: '#999',
+    alignSelf: 'flex-end',
+  },
+  systemMessage: {
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  systemMessageText: {
+    fontSize: 12,
+    color: '#999',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  messageInput: {
+    flexDirection: 'row',
+    padding: 16,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    alignItems: 'flex-end',
+  },
 });

@@ -6,6 +6,7 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
@@ -140,49 +141,64 @@ export const MatchChatRoomDetailScreen = () => {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.roomCard}>
-          <View style={[styles.cardGradient, { backgroundColor: '#FFFFFF' }]}>
+          <View style={styles.cardGradient}>
+            <LinearGradient
+              colors={['#049fbb', '#50f6ff']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.gradientBackground}
+            />
+            
+            {/* 장식적 테두리 요소 */}
+            <View style={styles.borderElement} />
+            
+            {/* 헤더 영역 */}
             <View style={styles.roomHeader}>
-              <View style={styles.titleContainer}>
-                <Text style={styles.roomTitle}>{room.matchTitle}</Text>
-                <Text style={styles.participantCount}>
-                  {room.currentParticipants}/{room.maxParticipants} 선수
-                </Text>
-              </View>
               <View style={[styles.teamBadge, { backgroundColor: teamInfo.colors[0] }]}>
                 <Text style={styles.teamText}>{teamInfo.name}</Text>
               </View>
-            </View>
-            
-            <Text style={styles.roomDescription}>{room.matchDescription}</Text>
-            
-            <View style={styles.statusContainer}>
-              <View style={[
-                styles.statusBadge,
-                isRoomActive ? styles.activeBadge : styles.inactiveBadge
-              ]}>
-                <Text style={[
-                  styles.statusText,
-                  isRoomActive ? styles.activeText : styles.inactiveText
+              <View style={styles.statusContainer}>
+                <View style={[
+                  styles.statusBadge,
+                  isRoomActive ? styles.activeBadge : styles.inactiveBadge
                 ]}>
-                  {isRoomActive ? '경기중' : '대기중'}
-                </Text>
-              </View>
-              
-              {isRoomFull && (
-                <View style={styles.fullBadge}>
-                  <Text style={styles.fullText}>만루</Text>
+                  <Text style={[
+                    styles.statusText,
+                    isRoomActive ? styles.activeText : styles.inactiveText
+                  ]}>
+                    {isRoomActive ? '경기중' : '대기중'}
+                  </Text>
                 </View>
-              )}
+                
+                {isRoomFull && (
+                  <View style={styles.fullBadge}>
+                    <Text style={styles.fullText}>만루</Text>
+                  </View>
+                )}
+              </View>
             </View>
+
+            {/* 제목 영역 */}
+            <View style={styles.titleContainer}>
+              <Text style={styles.roomTitle}>{room.matchTitle}</Text>
+              <Text style={styles.participantCount}>
+                {room.currentParticipants}/{room.maxParticipants} 명 참여중
+              </Text>
+              <Text style={styles.roomDescription}>{room.matchDescription}</Text>
+            </View>
+          </View>
+          
+          <View style={styles.bottomContent}>
+            {/* 추가적인 정보가 필요하다면 여기에 */}
           </View>
         </View>
 
         <View style={styles.infoSection}>
-          <Text style={styles.sectionTitle}>엔트리 조건</Text>
+          <Text style={styles.sectionTitle}>참여 정보</Text>
           
           <View style={styles.infoGrid}>
             <View style={styles.infoCard}>
-              <Text style={styles.infoCardLabel}>선수단</Text>
+              <Text style={styles.infoCardLabel}>참여자</Text>
               <Text style={styles.infoCardValue}>
                 {room.currentParticipants}/{room.maxParticipants}명
               </Text>
@@ -196,7 +212,7 @@ export const MatchChatRoomDetailScreen = () => {
 
           <View style={styles.infoGrid}>
             <View style={styles.infoCard}>
-              <Text style={styles.infoCardLabel}>참가 조건</Text>
+              <Text style={styles.infoCardLabel}>성별 조건</Text>
               <Text style={styles.infoCardValue}>{getGenderText(room.genderCondition)}</Text>
             </View>
             
@@ -222,7 +238,7 @@ export const MatchChatRoomDetailScreen = () => {
           {(!isRoomActive || isRoomFull) ? (
             <View style={styles.joinButtonDisabled}>
               <Text style={styles.joinButtonTextDisabled}>
-                {!isRoomActive ? '경기 대기중' : '만루 (인원 마감)'}
+                {!isRoomActive ? '대기중' : '인원 마감'}
               </Text>
             </View>
           ) : (
@@ -233,9 +249,9 @@ export const MatchChatRoomDetailScreen = () => {
               activeOpacity={0.8}
             >
               <Text style={styles.joinButtonText}>
-                {joining ? '참여중...' : '경기 참여하기'}
+                {joining ? '참여중...' : '채팅방 참여하기'}
               </Text>
-              <Text style={styles.joinButtonSubtext}>지금 바로 선수 등록</Text>
+              <Text style={styles.joinButtonSubtext}>지금 바로 입장하기</Text>
             </TouchableOpacity>
           )}
         </View>
