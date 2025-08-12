@@ -1,5 +1,8 @@
 import { StyleSheet } from 'react-native';
 
+// 공통 헤더 높이 상수
+const HEADER_HEIGHT = 56;
+
 export const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -10,7 +13,7 @@ export const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    height: HEADER_HEIGHT,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,

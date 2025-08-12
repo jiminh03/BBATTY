@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ExploreStackScreenProps } from '../../navigation/types';
 import { useThemeColor } from '../../shared/team/ThemeContext';
 import TeamRankingContent from './TeamRankingScreen';
@@ -17,6 +18,7 @@ const tabs = [
 export default function CommunityHomeScreen({ navigation, route }: Props) {
   const [activeTab, setActiveTab] = useState('teamranking');
   const themeColor = useThemeColor();
+  const insets = useSafeAreaInsets();
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -32,7 +34,7 @@ export default function CommunityHomeScreen({ navigation, route }: Props) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={[styles.header, { backgroundColor: themeColor }]}>
         <Text style={styles.headerTitle}>탐색</Text>
       </View>
@@ -44,8 +46,7 @@ export default function CommunityHomeScreen({ navigation, route }: Props) {
             style={[
               styles.tab, 
               activeTab === tab.id && { 
-                ...styles.activeTab, 
-                borderColor: themeColor 
+                borderBottomColor: themeColor 
               }
             ]}
             onPress={() => setActiveTab(tab.id)}
@@ -53,7 +54,6 @@ export default function CommunityHomeScreen({ navigation, route }: Props) {
             <Text style={[
               styles.tabText, 
               activeTab === tab.id && { 
-                ...styles.activeTabText, 
                 color: themeColor 
               }
             ]}>
@@ -66,9 +66,12 @@ export default function CommunityHomeScreen({ navigation, route }: Props) {
       <View style={styles.content}>
         {renderTabContent()}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
+
+// 공통 헤더 높이 상수
+const HEADER_HEIGHT = 56;
 
 const styles = StyleSheet.create({
   container: {
@@ -77,8 +80,9 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    height: HEADER_HEIGHT,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
     fontSize: 20,
@@ -87,30 +91,24 @@ const styles = StyleSheet.create({
   },
   tabsContainer: {
     flexDirection: 'row',
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
   },
   tab: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    marginHorizontal: 4,
-    borderRadius: 8,
-    backgroundColor: '#ffffff',
+    paddingVertical: 16,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
   },
   activeTab: {
-    backgroundColor: '#ffffff',
-    borderWidth: 2,
+    borderBottomWidth: 2,
   },
   tabText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#333333',
+    color: '#666666',
   },
   activeTabText: {
   },

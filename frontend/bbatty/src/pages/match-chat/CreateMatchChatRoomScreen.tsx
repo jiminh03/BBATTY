@@ -5,13 +5,13 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   Alert,
   KeyboardAvoidingView,
   Platform,
   Modal,
   FlatList,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { chatRoomApi } from '../../entities/chat-room/api/api';
@@ -20,6 +20,7 @@ import type { CreateMatchChatRoomRequest } from '../../entities/chat-room/api/ty
 import type { Game } from '../../entities/game';
 import type { ChatStackParamList } from '../../navigation/types';
 import { useThemeColor } from '../../shared/team/ThemeContext';
+import { useUserStore } from '../../entities/user/model/userStore';
 import { styles } from './CreateMatchChatRoomScreen.styles';
 
 type NavigationProp = StackNavigationProp<ChatStackParamList>;
@@ -52,6 +53,9 @@ const GENDER_OPTIONS = [
 export const CreateMatchChatRoomScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const themeColor = useThemeColor();
+  const getCurrentUser = useUserStore((state) => state.getCurrentUser);
+  const currentUser = getCurrentUser();
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(false);
   const [gamesLoading, setGamesLoading] = useState(false);
   const [showGameModal, setShowGameModal] = useState(false);
@@ -62,12 +66,12 @@ export const CreateMatchChatRoomScreen = () => {
     gameId: 0, // 경기 선택 후 설정
     matchTitle: '',
     matchDescription: '',
-    teamId: 1, // LG 팀 ID (실제 서버 팀 ID로 매핑 필요)
+    teamId: currentUser?.teamId || 1,
     minAge: 20,
     maxAge: 30,
     genderCondition: 'ALL',
     maxParticipants: 10,
-    nickname: '',
+    nickname: currentUser?.nickname || '',
   });
 
   useEffect(() => {
@@ -132,10 +136,6 @@ export const CreateMatchChatRoomScreen = () => {
       return;
     }
 
-    if (!formData.nickname.trim()) {
-      Alert.alert('알림', '닉네임을 입력해주세요.');
-      return;
-    }
 
     if (formData.minAge >= formData.maxAge) {
       Alert.alert('알림', '최대 나이는 최소 나이보다 커야 합니다.');
@@ -187,7 +187,7 @@ export const CreateMatchChatRoomScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <KeyboardAvoidingView 
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -262,28 +262,6 @@ export const CreateMatchChatRoomScreen = () => {
             />
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.label}>응원팀</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.teamContainer}>
-              {TEAMS.map((team) => (
-                <TouchableOpacity
-                  key={team}
-                  style={[
-                    styles.teamButton,
-                    formData.teamId === TEAM_ID_MAP[team] && styles.selectedTeamButton
-                  ]}
-                  onPress={() => updateFormData('teamId', team)}
-                >
-                  <Text style={[
-                    styles.teamButtonText,
-                    formData.teamId === TEAM_ID_MAP[team] && styles.selectedTeamButtonText
-                  ]}>
-                    {team}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
 
           <View style={styles.section}>
             <Text style={styles.label}>참여 조건</Text>
@@ -335,16 +313,6 @@ export const CreateMatchChatRoomScreen = () => {
             </View>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.label}>닉네임 *</Text>
-            <TextInput
-              style={styles.textInput}
-              value={formData.nickname}
-              onChangeText={(text) => updateFormData('nickname', text)}
-              placeholder="채팅방에서 사용할 닉네임을 입력하세요"
-              maxLength={20}
-            />
-          </View>
 
           <View style={styles.section}>
             <Text style={styles.label}>최대 참여 인원</Text>
@@ -374,7 +342,7 @@ export const CreateMatchChatRoomScreen = () => {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowGameModal(false)}
       >
-        <SafeAreaView style={styles.modalContainer}>
+        <View style={[styles.modalContainer, { paddingTop: insets.top }]}>
           <View style={[styles.modalHeader, { backgroundColor: themeColor }]}>
             <TouchableOpacity onPress={() => setShowGameModal(false)}>
               <Text style={[styles.modalCancelButton, { color: '#ffffff' }]}>취소</Text>
@@ -414,9 +382,9 @@ export const CreateMatchChatRoomScreen = () => {
             )}
             showsVerticalScrollIndicator={false}
           />
-        </SafeAreaView>
+        </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
 
