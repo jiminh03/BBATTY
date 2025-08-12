@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   FlatList,
-  RefreshControl,
   Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,22 +13,17 @@ import type { StackNavigationProp } from '@react-navigation/stack';
 import { chatRoomApi } from '../../entities/chat-room/api/api';
 import type { MatchChatRoom } from '../../entities/chat-room/api/types';
 import type { ChatStackParamList } from '../../navigation/types';
-import { useUserStore } from '../../entities/user/model/userStore';
-import { useTokenStore } from '../../shared/api/token/tokenStore';
 import { useThemeColor } from '../../shared/team/ThemeContext';
-import { BaseballAnimation } from '../../features/match-chat/components/BaseballAnimation';
 import { styles } from './MatchChatRoomListScreen.styles';
 
 type NavigationProp = StackNavigationProp<ChatStackParamList>;
 
-export const MatchChatRoomListScreen = () => {
+export default function ChatRoomSearchScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const getCurrentUser = useUserStore((state) => state.getCurrentUser);
-  const { getAccessToken } = useTokenStore();
-  const [rooms, setRooms] = useState<MatchChatRoom[]>([]);
+  const [searchKeyword, setSearchKeyword] = useState('');
+  const [searchResults, setSearchResults] = useState<MatchChatRoom[]>([]);
   const [loading, setLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [showAnimation, setShowAnimation] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
   const themeColor = useThemeColor();
   const insets = useSafeAreaInsets();
 
@@ -61,100 +56,35 @@ export const MatchChatRoomListScreen = () => {
     return teamInfoMap[key] || { name: `팀 ${teamId}`, color: '#007AFF' };
   };
 
-  const loadRooms = async () => {
+  const executeSearch = async () => {
+    if (!searchKeyword.trim()) {
+      Alert.alert('알림', '검색어를 입력해주세요.');
+      return;
+    }
+
     try {
       setLoading(true);
-      const response = await chatRoomApi.getMatchChatRooms();
+      const response = await chatRoomApi.getMatchChatRooms(searchKeyword.trim());
       
       if (response.data?.data?.chatRooms) {
-        setRooms(response.data.data.chatRooms);
+        setSearchResults(response.data.data.chatRooms);
       } else if (response.data?.data?.rooms) {
-        setRooms(response.data.data.rooms);
+        setSearchResults(response.data.data.rooms);
       } else if (response.data?.rooms) {
-        // 목 데이터 형식 (기존 호환성)
-        setRooms(response.data.rooms);
+        setSearchResults(response.data.rooms);
       } else {
-        Alert.alert('오류', '채팅방 목록을 불러오는데 실패했습니다.');
+        setSearchResults([]);
       }
+      setHasSearched(true);
     } catch (error) {
-      console.error('채팅방 목록 로드 실패:', error);
-      Alert.alert('오류', '채팅방 목록을 불러오는데 실패했습니다.');
+      console.error('채팅방 검색 실패:', error);
+      Alert.alert('오류', '채팅방 검색에 실패했습니다.');
+      setSearchResults([]);
+      setHasSearched(true);
     } finally {
       setLoading(false);
     }
   };
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadRooms();
-    setRefreshing(false);
-  };
-
-
-  const handleWatchChatJoin = async () => {
-    // 애니메이션 시작
-    setShowAnimation(true);
-  };
-
-  const onNavigateToChat = async () => {
-    try {
-      const currentUser = getCurrentUser();
-      
-      if (!currentUser) {
-        Alert.alert('오류', '사용자 정보를 찾을 수 없습니다.');
-        return;
-      }
-
-      const watchRequest = {
-        gameId: 1258,
-        teamId: currentUser.teamId,
-        isAttendanceVerified: true
-      };
-
-      const response = await chatRoomApi.joinWatchChat(watchRequest);
-      console.log('Watch chat API response:', response.data);
-      
-      if (response.data.status === 'SUCCESS') {
-        // 워치 채팅방으로 이동 (기존 화면 대체하여 스택 중복 방지)
-        navigation.push('MatchChatRoom', {
-          room: {
-            matchId: 'watch_chat_' + Date.now(),
-            gameId: watchRequest.gameId.toString(),
-            matchTitle: '직관채팅',
-            matchDescription: '모든 팬들이 함께 경기를 시청하며 채팅하는 공간',
-            teamId: '전체',
-            minAge: 0,
-            maxAge: 100,
-            genderCondition: 'ALL',
-            maxParticipants: 999,
-            currentParticipants: 0,
-            createdAt: new Date().toISOString(),
-            status: 'ACTIVE',
-            websocketUrl: response.data.data.websocketUrl
-          },
-          websocketUrl: response.data.data.websocketUrl,
-          sessionToken: response.data.data.sessionToken
-        });
-      } else {
-        Alert.alert('오류', response.data.message || '워치 채팅 참여에 실패했습니다.');
-      }
-    } catch (error) {
-      console.error('워치 채팅 참여 실패:', error);
-      Alert.alert('오류', '워치 채팅 참여에 실패했습니다.');
-    }
-  };
-
-  const onAnimationComplete = () => {
-    setShowAnimation(false);
-  };
-
-  useEffect(() => {
-    loadRooms();
-    
-    // 토큰 로그 출력
-    const token = getAccessToken();
-    console.log('📱 매칭채팅 목록 - 현재 액세스 토큰:', token);
-  }, []);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -229,68 +159,67 @@ export const MatchChatRoomListScreen = () => {
   const EmptyComponent = () => (
     <View style={styles.emptyContainer}>
       <View style={styles.emptyIconContainer}>
-        <Text style={styles.emptyIcon}>📝</Text>
+        <Text style={styles.emptyIcon}>🔍</Text>
       </View>
-      <Text style={styles.emptyText}>아직 생성된 매치룸이 없습니다</Text>
-      <Text style={styles.emptySubtext}>첫 번째 매치룸을 만들어보세요!</Text>
-      <TouchableOpacity
-        style={[styles.createButton, { backgroundColor: themeColor }]}
-        onPress={() => navigation.navigate('CreateMatchChatRoom')}
-      >
-        <Text style={styles.createButtonText}>매치룸 개설하기</Text>
-      </TouchableOpacity>
+      {hasSearched ? (
+        <>
+          <Text style={styles.emptyText}>검색 결과가 없습니다</Text>
+          <Text style={styles.emptySubtext}>다른 검색어로 다시 시도해보세요</Text>
+        </>
+      ) : (
+        <>
+          <Text style={styles.emptyText}>채팅방을 검색해보세요</Text>
+          <Text style={styles.emptySubtext}>채팅방 제목으로 검색할 수 있습니다</Text>
+        </>
+      )}
     </View>
   );
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={[styles.header, { backgroundColor: themeColor }]}>
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>매칭채팅</Text>
-        </View>
-        <View style={styles.headerButtons}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.backButtonText}>←</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>채팅방 검색</Text>
+        <View style={styles.placeholder} />
+      </View>
+
+      <View style={styles.searchContainer}>
+        <View style={styles.searchInputContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="채팅방 제목, 설명, 팀명으로 검색..."
+            placeholderTextColor="#999"
+            value={searchKeyword}
+            onChangeText={setSearchKeyword}
+            autoFocus={true}
+            returnKeyType="search"
+            onSubmitEditing={executeSearch}
+          />
           <TouchableOpacity
-            style={styles.watchChatButton}
-            onPress={() => handleWatchChatJoin()}
+            style={styles.searchButtonInline}
+            onPress={executeSearch}
+            disabled={loading}
           >
-            <Text style={styles.watchChatButtonText}>직관채팅</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={() => navigation.navigate('CreateMatchChatRoom')}
-          >
-            <Text style={styles.headerButtonText}>매치룸 개설</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.searchButton}
-            onPress={() => navigation.navigate('ChatRoomSearch')}
-          >
-            <Text style={styles.searchButtonText}>⌕</Text>
+            <Text style={styles.searchButtonInlineText}>
+              {loading ? '검색중...' : '검색'}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
 
-
       <FlatList
-        data={rooms}
+        data={searchResults}
         renderItem={renderRoomItem}
         keyExtractor={(item) => item.matchId}
         contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        ListEmptyComponent={!loading ? EmptyComponent : null}
+        ListEmptyComponent={EmptyComponent}
         showsVerticalScrollIndicator={false}
       />
-      
-      {/* 야구 애니메이션 */}
-      {showAnimation && (
-        <BaseballAnimation 
-          onAnimationComplete={onAnimationComplete}
-          onNavigate={onNavigateToChat}
-        />
-      )}
     </View>
   );
-};
-
+}
