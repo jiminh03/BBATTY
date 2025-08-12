@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@csark0812/zustand-expo-devtools": "^2.0.2",
-    "@react-native-async-storage/async-storage": "2.1.2",
+    "@react-native-async-storage/async-storage": "^2.1.2",
     "@react-native-community/netinfo": "11.4.1",
     "@react-native-kakao/core": "^2.4.0",
     "@react-native-kakao/user": "^2.4.0",
@@ -28,6 +28,7 @@
     "expo-image-picker": "^16.1.4",
     "expo-linking": "~7.1.7",
     "expo-location": "^18.1.6",
+    "expo-maps": "~0.11.0",
     "expo-secure-store": "~14.2.3",
     "expo-status-bar": "~2.2.3",
     "react": "19.0.0",
@@ -40,8 +41,7 @@
     "react-native-screens": "~4.11.1",
     "react-native-vector-icons": "^10.3.0",
     "react-native-web": "^0.20.0",
-    "zustand": "^5.0.6",
-    "expo-maps": "~0.11.0"
+    "zustand": "^5.0.7"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
