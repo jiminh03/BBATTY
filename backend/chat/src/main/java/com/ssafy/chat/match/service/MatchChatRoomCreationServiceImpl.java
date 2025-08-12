@@ -285,11 +285,16 @@ public class MatchChatRoomCreationServiceImpl implements MatchChatRoomCreationSe
                 .isWinFairy(userInfoMap.get("isWinFairy") != null ? (Boolean) userInfoMap.get("isWinFairy") : false)
                 .build();
 
+        // additionalInfo 설정 (게임 날짜 포함)
+        @SuppressWarnings("unchecked")
+        Map<String, Object> additionalInfo = (Map<String, Object>) authResultMap.get("additionalInfo");
+
         return AuthResult.builder()
                 .success(success)
                 .userInfo(userInfo)
                 .requestId((String) authResultMap.get("requestId"))
                 .timestamp(System.currentTimeMillis())
+                .additionalInfo(additionalInfo)
                 .build();
     }
 
@@ -297,7 +302,17 @@ public class MatchChatRoomCreationServiceImpl implements MatchChatRoomCreationSe
      * 게임 날짜 문자열 추출
      */
     private String getGameDateStr(AuthResult authResult) {
-        // AuthResult에서 게임 날짜 정보를 추출하거나 현재 날짜 사용
+        try {
+            // AuthResult에서 게임 날짜 정보를 추출
+            if (authResult.getAdditionalInfo() != null && 
+                authResult.getAdditionalInfo().containsKey("gameDate")) {
+                return authResult.getAdditionalInfo().get("gameDate").toString();
+            }
+        } catch (Exception e) {
+            log.warn("게임 날짜 추출 실패, 현재 날짜 사용 - error: {}", e.getMessage());
+        }
+        
+        // 실패 시 현재 날짜 사용 (fallback)
         return KSTTimeUtil.todayAsString();
     }
 

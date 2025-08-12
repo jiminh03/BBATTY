@@ -91,6 +91,13 @@ public interface DistributedSessionManagerService {
      */
     int cleanupInstanceSessions(String instanceId);
     
+    /**
+     * 특정 채팅방의 모든 세션 정리 (채팅방 종료 시)
+     * @param roomId 채팅방 ID
+     * @return 정리된 세션 수
+     */
+    int cleanupRoomSessions(String roomId);
+    
     // ===========================================
     // 분산 메시지 브로드캐스트
     // ===========================================
