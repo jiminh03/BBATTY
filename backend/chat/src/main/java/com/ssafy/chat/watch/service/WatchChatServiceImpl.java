@@ -110,13 +110,13 @@ public class WatchChatServiceImpl implements WatchChatService {
                 }
             }
             
-            // 임계값 초과 시 로그 출력
+            // 임계값 초과 시 "불이 났어요" 메시지 전송
             if (chatRoomUtils.isTrafficSpike(totalMessages)) {
                 log.warn("관전 채팅 트래픽 급증 감지 - roomId: {}, 최근 {}분간 메시지: {}개", 
                         roomId, chatRoomUtils.getTrafficWindowMinutes(), totalMessages);
                 
-                // 필요하다면 여기서 알림이나 추가 처리 가능
-                // 예: 관리자 알림, 레이트 리미팅 등
+                // "우리 채팅방에 불이 났어요" 시스템 메시지 전송
+                sendTrafficSpikeMessage(roomId, totalMessages);
             }
             
         } catch (Exception e) {
@@ -170,6 +170,32 @@ public class WatchChatServiceImpl implements WatchChatService {
         } catch (Exception e) {
             log.error("세션에서 사용자 정보 조회 실패 - token: {}", sessionToken, e);
             return Map.of();
+        }
+    }
+    
+    /**
+     * 트래픽 급증 시 "불이 났어요" 메시지 전송
+     */
+    private void sendTrafficSpikeMessage(String roomId, long totalMessages) {
+        try {
+            WatchChatMessage fireMessage = WatchChatMessage.builder()
+                    .messageType("SYSTEM_ALERT")
+                    .roomId(roomId)
+                    .content("🔥 우리 채팅방에 불이 났어요! 🔥 (최근 " + 
+                            chatRoomUtils.getTrafficWindowMinutes() + "분간 " + 
+                            totalMessages + "개 메시지)")
+                    .userId("SYSTEM")
+                    .timestamp(KSTTimeUtil.now())
+                    .build();
+                    
+            // 시스템 메시지를 채팅방에 발송
+            Map<String, Object> messageMap = createMessageMap(fireMessage);
+            redisPub.publishMessage(roomId, messageMap);
+            
+            log.info("트래픽 급증 알림 메시지 전송 - roomId: {}", roomId);
+            
+        } catch (Exception e) {
+            log.error("트래픽 급증 알림 메시지 전송 실패 - roomId: {}", roomId, e);
         }
     }
     

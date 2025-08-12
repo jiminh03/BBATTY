@@ -133,9 +133,9 @@ public class MatchChatServiceImpl implements MatchChatService {
             
             // 분산 세션 매니저를 통해 해당 방의 모든 세션 정리
             // 실제 WebSocket 세션 종료는 분산 세션 매니저에서 처리
-            distributedSessionManager.cleanupInstanceSessions(matchId);
+            int cleanedCount = distributedSessionManager.cleanupRoomSessions(matchId);
             
-            log.info("✅ 매칭 채팅방 분산 세션 강제 종료 완료 - matchId: {}", matchId);
+            log.info("✅ 매칭 채팅방 분산 세션 강제 종료 완료 - matchId: {}, 정리된 세션 수: {}", matchId, cleanedCount);
             
         } catch (Exception e) {
             log.error("매칭 채팅방 분산 세션 강제 종료 실패 - matchId: {}", matchId, e);
