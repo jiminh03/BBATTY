@@ -36,6 +36,7 @@ export type HomeStackParamList = {
   PostDetail: {
     postId: number;
   };
+  PopularPosts: {teamId:number};
   PostCreate: {
     category?: string;
   };

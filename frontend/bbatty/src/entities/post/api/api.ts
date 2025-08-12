@@ -91,11 +91,46 @@ export const postApi = {
 
 
   // 인기 게시글 목록 조회
-  getPopularPosts: ({ page = 0, size = 10, teamId }: GetPostsParams) =>
-    apiClient.get('/api/posts/popular', {
-      headers: new AxiosHeaders(),
-      params: { page, size, teamId },
-    }),
+  // api.ts
+async getPopularByTeam(teamId: number, limit = 20) {
+  let cursor: number | undefined;
+  const acc: PostListItem[] = [];
+  const seen = new Set<number>();
+
+  while (acc.length < limit) {
+    const res = await apiClient.get(`/api/posts/team/${teamId}/popular`,
+      { params: cursor !== undefined ? { cursor } : {} }
+    );
+    const api = (res as any).data as any;
+
+    const page: PostListItem[] = Array.isArray(api.data)
+      ? api.data
+      : (api.data?.posts ?? []);
+
+    console.log('[popular][page]', {
+      got: page.length,
+      hasNext: api.data?.hasNext,
+      nextCursor: api.data?.nextCursor,
+      acc: acc.length,
+    });
+
+    for (const p of page) {
+      if (!seen.has(p.id)) {
+        acc.push(p);
+        seen.add(p.id);
+        if (acc.length >= limit) break;
+      }
+    }
+
+    const hasNext = !Array.isArray(api.data) && api.data?.hasNext === true;
+    cursor = !Array.isArray(api.data) ? api.data?.nextCursor : undefined;
+    if (!hasNext) break;
+  }
+
+  console.log('[popular][done] total=', acc.length);
+  return acc.slice(0, limit);
+},
+
 
   // 게시글 좋아요
     likePost(postId: number) {
