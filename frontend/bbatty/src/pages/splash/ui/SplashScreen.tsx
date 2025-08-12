@@ -59,6 +59,14 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLogi
       // 1. 사용자 정보 확인
       const hasUserResult = await hasUser();
       const userExists = isOk(hasUserResult) && hasUserResult.data;
+      // const user = getCurrentUser();
+
+      // // 테스트용: teamId를 1로 설정
+      // if (user) {
+      //   const newUser = { ...user, teamId: 1 };
+      //   await setCurrentUser(newUser);
+      //   console.log('🏀 테스트: teamId를 1로 변경했습니다');
+      // }
 
       // 2. 토큰 유효성 확인 및 갱신 시도
       if (userExists && hasRefreshToken()) {

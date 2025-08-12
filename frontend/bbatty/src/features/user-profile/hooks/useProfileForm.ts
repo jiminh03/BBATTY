@@ -7,7 +7,7 @@ import { isOk } from '../../../shared/utils/result';
 // 오류 타입 정의
 type NicknameErrorType = 'LENGTH_OVER' | 'SPECIAL_CHARS' | 'VALIDATION' | 'NONE';
 
-export const useProfileForm = (initialData?: Partial<ProfileFormData>) => {
+export const useProfileForm = (initialData?: Partial<ProfileFormData>, originalNickname?: string) => {
   const [formData, setFormData] = useState<ProfileFormData>({
     nickname: initialData?.nickname || '',
     profileImage: initialData?.profileImage,
@@ -27,10 +27,21 @@ export const useProfileForm = (initialData?: Partial<ProfileFormData>) => {
     introduction: ValidationRules.maxLength(50),
   };
 
+  // 한글 초성 체크 함수
+  const hasIncompleteKorean = useCallback((text: string): boolean => {
+    // 한글 초성만 있는지 체크 (ㄱ-ㅎ)
+    return /[ㄱ-ㅎ]/.test(text);
+  }, []);
+
   // 중복 확인 버튼 클릭 핸들러
   const handleCheckNickname = useCallback(async () => {
     // 실제 표시된 값이 유효한지만 체크 (경고 메시지는 무시)
     if (!formData.nickname || formData.nickname.length < 2 || formData.nickname.length > 10) {
+      return;
+    }
+
+    // 한글 초성이 포함되어 있으면 중복체크 방지
+    if (hasIncompleteKorean(formData.nickname)) {
       return;
     }
 
@@ -74,7 +85,7 @@ export const useProfileForm = (initialData?: Partial<ProfileFormData>) => {
     } finally {
       setIsCheckingNickname(false);
     }
-  }, [formData.nickname]);
+  }, [formData.nickname, hasIncompleteKorean]);
 
   // 닉네임 실시간 필터링 및 업데이트
   const updateNickname = useCallback(
@@ -122,11 +133,42 @@ export const useProfileForm = (initialData?: Partial<ProfileFormData>) => {
     [validators.nickname, nicknameErrorType]
   );
 
+  // 자기소개 실시간 업데이트
+  const updateIntroduction = useCallback(
+    (rawValue: string) => {
+      // 50글자 초과 입력 감지
+      if (rawValue.length > 50) {
+        // 경고 메시지 표시 (실제 값은 50글자로 자름)
+        setErrors((prev) => ({
+          ...prev,
+          introduction: '최대 50자까지 입력 가능합니다',
+        }));
+        setFormData((prev) => ({ ...prev, introduction: rawValue.substring(0, 50) }));
+      } else {
+        // 정상 범위 내 입력
+        setFormData((prev) => ({ ...prev, introduction: rawValue }));
+        
+        // 검증
+        const validation = validators.introduction(rawValue);
+        setErrors((prev) => ({
+          ...prev,
+          introduction: validation.error,
+        }));
+      }
+    },
+    [validators.introduction]
+  );
+
   // 일반 필드 업데이트
   const updateField = useCallback(
     <K extends keyof ProfileFormData>(field: K, value: ProfileFormData[K]) => {
       if (field === 'nickname') {
         updateNickname(value as string);
+        return;
+      }
+
+      if (field === 'introduction') {
+        updateIntroduction(value as string);
         return;
       }
 
@@ -142,7 +184,7 @@ export const useProfileForm = (initialData?: Partial<ProfileFormData>) => {
         }));
       }
     },
-    [updateNickname, validators]
+    [updateNickname, updateIntroduction, validators]
   );
 
   // 전체 검증
@@ -163,8 +205,13 @@ export const useProfileForm = (initialData?: Partial<ProfileFormData>) => {
     }
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0 && isNicknameAvailable === true;
-  }, [formData, validators, isNicknameAvailable]);
+    
+    // 닉네임이 기존과 동일한지 체크
+    const isNicknameSameAsOriginal = originalNickname && formData.nickname === originalNickname;
+    
+    // 오류가 없고, 닉네임이 기존과 같거나 중복체크가 완료된 경우 통과
+    return Object.keys(newErrors).length === 0 && (isNicknameSameAsOriginal || isNicknameAvailable === true);
+  }, [formData, validators, isNicknameAvailable, originalNickname]);
 
   // 닉네임 상태 계산
   const nicknameStatus = {
@@ -172,8 +219,8 @@ export const useProfileForm = (initialData?: Partial<ProfileFormData>) => {
     isAvailable: isNicknameAvailable === true,
     isChecking: isCheckingNickname,
     showSuccess: isNicknameAvailable === true && !errors.nickname,
-    // 중복 확인 버튼 활성화 조건: 현재 표시된 값이 2-10글자면 항상 체크 가능
-    canCheck: formData.nickname.length >= 2 && formData.nickname.length <= 10,
+    // 중복 확인 버튼 활성화 조건: 현재 표시된 값이 2-10글자이고 한글 초성이 없어야 함
+    canCheck: formData.nickname.length >= 2 && formData.nickname.length <= 10 && !hasIncompleteKorean(formData.nickname),
     // 에러 판정: 현재 표시된 값 기준으로만 판단 (오버타이핑 경고는 무시)
     hasError: formData.nickname.length < 2 || formData.nickname.length > 10 || isNicknameAvailable === false,
   };

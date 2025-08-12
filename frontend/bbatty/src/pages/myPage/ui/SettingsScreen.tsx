@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Switch, Alert, BackHandler } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -10,7 +10,7 @@ import { useThemeColor } from '../../../shared/team/ThemeContext';
 import { useProfile, useUpdatePrivacySettings } from '../../../features/user-profile';
 import { UserPrivacySettings } from '../../../features/user-profile';
 import { useTokenStore } from '../../../shared/api/token/tokenStore';
-import { resetToAuth } from '../../../navigation/navigationRefs';
+import { useUserStore } from '../../../entities/user';
 import { isOk } from '../../../shared/utils/result';
 import { styles } from './SettingsScreen.style';
 import { authApi } from '../../../features/user-auth';
@@ -22,17 +22,25 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const themeColor = useThemeColor();
   const { clearTokens } = useTokenStore();
+  const { reset: resetUser } = useUserStore();
 
   // 프로필 및 프라이버시 설정 훅 사용
   const { data: profile, isLoading: isProfileLoading } = useProfile();
   const updatePrivacyMutation = useUpdatePrivacySettings();
 
-  // 프라이버시 설정 가져오기
-  const privacySettings = profile ? {
-    postsPublic: profile.postsPublic,
-    statsPublic: profile.statsPublic,
-    attendanceRecordsPublic: profile.attendanceRecordsPublic,
-  } : null;
+  // 로컬 상태로 Switch 값 관리 (깜빡임 방지)
+  const [localSettings, setLocalSettings] = useState<UserPrivacySettings | null>(null);
+
+  // 프로필 데이터가 처음 로드될 때만 로컬 상태 초기화
+  useEffect(() => {
+    if (profile && !localSettings) {
+      setLocalSettings({
+        postsPublic: profile.postsPublic,
+        statsPublic: profile.statsPublic,
+        attendanceRecordsPublic: profile.attendanceRecordsPublic,
+      });
+    }
+  }, [profile, localSettings]);
 
   // 화면 포커스 시 하단 탭 숨기기
   useFocusEffect(
@@ -56,29 +64,49 @@ export default function SettingsScreen() {
   );
 
   const updatePrivacySetting = (field: keyof UserPrivacySettings, value: boolean) => {
-    if (!privacySettings) return;
+    if (!localSettings) return;
 
+    // API 호출 중이면 무시 (중복 호출 방지)
+    if (updatePrivacyMutation.isPending) {
+      console.log('API 호출 중이므로 무시');
+      return;
+    }
+
+    // 즉시 로컬 상태 업데이트 (깜빡임 방지)
     const newSettings = {
-      ...privacySettings,
+      ...localSettings,
       [field]: value,
     };
 
+    setLocalSettings(newSettings);
+
     updatePrivacyMutation.mutate(newSettings, {
-      onError: () => {
+      onError: (error) => {
+        // 에러 시 로컬 상태를 원래대로 복원
+        console.log('API 에러 - 상태 복원:', error);
+        setLocalSettings(localSettings);
         Alert.alert('오류', '설정 업데이트에 실패했습니다.');
       },
     });
   };
 
   const handleLogout = () => {
-    Alert.alert('로그아웃', '정말 로그아웃하시겠습니까?', [
+    Alert.alert('로그아웃', '정말 로그아웃하시겠습니다?', [
       { text: '취소', style: 'cancel' },
       {
         text: '로그아웃',
         style: 'destructive',
         onPress: async () => {
-          await clearTokens();
-          resetToAuth();
+          try {
+            // 토큰 및 사용자 데이터 삭제
+            await clearTokens();
+            await resetUser();
+            
+            console.log('로그아웃 완료 - 앱이 자동으로 로그인 화면으로 전환됩니다');
+          } catch (error) {
+            console.error('로그아웃 실패:', error);
+            Alert.alert('오류', '로그아웃 중 오류가 발생했습니다.');
+          }
         },
       },
     ]);
@@ -91,12 +119,35 @@ export default function SettingsScreen() {
         text: '탈퇴',
         style: 'destructive',
         onPress: async () => {
-          const result = await authApi.deleteAccount();
-          if (isOk(result)) {
-            await clearTokens();
-            resetToAuth();
-          } else {
-            Alert.alert('오류', '회원탈퇴에 실패했습니다.');
+          try {
+            const result = await authApi.deleteAccount();
+            if (isOk(result)) {
+              await clearTokens();
+              await resetUser();
+              
+              console.log('회원탈퇴 완료 - 앱을 종료합니다');
+              
+              // 탈퇴 성공 알림 후 앱 종료
+              Alert.alert(
+                '회원탈퇴 완료', 
+                '회원탈퇴가 완료되었습니다. 앱을 종료합니다.',
+                [
+                  {
+                    text: '확인',
+                    onPress: () => {
+                      // 앱 종료
+                      BackHandler.exitApp();
+                    },
+                  },
+                ],
+                { cancelable: false }
+              );
+            } else {
+              Alert.alert('오류', '회원탈퇴에 실패했습니다.');
+            }
+          } catch (error) {
+            console.error('회원탈퇴 실패:', error);
+            Alert.alert('오류', '회원탈퇴 중 오류가 발생했습니다.');
           }
         },
       },
@@ -150,30 +201,27 @@ export default function SettingsScreen() {
         <View style={styles.settingItem}>
           <Text style={styles.settingLabel}>게시글 조회 허용</Text>
           <Switch
-            value={privacySettings?.postsPublic || false}
+            value={localSettings?.postsPublic || false}
             onValueChange={(value) => updatePrivacySetting('postsPublic', value)}
             trackColor={{ false: '#E0E0E0', true: themeColor }}
-            disabled={updatePrivacyMutation.isPending}
           />
         </View>
 
         <View style={styles.settingItem}>
           <Text style={styles.settingLabel}>통계 조회 허용</Text>
           <Switch
-            value={privacySettings?.statsPublic || false}
+            value={localSettings?.statsPublic || false}
             onValueChange={(value) => updatePrivacySetting('statsPublic', value)}
             trackColor={{ false: '#E0E0E0', true: themeColor }}
-            disabled={updatePrivacyMutation.isPending}
           />
         </View>
 
         <View style={styles.settingItem}>
           <Text style={styles.settingLabel}>직관기록 조회 허용</Text>
           <Switch
-            value={privacySettings?.attendanceRecordsPublic || false}
+            value={localSettings?.attendanceRecordsPublic || false}
             onValueChange={(value) => updatePrivacySetting('attendanceRecordsPublic', value)}
             trackColor={{ false: '#E0E0E0', true: themeColor }}
-            disabled={updatePrivacyMutation.isPending}
           />
         </View>
 
