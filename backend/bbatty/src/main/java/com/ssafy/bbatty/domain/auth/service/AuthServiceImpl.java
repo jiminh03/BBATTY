@@ -65,13 +65,18 @@ public class AuthServiceImpl implements AuthService {
         Optional<UserInfo> existingUserInfo = userInfoRepository.findByKakaoId(kakaoUserInfo.getKakaoId());
 
         if (existingUserInfo.isPresent()) {
-            // 기존 사용자 로그인
             User user = existingUserInfo.get().getUser();
+            
+            // 탈퇴한 사용자는 회원가입으로 유도
+            if (user.isDeleted()) {
+                log.info("탈퇴한 사용자의 로그인 시도: userId={}, kakaoId={}", user.getId(), kakaoUserInfo.getKakaoId());
+                throw new ApiException(ErrorCode.USER_NOT_FOUND);
+            }
             
             log.info("카카오 로그인 성공: userId={}, kakaoId={}", user.getId(), kakaoUserInfo.getKakaoId());
             return createAuthResponse(user, AuthResponse::ofLogin);
         } else {
-            // 신규 사용자 - 회원가입 필요
+            // 신규 사용자 또는 탈퇴 후 재가입 - 회원가입 필요
             log.info("신규 사용자 로그인 시도: kakaoId={}", kakaoUserInfo.getKakaoId());
             throw new ApiException(ErrorCode.USER_NOT_FOUND);
         }
