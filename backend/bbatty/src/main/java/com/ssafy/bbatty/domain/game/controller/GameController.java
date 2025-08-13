@@ -4,14 +4,14 @@ import com.ssafy.bbatty.domain.game.dto.response.GameScheduleResponse;
 import com.ssafy.bbatty.domain.game.service.GameService;
 import com.ssafy.bbatty.global.constants.SuccessCode;
 import com.ssafy.bbatty.global.response.ApiResponse;
+import com.ssafy.bbatty.global.security.SecurityUtils;
+import com.ssafy.bbatty.global.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -43,6 +43,33 @@ public class GameController {
         
         return ResponseEntity.status(SuccessCode.SUCCESS_DEFAULT.getStatus()).body(
                 ApiResponse.success(SuccessCode.SUCCESS_DEFAULT, schedule));
+    }
+
+    /**
+     * 사용자 팀의 오늘 경기 정보 조회
+     */
+    @GetMapping("/today")
+    public ResponseEntity<ApiResponse<GameScheduleResponse>> getUserTeamTodayGame(@AuthenticationPrincipal UserPrincipal userPrincipal) {
+        
+        GameScheduleResponse game = gameService.getUserTeamTodayGame(userPrincipal.getTeamId());
+        
+        return ResponseEntity.status(SuccessCode.SUCCESS_DEFAULT.getStatus()).body(
+                ApiResponse.success(SuccessCode.SUCCESS_DEFAULT, game));
+    }
+
+
+    /**
+     * gameId로 경기 정보 조회
+     */
+    @GetMapping("/{gameId}")
+    public ResponseEntity<ApiResponse<GameScheduleResponse>> getGameByGameId(@PathVariable Long gameId) {
+        
+        log.info("게임 ID {} 경기 조회 요청", gameId);
+        
+        GameScheduleResponse game = gameService.getGameByGameId(gameId);
+
+        return ResponseEntity.status(SuccessCode.SUCCESS_DEFAULT.getStatus()).body(
+                ApiResponse.success(SuccessCode.SUCCESS_DEFAULT, game));
     }
 
 }
