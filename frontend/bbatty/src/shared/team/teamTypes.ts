@@ -75,3 +75,13 @@ export const TEAMS: Team[] = [
 export const findTeamById = (id: number): Team | undefined => {
   return TEAMS.find((team) => team.id === id);
 };
+
+// 팀 ID로 팀 이름과 색상 정보 찾기
+export const getTeamInfo = (teamId: number): { name: string; color: string } => {
+  const team = findTeamById(teamId);
+  if (team) {
+    return { name: team.name, color: team.color };
+  }
+  // Fallback for unknown teamId
+  return { name: `팀 ${teamId}`, color: '#007AFF' };
+};

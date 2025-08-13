@@ -82,7 +82,7 @@ export const MatchChatRoomListScreen = () => {
           newMap.set(gameId, response.data);
           return newMap;
         });
-        console.log('🎮 게임 정보 저장됨:', gameId, response.data);
+        
         return response.data;
       }
     } catch (error) {
@@ -117,7 +117,7 @@ export const MatchChatRoomListScreen = () => {
         .map(room => String(room.gameId!)) // number를 string으로 변환
         .filter((gameId, index, self) => self.indexOf(gameId) === index); // 중복 제거
       
-      console.log('🎮 로드할 게임 ID들:', gameIds);
+      
       
       for (const gameId of gameIds) {
         await loadGameInfo(gameId);
@@ -152,7 +152,7 @@ export const MatchChatRoomListScreen = () => {
       }
 
       // 오늘의 게임 정보 가져오기
-      console.log('🎮 오늘의 게임 정보 조회 중...');
+      
       const todayGameResponse = await gameApi.getTodayGame();
       
       if (todayGameResponse.status !== 'SUCCESS') {
@@ -161,7 +161,7 @@ export const MatchChatRoomListScreen = () => {
       }
 
       const todayGame = todayGameResponse.data;
-      console.log('🎮 오늘의 게임 정보:', todayGame);
+      
 
       const watchRequest = {
         gameId: todayGame.gameId,
@@ -169,30 +169,38 @@ export const MatchChatRoomListScreen = () => {
         isAttendanceVerified: true
       };
 
-      console.log('🎮 직관채팅 참여 요청:', watchRequest);
+      
       const response = await chatRoomApi.joinWatchChat(watchRequest);
-      console.log('Watch chat API response:', response.data);
+      
       
       if (response.data.status === 'SUCCESS') {
-        // 워치 채팅방으로 이동
-        navigation.push('MatchChatRoom', {
-          room: {
-            matchId: 'watch_chat_' + Date.now(),
-            gameId: watchRequest.gameId.toString(),
-            matchTitle: `직관채팅 - ${todayGame.awayTeamName} vs ${todayGame.homeTeamName}`,
-            matchDescription: `${todayGame.stadium}에서 열리는 경기를 함께 시청하며 채팅하는 공간`,
-            teamId: '전체',
-            minAge: 0,
-            maxAge: 100,
-            genderCondition: 'ALL',
-            maxParticipants: 999,
-            currentParticipants: 0,
-            createdAt: new Date().toISOString(),
-            status: 'ACTIVE',
-            websocketUrl: response.data.data.websocketUrl
-          },
+        // 게임 정보 로드
+        const gameDetails = await loadGameInfo(todayGame.gameId.toString());
+        if (!gameDetails) {
+          Alert.alert('오류', '게임 정보를 불러올 수 없습니다.');
+          return;
+        }
+
+        const watchChatRoom = {
+          matchId: `watch_chat_${todayGame.gameId}_${currentUser.teamId}`,
+          gameId: todayGame.gameId.toString(),
+          matchTitle: `직관채팅 - ${gameDetails.awayTeamName} vs ${gameDetails.homeTeamName}`,
+          matchDescription: `${gameDetails.stadium}에서 열리는 경기를 함께 시청하며 채팅하는 공간`,
+          teamId: getTeamInfo(currentUser.teamId).name,
+          minAge: 0,
+          maxAge: 100,
+          genderCondition: 'ALL',
+          maxParticipants: 999,
+          currentParticipants: 0,
+          createdAt: new Date().toISOString(),
+          status: 'ACTIVE',
           websocketUrl: response.data.data.websocketUrl,
-          sessionToken: response.data.data.sessionToken
+        };
+
+        navigation.navigate('MatchChatRoom', {
+          room: watchChatRoom,
+          websocketUrl: response.data.data.websocketUrl,
+          sessionToken: response.data.data.sessionToken,
         });
       } else {
         Alert.alert('오류', response.data.message || '워치 채팅 참여에 실패했습니다.');
@@ -207,66 +215,17 @@ export const MatchChatRoomListScreen = () => {
     setShowAnimation(false);
   };
 
-  const handleDirectWatchConnection = async (connectionInfo: {
-    gameId: number;
-    teamId: number;
-    isAttendanceVerified: boolean;
-  }) => {
-    try {
-      const currentUser = getCurrentUser();
-      
-      if (!currentUser) {
-        Alert.alert('오류', '사용자 정보를 찾을 수 없습니다.');
-        return;
-      }
-
-      console.log('🎯 직관채팅 직접 연결 시작:', connectionInfo);
-
-      const watchRequest = {
-        gameId: connectionInfo.gameId,
-        teamId: connectionInfo.teamId,
-        isAttendanceVerified: connectionInfo.isAttendanceVerified,
-      };
-
-      console.log('🎮 직관채팅 연결 요청:', watchRequest);
-
-      const response = await chatRoomApi.connectWatchChat(watchRequest);
-      console.log('🎮 직관채팅 연결 응답:', response);
-
-      if (response.status === 'SUCCESS') {
-        console.log('✅ 직관채팅 연결 성공 - 채팅방으로 이동');
-        
-        navigation.navigate('MatchChatRoom', {
-          roomId: response.data.roomId,
-          roomType: 'WATCH',
-          gameId: connectionInfo.gameId,
-        });
-      } else {
-        console.error('❌ 직관채팅 연결 실패:', response.message);
-        Alert.alert('연결 실패', response.message || '직관채팅 연결에 실패했습니다.');
-      }
-    } catch (error) {
-      console.error('❌ 직관채팅 연결 중 오류:', error);
-      Alert.alert('오류', '직관채팅 연결 중 문제가 발생했습니다.');
-    }
-  };
+  
 
   useEffect(() => {
     // 토큰 로그 출력
     const token = getAccessToken();
-    console.log('🔑 매칭채팅 목록 진입 - 토큰:', token);
+    
     
     loadRooms();
   }, []);
 
-  // 직접 직관채팅 연결 처리
-  useEffect(() => {
-    const params = route.params as any;
-    if (params?.directWatchConnection) {
-      console.log('🎯 직접 직관채팅 연결 요청:', params.directWatchConnection);
-      handleDirectWatchConnection(params.directWatchConnection);
-    }
-  }, [route.params]);
+  
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
