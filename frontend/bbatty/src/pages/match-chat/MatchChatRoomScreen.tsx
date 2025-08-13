@@ -256,7 +256,7 @@ export const MatchChatRoomScreen = () => {
         if (isWatchChat) {
           authData = {
             type: 'AUTH',
-            gameId: room.gameId || '1258',
+            gameId: room.gameId || '1303',
             teamId: currentUser?.teamId || 3,
             nickname: currentUser?.nickname || 'Anonymous',
             userId: currentUser?.userId || currentUserId
@@ -285,7 +285,12 @@ export const MatchChatRoomScreen = () => {
           }
           
           const messageKey = `${messageData.content}_${messageData.timestamp}`;
-          const isMyMessage = sentMessages.has(messageKey);
+          const isMyMessage = messageData.userId && (
+            messageData.userId.toString() === currentUserId.toString() ||
+            messageData.userId.toString() === currentUser?.userId?.toString()
+          ) || (!isWatchChat && messageData.nickname === currentUser?.nickname);
+          
+          
           
           if (messageData.messageType === 'CHAT' || messageData.type === 'CHAT_MESSAGE') {
             const content = messageData.content || '';
@@ -298,14 +303,32 @@ export const MatchChatRoomScreen = () => {
             );
               
             if (!isAuthDataMessage) {
-              addMessage(messageData, isMyMessage);
-              
-              if (isMyMessage) {
-                setSentMessages(prev => {
-                  const newSet = new Set(prev);
-                  newSet.delete(messageKey);
-                  return newSet;
-                });
+              if (isWatchChat) {
+                // 직관채팅: 단순하게 메시지 추가
+                addMessage(messageData, isMyMessage);
+              } else {
+                // 매치채팅: 내 메시지인 경우 로컬 메시지를 서버 메시지로 교체
+                if (isMyMessage) {
+                  setMessages(prev => {
+                    // 같은 내용의 로컬 메시지 제거 (pending 메시지)
+                    const filtered = prev.filter(m => 
+                      !(m.content === messageData.content && (m as any)._isMyMessage && m.status)
+                    );
+                    
+                    // 서버 메시지 추가
+                    const serverMessage = {
+                      ...messageData,
+                      _isMyMessage: true
+                    };
+                    
+                    const newMessages = [...filtered, serverMessage];
+                    newMessages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+                    return newMessages;
+                  });
+                } else {
+                  // 다른 사용자 메시지는 그대로 추가
+                  addMessage(messageData, isMyMessage);
+                }
               }
             }
           } else if (
@@ -428,21 +451,23 @@ export const MatchChatRoomScreen = () => {
       // 메시지 큐에 추가 (자동으로 전송 시도)
       const messageId = await addMessageToQueue(messageContent);
       
-      // 로컬에서 즉시 메시지 표시 (낙관적 업데이트)
-      const timestamp = new Date().toISOString();
-      const localMessage: MessageWithStatus = {
-        messageType: 'CHAT',
-        roomId: room.matchId || '',
-        userId: currentUser?.userId?.toString() || currentUserId.toString(),
-        nickname: currentUser?.nickname || 'Anonymous',
-        content: messageContent,
-        timestamp,
-        id: messageId,
-        status: 'sending',
-        _isMyMessage: true,
-      };
-      
-      addMessage(localMessage, true);
+      // 매치채팅에서만 로컬에서 즉시 메시지 표시 (낙관적 업데이트)
+      if (!isWatchChat) {
+        const timestamp = new Date().toISOString();
+        const localMessage: MessageWithStatus = {
+          messageType: 'CHAT',
+          roomId: room.matchId || '',
+          userId: currentUser?.userId?.toString() || currentUserId.toString(),
+          nickname: currentUser?.nickname || 'Anonymous',
+          content: messageContent,
+          timestamp,
+          id: messageId,
+          status: 'sent',
+          _isMyMessage: true,
+        };
+        
+        addMessage(localMessage, true);
+      }
       
       console.log('메시지 큐에 추가:', messageContent);
     } catch (error) {
@@ -563,7 +588,7 @@ export const MatchChatRoomScreen = () => {
       console.log('📱 MatchChatRoomScreen 언마운트됨');
       disconnect();
     };
-  }, [disconnect]);
+  }, []); // disconnect를 dependency에서 제거
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -610,37 +635,29 @@ export const MatchChatRoomScreen = () => {
           {/* 실제 메시지들 */}
           {messages.map((message, index) => (
             <View key={message.id || index} style={styles.messageItem}>
-              {message.messageType === 'CHAT' ? (
+              {(message.messageType === 'CHAT' || message.type === 'CHAT_MESSAGE') ? (
                 <View style={[
                   styles.chatMessage,
                   (message as any)._isMyMessage && styles.myMessage
                 ]}>
-                  <View style={styles.messageHeader}>
-                    <Text style={styles.messageNickname}>{(message as MatchChatMessage).nickname}</Text>
-                    {(message as any)._isMyMessage && (
-                      <SimpleMessageStatus 
-                        status={message.status} 
-                        size={14}
-                      />
-                    )}
-                  </View>
-                  <Text style={styles.messageContent}>{message.content}</Text>
-                  <Text style={styles.messageTime}>
+                  {!(message as any)._isMyMessage && (
+                    <View style={styles.messageHeader}>
+                      <Text style={styles.messageNickname}>
+                        {(message as MatchChatMessage).nickname}
+                      </Text>
+                    </View>
+                  )}
+                  <Text style={[
+                    (message as any)._isMyMessage ? styles.myMessageContent : styles.messageContent
+                  ]}>{message.content}</Text>
+                  <Text style={[
+                    (message as any)._isMyMessage ? styles.myMessageTime : styles.messageTime
+                  ]}>
                     {new Date(message.timestamp).toLocaleTimeString('ko-KR', { 
                       hour: '2-digit', 
                       minute: '2-digit' 
                     })}
                   </Text>
-                  
-                  {/* 내 메시지의 상태 표시 */}
-                  {(message as any)._isMyMessage && message.status && message.status !== 'sent' && (
-                    <MessageStatusIndicator
-                      status={message.status}
-                      onRetry={message.id ? () => retryMessage(message.id!) : undefined}
-                      retryCount={message.retryCount}
-                      maxRetries={3}
-                    />
-                  )}
                 </View>
               ) : (
                 <View style={styles.systemMessage}>
@@ -653,30 +670,14 @@ export const MatchChatRoomScreen = () => {
           {/* 대기 중인 메시지들 표시 */}
           {pendingMessages.map((pendingMsg) => (
             <View key={pendingMsg.id} style={styles.messageItem}>
-              <View style={[styles.chatMessage, styles.myMessage, styles.pendingMessage]}>
-                <View style={styles.messageHeader}>
-                  <Text style={styles.messageNickname}>
-                    {currentUser?.nickname || 'Anonymous'}
-                  </Text>
-                  <SimpleMessageStatus 
-                    status={pendingMsg.status} 
-                    size={14}
-                  />
-                </View>
-                <Text style={styles.messageContent}>{pendingMsg.content}</Text>
-                <Text style={styles.messageTime}>
+              <View style={[styles.chatMessage, styles.myMessage]}>
+                <Text style={styles.myMessageContent}>{pendingMsg.content}</Text>
+                <Text style={styles.myMessageTime}>
                   {new Date(pendingMsg.timestamp).toLocaleTimeString('ko-KR', { 
                     hour: '2-digit', 
                     minute: '2-digit' 
                   })}
                 </Text>
-                
-                <MessageStatusIndicator
-                  status={pendingMsg.status}
-                  onRetry={() => retryMessage(pendingMsg.id)}
-                  retryCount={pendingMsg.retryCount}
-                  maxRetries={pendingMsg.maxRetries}
-                />
               </View>
             </View>
           ))}
