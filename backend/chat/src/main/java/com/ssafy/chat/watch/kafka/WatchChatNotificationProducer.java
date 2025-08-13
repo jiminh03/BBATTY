@@ -20,7 +20,7 @@ public class WatchChatNotificationProducer {
 
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
-    private static final String TOPIC_NAME = "team-fire-alert";
+    private static final String TOPIC_NAME = "traffic-spike-alert";
 
     /**
      * 팀 채팅방 "불이 났어요" 이벤트 발송

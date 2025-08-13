@@ -17,6 +17,7 @@ import com.ssafy.bbatty.domain.board.repository.PostRepository;
 import com.ssafy.bbatty.domain.board.repository.CommentRepository;
 import com.ssafy.bbatty.domain.board.repository.PostLikeRepository;
 import com.ssafy.bbatty.domain.board.repository.PostViewRepository;
+import com.ssafy.bbatty.domain.notification.repository.NotificationSettingRepository;
 import com.ssafy.bbatty.global.constants.ErrorCode;
 import com.ssafy.bbatty.global.constants.RedisKey;
 import com.ssafy.bbatty.global.exception.ApiException;
@@ -45,6 +46,7 @@ public class UserServiceImpl implements UserService {
     
     private final UserInfoRepository userInfoRepository;
     private final UserAttendedRepository userAttendedRepository;
+    private final NotificationSettingRepository notificationSettingRepository;
 
     @Override
     public UserResponseDto getUserProfile(Long targetUserId, Long currentUserId) {
@@ -155,6 +157,7 @@ public class UserServiceImpl implements UserService {
      * 개인정보 하드 삭제 (GDPR, 개인정보보호법 준수)
      * - UserInfo: 카카오 ID, 이메일 등 개인식별정보
      * - UserAttended: 개인의 직관 활동 기록
+     * - NotificationSetting: FCM 토큰, 알림 설정 등 개인정보
      */
     @Transactional
     public void deletePersonalInformation(Long userId) {
@@ -166,6 +169,10 @@ public class UserServiceImpl implements UserService {
             // UserAttended 하드 삭제 (개인의 직관 기록)
             userAttendedRepository.deleteByUserId(userId);
             log.info("UserAttended 삭제 완료: userId={}", userId);
+            
+            // NotificationSetting 하드 삭제 (FCM 토큰, 알림 설정)
+            notificationSettingRepository.deleteByUserId(userId);
+            log.info("NotificationSetting 삭제 완료: userId={}", userId);
             
         } catch (Exception e) {
             log.error("개인정보 삭제 중 오류 발생: userId={}, error={}", userId, e.getMessage(), e);

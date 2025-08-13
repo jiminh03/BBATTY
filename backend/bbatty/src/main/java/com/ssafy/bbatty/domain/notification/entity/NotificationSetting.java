@@ -33,9 +33,9 @@ public class NotificationSetting extends BaseEntity {
     private User user;
 
     /**
-     * FCM 토큰 (필수, 500자 - FCM 토큰 최대 길이)
+     * FCM 토큰 (필수, 4096자 - FCM 토큰 최대 길이)
      */
-    @Column(name = "fcm_token", nullable = false, length = 500)
+    @Column(name = "fcm_token", nullable = false, length = 4096)
     private String fcmToken;
 
     /**

@@ -14,7 +14,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/notifications")
+@RequestMapping("/api/notification")
 @RequiredArgsConstructor
 @Slf4j
 public class NotificationController {
@@ -24,7 +24,7 @@ public class NotificationController {
     /**
      * FCM 토큰 등록/업데이트
      */
-    @PostMapping("/token")
+    @PutMapping("/fcm-token")
     public ResponseEntity<ApiResponse<NotificationSettingResponse>> registerFCMToken(
             @Valid @RequestBody FCMTokenRequest request,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
@@ -36,9 +36,9 @@ public class NotificationController {
     }
 
     /**
-     * 알림 설정 업데이트
+     * 알림 설정 업데이트 (응답 일관성을 위해 설정 정보 반환)
      */
-    @PutMapping("/settings")
+    @PutMapping("/setting")
     public ResponseEntity<ApiResponse<NotificationSettingResponse>> updateNotificationSettings(
             @RequestBody NotificationSettingRequest request,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
@@ -47,31 +47,5 @@ public class NotificationController {
         NotificationSettingResponse response = notificationSettingService.updateNotificationSettings(userId, request);
         
         return ResponseEntity.ok(ApiResponse.success(response));
-    }
-
-    /**
-     * 알림 설정 조회
-     */
-    @GetMapping("/settings")
-    public ResponseEntity<ApiResponse<NotificationSettingResponse>> getNotificationSettings(
-            @AuthenticationPrincipal UserPrincipal userPrincipal) {
-        
-        Long userId = userPrincipal.getUserId();
-        NotificationSettingResponse response = notificationSettingService.getNotificationSettings(userId);
-        
-        return ResponseEntity.ok(ApiResponse.success(response));
-    }
-
-    /**
-     * FCM 토큰 삭제
-     */
-    @DeleteMapping("/token")
-    public ResponseEntity<ApiResponse<Void>> deleteFCMToken(
-            @AuthenticationPrincipal UserPrincipal userPrincipal) {
-        
-        Long userId = userPrincipal.getUserId();
-        notificationSettingService.deleteFCMToken(userId);
-        
-        return ResponseEntity.ok(ApiResponse.success(null));
     }
 }

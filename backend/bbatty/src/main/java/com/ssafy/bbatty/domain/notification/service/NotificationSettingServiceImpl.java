@@ -25,22 +25,27 @@ public class NotificationSettingServiceImpl implements NotificationSettingServic
 
     @Override
     public NotificationSettingResponse registerFCMToken(Long userId, FCMTokenRequest request) {
-        User user = findUserById(userId);
+        try {
+            User user = findUserById(userId);
 
-        NotificationSetting setting = notificationSettingRepository.findByUserId(userId)
-                .map(existing -> {
-                    existing.updateFcmToken(request.getFcmToken(), request.getDeviceId(), request.getDeviceType());
-                    return existing;
-                })
-                .orElseGet(() -> {
-                    NotificationSetting newSetting = NotificationSetting.createWithFcmToken(
-                            user, request.getFcmToken(), request.getDeviceId(), request.getDeviceType()
-                    );
-                    return notificationSettingRepository.save(newSetting);
-                });
+            NotificationSetting setting = notificationSettingRepository.findByUserId(userId)
+                    .map(existing -> {
+                        existing.updateFcmToken(request.getFcmToken(), request.getDeviceId(), request.getDeviceType());
+                        return existing;
+                    })
+                    .orElseGet(() -> {
+                        NotificationSetting newSetting = NotificationSetting.createWithFcmToken(
+                                user, request.getFcmToken(), request.getDeviceId(), request.getDeviceType()
+                        );
+                        return notificationSettingRepository.save(newSetting);
+                    });
 
-        log.info("FCM 토큰 등록/업데이트 완료 - userId: {}, deviceType: {}", userId, request.getDeviceType());
-        return NotificationSettingResponse.from(setting);
+            log.info("FCM 토큰 등록/업데이트 완료 - userId: {}, deviceType: {}", userId, request.getDeviceType());
+            return NotificationSettingResponse.from(setting);
+        } catch (Exception e) {
+            log.error("FCM 토큰 등록 실패 - userId: {}, error: {}", userId, e.getMessage(), e);
+            throw new ApiException(ErrorCode.FCM_TOKEN_REGISTRATION_FAILED);
+        }
     }
 
     @Override
@@ -51,21 +56,8 @@ public class NotificationSettingServiceImpl implements NotificationSettingServic
         
         log.info("알림 설정 업데이트 완료 - userId: {}, trafficSpikeAlertEnabled: {}", 
                 userId, request.getTrafficSpikeAlertEnabled());
-        
+                
         return NotificationSettingResponse.from(setting);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public NotificationSettingResponse getNotificationSettings(Long userId) {
-        NotificationSetting setting = findNotificationSettingByUserId(userId);
-        return NotificationSettingResponse.from(setting);
-    }
-
-    @Override
-    public void deleteFCMToken(Long userId) {
-        notificationSettingRepository.deleteByUserId(userId);
-        log.info("FCM 토큰 삭제 완료 - userId: {}", userId);
     }
 
     private User findUserById(Long userId) {

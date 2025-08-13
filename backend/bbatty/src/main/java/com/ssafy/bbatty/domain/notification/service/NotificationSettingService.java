@@ -9,8 +9,4 @@ public interface NotificationSettingService {
     NotificationSettingResponse registerFCMToken(Long userId, FCMTokenRequest request);
     
     NotificationSettingResponse updateNotificationSettings(Long userId, NotificationSettingRequest request);
-    
-    NotificationSettingResponse getNotificationSettings(Long userId);
-    
-    void deleteFCMToken(Long userId);
 }

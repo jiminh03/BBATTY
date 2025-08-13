@@ -93,7 +93,12 @@ public enum ErrorCode {
     ROOM_INFO_MISSING(HttpStatus.BAD_REQUEST, "채팅방 정보가 누락되었습니다"),
 
     // USER PRIVACY
-    PRIVATE_CONTENT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "비공개 설정된 콘텐츠에요.");
+    PRIVATE_CONTENT_ACCESS_DENIED(HttpStatus.FORBIDDEN, "비공개 설정된 콘텐츠에요."),
+
+    // NOTIFICATION
+    FCM_TOKEN_REGISTRATION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "FCM 토큰 등록에 실패했습니다"),
+    PUSH_NOTIFICATION_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "푸시 알림 전송에 실패했습니다"),
+    NOTIFICATION_SETTING_NOT_FOUND(HttpStatus.NOT_FOUND, "알림 설정을 찾을 수 없습니다");
 
     private final HttpStatus status;
     private final String message;

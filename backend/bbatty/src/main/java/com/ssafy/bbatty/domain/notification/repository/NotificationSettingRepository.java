@@ -27,13 +27,14 @@ public interface NotificationSettingRepository extends JpaRepository<Notificatio
     Optional<NotificationSetting> findByFcmToken(String fcmToken);
 
     /**
-     * 특정 팀의 트래픽 급증 알림 활성화된 사용자들 조회
+     * 특정 팀의 트래픽 급증 알림 활성화된 사용자들 조회 (N+1 쿼리 방지)
      */
     @Query("SELECT ns FROM NotificationSetting ns " +
-           "WHERE ns.user.team.id = :teamId " +
+           "JOIN FETCH ns.user u " +
+           "JOIN FETCH u.team t " +
+           "WHERE t.id = :teamId " +
            "AND ns.trafficSpikeAlertEnabled = true " +
-           "AND ns.isDeleted = false " +
-           "AND ns.user.isDeleted = false")
+           "AND u.isDeleted = false")
     List<NotificationSetting> findTrafficSpikeAlertEnabledUsers(@Param("teamId") Long teamId);
 
     /**
@@ -59,8 +60,7 @@ public interface NotificationSettingRepository extends JpaRepository<Notificatio
     boolean existsByUserId(Long userId);
 
     /**
-     * 사용자 ID로 알림 설정 삭제
+     * 회원 탈퇴시 개인정보 삭제용 - 사용자 알림 설정 하드 삭제
      */
     void deleteByUserId(Long userId);
-
 }

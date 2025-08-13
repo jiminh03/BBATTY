@@ -7,6 +7,8 @@ import com.google.firebase.messaging.MulticastMessage;
 import com.ssafy.bbatty.domain.notification.dto.internal.NotificationTemplate;
 import com.ssafy.bbatty.domain.notification.entity.NotificationSetting;
 import com.ssafy.bbatty.domain.notification.repository.NotificationSettingRepository;
+import com.ssafy.bbatty.global.constants.ErrorCode;
+import com.ssafy.bbatty.global.exception.ApiException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,26 +27,30 @@ public class PushNotificationServiceImpl implements PushNotificationService {
     private final FCMMessageBuilder fcmMessageBuilder;
     private final FirebaseMessaging firebaseMessaging;
 
-    @Value("${notification.fcm.batch-size:500}")
+    @Value("${notification.fcm.batch-size:200}")
     private Integer batchSize;
 
     @Override
     @Transactional
     public void sendTrafficSpikeAlert(Long teamId, String teamName) {
-        List<NotificationSetting> targetUsers = notificationSettingRepository
-                .findTrafficSpikeAlertEnabledUsers(teamId);
+        try {
+            List<NotificationSetting> targetUsers = notificationSettingRepository
+                    .findTrafficSpikeAlertEnabledUsers(teamId);
 
-        if (targetUsers.isEmpty()) {
-            log.info("트래픽 급증 알림 대상 사용자 없음 - teamId: {}", teamId);
-            return;
+            if (targetUsers.isEmpty()) {
+                log.info("트래픽 급증 알림 대상 사용자 없음 - teamId: {}", teamId);
+                return;
+            }
+
+            log.info("트래픽 급증 알림 발송 시작 - teamId: {}, targetCount: {}", teamId, targetUsers.size());
+            sendBatchNotifications(targetUsers, teamName);
+        } catch (Exception e) {
+            log.error("트래픽 급증 알림 발송 중 시스템 오류 - teamId: {}, error: {}", teamId, e.getMessage(), e);
+            throw new ApiException(ErrorCode.PUSH_NOTIFICATION_SEND_FAILED);
         }
-
-        log.info("트래픽 급증 알림 발송 시작 - teamId: {}, targetCount: {}", teamId, targetUsers.size());
-        sendBatchNotifications(targetUsers, teamName);
     }
 
     @Override
-    @Transactional
     public void sendBatchNotifications(List<NotificationSetting> targetUsers, String teamName) {
         NotificationTemplate template = NotificationTemplate.createTrafficSpikeAlert(teamName);
 
