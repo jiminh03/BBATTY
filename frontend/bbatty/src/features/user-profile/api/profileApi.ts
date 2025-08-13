@@ -1,36 +1,28 @@
-import { apiClient } from '../../../shared';
+import { apiClient, Season } from '../../../shared';
 import { wrapApiCall, ApiError } from '../../../shared/api/utils/apiWrapper';
 import { AsyncResult } from '../../../shared/utils/result';
 import {
   UserProfile,
-  CheckNicknameRequest,
-  CheckNicknameResponse,
   UpdateProfileRequest,
   UserPrivacySettings,
+  CheckNicknameRequest,
+  CheckNicknameResponse,
 } from '../model/profileTypes';
 
 export const profileApi = {
-  // 프로필 조회 (본인 또는 타인)
   getProfile: (userId?: number): AsyncResult<UserProfile, ApiError> =>
-    wrapApiCall(() => (userId ? apiClient.get(`/api/users/${userId}/profile`) : apiClient.get('/api/user/profile'))),
-
-  // 프로필 수정 (본인만)
-  updateProfile: (data: UpdateProfileRequest): AsyncResult<UserProfile, ApiError> =>
-    wrapApiCall(() => apiClient.put('/api/user/profile', data)),
-
-  // 프로필 이미지 업로드
-  uploadProfileImage: (imageFile: FormData): AsyncResult<{ imageUrl: string }, ApiError> =>
     wrapApiCall(() =>
-      apiClient.post('/api/user/profile/image', imageFile, {
-        headers: { 'Content-Type': 'multipart/form-data' } as any,
+      apiClient.get('/api/profile', {
+        params: userId ? { userId } : undefined,
       })
     ),
 
-  updatePrivacySettings: (settings: UserPrivacySettings): AsyncResult<UserPrivacySettings, ApiError> =>
-    wrapApiCall(() => apiClient.put('/api/user/privacy-settings', settings)),
+  updateProfile: (data: UpdateProfileRequest): AsyncResult<UserProfile, ApiError> =>
+    wrapApiCall(() => apiClient.put('/api/profile/update', data)),
 
-  getPrivacySettings: (): AsyncResult<UserPrivacySettings, ApiError> =>
-    wrapApiCall(() => apiClient.get('/api/user/privacy-settings')),
+  updatePrivacySettings: (settings: UserPrivacySettings): AsyncResult<null, ApiError> => {
+    return wrapApiCall(() => apiClient.put('/api/profile/privacy', settings));
+  },
 
   checkNickname: (request: CheckNicknameRequest): AsyncResult<CheckNicknameResponse, ApiError> =>
     wrapApiCall(() => apiClient.get<CheckNicknameResponse>('/api/auth/check-nickname', { params: request })),

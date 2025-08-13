@@ -31,7 +31,7 @@ public interface AuthService {
     boolean isNicknameAvailable(String nickname);
 
     /**
-     * 로그아웃
+     * 회원 탈퇴
      */
-    void logout(String accessToken, String refreshToken);
+    void withdraw(Long userId);
 }

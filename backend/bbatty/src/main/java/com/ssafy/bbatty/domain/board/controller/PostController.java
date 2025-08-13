@@ -1,6 +1,7 @@
 package com.ssafy.bbatty.domain.board.controller;
 
 import com.ssafy.bbatty.domain.board.dto.request.PostCreateRequest;
+import com.ssafy.bbatty.domain.board.dto.request.PostUpdateRequest;
 import com.ssafy.bbatty.domain.board.dto.response.PostCreateResponse;
 import com.ssafy.bbatty.domain.board.dto.response.PostDetailResponse;
 import com.ssafy.bbatty.domain.board.dto.response.PostListPageResponse;
@@ -38,7 +39,6 @@ public class PostController {
     private final PostCountService postCountService;
     private final PostImageService postImageService;
     private final PopularPostService popularPostService;
-    private final NewsService newsService;
 
     // 게시물 생성
     @PostMapping
@@ -50,6 +50,8 @@ public class PostController {
                 .body(ApiResponse.success(SuccessCode.SUCCESS_CREATED, response));
     }
 
+
+
     // 게시물 삭제
     @DeleteMapping("/{postId}")
     public ResponseEntity<ApiResponse<Void>> deletePost(
@@ -59,6 +61,18 @@ public class PostController {
         postService.deletePost(postId, userPrincipal.getUserId());
         return ResponseEntity.status(SuccessCode.SUCCESS_DELETED.getStatus())
                 .body(ApiResponse.success(SuccessCode.SUCCESS_DELETED));
+    }
+
+    // 게시물 수정
+    @PutMapping("/{postId}")
+    public ResponseEntity<ApiResponse<Void>> updatePost(
+            @PathVariable Long postId,
+            @Valid @RequestBody PostUpdateRequest request,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+
+        postService.updatePost(postId, request, userPrincipal.getUserId());
+        return ResponseEntity.status(SuccessCode.SUCCESS_DEFAULT.getStatus())
+                .body(ApiResponse.success(SuccessCode.SUCCESS_DEFAULT));
     }
 
     // 전체 게시물 목록 조회 - 응답 형식
@@ -199,9 +213,9 @@ public class PostController {
     @GetMapping("/team/{teamId}/news")
     public ResponseEntity<ApiResponse<List<NewsSummaryDto>>> getNewsSummaryByTeam(
             @PathVariable Long teamId) {
-        
+
         List<NewsSummaryDto> response = newsService.getNewsSummaryByTeam(teamId);
-        
+
         return ResponseEntity.status(SuccessCode.SUCCESS_DEFAULT.getStatus())
                 .body(ApiResponse.success(SuccessCode.SUCCESS_DEFAULT, response));
     }

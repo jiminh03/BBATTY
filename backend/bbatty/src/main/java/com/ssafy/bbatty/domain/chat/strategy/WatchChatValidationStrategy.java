@@ -10,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Map;
 
 /**
@@ -59,6 +61,15 @@ public class WatchChatValidationStrategy implements ChatValidationStrategy {
             // 경기 상태 확인 (종료된 경기는 직관 채팅 불가)
             if (game.getStatus() == GameStatus.FINISHED) {
                 throw new ApiException(ErrorCode.GAME_FINISHED);
+            }
+
+            // 당일 경기인지 확인 (한국 시간 기준, 당일 경기가 아니면 직관 채팅 불가)
+            LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
+            LocalDate gameDate = game.getDateTime().toLocalDate();
+            if (!gameDate.equals(today)) {
+                log.warn("당일 경기가 아닌 채팅방 입장 시도: gameId={}, gameDate={}, today={}", 
+                        request.getGameId(), gameDate, today);
+                throw new ApiException(ErrorCode.NO_GAME_TODAY);
             }
 
             // 응원할 팀이 경기에 참여하는지 확인

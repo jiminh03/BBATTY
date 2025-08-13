@@ -29,9 +29,20 @@ export default function AppNavigator() {
   const { initializeUser, setCurrentUser, reset } = useUserStore();
   const { setCurrentTeam } = useTheme();
 
+  // Zustand 상태를 직접 구독 (상태 변경시 자동 리렌더링)
+  const refreshToken = useTokenStore((state) => state.refreshToken);
+  const currentUser = useUserStore((state) => state.currentUser);
+
   useEffect(() => {
     initializeApp();
   }, []);
+
+  // 상태가 변경될 때만 인증 상태 업데이트
+  useEffect(() => {
+    const isAuth = !!refreshToken && !!currentUser;
+    console.log('Auth status changed:', { isAuth, hasToken: !!refreshToken, hasUser: !!currentUser });
+    setIsAuthenticated(isAuth);
+  }, [refreshToken, currentUser]);
 
   const testReset = () => {
     resetToken();
@@ -41,7 +52,7 @@ export default function AppNavigator() {
   const initializeApp = async () => {
     try {
       await Promise.all([initializeTokens(), initializeUser()]);
-      await testReset();
+      // await testReset();
       initializeApiClient();
     } catch (error) {
       console.error('App initialization failed:', error);
@@ -62,59 +73,44 @@ export default function AppNavigator() {
       setKakaoUserInfo(userInfo);
       setKakaoAccessToken(accessToken);
 
-      // 기존 사용자인지 확인
-      const hasUserResult = await useUserStore.getState().hasUser();
-      const isExisting = isOk(hasUserResult) && hasUserResult.data;
-
-      setIsExistingUser(isExisting);
-      setShowSplash(false);
-
-      // 기존 사용자라면 서버에 로그인 요청
-      if (isExisting) {
-        console.error('기존 사용자임');
-        await handleExistingUserLogin(accessToken);
-      }
-    } catch (error) {
-      console.error('Login success handling failed:', error);
-      setShowSplash(false);
-    }
-  };
-
-  // 기존 사용자 로그인 처리
-  const handleExistingUserLogin = async (kakaoAccessToken: string) => {
-    try {
+      // 먼저 서버에 로그인을 시도해서 기존 사용자인지 확인
       const { authApi } = await import('../features/user-auth/api/authApi');
-
+      
       const loginResult = await authApi.login({
-        accessToken: kakaoAccessToken,
+        accessToken: accessToken,
       });
 
       if (isOk(loginResult)) {
+        // 기존 사용자 - 로그인 성공
         const { userProfile, tokens } = loginResult.data;
 
         const setTokensResult = await useTokenStore.getState().setTokens(tokens);
-
         if (isErr(setTokensResult)) {
           throw new Error('Token save failed');
         }
 
-        // 사용자 정보 및 팀 테마 설정
         await handleSetUserAndTeam(userProfile);
         setIsAuthenticated(true);
-
+        setIsExistingUser(true);
+        setShowSplash(false);
+        
         console.log('Existing user login successful');
       } else {
-        throw new Error(loginResult.error.message);
+        // 신규 사용자 - 회원가입 화면으로
+        setIsExistingUser(false);
+        setShowSplash(false);
       }
     } catch (error) {
-      console.error('Existing user login failed:', error);
-      Alert.alert('로그인 실패', '자동 로그인에 실패했습니다. 다시 로그인해주세요.');
-      // 이게 안되면 뭐먹고 사냐?
+      console.error('Login success handling failed:', error);
+      setIsExistingUser(false);
+      setShowSplash(false);
     }
   };
 
+
   const handleSetUserAndTeam = async (userInfo: any) => {
     await setCurrentUser(userInfo);
+    console.log('userInfo', userInfo);
 
     // 사용자 정보로부터 팀 설정
     if (userInfo.teamId) {

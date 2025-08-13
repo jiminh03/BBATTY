@@ -22,13 +22,13 @@ import org.springframework.web.bind.annotation.*;
  * 인증 컨트롤러
  * - 카카오 로그인/회원가입
  * - 토큰 갱신
- * - 로그아웃
+ * - 회원 탈퇴
  *
  * 📱 프론트엔드 개발자를 위한 API 가이드:
  * 1. POST /api/auth/login - 카카오 로그인 (기존 사용자)
  * 2. POST /api/auth/signup - 회원가입 (신규 사용자)
  * 3. POST /api/auth/refresh - 토큰 갱신
- * 4. POST /api/auth/logout - 로그아웃
+ * 4. DELETE /api/auth/withdraw - 회원 탈퇴
  */
 @Slf4j
 @RestController
@@ -106,20 +106,20 @@ public class AuthController {
     }
 
     /**
-     * 로그아웃
+     * 회원 탈퇴
      *
      * 📝 프론트 처리:
-     * - Authorization과 X-Refresh-Token 헤더 모두 포함
+     * - Authorization 헤더 포함하여 인증된 사용자만 탈퇴 가능
      * - 성공 후 모든 토큰 삭제하고 로그인 화면으로
      */
-    @PostMapping("/logout")
-    public ResponseEntity<ApiResponse<Void>> logout(
+    @DeleteMapping("/withdraw")
+    public ResponseEntity<ApiResponse<Void>> withdraw(
             HttpServletRequest request
     ) {
         String accessToken = jwtProvider.extractToken(request.getHeader("Authorization"));
-        String refreshToken = extractRefreshToken(request);
-
-        authService.logout(accessToken, refreshToken);
+        Long userId = jwtProvider.getUserId(accessToken);
+        
+        authService.withdraw(userId);
         return ResponseEntity.ok(ApiResponse.success());
     }
 

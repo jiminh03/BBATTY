@@ -1,5 +1,6 @@
 package com.ssafy.chat.match.controller;
 
+import com.ssafy.chat.common.util.AuthenticationUtil;
 import com.ssafy.chat.common.util.ChatRoomUtils;
 import com.ssafy.chat.config.ChatProperties;
 import com.ssafy.chat.global.constants.ErrorCode;
@@ -7,7 +8,7 @@ import com.ssafy.chat.global.exception.ApiException;
 import com.ssafy.chat.global.response.ApiResponse;
 import com.ssafy.chat.match.dto.MatchChatJoinRequest;
 import com.ssafy.chat.match.dto.MatchChatJoinResponse;
-import com.ssafy.chat.match.service.MatchChatAuthService;
+import com.ssafy.chat.match.service.MatchChatRoomAuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -26,9 +27,10 @@ import java.util.Map;
 @Slf4j
 public class MatchChatAuthController {
 
-    private final MatchChatAuthService matchChatAuthService;
+    private final MatchChatRoomAuthService matchChatRoomAuthService;
     private final ChatProperties chatProperties;
     private final ChatRoomUtils chatRoomUtils;
+    private final AuthenticationUtil authenticationUtil;
 
     /**
      * 매칭 채팅방 입장 요청
@@ -42,18 +44,15 @@ public class MatchChatAuthController {
         log.info("매칭 채팅방 입장 요청 - matchId: {}, nickname: {}, winRate: {}%", 
                 request.getMatchId(), request.getNickname(), request.getWinRate());
         
-        // JWT 토큰 추출 (현재는 사용하지 않음 - 더미로 처리)
-        String jwtToken = null;
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            jwtToken = authHeader.substring(7);
-        }
+        // JWT 토큰 추출
+        String jwtToken = authenticationUtil.extractJwtToken(authHeader);
         
         try {
             // 입장 검증 및 세션 토큰 발급
-            Map<String, Object> sessionData = matchChatAuthService.validateAndCreateSession(jwtToken, request);
+            Map<String, Object> sessionData = matchChatRoomAuthService.validateAndCreateSession(jwtToken, request);
             
-            // WebSocket 접속 링크 생성 - 매칭 채팅은 토큰 기반이므로 별도 처리
-            String websocketUrl = String.format("%s/ws/match-chat/websocket?token=%s&matchId=%s",
+            // WebSocket 접속 링크 생성 - React Native용 순수 WebSocket
+            String websocketUrl = String.format("%s/ws/match-chat?sessionToken=%s&matchId=%s",
                     chatProperties.getWebsocket().getBaseUrl(), 
                     sessionData.get("sessionToken"), request.getMatchId());
 
@@ -92,7 +91,7 @@ public class MatchChatAuthController {
     @GetMapping("/validate-token")
     public ResponseEntity<ApiResponse<Map<String, Object>>> validateToken(@RequestParam String token) {
         try {
-            Map<String, Object> userInfo = matchChatAuthService.getUserInfoByToken(token);
+            Map<String, Object> userInfo = matchChatRoomAuthService.getUserInfoByToken(token);
             return ResponseEntity.ok(ApiResponse.success(userInfo));
         } catch (Exception e) {
             log.warn("세션 토큰 검증 실패 - token: {}", token, e);

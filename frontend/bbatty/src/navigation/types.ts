@@ -36,9 +36,11 @@ export type HomeStackParamList = {
   PostDetail: {
     postId: number;
   };
+  PopularPosts: {teamId:number};
   PostCreate: {
     category?: string;
   };
+  TeamPostSearch: { teamId: number; initialKeyword?:string}
   Notifications: undefined;
   Search: {
     initialQuery?: string;
@@ -47,9 +49,10 @@ export type HomeStackParamList = {
 
 // 탐색 스택 파라미터
 export type ExploreStackParamList = {
-  CommunityHome: {
-    teamId?: string;
-  };
+  CommunityHome: undefined;
+  TeamRanking: undefined;
+  UserRanking: undefined;
+  TeamCommunity: undefined;
   PostEdit: {
     postId: string;
   };
@@ -107,6 +110,7 @@ export type ChatStackParamList = {
     websocketUrl: string;
     sessionToken: string;
   };
+  ChatRoomSearch: undefined;
 };
 
 // 마이페이지 스택 파라미터 (간소화)

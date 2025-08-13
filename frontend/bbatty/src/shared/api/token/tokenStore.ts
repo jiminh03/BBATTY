@@ -105,6 +105,13 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
           accessTokenExpiresAt: tokens.accessTokenExpiresAt,
           refreshTokenExpiresAt: tokens.refreshTokenExpiresAt,
         });
+
+        console.log('🔑 [TokenStore] Access Token 저장 성공:', {
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
+          accessTokenExpiresAt: tokens.accessTokenExpiresAt,
+          refreshTokenExpiresAt: tokens.refreshTokenExpiresAt,
+        });
       },
       (error) => createTokenError('STORAGE_ERROR', 'Failed to set tokens', error)
     );
@@ -170,6 +177,7 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
       return Ok(true);
     }
 
+    console.log('10분전 미리 갱신 ');
     console.log('Access token expiring soon, attempting refresh...');
     return await refreshTokens();
   },

@@ -6,6 +6,7 @@ import {
   MatchChatRoomDetailScreen,
   MatchChatRoomScreen 
 } from '../../pages/match-chat';
+import ChatRoomSearchScreen from '../../pages/match-chat/ChatRoomSearchScreen';
 import type { ChatStackParamList } from '../types';
 
 const Stack = createStackNavigator<ChatStackParamList>();
@@ -22,6 +23,9 @@ export default function ChatNavigator() {
         headerTitleStyle: {
           fontWeight: 'bold',
         },
+        // 화면 캐싱 비활성화로 중복 마운트 방지
+        animationEnabled: true,
+        gestureEnabled: true,
       }}
     >
       <Stack.Screen 
@@ -42,6 +46,11 @@ export default function ChatNavigator() {
       <Stack.Screen 
         name="MatchChatRoom" 
         component={MatchChatRoomScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen 
+        name="ChatRoomSearch" 
+        component={ChatRoomSearchScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

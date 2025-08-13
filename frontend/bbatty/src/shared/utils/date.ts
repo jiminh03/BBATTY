@@ -113,3 +113,39 @@ export const parseISODate = (isoString: string): Date | null => {
     return null;
   }
 };
+
+// ================================ 시즌 관련 함수들 ===============================
+
+// 서비스 시작년도
+const SERVICE_START_YEAR = 2025;
+
+export type Season = 'total' | string;
+
+export const generateSeasons = (): Season[] => {
+  const currentYear = new Date().getFullYear();
+  const seasons: Season[] = ['total'];
+
+  for (let year = SERVICE_START_YEAR; year <= currentYear; year++) {
+    seasons.push(year.toString());
+  }
+
+  return seasons;
+};
+
+export const formatSeasonDisplay = (season: Season): string => {
+  if (season === 'total') return '전체';
+  return `${season}시즌`;
+};
+
+export const getCurrentSeason = (): string => {
+  return new Date().getFullYear().toString();
+};
+
+export const isValidSeason = (season: string): boolean => {
+  if (season === 'total') return true;
+
+  const year = parseInt(season);
+  const currentYear = new Date().getFullYear();
+
+  return year >= SERVICE_START_YEAR && year <= currentYear;
+};

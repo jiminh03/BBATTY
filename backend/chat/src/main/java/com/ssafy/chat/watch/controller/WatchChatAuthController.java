@@ -1,5 +1,6 @@
 package com.ssafy.chat.watch.controller;
 
+import com.ssafy.chat.common.util.AuthenticationUtil;
 import com.ssafy.chat.common.util.ChatRoomUtils;
 import com.ssafy.chat.config.ChatProperties;
 import com.ssafy.chat.global.constants.ErrorCode;
@@ -7,7 +8,7 @@ import com.ssafy.chat.global.exception.ApiException;
 import com.ssafy.chat.global.response.ApiResponse;
 import com.ssafy.chat.watch.dto.WatchChatJoinRequest;
 import com.ssafy.chat.watch.dto.WatchChatJoinResponse;
-import com.ssafy.chat.watch.service.WatchChatAuthService;
+import com.ssafy.chat.watch.service.WatchChatRoomAuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -25,9 +26,10 @@ import java.util.Map;
 @Slf4j
 public class WatchChatAuthController {
 
-    private final WatchChatAuthService watchChatAuthService;
+    private final WatchChatRoomAuthService watchChatRoomAuthService;
     private final ChatProperties chatProperties;
     private final ChatRoomUtils chatRoomUtils;
+    private final AuthenticationUtil authenticationUtil;
 
     /**
      * 직관 채팅방 입장 토큰 발급
@@ -42,10 +44,10 @@ public class WatchChatAuthController {
                 request.getGameId(), request.isAttendanceVerified());
 
         // JWT 토큰 추출
-        String jwtToken = extractTokenFromHeader(authHeader);
+        String jwtToken = authenticationUtil.extractJwtToken(authHeader);
         
         try {
-            Map<String, Object> sessionData = watchChatAuthService.validateAndCreateSession(jwtToken, request);
+            Map<String, Object> sessionData = watchChatRoomAuthService.validateAndCreateSession(jwtToken, request);
             
             // WebSocket 접속 링크 생성
             String websocketUrl = chatRoomUtils.buildWatchChatWebSocketUrl(
@@ -82,7 +84,7 @@ public class WatchChatAuthController {
     @DeleteMapping("/session/{sessionToken}")
     public ResponseEntity<ApiResponse<Void>> invalidateSession(@PathVariable String sessionToken) {
         try {
-            watchChatAuthService.invalidateSession(sessionToken);
+            watchChatRoomAuthService.invalidateSession(sessionToken);
             log.info("직관 채팅 세션 무효화 성공 - sessionToken: {}", sessionToken);
             
             return ResponseEntity.ok(ApiResponse.success());
@@ -93,10 +95,4 @@ public class WatchChatAuthController {
         }
     }
 
-    private String extractTokenFromHeader(String authHeader) {
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            throw new ApiException(ErrorCode.UNAUTHORIZED);
-        }
-        return authHeader.substring(7);
-    }
 }

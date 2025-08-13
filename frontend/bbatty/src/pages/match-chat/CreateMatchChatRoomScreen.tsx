@@ -5,14 +5,13 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  StyleSheet,
-  SafeAreaView,
   Alert,
   KeyboardAvoidingView,
   Platform,
   Modal,
   FlatList,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { chatRoomApi } from '../../entities/chat-room/api/api';
@@ -20,6 +19,9 @@ import { gameApi } from '../../entities/game';
 import type { CreateMatchChatRoomRequest } from '../../entities/chat-room/api/types';
 import type { Game } from '../../entities/game';
 import type { ChatStackParamList } from '../../navigation/types';
+import { useThemeColor } from '../../shared/team/ThemeContext';
+import { useUserStore } from '../../entities/user/model/userStore';
+import { styles } from './CreateMatchChatRoomScreen.styles';
 
 type NavigationProp = StackNavigationProp<ChatStackParamList>;
 
@@ -50,6 +52,10 @@ const GENDER_OPTIONS = [
 
 export const CreateMatchChatRoomScreen = () => {
   const navigation = useNavigation<NavigationProp>();
+  const themeColor = useThemeColor();
+  const getCurrentUser = useUserStore((state) => state.getCurrentUser);
+  const currentUser = getCurrentUser();
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(false);
   const [gamesLoading, setGamesLoading] = useState(false);
   const [showGameModal, setShowGameModal] = useState(false);
@@ -60,12 +66,12 @@ export const CreateMatchChatRoomScreen = () => {
     gameId: 0, // 경기 선택 후 설정
     matchTitle: '',
     matchDescription: '',
-    teamId: 1, // LG 팀 ID (실제 서버 팀 ID로 매핑 필요)
+    teamId: currentUser?.teamId || 1,
     minAge: 20,
     maxAge: 30,
     genderCondition: 'ALL',
     maxParticipants: 10,
-    nickname: '',
+    nickname: currentUser?.nickname || '',
   });
 
   useEffect(() => {
@@ -130,10 +136,6 @@ export const CreateMatchChatRoomScreen = () => {
       return;
     }
 
-    if (!formData.nickname.trim()) {
-      Alert.alert('알림', '닉네임을 입력해주세요.');
-      return;
-    }
 
     if (formData.minAge >= formData.maxAge) {
       Alert.alert('알림', '최대 나이는 최소 나이보다 커야 합니다.');
@@ -185,22 +187,22 @@ export const CreateMatchChatRoomScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <KeyboardAvoidingView 
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: themeColor }]}>
           <TouchableOpacity onPress={() => {
             if (navigation.canGoBack()) {
               navigation.goBack();
             }
           }}>
-            <Text style={styles.cancelButton}>취소</Text>
+            <Text style={[styles.cancelButton, { color: '#ffffff' }]}>취소</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>채팅방 만들기</Text>
+          <Text style={[styles.headerTitle, { color: '#ffffff' }]}>채팅방 만들기</Text>
           <TouchableOpacity onPress={handleSubmit} disabled={loading}>
-            <Text style={[styles.createButton, loading && styles.disabledButton]}>
+            <Text style={[styles.createButton, { color: '#ffffff' }, loading && styles.disabledButton]}>
               {loading ? '생성중...' : '완료'}
             </Text>
           </TouchableOpacity>
@@ -260,28 +262,6 @@ export const CreateMatchChatRoomScreen = () => {
             />
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.label}>응원팀</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.teamContainer}>
-              {TEAMS.map((team) => (
-                <TouchableOpacity
-                  key={team}
-                  style={[
-                    styles.teamButton,
-                    formData.teamId === TEAM_ID_MAP[team] && styles.selectedTeamButton
-                  ]}
-                  onPress={() => updateFormData('teamId', team)}
-                >
-                  <Text style={[
-                    styles.teamButtonText,
-                    formData.teamId === TEAM_ID_MAP[team] && styles.selectedTeamButtonText
-                  ]}>
-                    {team}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
 
           <View style={styles.section}>
             <Text style={styles.label}>참여 조건</Text>
@@ -333,16 +313,6 @@ export const CreateMatchChatRoomScreen = () => {
             </View>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.label}>닉네임 *</Text>
-            <TextInput
-              style={styles.textInput}
-              value={formData.nickname}
-              onChangeText={(text) => updateFormData('nickname', text)}
-              placeholder="채팅방에서 사용할 닉네임을 입력하세요"
-              maxLength={20}
-            />
-          </View>
 
           <View style={styles.section}>
             <Text style={styles.label}>최대 참여 인원</Text>
@@ -372,12 +342,12 @@ export const CreateMatchChatRoomScreen = () => {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowGameModal(false)}
       >
-        <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
+        <View style={[styles.modalContainer, { paddingTop: insets.top }]}>
+          <View style={[styles.modalHeader, { backgroundColor: themeColor }]}>
             <TouchableOpacity onPress={() => setShowGameModal(false)}>
-              <Text style={styles.modalCancelButton}>취소</Text>
+              <Text style={[styles.modalCancelButton, { color: '#ffffff' }]}>취소</Text>
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>경기 선택</Text>
+            <Text style={[styles.modalTitle, { color: '#ffffff' }]}>경기 선택</Text>
             <View style={styles.placeholder} />
           </View>
 
@@ -412,291 +382,9 @@ export const CreateMatchChatRoomScreen = () => {
             )}
             showsVerticalScrollIndicator={false}
           />
-        </SafeAreaView>
+        </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  cancelButton: {
-    color: '#666',
-    fontSize: 16,
-  },
-  createButton: {
-    color: '#007AFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  disabledButton: {
-    color: '#ccc',
-  },
-  content: {
-    flex: 1,
-  },
-  section: {
-    backgroundColor: '#fff',
-    marginTop: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 12,
-  },
-  subLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
-  },
-  textInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    backgroundColor: '#f9f9f9',
-  },
-  textArea: {
-    height: 80,
-    textAlignVertical: 'top',
-  },
-  teamContainer: {
-    marginTop: 8,
-  },
-  teamButton: {
-    backgroundColor: '#f0f0f0',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 8,
-  },
-  selectedTeamButton: {
-    backgroundColor: '#007AFF',
-  },
-  teamButtonText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  selectedTeamButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  conditionRow: {
-    marginBottom: 16,
-  },
-  ageContainer: {
-    marginBottom: 16,
-  },
-  ageInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  ageInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 16,
-    width: 60,
-    textAlign: 'center',
-    backgroundColor: '#f9f9f9',
-  },
-  ageText: {
-    marginHorizontal: 8,
-    fontSize: 16,
-    color: '#666',
-  },
-  genderContainer: {
-    marginBottom: 16,
-  },
-  genderButtons: {
-    flexDirection: 'row',
-  },
-  genderButton: {
-    backgroundColor: '#f0f0f0',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 8,
-  },
-  selectedGenderButton: {
-    backgroundColor: '#007AFF',
-  },
-  genderButtonText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  selectedGenderButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  participantContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 12,
-  },
-  participantButton: {
-    backgroundColor: '#007AFF',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  participantButtonText: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  participantCount: {
-    marginHorizontal: 20,
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  // 경기 선택 관련 스타일
-  gameSelectButton: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 16,
-    backgroundColor: '#f9f9f9',
-  },
-  gameSelectButtonEmpty: {
-    borderColor: '#007AFF',
-    borderStyle: 'dashed',
-  },
-  selectedGameContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  gameInfo: {
-    flex: 1,
-  },
-  gameTeams: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
-  },
-  gameDetails: {
-    fontSize: 12,
-    color: '#666',
-  },
-  gameStatusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  gameStatusText: {
-    color: '#fff',
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  gameSelectPlaceholder: {
-    fontSize: 16,
-    color: '#999',
-    textAlign: 'center',
-  },
-  // 모달 스타일
-  modalContainer: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  modalCancelButton: {
-    color: '#666',
-    fontSize: 16,
-  },
-  placeholder: {
-    width: 40,
-  },
-  dateGroup: {
-    marginBottom: 16,
-  },
-  dateHeader: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  gameItem: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  selectedGameItem: {
-    backgroundColor: '#E3F2FD',
-  },
-  gameItemContent: {
-    flex: 1,
-  },
-  gameTeamsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  gameItemTeams: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    flex: 1,
-  },
-  gameItemDetails: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
-  },
-  activeUserCount: {
-    fontSize: 12,
-    color: '#007AFF',
-    fontWeight: '500',
-  },
-});

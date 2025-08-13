@@ -21,14 +21,14 @@ public class ChatProperties {
     @Getter
     @Setter
     public static class Websocket {
-        private String baseUrl = "ws://i13a403.p.ssafy.io:8084";
+        private String baseUrl = "ws://i13a403.p.ssafy.io:8083";
     }
 
     @Getter
     @Setter
     public static class Traffic {
-        private int spikeThreshold = 100;
-        private int windowMinutes = 3;
+        private int spikeThreshold = 50;
+        private int windowMinutes = 1;
     }
 
     @Getter

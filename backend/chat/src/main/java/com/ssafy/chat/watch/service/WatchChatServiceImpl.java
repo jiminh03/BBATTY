@@ -1,5 +1,6 @@
 package com.ssafy.chat.watch.service;
 
+import com.ssafy.chat.common.enums.MessageType;
 import com.ssafy.chat.common.util.KSTTimeUtil;
 
 import com.ssafy.chat.common.util.ChatRoomTTLManager;
@@ -13,6 +14,7 @@ import com.ssafy.chat.global.exception.ApiException;
 import com.ssafy.chat.watch.dto.WatchChatMessage;
 import com.ssafy.chat.watch.redis.WatchChatRedisPub;
 import com.ssafy.chat.watch.redis.WatchChatRedisSub;
+import com.ssafy.chat.watch.kafka.WatchChatNotificationProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -40,6 +42,7 @@ public class WatchChatServiceImpl implements WatchChatService {
     private final RedisUtil redisUtil;
     private final ChatProperties chatProperties;
     private final ChatRoomUtils chatRoomUtils;
+    private final WatchChatNotificationProducer notificationProducer;
     
     @Override
     public void addSessionToWatchRoom(String roomId, WebSocketSession session) {
@@ -110,13 +113,16 @@ public class WatchChatServiceImpl implements WatchChatService {
                 }
             }
             
-            // 임계값 초과 시 로그 출력
+            // 임계값 초과 시 "불이 났어요" 메시지 전송
             if (chatRoomUtils.isTrafficSpike(totalMessages)) {
                 log.warn("관전 채팅 트래픽 급증 감지 - roomId: {}, 최근 {}분간 메시지: {}개", 
                         roomId, chatRoomUtils.getTrafficWindowMinutes(), totalMessages);
                 
-                // 필요하다면 여기서 알림이나 추가 처리 가능
-                // 예: 관리자 알림, 레이트 리미팅 등
+                // "우리 채팅방에 불이 났어요" 시스템 메시지 전송
+                sendTrafficSpikeMessage(roomId, totalMessages);
+                
+                // Kafka로 팀 알림 전송
+                sendTeamFireAlertToKafka(roomId);
             }
             
         } catch (Exception e) {
@@ -170,6 +176,53 @@ public class WatchChatServiceImpl implements WatchChatService {
         } catch (Exception e) {
             log.error("세션에서 사용자 정보 조회 실패 - token: {}", sessionToken, e);
             return Map.of();
+        }
+    }
+    
+    /**
+     * 트래픽 급증 시 "불이 났어요" 메시지 전송
+     */
+    private void sendTrafficSpikeMessage(String roomId, long totalMessages) {
+        try {
+            WatchChatMessage fireMessage = (WatchChatMessage) WatchChatMessage.builder()
+                    .messageType(MessageType.SYSTEM)
+                    .roomId(roomId)
+                    .content("🔥 우리 채팅방에 불이 났어요! 🔥 (최근 " + 
+                            chatRoomUtils.getTrafficWindowMinutes() + "분간 " + 
+                            totalMessages + "개 메시지)")
+                    .timestamp(KSTTimeUtil.nowAsTimestamp())
+                    .build();
+                    
+            // 시스템 메시지를 채팅방에 발송
+            Map<String, Object> messageMap = createMessageMap(fireMessage);
+            redisPub.publishMessage(roomId, messageMap);
+            
+            log.info("트래픽 급증 알림 메시지 전송 - roomId: {}", roomId);
+            
+        } catch (Exception e) {
+            log.error("트래픽 급증 알림 메시지 전송 실패 - roomId: {}", roomId, e);
+        }
+    }
+    
+    /**
+     * 팀 불이 났어요 알림을 Kafka로 전송
+     */
+    private void sendTeamFireAlertToKafka(String roomId) {
+        try {
+            // 채팅방 정보에서 teamId 조회
+            Map<String, Object> roomInfo = getWatchChatRoom(roomId);
+            Object teamIdObj = roomInfo.get("teamId");
+            
+            if (teamIdObj != null) {
+                Long teamId = Long.parseLong(teamIdObj.toString());
+                notificationProducer.sendTeamFireAlert(teamId);
+                log.info("팀 불이 났어요 Kafka 알림 전송 - roomId: {}, teamId: {}", roomId, teamId);
+            } else {
+                log.warn("채팅방에서 teamId를 찾을 수 없음 - roomId: {}", roomId);
+            }
+            
+        } catch (Exception e) {
+            log.error("팀 불이 났어요 Kafka 알림 전송 실패 - roomId: {}", roomId, e);
         }
     }
     

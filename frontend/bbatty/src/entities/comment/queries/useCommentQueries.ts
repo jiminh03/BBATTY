@@ -44,19 +44,34 @@ export const useCreateComment = (postId: number) => {
 export const useUpdateComment = (postId: number) => {
   const qc = useQueryClient();
   return useMutation({
-    // ✅ commentId: string 유지
-    mutationFn: (payload: { commentId: string; content: string }) =>
-      commentApi.updateComment(payload),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['comments', postId] }),
+    mutationFn: (payload: UpdateCommentPayload) => commentApi.updateComment(payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['comments', postId] });
+    },
   });
 };
 
 export const useDeleteComment = (postId: number) => {
   const qc = useQueryClient();
   return useMutation({
-    // ✅ commentId: string 유지
-    mutationFn: (payload: { commentId: string }) =>
-      commentApi.deleteComment(payload),
+    mutationFn: (payload: DeleteCommentPayload) => commentApi.deleteComment(payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['comments', postId] });
+      qc.invalidateQueries({ queryKey: ['post', postId] }); // 댓글 수 갱신
+    },
+  });
+};
+
+// 답글
+export const useCreateReply = (postId: number, parentId: number) => {
+  const qc = useQueryClient();
+  const userId = useUserStore((s) => s.currentUser?.userId);
+
+  return useMutation({
+    mutationFn: async (content: string) => {
+      if (!userId) throw new Error('로그인이 필요합니다.');
+      await commentApi.createComment({ postId, userId, content, parentId }); // 👈 parentId 포함
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['comments', postId] });
       qc.invalidateQueries({ queryKey: ['post', postId] });

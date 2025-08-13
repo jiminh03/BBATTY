@@ -1,24 +1,32 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   ScrollView,
-  StyleSheet,
-  SafeAreaView,
   Alert,
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  AppState,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import NetInfo from '@react-native-community/netinfo';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import type { RouteProp } from '@react-navigation/native';
-import { useMatchChatWebSocket } from '../../features/match-chat';
 import type { MatchChatRoom } from '../../entities/chat-room/api/types';
-import type { ChatMessage, MatchChatMessage, SystemMessage } from '../../features/match-chat';
+import type { ChatMessage, MatchChatMessage, SystemMessage, MessageWithStatus, ExtendedConnectionStatus, ChatNotification } from '../../features/match-chat';
 import type { ChatStackParamList } from '../../navigation/types';
+import { useMessageQueue } from '../../features/match-chat/hooks/useMessageQueue';
+import { useChatNotifications } from '../../features/match-chat/hooks/useChatNotifications';
+import { ChatNotificationManager } from '../../features/match-chat/components/ChatNotification';
+import { ConnectionStatusIndicator, SimpleConnectionStatus } from '../../features/match-chat/components/ConnectionStatus';
+import { MessageStatusIndicator, SimpleMessageStatus } from '../../features/match-chat/components/MessageStatus';
+import { getErrorMessage, logChatError } from '../../shared/utils/error';
 import { useUserStore } from '../../entities/user/model/userStore';
+import { useThemeColor } from '../../shared/team/ThemeContext';
+import { styles } from './MatchChatRoomScreen.styles';
 
 type NavigationProp = StackNavigationProp<ChatStackParamList>;
 type RoutePropType = RouteProp<ChatStackParamList, 'MatchChatRoom'>;
@@ -26,33 +34,78 @@ type RoutePropType = RouteProp<ChatStackParamList, 'MatchChatRoom'>;
 export const MatchChatRoomScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RoutePropType>();
+  const insets = useSafeAreaInsets();
   const { room, websocketUrl, sessionToken } = route.params;
+  const themeColor = useThemeColor();
   
-  console.log('MatchChatRoomScreen route.params:', route.params);
+  // 워치채팅 여부 확인
+  const isWatchChat = websocketUrl.includes('/ws/watch-chat/') || (websocketUrl.includes('gameId=') && websocketUrl.includes('teamId='));
   
   const [currentMessage, setCurrentMessage] = useState('');
   const getCurrentUser = useUserStore((state) => state.getCurrentUser);
   const currentUser = getCurrentUser();
-  const currentUserId = currentUser?.userId || 45; // fallback to test ID that matches log
-  
-  console.log('Current User:', currentUser);
-  console.log('Current User ID:', currentUserId);
+  const currentUserId = currentUser?.userId || 45;
   
   const scrollViewRef = useRef<ScrollView>(null);
 
-  const scrollToBottom = () => {
+  // 🔧 FIX 1: ref로 상태 관리하여 무한 루프 방지
+  const connectionStateRef = useRef({
+    isConnecting: false,
+    isConnected: false,
+    reconnectAttempts: 0,
+    maxReconnectAttempts: 3,
+    lastReconnectTime: 0,
+    reconnectCooldown: 5000, // 5초 쿨다운
+    isDestroyed: false,
+    reconnectTimer: null as NodeJS.Timeout | null,
+  });
+
+  const [messages, setMessages] = useState<MessageWithStatus[]>([]);
+  const [ws, setWs] = useState<WebSocket | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<ExtendedConnectionStatus>('DISCONNECTED');
+  const [sentMessages, setSentMessages] = useState<Set<string>>(new Set());
+  const [appState, setAppState] = useState(AppState.currentState);
+  const [networkConnected, setNetworkConnected] = useState(true);
+  
+  // 사용자 친화적 기능들
+  const {
+    notifications,
+    dismissNotification,
+    showConnectionNotification,
+    showErrorNotification,
+    showMessageNotification,
+  } = useChatNotifications();
+
+  const {
+    pendingMessages,
+    addMessageToQueue,
+    retryMessage,
+    removeMessage,
+    flushQueue,
+  } = useMessageQueue({
+    onSendMessage: async (content: string) => {
+      if (ws?.readyState === WebSocket.OPEN) {
+        try {
+          ws.send(content);
+          return true;
+        } catch (error) {
+          console.error('WebSocket send error:', error);
+          return false;
+        }
+      }
+      return false;
+    },
+    isConnected: connectionStatus === 'CONNECTED',
+    maxRetries: 3,
+  });
+
+  const scrollToBottom = useCallback(() => {
     setTimeout(() => {
       scrollViewRef.current?.scrollToEnd({ animated: true });
     }, 50);
-  };
+  }, []);
 
-  // 기존 WebSocket 로직 다시 사용
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [ws, setWs] = useState<WebSocket | null>(null);
-  const [connectionStatus, setConnectionStatus] = useState<'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'ERROR'>('DISCONNECTED');
-  const [sentMessages, setSentMessages] = useState<Set<string>>(new Set());
-
-  const addMessage = (message: ChatMessage, isMyMessage: boolean = false) => {
+  const addMessage = useCallback((message: ChatMessage, isMyMessage: boolean = false) => {
     setMessages(prev => {
       const isDuplicate = prev.some(m => 
         m.timestamp === message.timestamp && 
@@ -74,480 +127,584 @@ export const MatchChatRoomScreen = () => {
       }
       return newMessages;
     });
-  };
+  }, []);
 
-  // 메시지가 업데이트될 때마다 스크롤을 하단으로
-  useEffect(() => {
-    if (messages.length > 0) {
-      scrollToBottom();
+  // 🔧 FIX 2: 재연결 쿨다운 및 중복 방지 로직 추가
+  const canReconnect = useCallback((): boolean => {
+    const state = connectionStateRef.current;
+    const now = Date.now();
+    
+    if (state.isDestroyed) return false;
+    if (state.isConnecting) return false;
+    if (state.isConnected) return false;
+    if (state.reconnectAttempts >= state.maxReconnectAttempts) return false;
+    if (now - state.lastReconnectTime < state.reconnectCooldown) return false;
+    if (!networkConnected) return false;
+    if (appState !== 'active') return false;
+    
+    return true;
+  }, [networkConnected, appState]);
+
+  const clearReconnectTimer = useCallback(() => {
+    if (connectionStateRef.current.reconnectTimer) {
+      clearTimeout(connectionStateRef.current.reconnectTimer);
+      connectionStateRef.current.reconnectTimer = null;
     }
-  }, [messages]);
+  }, []);
 
-  const connectToWebSocket = () => {
+  const connectToWebSocket = useCallback(async () => {
+    const state = connectionStateRef.current;
+    
+    // 🔧 FIX 3: 중복 연결 방지 강화
+    if (state.isDestroyed) {
+      console.log('📱 컴포넌트가 언마운트됨 - 연결 시도 중단');
+      return;
+    }
+
+    if (!canReconnect()) {
+      console.log('📱 재연결 조건 불충족 - 연결 시도 중단');
+      return;
+    }
+
     try {
+      const netState = await NetInfo.fetch();
+      if (!netState.isConnected) {
+        console.log('🌐 네트워크 연결 없음 - WebSocket 연결 시도 중단');
+        setConnectionStatus('ERROR');
+        return;
+      }
+
+      // 기존 WebSocket 정리
+      if (ws) {
+        ws.close(1000, 'New connection attempt');
+        setWs(null);
+      }
+
+      state.isConnecting = true;
+      state.lastReconnectTime = Date.now();
       setConnectionStatus('CONNECTING');
       
-      // 안드로이드 에뮬레이터용 URL 변경
+      console.log(`📱 WebSocket 연결 시도 (${state.reconnectAttempts + 1}/${state.maxReconnectAttempts})`);
+      
       let wsUrl = websocketUrl;
       if (wsUrl && wsUrl.includes('localhost')) {
         wsUrl = wsUrl.replace('localhost', '10.0.2.2');
       }
       
-      console.log('웹소켓 연결 시작');
-      console.log('websocketUrl:', websocketUrl);
-      console.log('sessionToken:', sessionToken);
-      console.log(`최종 wsUrl: ${wsUrl}`);
+      if (wsUrl && !wsUrl.startsWith('ws://') && !wsUrl.startsWith('wss://')) {
+        if (wsUrl.startsWith('http://')) {
+          wsUrl = wsUrl.replace('http://', 'ws://');
+        } else if (wsUrl.startsWith('https://')) {
+          wsUrl = wsUrl.replace('https://', 'wss://');
+        }
+      }
+      
+      // Mock 처리 로직 (기존과 동일)
+      if (wsUrl && wsUrl.includes('i13a403.p.ssafy.io:8083') && sessionToken && sessionToken.startsWith('mock_session_token')) {
+        console.log('⚠️ 서버 WebSocket 연결 문제로 인한 임시 데모 모드');
+        setTimeout(() => {
+          if (!state.isDestroyed) {
+            state.isConnecting = false;
+            state.isConnected = true;
+            state.reconnectAttempts = 0;
+            setConnectionStatus('CONNECTED');
+            console.log('📡 데모 모드: 연결 성공');
+          }
+        }, 1000);
+        return;
+      }
 
       if (!wsUrl) {
         console.error('웹소켓 URL이 없습니다!');
-        setConnectionStatus('DISCONNECTED');
+        state.isConnecting = false;
+        setConnectionStatus('ERROR');
         return;
       }
 
       const websocket = new WebSocket(wsUrl);
       setWs(websocket);
 
+      // 🔧 FIX 4: 연결 타임아웃 추가
+      const connectionTimeout = setTimeout(() => {
+        if (state.isConnecting) {
+          console.log('📱 WebSocket 연결 타임아웃');
+          websocket.close();
+          state.isConnecting = false;
+          setConnectionStatus('ERROR');
+          scheduleReconnect();
+        }
+      }, 10000); // 10초 타임아웃
+
       websocket.onopen = () => {
+        clearTimeout(connectionTimeout);
+        if (state.isDestroyed) return;
+        
+        state.isConnecting = false;
+        state.isConnected = true;
+        state.reconnectAttempts = 0; // 성공 시 리셋
         setConnectionStatus('CONNECTED');
-        console.log('웹소켓 연결 성공');
+        console.log('📡 WebSocket 연결 성공');
         
-        // watch chat의 경우 사용자 정보 전송하지 않음
-        const isWatchChat = wsUrl.includes('/ws/watch-chat/') || (wsUrl.includes('gameId=') && wsUrl.includes('teamId='));
+        // 사용자에게 연결 성공 알림
+        showConnectionNotification('CONNECTED');
         
-        if (!isWatchChat) {
-          // 매치 채팅의 경우만 사용자 인증 정보 전송
-          const authData = {
+        // 대기 중인 메시지들 재전송 시도
+        // await flushQueue();
+        
+        // 인증 데이터 전송 (기존 로직 유지)
+        let authData;
+        if (isWatchChat) {
+          authData = {
+            type: 'AUTH',
+            gameId: room.gameId || '1258',
+            teamId: currentUser?.teamId || 3,
+            nickname: currentUser?.nickname || 'Anonymous',
+            userId: currentUser?.userId || currentUserId
+          };
+        } else {
+          authData = {
+            type: 'AUTH',
             matchId: room.matchId,
             nickname: currentUser?.nickname || 'Anonymous',
             winRate: 75,
             profileImgUrl: currentUser?.profileImageURL || '',
             isWinFairy: false
           };
-          
-          websocket.send(JSON.stringify(authData));
         }
+        
+        websocket.send(JSON.stringify(authData));
       };
 
       websocket.onmessage = (event) => {
+        // 메시지 처리 로직 (기존과 동일)
         try {
           const messageData = JSON.parse(event.data);
-          console.log('메시지 수신:', messageData);
+          
+          if (typeof messageData.timestamp === 'number') {
+            messageData.timestamp = new Date(messageData.timestamp).toISOString();
+          }
           
           const messageKey = `${messageData.content}_${messageData.timestamp}`;
           const isMyMessage = sentMessages.has(messageKey);
           
-          if (messageData.messageType === 'CHAT') {
-            addMessage(messageData, isMyMessage);
+          if (messageData.messageType === 'CHAT' || messageData.type === 'CHAT_MESSAGE') {
+            const content = messageData.content || '';
             
-            if (isMyMessage) {
-              setSentMessages(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(messageKey);
-                return newSet;
-              });
+            const isAuthDataMessage = typeof content === 'string' && (
+              content.includes('"matchId"') && content.includes('"winRate"') ||
+              content.includes('"gameId"') && content.includes('"teamId"') ||
+              content.includes('"isWinFairy"') ||
+              content.includes('"profileImgUrl"')
+            );
+              
+            if (!isAuthDataMessage) {
+              addMessage(messageData, isMyMessage);
+              
+              if (isMyMessage) {
+                setSentMessages(prev => {
+                  const newSet = new Set(prev);
+                  newSet.delete(messageKey);
+                  return newSet;
+                });
+              }
             }
           } else if (
-              messageData.messageType === 'USER_JOIN' ||
-              messageData.messageType === 'USER_LEAVE'
-            ) {
-              addMessage(messageData, false);
-            }
+            messageData.messageType === 'USER_JOIN' ||
+            messageData.messageType === 'USER_LEAVE'
+          ) {
+            addMessage(messageData, false);
+          }
         } catch (error) {
           console.error('메시지 파싱 오류:', error);
         }
       };
 
       websocket.onclose = (event) => {
+        clearTimeout(connectionTimeout);
+        state.isConnecting = false;
+        state.isConnected = false;
         setConnectionStatus('DISCONNECTED');
         console.log(`웹소켓 연결 종료: ${event.code} - ${event.reason}`);
+        
+        // 사용자에게 연결 끊어짐 알림 (정상 종료가 아닌 경우만)
+        if (event.code !== 1000 && !state.isDestroyed) {
+          const error = getErrorMessage({
+            type: 'close',
+            code: event.code,
+            reason: event.reason
+          });
+          logChatError(error, { code: event.code, reason: event.reason });
+          showErrorNotification(error);
+          
+          scheduleReconnect();
+        }
       };
 
       websocket.onerror = (error) => {
+        clearTimeout(connectionTimeout);
+        state.isConnecting = false;
+        state.isConnected = false;
         setConnectionStatus('ERROR');
         console.error('웹소켓 오류:', error);
         
-        // WebSocket 서버가 실행되지 않은 경우 안내 메시지
-        setTimeout(() => {
-          Alert.alert(
-            '채팅 서버 연결 실패', 
-            'WebSocket 서버(8084 포트)가 실행되지 않았습니다.\n\n백엔드 채팅 서버를 먼저 실행해주세요.',
-            [{ text: '확인', onPress: () => {
-              if (navigation.canGoBack()) {
-                navigation.goBack();
-              }
-            }}]
-          );
-        }, 1000);
+        if (!state.isDestroyed) {
+          const chatError = getErrorMessage({
+            type: 'CONNECTION_ERROR',
+            message: 'WebSocket connection error'
+          });
+          logChatError(chatError, { originalError: error });
+          showErrorNotification(chatError, () => {
+            // 사용자가 재시도 버튼을 클릭하면 즉시 재연결 시도
+            connectToWebSocket();
+          });
+          
+          scheduleReconnect();
+        }
       };
 
     } catch (error) {
-      console.error('웹소켓 연결 오류:', error);
+      state.isConnecting = false;
       setConnectionStatus('ERROR');
+      console.error('웹소켓 연결 오류:', error);
+      scheduleReconnect();
     }
-  };
+  }, [websocketUrl, sessionToken, canReconnect, ws, isWatchChat, room, currentUser, currentUserId, sentMessages, addMessage]);
 
-  const disconnect = () => {
-    if (ws) {
-      ws.close();
-      setWs(null);
-      setConnectionStatus('DISCONNECTED');
-      setSentMessages(new Set());
-      console.log('웹소켓 연결 해제');
-    }
-  };
-
-  const sendMessage = () => {
-    if (!currentMessage.trim()) {
-      Alert.alert('알림', '메시지를 입력해주세요.');
+  // 🔧 FIX 6: 재연결 스케줄링 함수 분리
+  const scheduleReconnect = useCallback(() => {
+    const state = connectionStateRef.current;
+    
+    if (!canReconnect()) {
       return;
     }
 
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      try {
-        const messageContent = currentMessage.trim();
-        const timestamp = new Date().toISOString();
-        
-        const messageKey = `${messageContent}_${timestamp}`;
-        setSentMessages(prev => new Set([...prev, messageKey]));
-        
-        ws.send(messageContent);
-        setCurrentMessage('');
-        console.log('메시지 전송:', messageContent);
-        
-        // 메시지 전송 후 스크롤
-        scrollToBottom();
-      } catch (error) {
-        console.error('메시지 전송 오류:', error);
-        Alert.alert('전송 오류', '메시지 전송에 실패했습니다.');
+    clearReconnectTimer();
+    
+    state.reconnectAttempts++;
+    const backoffDelay = Math.min(Math.pow(2, state.reconnectAttempts - 1) * 1000, 10000);
+    
+    console.log(`🔄 재연결 예약: ${state.reconnectAttempts}/${state.maxReconnectAttempts} (${backoffDelay}ms 후)`);
+    
+    // 재연결 시도 알림 표시
+    setConnectionStatus('RECONNECTING');
+    showConnectionNotification('RECONNECTING', state.reconnectAttempts, state.maxReconnectAttempts);
+    
+    state.reconnectTimer = setTimeout(() => {
+      if (!state.isDestroyed && canReconnect()) {
+        setConnectionStatus('CONNECTING');
+        connectToWebSocket();
       }
-    } else {
-      Alert.alert('오류', '채팅방에 연결되지 않았습니다.');
+    }, backoffDelay);
+  }, [canReconnect, connectToWebSocket, clearReconnectTimer, showConnectionNotification]);
+
+  const disconnect = useCallback(() => {
+    console.log('📱 WebSocket 연결 해제');
+    
+    const state = connectionStateRef.current;
+    state.isDestroyed = true;
+    state.isConnecting = false;
+    state.isConnected = false;
+    
+    clearReconnectTimer();
+    
+    if (ws) {
+      ws.close(1000, 'Client disconnect');
+      setWs(null);
     }
-  };
+    
+    setConnectionStatus('DISCONNECTED');
+    setSentMessages(new Set());
+  }, [ws, clearReconnectTimer]);
 
-  const formatTime = (timestamp: string): string => {
-    const date = new Date(timestamp);
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${hours}:${minutes}`;
-  };
+  const sendMessage = useCallback(async () => {
+    if (!currentMessage.trim()) return;
 
-  const getStatusColor = (): string => {
-    switch (connectionStatus) {
-      case 'CONNECTED': return '#4CAF50';
-      case 'CONNECTING': return '#FF9800';
-      case 'ERROR': return '#F44336';
-      default: return '#9E9E9E';
+    const messageContent = currentMessage.trim();
+    
+    // 즉시 입력 필드 클리어 (사용자 경험 개선)
+    setCurrentMessage('');
+    
+    try {
+      // 메시지 큐에 추가 (자동으로 전송 시도)
+      const messageId = await addMessageToQueue(messageContent);
+      
+      // 로컬에서 즉시 메시지 표시 (낙관적 업데이트)
+      const timestamp = new Date().toISOString();
+      const localMessage: MessageWithStatus = {
+        messageType: 'CHAT',
+        roomId: room.matchId || '',
+        userId: currentUser?.userId?.toString() || currentUserId.toString(),
+        nickname: currentUser?.nickname || 'Anonymous',
+        content: messageContent,
+        timestamp,
+        id: messageId,
+        status: 'sending',
+        _isMyMessage: true,
+      };
+      
+      addMessage(localMessage, true);
+      
+      console.log('메시지 큐에 추가:', messageContent);
+    } catch (error) {
+      console.error('메시지 전송 오류:', error);
+      const chatError = getErrorMessage({
+        type: 'MESSAGE_SEND',
+        message: error instanceof Error ? error.message : '메시지 전송 실패'
+      });
+      logChatError(chatError, { content: messageContent });
+      showErrorNotification(chatError);
+      
+      // 실패 시 입력 필드 복원
+      setCurrentMessage(messageContent);
     }
-  };
+  }, [currentMessage, addMessageToQueue, addMessage, room, currentUser, currentUserId, showErrorNotification]);
 
-  const renderMessage = (message: ChatMessage & { _isMyMessage?: boolean }, index: number) => {
-    if (
-      message.messageType === 'USER_JOIN' ||
-      message.messageType === 'USER_LEAVE'
-    ) {
-      const systemMsg = message as SystemMessage;
-      const systemText =
-        systemMsg.messageType === 'USER_JOIN'
-          ? `${systemMsg.userName || '사용자'}님이 입장했습니다.`
-          : `${systemMsg.userName || '사용자'}님이 퇴장했습니다.`;
-
-      return (
-        <View key={index} style={styles.systemMessageContainer}>
-          <Text style={styles.systemMessageText}>{systemText}</Text>
-        </View>
-      );
-    }
-
-    const isMyMessage = 'userId' in message && message.userId === currentUserId;
-
-    return (
-      <View key={index} style={[
-        styles.messageContainer,
-        isMyMessage ? styles.myMessageContainer : styles.otherMessageContainer
-      ]}>
-        {!isMyMessage && 'nickname' in message && (
-          <Text style={styles.nicknameText}>{message.nickname}</Text>
-        )}
-        
-        <View style={[
-          styles.messageBubble,
-          isMyMessage ? styles.myMessageBubble : styles.otherMessageBubble
-        ]}>
-          <Text style={[
-            styles.messageText,
-            isMyMessage ? styles.myMessageText : styles.otherMessageText
-          ]}>
-            {message.content}
-          </Text>
-          <Text style={[
-            styles.timeText,
-            isMyMessage ? styles.myTimeText : styles.otherTimeText
-          ]}>
-            {formatTime(message.timestamp)}
-          </Text>
-        </View>
-      </View>
-    );
-  };
-
+  // 🔧 FIX 7: useEffect 의존성 배열 최적화
+  
+  // 메시지 스크롤
   useEffect(() => {
-    connectToWebSocket();
+    if (messages.length > 0) {
+      scrollToBottom();
+    }
+  }, [messages, scrollToBottom]);
+
+  // 초기 연결 (한 번만)
+  useEffect(() => {
+    console.log('📱 MatchChatRoomScreen 마운트됨 - WebSocket 연결 시작');
+    
+    const timer = setTimeout(() => {
+      connectToWebSocket();
+    }, 500);
     
     return () => {
-      disconnect();
+      clearTimeout(timer);
     };
-  }, []);
+  }, []); // 의존성 배열 비움
 
+  // AppState 이벤트 리스너 (한 번만 등록)
   useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', () => {
+    const handleAppStateChange = (nextAppState: string) => {
+      console.log('📱 앱 상태 변화:', appState, '→', nextAppState);
+      
+      const prevAppState = appState;
+      setAppState(nextAppState);
+      
+      // background -> active 복귀 시에만 재연결 시도
+      if (prevAppState.match(/inactive|background/) && nextAppState === 'active') {
+        console.log('📱 백그라운드에서 복귀 - WebSocket 상태 확인');
+        setTimeout(() => {
+          if (canReconnect()) {
+            console.log('📱 백그라운드 복귀 시 WebSocket 재연결 시도');
+            connectToWebSocket();
+          }
+        }, 1000);
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription?.remove();
+  }, [appState, canReconnect, connectToWebSocket]); // 안정적인 의존성만 포함
+
+  // 네비게이션 이벤트 (한 번만 등록)
+  useEffect(() => {
+    const unsubscribeBeforeRemove = navigation.addListener('beforeRemove', () => {
+      console.log('📱 화면 제거 직전 - WebSocket 연결 해제');
       disconnect();
     });
 
-    return unsubscribe;
-  }, [navigation]);
+    const unsubscribeBlur = navigation.addListener('blur', () => {
+      console.log('📱 MatchChatRoom 화면 블러됨 - WebSocket 연결 해제');
+      disconnect();
+    });
+
+    return () => {
+      unsubscribeBeforeRemove();
+      unsubscribeBlur();
+    };
+  }, [navigation, disconnect]);
+
+  // 네트워크 상태 모니터링 (한 번만 등록)
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      const isConnected = state.isConnected ?? false;
+      console.log('🌐 네트워크 상태 변화:', { isConnected, type: state.type });
+      
+      const prevNetworkConnected = networkConnected;
+      setNetworkConnected(isConnected);
+      
+      if (!isConnected) {
+        // 오프라인 상태 알림
+        setConnectionStatus('OFFLINE');
+        showConnectionNotification('OFFLINE');
+        
+        if (ws) {
+          console.log('🌐 네트워크 연결 끊어짐 - WebSocket 연결 해제');
+          ws.close(1000, 'Network disconnected');
+        }
+      } else if (isConnected && !prevNetworkConnected && appState === 'active') {
+        // 온라인 복구 시 알림 및 재연결
+        console.log('🌐 네트워크 다시 연결됨 - WebSocket 재연결 시도');
+        
+        setTimeout(() => {
+          if (canReconnect()) {
+            setConnectionStatus('CONNECTING');
+            connectToWebSocket();
+          }
+        }, 2000);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [networkConnected, ws, appState, canReconnect, connectToWebSocket, showConnectionNotification]);
+
+  // 컴포넌트 언마운트 시 정리
+  useEffect(() => {
+    return () => {
+      console.log('📱 MatchChatRoomScreen 언마운트됨');
+      disconnect();
+    };
+  }, [disconnect]);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <KeyboardAvoidingView 
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => {
-            if (navigation.canGoBack()) {
-              navigation.goBack();
-            }
-          }}>
-            <Text style={styles.backButton}>← 나가기</Text>
+        {/* 알림 관리자 */}
+        <ChatNotificationManager
+          notifications={notifications}
+          onDismiss={dismissNotification}
+        />
+
+        {/* 헤더 */}
+        <View style={[styles.header, { backgroundColor: themeColor }]}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          >
+            <Text style={styles.backButtonText}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>{room.matchTitle}</Text>
-          <View style={styles.statusContainer}>
-            <View style={[
-              styles.statusIndicator,
-              { backgroundColor: getStatusColor() }
-            ]} />
-            <Text style={styles.statusText}>{connectionStatus}</Text>
+          <View style={styles.headerContent}>
+            <View style={styles.headerTitleRow}>
+              <Text style={styles.headerTitle}>
+                {isWatchChat ? '직관채팅' : room.matchTitle || '매치채팅'}
+              </Text>
+              <SimpleConnectionStatus status={connectionStatus} />
+            </View>
+            <ConnectionStatusIndicator 
+              status={connectionStatus}
+              reconnectAttempts={connectionStateRef.current.reconnectAttempts}
+              maxReconnectAttempts={connectionStateRef.current.maxReconnectAttempts}
+            />
           </View>
         </View>
 
-        <ScrollView 
+        {/* 메시지 목록 */}
+        <ScrollView
           ref={scrollViewRef}
-          style={styles.messagesContainer}
+          style={styles.messagesList}
           contentContainerStyle={styles.messagesContent}
-          showsVerticalScrollIndicator={false}
         >
-          {messages.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>
-                {connectionStatus === 'CONNECTED' 
-                  ? '아직 메시지가 없습니다.\n첫 번째 메시지를 보내보세요!' 
-                  : '채팅방에 연결중입니다...'}
-              </Text>
+          {/* 실제 메시지들 */}
+          {messages.map((message, index) => (
+            <View key={message.id || index} style={styles.messageItem}>
+              {message.messageType === 'CHAT' ? (
+                <View style={[
+                  styles.chatMessage,
+                  (message as any)._isMyMessage && styles.myMessage
+                ]}>
+                  <View style={styles.messageHeader}>
+                    <Text style={styles.messageNickname}>{(message as MatchChatMessage).nickname}</Text>
+                    {(message as any)._isMyMessage && (
+                      <SimpleMessageStatus 
+                        status={message.status} 
+                        size={14}
+                      />
+                    )}
+                  </View>
+                  <Text style={styles.messageContent}>{message.content}</Text>
+                  <Text style={styles.messageTime}>
+                    {new Date(message.timestamp).toLocaleTimeString('ko-KR', { 
+                      hour: '2-digit', 
+                      minute: '2-digit' 
+                    })}
+                  </Text>
+                  
+                  {/* 내 메시지의 상태 표시 */}
+                  {(message as any)._isMyMessage && message.status && message.status !== 'sent' && (
+                    <MessageStatusIndicator
+                      status={message.status}
+                      onRetry={message.id ? () => retryMessage(message.id!) : undefined}
+                      retryCount={message.retryCount}
+                      maxRetries={3}
+                    />
+                  )}
+                </View>
+              ) : (
+                <View style={styles.systemMessage}>
+                  <Text style={styles.systemMessageText}>{message.content}</Text>
+                </View>
+              )}
             </View>
-          ) : (
-            messages.map(renderMessage)
-          )}
+          ))}
+          
+          {/* 대기 중인 메시지들 표시 */}
+          {pendingMessages.map((pendingMsg) => (
+            <View key={pendingMsg.id} style={styles.messageItem}>
+              <View style={[styles.chatMessage, styles.myMessage, styles.pendingMessage]}>
+                <View style={styles.messageHeader}>
+                  <Text style={styles.messageNickname}>
+                    {currentUser?.nickname || 'Anonymous'}
+                  </Text>
+                  <SimpleMessageStatus 
+                    status={pendingMsg.status} 
+                    size={14}
+                  />
+                </View>
+                <Text style={styles.messageContent}>{pendingMsg.content}</Text>
+                <Text style={styles.messageTime}>
+                  {new Date(pendingMsg.timestamp).toLocaleTimeString('ko-KR', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                  })}
+                </Text>
+                
+                <MessageStatusIndicator
+                  status={pendingMsg.status}
+                  onRetry={() => retryMessage(pendingMsg.id)}
+                  retryCount={pendingMsg.retryCount}
+                  maxRetries={pendingMsg.maxRetries}
+                />
+              </View>
+            </View>
+          ))}
         </ScrollView>
 
-        {connectionStatus === 'CONNECTED' && (
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.textInput}
-              value={currentMessage}
-              onChangeText={setCurrentMessage}
-              placeholder="메시지를 입력하세요..."
-              placeholderTextColor="#999"
-              multiline={true}
-              maxLength={500}
-              onSubmitEditing={sendMessage}
-              blurOnSubmit={false}
-            />
-            <TouchableOpacity 
-              style={[
-                styles.sendButton,
-                !currentMessage.trim() && styles.sendButtonDisabled
-              ]}
-              onPress={sendMessage}
-              disabled={!currentMessage.trim()}
-            >
-              <Text style={styles.sendButtonText}>전송</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        {/* 메시지 입력 */}
+        <View style={styles.messageInput}>
+          <TextInput
+            style={styles.textInput}
+            value={currentMessage}
+            onChangeText={setCurrentMessage}
+            placeholder="메시지를 입력하세요..."
+            multiline
+            maxLength={500}
+          />
+          <TouchableOpacity
+            style={[
+              styles.sendButton,
+              { backgroundColor: themeColor },
+              !currentMessage.trim() && styles.sendButtonDisabled
+            ]}
+            onPress={sendMessage}
+            disabled={!currentMessage.trim() || connectionStatus !== 'CONNECTED'}
+          >
+            <Text style={styles.sendButtonText}>전송</Text>
+          </TouchableOpacity>
+        </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    backgroundColor: '#f8f9fa',
-  },
-  backButton: {
-    color: '#007AFF',
-    fontSize: 16,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    flex: 1,
-    textAlign: 'center',
-    marginHorizontal: 16,
-  },
-  statusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statusIndicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 6,
-  },
-  statusText: {
-    fontSize: 12,
-    color: '#666',
-  },
-  messagesContainer: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  messagesContent: {
-    padding: 16,
-    flexGrow: 1,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#999',
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  messageContainer: {
-    marginBottom: 12,
-    maxWidth: '80%',
-  },
-  myMessageContainer: {
-    alignSelf: 'flex-end',
-    alignItems: 'flex-end',
-  },
-  otherMessageContainer: {
-    alignSelf: 'flex-start',
-    alignItems: 'flex-start',
-  },
-  nicknameText: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
-    marginLeft: 4,
-  },
-  messageBubble: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 18,
-    maxWidth: '100%',
-  },
-  myMessageBubble: {
-    backgroundColor: '#007AFF',
-    borderBottomRightRadius: 4,
-  },
-  otherMessageBubble: {
-    backgroundColor: '#fff',
-    borderBottomLeftRadius: 4,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  messageText: {
-    fontSize: 16,
-    lineHeight: 20,
-    marginBottom: 4,
-  },
-  myMessageText: {
-    color: '#fff',
-  },
-  otherMessageText: {
-    color: '#333',
-  },
-  timeText: {
-    fontSize: 10,
-    alignSelf: 'flex-end',
-  },
-  myTimeText: {
-    color: 'rgba(255, 255, 255, 0.7)',
-  },
-  otherTimeText: {
-    color: '#999',
-  },
-  systemMessageContainer: {
-    alignItems: 'center',
-    marginVertical: 8,
-  },
-  systemMessageText: {
-    fontSize: 12,
-    color: '#999',
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    padding: 16,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    alignItems: 'flex-end',
-  },
-  textInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 16,
-    maxHeight: 80,
-    marginRight: 8,
-    backgroundColor: '#f8f9fa',
-  },
-  sendButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sendButtonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  sendButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-});

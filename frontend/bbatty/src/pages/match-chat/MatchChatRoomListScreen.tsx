@@ -4,41 +4,62 @@ import {
   Text,
   TouchableOpacity,
   FlatList,
-  StyleSheet,
-  SafeAreaView,
   RefreshControl,
   Alert,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { chatRoomApi } from '../../entities/chat-room/api/api';
 import type { MatchChatRoom } from '../../entities/chat-room/api/types';
 import type { ChatStackParamList } from '../../navigation/types';
 import { useUserStore } from '../../entities/user/model/userStore';
+import { useTokenStore } from '../../shared/api/token/tokenStore';
+import { useThemeColor } from '../../shared/team/ThemeContext';
+import { BaseballAnimation } from '../../features/match-chat/components/BaseballAnimation';
+import { styles } from './MatchChatRoomListScreen.styles';
 
 type NavigationProp = StackNavigationProp<ChatStackParamList>;
 
 export const MatchChatRoomListScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const getCurrentUser = useUserStore((state) => state.getCurrentUser);
+  const { getAccessToken } = useTokenStore();
   const [rooms, setRooms] = useState<MatchChatRoom[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [showAnimation, setShowAnimation] = useState(false);
+  const themeColor = useThemeColor();
+  const insets = useSafeAreaInsets();
 
-  const getTeamColors = (teamId: string) => {
-    const teamColorMap: { [key: string]: string } = {
-      'LG': '#C30452',
-      '두산': '#131230',
-      'KIA': '#EA0029',
-      '삼성': '#074CA1',
-      '롯데': '#041E42',
-      'SSG': '#CE0E2D',
-      'KT': '#000000',
-      '한화': '#FF6600',
-      'NC': '#315288',
-      '키움': '#570514',
+  const getTeamInfo = (teamId: string | number) => {
+    const teamInfoMap: { [key: string]: { name: string; color: string } } = {
+      // 숫자 ID로 매핑
+      '1': { name: 'KIA', color: '#EA0029' },
+      '2': { name: '삼성', color: '#074CA1' },
+      '3': { name: 'LG', color: '#C30452' },
+      '4': { name: '두산', color: '#131230' },
+      '5': { name: 'KT', color: '#000000' },
+      '6': { name: 'SSG', color: '#CE0E2D' },
+      '7': { name: '롯데', color: '#041E42' },
+      '8': { name: '한화', color: '#FF6600' },
+      '9': { name: 'NC', color: '#315288' },
+      '10': { name: '키움', color: '#570514' },
+      // 문자열 ID도 지원 (기존 호환성)
+      'LG': { name: 'LG', color: '#C30452' },
+      '두산': { name: '두산', color: '#131230' },
+      'KIA': { name: 'KIA', color: '#EA0029' },
+      '삼성': { name: '삼성', color: '#074CA1' },
+      '롯데': { name: '롯데', color: '#041E42' },
+      'SSG': { name: 'SSG', color: '#CE0E2D' },
+      'KT': { name: 'KT', color: '#000000' },
+      '한화': { name: '한화', color: '#FF6600' },
+      'NC': { name: 'NC', color: '#315288' },
+      '키움': { name: '키움', color: '#570514' },
     };
-    return teamColorMap[teamId] || '#007AFF';
+    const key = String(teamId);
+    return teamInfoMap[key] || { name: `팀 ${teamId}`, color: '#007AFF' };
   };
 
   const loadRooms = async () => {
@@ -46,7 +67,9 @@ export const MatchChatRoomListScreen = () => {
       setLoading(true);
       const response = await chatRoomApi.getMatchChatRooms();
       
-      if (response.data?.data?.rooms) {
+      if (response.data?.data?.chatRooms) {
+        setRooms(response.data.data.chatRooms);
+      } else if (response.data?.data?.rooms) {
         setRooms(response.data.data.rooms);
       } else if (response.data?.rooms) {
         // 목 데이터 형식 (기존 호환성)
@@ -68,7 +91,13 @@ export const MatchChatRoomListScreen = () => {
     setRefreshing(false);
   };
 
+
   const handleWatchChatJoin = async () => {
+    // 애니메이션 시작
+    setShowAnimation(true);
+  };
+
+  const onNavigateToChat = async () => {
     try {
       const currentUser = getCurrentUser();
       
@@ -87,12 +116,12 @@ export const MatchChatRoomListScreen = () => {
       console.log('Watch chat API response:', response.data);
       
       if (response.data.status === 'SUCCESS') {
-        // 워치 채팅방으로 이동 (매치 채팅과 동일한 화면 사용)
-        navigation.navigate('MatchChatRoom', {
+        // 워치 채팅방으로 이동 (기존 화면 대체하여 스택 중복 방지)
+        navigation.push('MatchChatRoom', {
           room: {
             matchId: 'watch_chat_' + Date.now(),
             gameId: watchRequest.gameId.toString(),
-            matchTitle: '📺 워치 채팅',
+            matchTitle: '직관채팅',
             matchDescription: '모든 팬들이 함께 경기를 시청하며 채팅하는 공간',
             teamId: '전체',
             minAge: 0,
@@ -116,8 +145,16 @@ export const MatchChatRoomListScreen = () => {
     }
   };
 
+  const onAnimationComplete = () => {
+    setShowAnimation(false);
+  };
+
   useEffect(() => {
     loadRooms();
+    
+    // 토큰 로그 출력
+    const token = getAccessToken();
+    console.log('📱 매칭채팅 목록 - 현재 액세스 토큰:', token);
   }, []);
 
   const formatDate = (dateString: string) => {
@@ -133,76 +170,132 @@ export const MatchChatRoomListScreen = () => {
     return `${days}일 전`;
   };
 
-  const renderRoomItem = ({ item }: { item: MatchChatRoom }) => (
-    <TouchableOpacity
-      style={styles.roomItem}
-      onPress={() => navigation.navigate('MatchChatRoomDetail', { room: item })}
-    >
-      <View style={styles.roomHeader}>
-        <Text style={styles.roomTitle}>🔥 {item.matchTitle}</Text>
-        <View style={[styles.teamBadge, { backgroundColor: getTeamColors(item.teamId) }]}>
-          <Text style={styles.teamText}>⚾ {item.teamId}</Text>
+  const renderRoomItem = ({ item }: { item: MatchChatRoom }) => {
+    const teamInfo = getTeamInfo(item.teamId);
+    
+    return (
+      <TouchableOpacity
+        style={styles.roomItem}
+        onPress={() => navigation.navigate('MatchChatRoomDetail', { room: item })}
+        activeOpacity={0.9}
+      >
+        <View style={styles.topSection}>
+          <LinearGradient
+            colors={['#049fbb', '#50f6ff']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.gradientBackground}
+          />
+          
+          {/* 장식적 테두리 요소 */}
+          <View style={styles.borderElement} />
+          
+          {/* 헤더 영역 */}
+          <View style={styles.roomHeader}>
+            <View style={styles.logoContainer}>
+              <View style={[styles.teamBadge, { backgroundColor: teamInfo.color }]}>
+                <Text style={styles.teamText}>{teamInfo.name}</Text>
+              </View>
+            </View>
+            <View style={styles.socialMediaContainer}>
+              <Text style={[styles.statusText, { color: '#ffffff' }]}>
+                {item.status === 'ACTIVE' ? '모집중' : '마감'}
+              </Text>
+            </View>
+          </View>
+
+          {/* 제목 영역 */}
+          <View style={styles.titleContainer}>
+            <Text style={styles.roomTitle}>{item.matchTitle}</Text>
+            <Text style={styles.roomDescription} numberOfLines={2}>
+              {item.matchDescription}
+            </Text>
+          </View>
         </View>
-      </View>
-      
-      <Text style={styles.roomDescription} numberOfLines={2}>
-        🏟️ {item.matchDescription}
-      </Text>
-      
-      <View style={styles.roomInfo}>
-        <Text style={styles.ageRange}>
-          🎂 {item.minAge}-{item.maxAge}세
-        </Text>
-        <Text style={styles.participants}>
-          👥 {item.currentParticipants}/{item.maxParticipants}명
-        </Text>
-        <Text style={styles.createdAt}>
-          ⏰ {formatDate(item.createdAt)}
-        </Text>
-      </View>
-      
-      <View style={styles.genderBadge}>
-        <Text style={styles.genderText}>
-          {item.genderCondition === 'ALL' ? '전체' : 
-           item.genderCondition === 'MALE' ? '남성' : '여성'}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
+
+        <View style={styles.bottomContent}>
+          <View style={styles.roomInfo}>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>연령</Text>
+              <Text style={styles.infoValue}>{item.minAge}-{item.maxAge}세</Text>
+            </View>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>참여자</Text>
+              <Text style={[styles.infoValue, styles.participantCount]}>
+                {item.currentParticipants}/{item.maxParticipants}
+              </Text>
+            </View>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>성별</Text>
+              <Text style={styles.infoValue}>
+                {item.genderCondition === 'ALL' ? '전체' : 
+                 item.genderCondition === 'MALE' ? '남성' : '여성'}
+              </Text>
+            </View>
+          </View>
+          
+          <View style={styles.roomFooter}>
+            <Text style={styles.createdAt}>
+              {formatDate(item.createdAt)}
+            </Text>
+            <View style={[
+              styles.statusBadge, 
+              item.status === 'ACTIVE' ? styles.activeBadge : styles.inactiveBadge
+            ]}>
+              <Text style={[styles.statusText, { color: item.status === 'ACTIVE' ? '#4CAF50' : '#999' }]}>
+                {item.status === 'ACTIVE' ? '입장 가능' : '마감됨'}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const EmptyComponent = () => (
     <View style={styles.emptyContainer}>
-      <Text style={styles.emptyIcon}>⚾</Text>
+      <View style={styles.emptyIconContainer}>
+        <Text style={styles.emptyIcon}>📝</Text>
+      </View>
       <Text style={styles.emptyText}>아직 생성된 매치룸이 없습니다</Text>
-      <Text style={styles.emptySubtext}>첫 번째 열정적인 매치룸을 만들어보세요!</Text>
+      <Text style={styles.emptySubtext}>첫 번째 매치룸을 만들어보세요!</Text>
       <TouchableOpacity
-        style={styles.createButton}
+        style={[styles.createButton, { backgroundColor: themeColor }]}
         onPress={() => navigation.navigate('CreateMatchChatRoom')}
       >
-        <Text style={styles.createButtonText}>🔥 첫 매치룸 개설하기</Text>
+        <Text style={styles.createButtonText}>매치룸 개설하기</Text>
       </TouchableOpacity>
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>⚾ 매치룸 리그</Text>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={[styles.header, { backgroundColor: themeColor }]}>
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>매칭채팅</Text>
+        </View>
         <View style={styles.headerButtons}>
           <TouchableOpacity
             style={styles.watchChatButton}
             onPress={() => handleWatchChatJoin()}
           >
-            <Text style={styles.watchChatButtonText}>📺 워치파티</Text>
+            <Text style={styles.watchChatButtonText}>직관채팅</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.headerButton}
             onPress={() => navigation.navigate('CreateMatchChatRoom')}
           >
-            <Text style={styles.headerButtonText}>🔥 매치룸 개설</Text>
+            <Text style={styles.headerButtonText}>매치룸 개설</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.searchButton}
+            onPress={() => navigation.navigate('ChatRoomSearch')}
+          >
+            <Text style={styles.searchButtonText}>⌕</Text>
           </TouchableOpacity>
         </View>
       </View>
+
 
       <FlatList
         data={rooms}
@@ -215,154 +308,15 @@ export const MatchChatRoomListScreen = () => {
         ListEmptyComponent={!loading ? EmptyComponent : null}
         showsVerticalScrollIndicator={false}
       />
-    </SafeAreaView>
+      
+      {/* 야구 애니메이션 */}
+      {showAnimation && (
+        <BaseballAnimation 
+          onAnimationComplete={onAnimationComplete}
+          onNavigate={onNavigateToChat}
+        />
+      )}
+    </View>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  watchChatButton: {
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  watchChatButtonText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  headerButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-  },
-  headerButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  listContent: {
-    padding: 16,
-  },
-  roomItem: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  roomHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  roomTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    flex: 1,
-    marginRight: 8,
-  },
-  teamBadge: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  teamText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  roomDescription: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  roomInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  ageRange: {
-    fontSize: 12,
-    color: '#999',
-  },
-  participants: {
-    fontSize: 12,
-    color: '#007AFF',
-    fontWeight: '600',
-  },
-  createdAt: {
-    fontSize: 12,
-    color: '#999',
-  },
-  genderBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#f0f0f0',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  genderText: {
-    fontSize: 12,
-    color: '#666',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#999',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  createButton: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  createButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});

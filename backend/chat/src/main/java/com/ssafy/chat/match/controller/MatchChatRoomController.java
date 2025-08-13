@@ -1,5 +1,6 @@
 package com.ssafy.chat.match.controller;
 
+import com.ssafy.chat.common.util.AuthenticationUtil;
 import com.ssafy.chat.global.constants.ErrorCode;
 import com.ssafy.chat.global.constants.SuccessCode;
 import com.ssafy.chat.global.exception.ApiException;
@@ -23,6 +24,7 @@ import jakarta.validation.Valid;
 public class MatchChatRoomController {
 
     private final MatchChatRoomService matchChatRoomService;
+    private final AuthenticationUtil authenticationUtil;
 
     /**
      * 매칭 채팅방 생성
@@ -32,21 +34,10 @@ public class MatchChatRoomController {
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @Valid @RequestBody MatchChatRoomCreateRequest request) {
 
-        // 디버깅 로그 추가
-        log.info("=== 매칭 채팅방 생성 요청 ===");
-        log.info("Authorization header: [{}]", authHeader);
-        log.info("Authorization header length: {}", authHeader != null ? authHeader.length() : "null");
-        log.info("Request body: {}", request);
+        log.info("매칭 채팅방 생성 요청 - gameId: {}, title: {}", request.getGameId(), request.getMatchTitle());
 
         // JWT 토큰 추출
-        String jwtToken = null;
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            jwtToken = authHeader.substring(7);
-            log.info("Extracted JWT token: [{}...]", jwtToken.substring(0, Math.min(20, jwtToken.length())));
-        } else {
-            log.error("Invalid Authorization header format: [{}]", authHeader);
-            throw new ApiException(ErrorCode.UNAUTHORIZED);
-        }
+        String jwtToken = authenticationUtil.extractJwtToken(authHeader);
 
         // 서비스 호출
         MatchChatRoomCreateResponse response = matchChatRoomService.createMatchChatRoom(request, jwtToken);

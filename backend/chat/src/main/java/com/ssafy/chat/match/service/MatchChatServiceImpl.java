@@ -5,6 +5,7 @@ import com.ssafy.chat.common.util.KSTTimeUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.chat.match.dto.MatchChatMessage;
 import com.ssafy.chat.match.kafka.MatchChatKafkaProducer;
+import com.ssafy.chat.common.service.DistributedSessionManagerService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -17,7 +18,6 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -33,31 +33,32 @@ public class MatchChatServiceImpl implements MatchChatService {
     private final MatchChatKafkaProducer kafkaProducer;
     private final ObjectMapper objectMapper;
     private final ConsumerFactory<String, String> consumerFactory;
+    private final DistributedSessionManagerService distributedSessionManager;
     
-    private final Map<String, Set<WebSocketSession>> matchChatSessions = new ConcurrentHashMap<>();
+    // 로컬 세션 캐시 제거 - 분산 세션 매니저 사용
     private static final String TOPIC_PREFIX = "match-chat-";
     
     @Override
     public void addSessionToMatchRoom(String matchId, WebSocketSession session) {
-        log.debug("매칭 채팅방에 세션 추가 - matchId: {}, sessionId: {}", matchId, session.getId());
-        matchChatSessions.computeIfAbsent(matchId, k -> ConcurrentHashMap.newKeySet()).add(session);
-        log.info("🔥 세션 추가 - matchId: {}, sessionId: {}, 해당 방 세션 수: {}, 전체 활성 방: {}", 
-                matchId, session.getId(), matchChatSessions.get(matchId).size(), matchChatSessions.keySet());
+        log.debug("매칭 채팅방에 분산 세션 추가 - matchId: {}, sessionId: {}", matchId, session.getId());
+        
+        // 분산 세션 매니저는 이미 ChatWebSocketHandler에서 등록됨
+        // 여기서는 히스토리만 전송
         sendRecentMessagesToSession(matchId, session);
+        
+        int sessionCount = distributedSessionManager.getActiveSessionCount(matchId);
+        log.info("🔥 매치 채팅 세션 추가 완료 - matchId: {}, sessionId: {}, 해당 방 세션 수: {}", 
+                matchId, session.getId(), sessionCount);
     }
     
     @Override
     public void removeSessionFromMatchRoom(String matchId, WebSocketSession session) {
-        log.debug("매칭 채팅방에서 세션 제거 - matchId: {}, sessionId: {}", matchId, session.getId());
-        Set<WebSocketSession> sessions = matchChatSessions.get(matchId);
-        if (sessions != null) {
-            sessions.remove(session);
-            log.debug("세션 제거 - matchId: {}, sessionId: {}, 남은 세션 수: {}", matchId, session.getId(), sessions.size());
-            if (sessions.isEmpty()) {
-                matchChatSessions.remove(matchId);
-                log.debug("빈 채팅방 제거 - matchId: {}", matchId);
-            }
-        }
+        log.debug("매칭 채팅방에서 분산 세션 제거 - matchId: {}, sessionId: {}", matchId, session.getId());
+        
+        // 분산 세션 매니저는 ChatWebSocketHandler에서 해제됨
+        int remainingCount = distributedSessionManager.getActiveSessionCount(matchId);
+        log.info("매치 채팅 세션 제거 완료 - matchId: {}, sessionId: {}, 남은 세션 수: {}", 
+                matchId, session.getId(), remainingCount);
     }
     
     @Override
@@ -93,13 +94,12 @@ public class MatchChatServiceImpl implements MatchChatService {
     
     @Override
     public int getActiveMatchRoomCount() {
-        return matchChatSessions.size();
+        return distributedSessionManager.getTotalActiveRoomCount();
     }
     
     @Override
     public int getActiveSessionCount(String matchId) {
-        Set<WebSocketSession> sessions = matchChatSessions.get(matchId);
-        return sessions != null ? sessions.size() : 0;
+        return distributedSessionManager.getActiveSessionCount(matchId);
     }
     
     @Override
@@ -122,61 +122,37 @@ public class MatchChatServiceImpl implements MatchChatService {
     
     @Override
     public void forceCloseRoomSessions(String matchId) {
-        Set<WebSocketSession> sessions = matchChatSessions.get(matchId);
-        if (sessions == null || sessions.isEmpty()) {
-            log.debug("강제 종료할 세션 없음 - matchId: {}", matchId);
-            return;
-        }
-        
-        log.info("🔒 매칭 채팅방 세션 강제 종료 시작 - matchId: {}, 세션 수: {}", matchId, sessions.size());
-        
-        // 복사본 생성 (ConcurrentModificationException 방지)
-        Set<WebSocketSession> sessionCopy = Set.copyOf(sessions);
-        int closedCount = 0;
-        
-        for (WebSocketSession session : sessionCopy) {
-            try {
-                if (session.isOpen()) {
-                    session.close();
-                    closedCount++;
-                }
-            } catch (Exception e) {
-                log.error("세션 강제 종료 실패 - sessionId: {}", session.getId(), e);
+        try {
+            int sessionCount = distributedSessionManager.getActiveSessionCount(matchId);
+            if (sessionCount == 0) {
+                log.debug("강제 종료할 세션 없음 - matchId: {}", matchId);
+                return;
             }
+            
+            log.info("🔒 매칭 채팅방 분산 세션 강제 종료 시작 - matchId: {}, 세션 수: {}", matchId, sessionCount);
+            
+            // 분산 세션 매니저를 통해 해당 방의 모든 세션 정리
+            // 실제 WebSocket 세션 종료는 분산 세션 매니저에서 처리
+            int cleanedCount = distributedSessionManager.cleanupRoomSessions(matchId);
+            
+            log.info("✅ 매칭 채팅방 분산 세션 강제 종료 완료 - matchId: {}, 정리된 세션 수: {}", matchId, cleanedCount);
+            
+        } catch (Exception e) {
+            log.error("매칭 채팅방 분산 세션 강제 종료 실패 - matchId: {}", matchId, e);
         }
-        
-        // 메모리에서 해당 채팅방 세션 정보 완전 제거
-        matchChatSessions.remove(matchId);
-        
-        log.info("✅ 매칭 채팅방 세션 강제 종료 완료 - matchId: {}, 종료된 세션 수: {}", matchId, closedCount);
     }
     
     private void broadcastToMatchChatRoom(String matchId, Map<String, Object> messageData) {
-        Set<WebSocketSession> sessions = matchChatSessions.get(matchId);
-        if (sessions == null || sessions.isEmpty()) {
-            log.debug("활성화된 세션이 없음 - matchId: {}", matchId);
-            return;
-        }
         try {
             String messageJson = objectMapper.writeValueAsString(messageData);
-            TextMessage textMessage = new TextMessage(messageJson);
-            Set<WebSocketSession> sessionSet = Set.copyOf(sessions);
-            for (WebSocketSession session : sessionSet) {
-                try {
-                    if (session.isOpen()) {
-                        session.sendMessage(textMessage);
-                        log.debug("메시지 전송 성공 - matchId: {}, sessionId: {}", matchId, session.getId());
-                    } else {
-                        sessions.remove(session);
-                        log.debug("닫힌 세션 제거 - matchId: {}, sessionId: {}", matchId, session.getId());
-                    }
-                } catch (Exception e){
-                    log.error("개별 세션 메시지 전송 실패 - matchId: {}, sessionId: {}", matchId, session.getId(), e);
-                    sessions.remove(session);
-                }
-            }
+            
+            // 🚀 분산 세션 매니저를 통한 브로드캐스트 (모든 인스턴스에 전파)
+            distributedSessionManager.broadcastToRoom(matchId, messageJson, null);
+            
+            log.debug("분산 매치 채팅 브로드캐스트 완료 - matchId: {}", matchId);
+            
         } catch (Exception e) {
-            log.error("메시지 브로드캐스트 실패 - matchId: {}", matchId, e);
+            log.error("분산 매치 채팅 브로드캐스트 실패 - matchId: {}", matchId, e);
         }
     }
     
@@ -220,16 +196,18 @@ public class MatchChatServiceImpl implements MatchChatService {
             consumer.seekToEnd(Collections.singletonList(partition));
             
             long endOffset = consumer.position(partition);
+            log.info("🔥 토픽 offset 정보 - topic: {}, endOffset: {}", topicName, endOffset);
             if (endOffset == 0) {
-                log.debug("토픽에 메시지가 없음 - topic: {}", topicName);
+                log.info("🔥 토픽에 메시지가 없음 - topic: {}", topicName);
                 return messages;
             }
             
             long startOffset = Math.max(0, endOffset - limit);
             consumer.seek(partition, startOffset);
-            log.debug("offset 설정 - topic: {}, start: {}, end: {}", topicName, startOffset, endOffset);
+            log.info("🔥 offset 설정 - topic: {}, start: {}, end: {}", topicName, startOffset, endOffset);
             
             ConsumerRecords<String, String> records = consumer.poll(Duration.ofSeconds(5));
+            log.info("🔥 poll 결과 - topic: {}, records count: {}", topicName, records.count());
             
             for (ConsumerRecord<String, String> record : records) {
                 try {
