@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { chatRoomApi } from '../../entities/chat-room/api/api';
+import { gameApi } from '../../entities/game/api/api';
 import type { MatchChatRoom } from '../../entities/chat-room/api/types';
+import type { Game } from '../../entities/game/api/types';
 import type { ChatStackParamList } from '../../navigation/types';
 import { useThemeColor } from '../../shared/team/ThemeContext';
 import { styles } from './MatchChatRoomListScreen.styles';
@@ -25,22 +27,23 @@ export default function ChatRoomSearchScreen() {
   const [searchResults, setSearchResults] = useState<MatchChatRoom[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [gameInfoMap, setGameInfoMap] = useState<Map<string, Game>>(new Map());
   const themeColor = useThemeColor();
   const insets = useSafeAreaInsets();
 
   const getTeamInfo = (teamId: string | number) => {
     const teamInfoMap: { [key: string]: { name: string; color: string } } = {
-      // 숫자 ID로 매핑
-      '1': { name: 'KIA', color: '#EA0029' },
-      '2': { name: '삼성', color: '#074CA1' },
-      '3': { name: 'LG', color: '#C30452' },
-      '4': { name: '두산', color: '#131230' },
-      '5': { name: 'KT', color: '#000000' },
-      '6': { name: 'SSG', color: '#CE0E2D' },
-      '7': { name: '롯데', color: '#041E42' },
-      '8': { name: '한화', color: '#FF6600' },
-      '9': { name: 'NC', color: '#315288' },
-      '10': { name: '키움', color: '#570514' },
+      // 숫자 ID로 매핑 (teamTypes.ts 기준)
+      '1': { name: '한화', color: '#FF6600' },
+      '2': { name: 'LG', color: '#C30452' },
+      '3': { name: '롯데', color: '#002955' },
+      '4': { name: 'KT', color: '#000000' },
+      '5': { name: '삼성', color: '#0066B3' },
+      '6': { name: 'KIA', color: '#EA0029' },
+      '7': { name: 'SSG', color: '#CE0E2D' },
+      '8': { name: 'NC', color: '#1D467F' },
+      '9': { name: '두산', color: '#131230' },
+      '10': { name: '키움', color: '#820024' },
       // 문자열 ID도 지원 (기존 호환성)
       'LG': { name: 'LG', color: '#C30452' },
       '두산': { name: '두산', color: '#131230' },
@@ -87,6 +90,25 @@ export default function ChatRoomSearchScreen() {
     }
   };
 
+  const loadGameInfo = async (gameId: string) => {
+    try {
+      if (gameInfoMap.has(gameId)) {
+        return gameInfoMap.get(gameId);
+      }
+      
+      const response = await gameApi.getGameById(gameId);
+      if (response.status === 'SUCCESS') {
+        const newGameInfoMap = new Map(gameInfoMap);
+        newGameInfoMap.set(gameId, response.data);
+        setGameInfoMap(newGameInfoMap);
+        return response.data;
+      }
+    } catch (error) {
+      console.error(`게임 정보 로드 실패 (gameId: ${gameId}):`, error);
+    }
+    return null;
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -100,8 +122,24 @@ export default function ChatRoomSearchScreen() {
     return `${days}일 전`;
   };
 
+  const formatGameDateTime = (dateTimeString: string) => {
+    const date = new Date(dateTimeString);
+    return date.toLocaleString('ko-KR', {
+      month: 'numeric',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
   const renderRoomItem = ({ item }: { item: MatchChatRoom }) => {
     const teamInfo = getTeamInfo(item.teamId);
+    const gameInfo = item.gameId ? gameInfoMap.get(item.gameId) : null;
+
+    // 게임 정보가 없으면 로드 시도 (hook 없이)
+    if (item.gameId && !gameInfoMap.has(item.gameId)) {
+      loadGameInfo(item.gameId);
+    }
     
     return (
       <TouchableOpacity
@@ -117,66 +155,44 @@ export default function ChatRoomSearchScreen() {
             style={styles.gradientBackground}
           />
           
-          {/* 장식적 테두리 요소 */}
-          <View style={styles.borderElement} />
           
-          {/* 헤더 영역 */}
-          <View style={styles.roomHeader}>
-            <View style={styles.logoContainer}>
-              <View style={[styles.teamBadge, { backgroundColor: teamInfo.color }]}>
-                <Text style={styles.teamText}>{teamInfo.name}</Text>
-              </View>
-            </View>
-            <View style={styles.socialMediaContainer}>
-              <Text style={[styles.statusText, { color: '#ffffff' }]}>
-                {item.status === 'ACTIVE' ? '모집중' : '마감'}
-              </Text>
+          {/* 헤더 영역 - 팀 배지만 */}
+          <View style={styles.simpleHeader}>
+            <View style={[styles.teamBadge, { backgroundColor: teamInfo.color }]}>
+              <Text style={styles.teamText}>{teamInfo.name}</Text>
             </View>
           </View>
 
-          {/* 제목 영역 */}
-          <View style={styles.titleContainer}>
+          {/* 메인 컨텐츠 영역 */}
+          <View style={styles.centeredContent}>
             <Text style={styles.roomTitle}>{item.matchTitle}</Text>
+            
+            {gameInfo && (
+              <View style={styles.gameInfoMain}>
+                <Text style={styles.gameTeamsText}>
+                  {gameInfo.awayTeamName} vs {gameInfo.homeTeamName}
+                </Text>
+                <Text style={styles.gameDetailsText}>
+                  {formatGameDateTime(gameInfo.dateTime)} | {gameInfo.stadium}
+                </Text>
+              </View>
+            )}
+            
             <Text style={styles.roomDescription} numberOfLines={2}>
               {item.matchDescription}
             </Text>
           </View>
         </View>
 
-        <View style={styles.bottomContent}>
-          <View style={styles.roomInfo}>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>연령</Text>
-              <Text style={styles.infoValue}>{item.minAge}-{item.maxAge}세</Text>
-            </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>참여자</Text>
-              <Text style={[styles.infoValue, styles.participantCount]}>
-                {item.currentParticipants}/{item.maxParticipants}
-              </Text>
-            </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>성별</Text>
-              <Text style={styles.infoValue}>
-                {item.genderCondition === 'ALL' ? '전체' : 
-                 item.genderCondition === 'MALE' ? '남성' : '여성'}
-              </Text>
-            </View>
-          </View>
-          
-          <View style={styles.roomFooter}>
-            <Text style={styles.createdAt}>
-              {formatDate(item.createdAt)}
-            </Text>
-            <View style={[
-              styles.statusBadge, 
-              item.status === 'ACTIVE' ? styles.activeBadge : styles.inactiveBadge
-            ]}>
-              <Text style={styles.statusText}>
-                {item.status === 'ACTIVE' ? '모집중' : '마감'}
-              </Text>
-            </View>
-          </View>
+        {/* 하단 정보 영역 */}
+        <View style={styles.compactBottomInfo}>
+          <Text style={styles.ageGenderInfo}>
+            {item.minAge}-{item.maxAge}세 • {item.genderCondition === 'ALL' ? '전체' : 
+             item.genderCondition === 'MALE' ? '남성' : '여성'}
+          </Text>
+          <Text style={styles.timeInfo}>
+            {formatDate(item.createdAt)}
+          </Text>
         </View>
       </TouchableOpacity>
     );

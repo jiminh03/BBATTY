@@ -23,9 +23,19 @@ export const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+  },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    fontWeight: '500',
+    opacity: 0.8,
+    marginTop: 2,
   },
   backButton: {
     fontSize: 18,
@@ -65,15 +75,6 @@ export const styles = StyleSheet.create({
     right: 0,
     top: 0,
     height: 200,
-  },
-  borderElement: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    height: 40,
-    width: 140,
-    backgroundColor: '#1b233d',
-    transform: [{ skewX: '-40deg' }],
   },
   roomHeader: {
     position: 'absolute',
@@ -251,6 +252,50 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     color: '#ffffff',
     fontWeight: '600',
+    marginBottom: 4,
+  },
+  gameIdSubValue: {
+    fontSize: 12,
+    color: '#ffffff',
+    opacity: 0.7,
+    fontWeight: '400',
+  },
+  
+  // Detail 화면 새로운 스타일
+  simpleRoomHeader: {
+    position: 'absolute',
+    top: 12,
+    right: 15,
+  },
+  
+  detailTitleContainer: {
+    position: 'absolute',
+    top: 15,
+    left: 15,
+    right: 15,
+    justifyContent: 'flex-start',
+  },
+  
+  gameInfoMain: {
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  
+  gameTeamsText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#ffffff',
+    marginBottom: 4,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  
+  gameDetailsText: {
+    fontSize: 13,
+    color: '#ffffff',
+    opacity: 0.9,
+    fontWeight: '500',
   },
   actionSection: {
     paddingHorizontal: 16,

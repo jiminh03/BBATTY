@@ -82,14 +82,14 @@ export default function TeamRankingScreen({ navigation, route }: Props) {
     <View style={styles.tableContainer}>
         <View style={styles.tableHeader}>
           <Text style={[styles.headerCell, { width: 25 }]}>순위</Text>
-          <Text style={[styles.headerCell, { width: 100 }]}>팀</Text>
-          <Text style={[styles.headerCell, { width: 40 }]}>경기</Text>
-          <Text style={[styles.headerCell, { width: 35 }]}>승</Text>
+          <Text style={[styles.headerCell, { width: 80 }]}>팀</Text>
+          <Text style={[styles.headerCell, { width: 35 }]}>경기</Text>
+          <Text style={[styles.headerCell, { width: 30 }]}>승</Text>
           <Text style={[styles.headerCell, { width: 25 }]}>무</Text>
-          <Text style={[styles.headerCell, { width: 35 }]}>패</Text>
+          <Text style={[styles.headerCell, { width: 30 }]}>패</Text>
           <Text style={[styles.headerCell, { width: 50 }]}>승률</Text>
           <Text style={[styles.headerCell, { width: 35 }]}>게임차</Text>
-          <Text style={[styles.headerCell, { width: 65 }]}>최근</Text>
+          <Text style={[styles.headerCell, { width: 60 }]}>최근</Text>
         </View>
         
         <ScrollView showsVerticalScrollIndicator={false}>
@@ -98,7 +98,7 @@ export default function TeamRankingScreen({ navigation, route }: Props) {
             return (
               <View key={team.teamName} style={styles.tableRow}>
                 <Text style={[styles.cell, { width: 25 }]}>{index + 1}</Text>
-                <View style={[styles.teamCellWithLogo, { width: 100 }]}>
+                <View style={[styles.teamCellWithLogo, { width: 80 }]}>
                   {teamInfo && (
                     <Image 
                       source={typeof teamInfo.imagePath === 'string' ? { uri: teamInfo.imagePath } : teamInfo.imagePath} 
@@ -107,18 +107,19 @@ export default function TeamRankingScreen({ navigation, route }: Props) {
                     />
                   )}
                 </View>
-                <Text style={[styles.cell, { width: 40 }]}>{team.games}</Text>
-                <Text style={[styles.cell, { width: 35 }]}>{team.wins}</Text>
+                <Text style={[styles.cell, { width: 35 }]}>{team.games}</Text>
+                <Text style={[styles.cell, { width: 30 }]}>{team.wins}</Text>
                 <Text style={[styles.cell, { width: 25 }]}>{team.draws}</Text>
-                <Text style={[styles.cell, { width: 35 }]}>{team.losses}</Text>
+                <Text style={[styles.cell, { width: 30 }]}>{team.losses}</Text>
                 <Text style={[styles.cell, { width: 50 }]}>{team.winRate.toFixed(3)}</Text>
                 <Text style={[styles.cell, { width: 35 }]}>{team.gameBehind === 0 ? '-' : team.gameBehind}</Text>
-                <Text style={[styles.cell, { width: 65, color: team.streak > 0 ? '#007AFF' : '#FF3B30' }]}>
+                <Text style={[styles.cell, { width: 60, color: team.streak > 0 ? '#007AFF' : '#FF3B30' }]}>
                   {team.streakText}
                 </Text>
               </View>
             );
-          })}
+          })
+}
         </ScrollView>
     </View>
   );
@@ -147,7 +148,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#f8f9fa',
     paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingLeft: 20,
+    paddingRight: 4,
     borderBottomWidth: 1,
     borderBottomColor: '#e9ecef',
   },
@@ -160,7 +162,8 @@ const styles = StyleSheet.create({
   tableRow: {
     flexDirection: 'row',
     paddingVertical: 16,
-    paddingHorizontal: 16,
+    paddingLeft: 20,
+    paddingRight: 4,
     borderBottomWidth: 1,
     borderBottomColor: '#f1f3f4',
     alignItems: 'center',

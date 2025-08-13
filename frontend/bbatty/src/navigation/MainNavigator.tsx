@@ -1,5 +1,6 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { MainTabParamList } from './types';
 import { useThemeColor } from '../shared/team/ThemeContext';
@@ -7,6 +8,18 @@ import HomeNavigator from './stacks/HomeNavgator';
 import ChatNavigator from './stacks/ChatNavigator';
 import ExploreNavigator from './stacks/ExploreNavigator';
 import MyPageNavigator from './stacks/MyPageNavigator';
+
+// 탭바를 숨길 화면들 정의
+const getTabBarVisibility = (route: any) => {
+  const routeName = getFocusedRouteNameFromRoute(route) ?? 'MatchChatRoomList';
+  
+  console.log('현재 화면:', routeName); // 디버깅용
+
+  if (routeName === 'MatchChatRoom') {
+    return { display: 'none' };
+  }
+  return { display: 'flex' };
+};
 
 const BottomTab = createBottomTabNavigator<MainTabParamList>();
 
@@ -23,6 +36,12 @@ export default function MainNavigator() {
         },
       }}
       initialRouteName='HomeStack'
+      screenListeners={{
+        tabPress: (e) => {
+          // 탭 바 눌렀을 때 로그 출력
+          console.log('Tab pressed:', e.target);
+        },
+      }}
     >
       <BottomTab.Screen
         name='HomeStack'
@@ -47,12 +66,13 @@ export default function MainNavigator() {
       <BottomTab.Screen
         name='ChatStack'
         component={ChatNavigator}
-        options={{
+        options={({ route }) => ({
           tabBarLabel: '채팅',
           tabBarIcon: ({ focused, color, size }) => (
             <Ionicons name={focused ? 'chatbubbles' : 'chatbubbles-outline'} size={size} color={color} />
           ),
-        }}
+          tabBarStyle: getTabBarVisibility(route),
+        })}
       />
       <BottomTab.Screen
         name='MyPageStack'
