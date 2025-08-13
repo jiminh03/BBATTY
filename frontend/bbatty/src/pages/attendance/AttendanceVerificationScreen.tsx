@@ -13,6 +13,9 @@ import type { StackNavigationProp } from '@react-navigation/stack';
 import * as Location from 'expo-location';
 import MapView, { Marker } from 'react-native-maps';
 import type { RootStackParamList } from '../../navigation/types';
+import { attendanceApi } from '../../entities/attendance/api/api';
+import { useAttendanceStore } from '../../entities/attendance/model/attendanceStore';
+import { gameApi } from '../../entities/game/api/api';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'AttendanceVerification'>;
 
@@ -50,6 +53,7 @@ const createCircle = (center: {latitude: number, longitude: number}, radius: num
 export const AttendanceVerificationScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const mapRef = useRef<MapView>(null);
+  const { setAttendanceVerified } = useAttendanceStore();
   const [currentLocation, setCurrentLocation] = useState<{latitude: number; longitude: number} | null>(null);
   const [mapRegion, setMapRegion] = useState({
     latitude: TARGET_LOCATION.latitude,
@@ -134,7 +138,7 @@ export const AttendanceVerificationScreen = () => {
     return distance;
   };
 
-  const handleAttendanceVerification = () => {
+  const handleAttendanceVerification = async () => {
     if (!currentLocation) {
       Alert.alert('오류', '현재 위치를 확인할 수 없습니다.');
       return;
@@ -142,25 +146,36 @@ export const AttendanceVerificationScreen = () => {
 
     setIsVerifying(true);
 
-    // 현재 위치와 목표 위치 간의 거리 계산
-    const distance = calculateDistance(
-      currentLocation.latitude,
-      currentLocation.longitude,
-      TARGET_LOCATION.latitude,
-      TARGET_LOCATION.longitude
-    );
+    try {
+      console.log('현재 위치:', currentLocation);
+      
+      // API 호출로 직관 인증 (서버에서 거리 검증)
+      const response = await attendanceApi.verifyAttendance({
+        latitude: currentLocation.latitude,
+        longitude: currentLocation.longitude,
+      });
 
-    console.log('현재 위치:', currentLocation);
-    console.log('목표 위치:', TARGET_LOCATION);
-    console.log('거리:', Math.round(distance), 'meters');
+      console.log('🎯 직관 인증 API 응답:', response);
 
-    setTimeout(() => {
-      setIsVerifying(false);
+      if (response.status === 'SUCCESS') {
+        // 오늘의 게임 정보 가져오기
+        let gameInfo = null;
+        try {
+          const gameResponse = await gameApi.getTodayGame();
+          if (gameResponse.status === 'SUCCESS') {
+            gameInfo = gameResponse.data;
+          }
+        } catch (error) {
+          console.error('게임 정보 로드 실패:', error);
+        }
 
-      if (distance <= MAX_DISTANCE) {
+        // 상태 저장
+        setAttendanceVerified(true, gameInfo);
+
+        setIsVerifying(false);
         Alert.alert(
           '직관 인증 성공! 🎉',
-          `${TARGET_LOCATION.name}에서 ${Math.round(distance)}m 거리에 있습니다.\n직관 인증이 완료되었습니다!`,
+          '직관 인증이 완료되었습니다!',
           [
             {
               text: '확인',
@@ -172,9 +187,10 @@ export const AttendanceVerificationScreen = () => {
           ]
         );
       } else {
+        setIsVerifying(false);
         Alert.alert(
           '직관 인증 실패 😔',
-          `${TARGET_LOCATION.name}에서 ${Math.round(distance)}m 떨어져 있습니다.\n경기장 근처(${MAX_DISTANCE}m 이내)에서 인증해주세요.`,
+          response.message || '인증에 실패했습니다. 다시 시도해주세요.',
           [
             {
               text: '위치 새로고침',
@@ -187,7 +203,20 @@ export const AttendanceVerificationScreen = () => {
           ]
         );
       }
-    }, 2000);
+    } catch (error) {
+      console.error('직관 인증 중 오류:', error);
+      setIsVerifying(false);
+      Alert.alert(
+        '오류 발생',
+        '네트워크 오류가 발생했습니다. 다시 시도해주세요.',
+        [
+          {
+            text: '확인',
+            style: 'cancel',
+          },
+        ]
+      );
+    }
   };
 
   if (isLoading) {

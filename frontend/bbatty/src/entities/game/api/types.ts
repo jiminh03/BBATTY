@@ -11,3 +11,15 @@ export interface GamesResponse {
   message: string;
   data: Game[];
 }
+
+export interface GameResponse {
+  status: string;
+  message: string;
+  data: Game;
+}
+
+export interface TodayGameResponse {
+  status: string;
+  message: string;
+  data: Game;
+}

@@ -44,6 +44,7 @@ export default function UserRankingScreen({ navigation, route }: Props) {
   const getCurrentUser = useUserStore((state) => state.getCurrentUser);
   const currentUser = getCurrentUser();
   const scrollViewRef = useRef<ScrollView>(null);
+  const rankingScrollViewRef = useRef<ScrollView>(null);
 
   const fetchAllRankingsData = async () => {
     if (!currentUser?.userId) {
@@ -174,64 +175,75 @@ export default function UserRankingScreen({ navigation, route }: Props) {
 
   return (
     <View style={styles.userRankingContainer}>
-        {/* 팀 필터 */}
-        <View style={styles.teamFilterContainer}>
-          <ScrollView 
-            ref={scrollViewRef}
-            horizontal 
-            showsHorizontalScrollIndicator={false} 
-            style={styles.teamFilterScroll}
-            maintainVisibleContentPosition={{
-              minIndexForVisible: 0,
-              autoscrollToTopThreshold: 0,
-            }}
-          >
-            {teamFilters.map((filter, index) => (
-              <TouchableOpacity
-                key={filter.id}
-                style={[
-                  styles.teamFilterItem,
-                  selectedTeamFilter === filter.id && {
-                    ...styles.selectedTeamFilter,
-                    backgroundColor: themeColor,
-                  }
-                ]}
-                onPress={() => setSelectedTeamFilter(filter.id)}
-              >
-                {filter.logo ? (
-                  <View style={styles.teamLogoContainer}>
-                    <Image 
-                      source={typeof filter.logo === 'string' ? { uri: filter.logo } : filter.logo} 
-                      style={[
-                        styles.teamFilterLogo,
-                        selectedTeamFilter === filter.id && styles.selectedTeamLogo
-                      ]} 
-                      resizeMode="contain" 
-                    />
-                    <Text style={[
-                      styles.teamFilterName,
-                      selectedTeamFilter === filter.id && styles.selectedTeamFilterName
-                    ]}>
-                      {filter.name}
-                    </Text>
-                  </View>
-                ) : (
-                  <View style={styles.allFilterContainer}>
-                    <Text style={[
-                      styles.allFilterText,
-                      selectedTeamFilter === filter.id && styles.selectedAllFilterText
-                    ]}>ALL</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
         <ScrollView 
+          ref={rankingScrollViewRef}
           style={styles.userRankingList}
           contentContainerStyle={styles.scrollContent}
+          stickyHeaderIndices={[0]}
         >
+          {/* 팀 필터 - 스크롤뷰 내부 상단에 고정 */}
+          <View style={styles.teamFilterContainer}>
+            <ScrollView 
+              ref={scrollViewRef}
+              horizontal 
+              showsHorizontalScrollIndicator={false} 
+              style={styles.teamFilterScroll}
+              maintainVisibleContentPosition={{
+                minIndexForVisible: 0,
+                autoscrollToTopThreshold: 0,
+              }}
+            >
+              {teamFilters.map((filter, index) => (
+                <TouchableOpacity
+                  key={filter.id}
+                  style={[
+                    styles.teamFilterItem,
+                    selectedTeamFilter === filter.id && {
+                      ...styles.selectedTeamFilter,
+                      backgroundColor: themeColor,
+                    }
+                  ]}
+                  onPress={() => {
+                    setSelectedTeamFilter(filter.id);
+                    // 순위표를 맨 위로 스크롤
+                    setTimeout(() => {
+                      rankingScrollViewRef.current?.scrollTo({ y: 0, animated: true });
+                    }, 100);
+                  }}
+                >
+                  {filter.logo ? (
+                    <View style={styles.teamLogoContainer}>
+                      <Image 
+                        source={typeof filter.logo === 'string' ? { uri: filter.logo } : filter.logo} 
+                        style={[
+                          styles.teamFilterLogo,
+                          selectedTeamFilter === filter.id && styles.selectedTeamLogo
+                        ]} 
+                        resizeMode="contain" 
+                      />
+                      <Text style={[
+                        styles.teamFilterName,
+                        selectedTeamFilter === filter.id && styles.selectedTeamFilterName
+                      ]}>
+                        {filter.name}
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={styles.allFilterContainer}>
+                      <Text style={[
+                        styles.allFilterText,
+                        selectedTeamFilter === filter.id && styles.selectedAllFilterText
+                      ]}>ALL</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+          
+          {/* 여백 추가 - 팀 필터와 순위표 사이 */}
+          <View style={styles.spacer} />
+          
           {/* 상위 3명 시상대 */}
           {top3Users.length > 0 && (
             <View style={styles.podiumContainer}>
@@ -435,9 +447,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   teamFilterContainer: {
-    paddingVertical: 8,
+    paddingVertical: 12,
     paddingHorizontal: 16,
     backgroundColor: '#ffffff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 10,
   },
   teamFilterScroll: {
     flexDirection: 'row',
@@ -483,7 +506,8 @@ const styles = StyleSheet.create({
   allFilterContainer: {
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 12,
+    height: 60,
   },
   allFilterText: {
     fontSize: 16,
@@ -506,11 +530,12 @@ const styles = StyleSheet.create({
   },
   userRankingList: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 20,
+    paddingHorizontal: 0,
+    paddingTop: 0,
   },
   scrollContent: {
     paddingBottom: 60,
+    paddingHorizontal: 16,
     flexGrow: 1,
   },
   userRankingItem: {
@@ -730,13 +755,16 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   podiumTeamLogo: {
-    width: 20,
-    height: 20,
+    width: 40,
+    height: 40,
     marginBottom: 4,
   },
   userTeamLogo: {
-    width: 16,
-    height: 16,
+    width: 32,
+    height: 32,
     marginRight: 8,
+  },
+  spacer: {
+    height: 80,
   },
 });
