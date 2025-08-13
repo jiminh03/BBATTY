@@ -54,9 +54,8 @@ export const useMessageQueue = ({
       const success = await onSendMessage(message.content);
       
       if (success) {
-        // 전송 성공 - 큐에서 제거
-        updateMessageStatus(message.id, 'sent');
-        setTimeout(() => removeMessage(message.id), 2000); // 2초 후 완전 제거
+        // 전송 성공 - 즉시 큐에서 제거 (웹소켓으로 받은 메시지가 표시됨)
+        removeMessage(message.id);
       } else {
         // 전송 실패 - 재시도 스케줄링
         await handleMessageFailure(message);

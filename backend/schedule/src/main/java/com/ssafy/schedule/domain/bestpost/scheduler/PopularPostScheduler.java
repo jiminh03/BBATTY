@@ -147,9 +147,9 @@ public class PopularPostScheduler {
     /**
      * 인기글 점수 감쇠 - 30분마다 실행
      */
-    @Scheduled(fixedRate = 1800000) // 30분 = 1,800,000ms
+    @Scheduled(fixedRate = 3600000) // 1시간 = 1,800,000ms
     public void applyScoreDecay() {
-        double decayRate = 0.80; //20% 감쇠
+        double decayRate = 0.90; //20% 감쇠
         rankingService.applyDecayToAllTeams(decayRate);
         
         log.info("인기글 점수 감쇠 적용 완료 - 감쇠율: {}%", (1 - decayRate) * 100);

@@ -129,16 +129,52 @@ public class MatchChatRoomAuthServiceImpl implements MatchChatRoomAuthService {
             return ErrorCode.UNAUTHORIZED;
         }
         
+        // 게임 관련 오류
         if (errorMessage.contains("경기 정보를 찾을 수 없어요")) {
-            return ErrorCode.NOT_FOUND;
-        } else if (errorMessage.contains("이미 매칭방이 있어요")) {
-            return ErrorCode.DUPLICATE_MATCH_CHAT_ROOM;
-        } else if (errorMessage.contains("토큰이 만료되었어요")) {
-            return ErrorCode.UNAUTHORIZED;
-        } else if (errorMessage.contains("인증에 실패했어요")) {
-            return ErrorCode.UNAUTHORIZED;
+            return ErrorCode.GAME_NOT_FOUND;
+        } else if (errorMessage.contains("이미 종료된 경기예요")) {
+            return ErrorCode.GAME_FINISHED;
+        } else if (errorMessage.contains("경기가 진행 중이 아닙니다")) {
+            return ErrorCode.GAME_NOT_LIVE;
         }
         
+        // 팀 관련 오류
+        else if (errorMessage.contains("해당 팀이 경기에 참여하지 않습니다")) {
+            return ErrorCode.TEAM_NOT_IN_GAME;
+        } else if (errorMessage.contains("팀에 대한 접근 권한이 없습니다")) {
+            return ErrorCode.UNAUTHORIZED_TEAM_ACCESS;
+        }
+        
+        // 매칭 조건 관련 오류
+        else if (errorMessage.contains("나이 조건에 맞지 않습니다")) {
+            return ErrorCode.INVALID_MATCH_CONDITIONS;
+        } else if (errorMessage.contains("성별 조건에 맞지 않습니다")) {
+            return ErrorCode.INVALID_MATCH_CONDITIONS;
+        } else if (errorMessage.contains("승률 조건에 맞지 않습니다")) {
+            return ErrorCode.INVALID_MATCH_CONDITIONS;
+        } else if (errorMessage.contains("매칭방 조건 정보가 올바르지 않습니다")) {
+            return ErrorCode.INVALID_MATCH_CONDITIONS;
+        } else if (errorMessage.contains("채팅방 정보가 누락되었습니다")) {
+            return ErrorCode.REQUIRED_FIELD_MISSING;
+        }
+        
+        // 인증 관련 오류
+        else if (errorMessage.contains("유효하지 않은 토큰이에요")) {
+            return ErrorCode.INVALID_SESSION_TOKEN;
+        } else if (errorMessage.contains("인증이 필요해요")) {
+            return ErrorCode.UNAUTHORIZED;
+        } else if (errorMessage.contains("접근 권한이 없어요")) {
+            return ErrorCode.FORBIDDEN;
+        }
+        
+        // 입력값 관련 오류
+        else if (errorMessage.contains("입력값이 올바르지 않습니다")) {
+            return ErrorCode.INVALID_INPUT_VALUE;
+        } else if (errorMessage.contains("잘못된 요청이에요")) {
+            return ErrorCode.BAD_REQUEST;
+        }
+        
+        // 기본값
         return ErrorCode.UNAUTHORIZED;
     }
     
