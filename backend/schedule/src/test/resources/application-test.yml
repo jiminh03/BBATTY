@@ -5,7 +5,7 @@ spring:
 
   # H2 메모리 데이터베이스 설정
   datasource:
-    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;REFERENTIAL_INTEGRITY=FALSE
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;INIT=CREATE SCHEMA IF NOT EXISTS bbatty
     username: test
     password:
     driver-class-name: org.h2.Driver
@@ -29,3 +29,19 @@ spring:
   h2:
     console:
       enabled: true
+
+  ai:
+    naver-api:
+      client-id: ${NAVER_CLIENT_ID:dummy-id}
+      client-secret: ${NAVER_CLIENT_SECRET:dummy-secret}
+
+    openai:
+      api-key: ${OPENAI_GPT_KEY:dummy-key}
+      chat:
+        options:
+          model: gpt-4o-mini        # 처음에 쓸 모델
+          temperature: 0.5          # 창의성 낮게
+          max-tokens: 512
+
+  jwt:
+    secret: ${JWT_SECRET:dummy-secret}
