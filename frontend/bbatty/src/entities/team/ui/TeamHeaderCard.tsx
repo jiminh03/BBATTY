@@ -55,7 +55,7 @@ export default function TeamHeaderCard({
     }
     
     if (isVerified && gameInfo) {
-      return `VS ${gameInfo.homeTeamName}\n실시간 채팅방 가기`;
+      return `${gameInfo.homeTeamName.split(' ')[0]} VS ${gameInfo.awayTeamName.split(' ')[0]}\n실시간 채팅방 가기`;
     }
     
     return '직관인증하기';

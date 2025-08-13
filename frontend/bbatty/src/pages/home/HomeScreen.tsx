@@ -2,7 +2,7 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import {
   View, FlatList, ActivityIndicator, StyleSheet, TouchableOpacity,
-  Pressable, Text, TextInput,
+  Pressable, Text, TextInput, Alert,
 } from 'react-native';
 import { HomeStackScreenProps } from '../../navigation/types';
 import TeamHeaderCard from '../../entities/team/ui/TeamHeaderCard';
@@ -16,12 +16,11 @@ import {
 import { useUserStore } from '../../entities/user/model/userStore';
 import { useAttendanceStore } from '../../entities/attendance/model/attendanceStore';
 import TeamGearIcon from '../../shared/ui/atoms/Team/TeamGearIcon';
-import { findTeamById } from '../../shared/team/teamTypes';
+import { findTeamById, getTeamInfo } from '../../shared/team/teamTypes';
 import { useTeamStanding } from '../../entities/team/queries/useTeamStanding';
 import { useSearchHistoryStore } from '../../entities/post/model/searchHistoryStore';
 import { chatRoomApi } from '../../entities/chat-room/api/api';
 import { gameApi } from '../../entities/game/api/api';
-import { getTeamInfo } from '../../shared/team/teamTypes';
 
 type Props = HomeStackScreenProps<'Home'>;
 
@@ -129,6 +128,76 @@ export default function HomeScreen({ navigation }: Props) {
     setSubmittedKeyword('');
     setKeyword('');
   }, []);
+
+  const handleChatPress = async () => {
+    const isVerified = isVerifiedToday();
+    if (isVerified) {
+      try {
+        const currentUser = useUserStore.getState().currentUser;
+        if (!currentUser) {
+          Alert.alert('오류', '사용자 정보를 찾을 수 없습니다.');
+          return;
+        }
+
+        // 오늘의 게임 정보 가져오기
+        const todayGameResponse = await gameApi.getTodayGame();
+        if (todayGameResponse.status !== 'SUCCESS' || !todayGameResponse.data) {
+          Alert.alert('오류', '오늘의 경기 정보를 가져올 수 없습니다.');
+          return;
+        }
+        const todayGame = todayGameResponse.data;
+
+        const watchRequest = {
+          gameId: todayGame.gameId,
+          teamId: currentUser.teamId,
+          isAttendanceVerified: true,
+        };
+
+        const response = await chatRoomApi.joinWatchChat(watchRequest);
+
+        if (response.data.status === 'SUCCESS') {
+          // 게임 정보 로드
+          const gameDetails = await gameApi.getGameById(todayGame.gameId.toString());
+          if (!gameDetails || gameDetails.status !== 'SUCCESS') {
+            Alert.alert('오류', '게임 정보를 불러올 수 없습니다.');
+            return;
+          }
+
+          const watchChatRoom = {
+            matchId: `watch_chat_${todayGame.gameId}_${currentUser.teamId}`,
+            gameId: todayGame.gameId.toString(),
+            matchTitle: `직관채팅 - ${gameDetails.data.awayTeamName} vs ${gameDetails.data.homeTeamName}`,
+            matchDescription: `${gameDetails.data.stadium}에서 열리는 경기를 함께 시청하며 채팅하는 공간`,
+            teamId: getTeamInfo(currentUser.teamId).name,
+            minAge: 0,
+            maxAge: 100,
+            genderCondition: 'ALL',
+            maxParticipants: 999,
+            currentParticipants: 0,
+            createdAt: new Date().toISOString(),
+            status: 'ACTIVE',
+            websocketUrl: response.data.data.websocketUrl,
+          };
+
+          navigation.navigate('ChatStack', {
+            screen: 'MatchChatRoom',
+            params: {
+              room: watchChatRoom,
+              websocketUrl: response.data.data.websocketUrl,
+              sessionToken: response.data.data.sessionToken,
+            },
+          });
+        } else {
+          Alert.alert('연결 실패', response.data.message || JSON.stringify(response.data) || '직관채팅 연결에 실패했습니다.');
+        }
+      } catch (error) {
+        console.error('직관채팅 연결 중 오류:', error);
+        Alert.alert('오류', '직관채팅 연결 중 문제가 발생했습니다.');
+      }
+    } else {
+      navigation.navigate('AttendanceVerification' as never);
+    }
+  };
 
   const listData = tab === 'best' ? popular : isSearching ? searchPosts : allPosts;
   const isFetchingNext =
