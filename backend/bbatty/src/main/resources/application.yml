@@ -87,3 +87,4 @@ logging:
   level:
     root: INFO
     com.ssafy: DEBUG
+    com.google.firebase: DEBUG
