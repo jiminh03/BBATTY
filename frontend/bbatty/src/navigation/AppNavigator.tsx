@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import { NavigationContainer } from '@react-navigation/native';
 import AuthNavigator from './AuthNavigator';
@@ -19,9 +19,12 @@ import { AttendanceVerificationScreen } from '../pages/attendance';
 
 const Stack = createStackNavigator();
 
+// 컴포넌트 외부에서 selector 정의 (안정적인 참조)
+const selectHasToken = (state: any) => !!state.refreshToken;
+const selectHasUser = (state: any) => !!state.currentUser;
+
 export default function AppNavigator() {
   const [showSplash, setShowSplash] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isExistingUser, setIsExistingUser] = useState(false);
 
   const { setKakaoUserInfo, setKakaoAccessToken } = usekakaoStore();
@@ -29,35 +32,35 @@ export default function AppNavigator() {
   const { initializeUser, setCurrentUser, reset } = useUserStore();
   const { setCurrentTeam } = useTheme();
 
-  // Zustand 상태를 직접 구독 (상태 변경시 자동 리렌더링)
-  const refreshToken = useTokenStore((state) => state.refreshToken);
-  const currentUser = useUserStore((state) => state.currentUser);
+  // 임시: 인증 상태를 단순 boolean으로 고정 (무한 루프 디버깅)
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
+  // 무한 루프 테스트를 위해 임시 비활성화
+  // const hasToken = useTokenStore(selectHasToken);
+  // const hasUser = useUserStore(selectHasUser);
+  // const isAuthenticated = useMemo(() => {
+  //   return hasToken && hasUser;
+  // }, [hasToken, hasUser]);
+
+  // 앱 초기화 함수
+  const initializeApp = useCallback(async () => {
+    try {
+      await Promise.all([initializeTokens(), initializeUser()]);
+      // await testReset();
+      await initializeApiClient();
+    } catch (error) {
+      console.error('App initialization failed:', error);
+      // 인증 상태는 Zustand 상태에서 자동으로 계산됨
+    }
+  }, [initializeTokens, initializeUser]);
 
   useEffect(() => {
     initializeApp();
-  }, []);
-
-  // 상태가 변경될 때만 인증 상태 업데이트
-  useEffect(() => {
-    const isAuth = !!refreshToken && !!currentUser;
-    console.log('Auth status changed:', { isAuth, hasToken: !!refreshToken, hasUser: !!currentUser });
-    setIsAuthenticated(isAuth);
-  }, [refreshToken, currentUser]);
+  }, [initializeApp]);
 
   const testReset = () => {
     resetToken();
     reset();
-  };
-
-  const initializeApp = async () => {
-    try {
-      await Promise.all([initializeTokens(), initializeUser()]);
-      // await testReset();
-      initializeApiClient();
-    } catch (error) {
-      console.error('App initialization failed:', error);
-      setIsAuthenticated(false);
-    }
   };
 
   // 자동로그인 성공 시 호출
@@ -75,7 +78,7 @@ export default function AppNavigator() {
 
       // 먼저 서버에 로그인을 시도해서 기존 사용자인지 확인
       const { authApi } = await import('../features/user-auth/api/authApi');
-      
+
       const loginResult = await authApi.login({
         accessToken: accessToken,
       });
@@ -93,7 +96,7 @@ export default function AppNavigator() {
         setIsAuthenticated(true);
         setIsExistingUser(true);
         setShowSplash(false);
-        
+
         console.log('Existing user login successful');
       } else {
         // 신규 사용자 - 회원가입 화면으로
@@ -106,7 +109,6 @@ export default function AppNavigator() {
       setShowSplash(false);
     }
   };
-
 
   const handleSetUserAndTeam = async (userInfo: any) => {
     await setCurrentUser(userInfo);
@@ -149,19 +151,11 @@ export default function AppNavigator() {
     );
   }
 
+  // 임시: 무한 루프 디버깅을 위해 조건부 렌더링 제거
   return (
     <NavigationContainer ref={navigationRef} linking={linking}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {isAuthenticated ? (
-          <>
-            <Stack.Screen name='MainTabs' component={MainNavigator} />
-            <Stack.Screen name='AttendanceVerification' component={AttendanceVerificationScreen} />
-          </>
-        ) : (
-          <Stack.Screen name='AuthStack'>
-            {() => <AuthNavigator onSignUpComplete={handleSignUpComplete} isExistingUser={isExistingUser} />}
-          </Stack.Screen>
-        )}
+        <Stack.Screen name='MainTabs' component={MainNavigator} />
       </Stack.Navigator>
     </NavigationContainer>
   );

@@ -17,27 +17,22 @@ export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnaut
       const isPublicEndpoint = /\/api\/(auth\/(signup|check-nickname|refresh|login))(\/.*)?$/.test(config.url || '');
 
       if (!isPublicEndpoint) {
-        // 토큰 만료 임박 시 선제 갱신
-        const checkResult = await useTokenStore.getState().checkAndRefreshIfNeeded();
-
-        if (isOk(checkResult) && checkResult.data) {
-          // 갱신된 토큰으로 헤더 설정
-          const token = useTokenStore.getState().getAccessToken();
-          if (token && config.headers) {
-            config.headers.Authorization = `Bearer ${token}`;
-          }
-        } else {
-          // 토큰 갱신 실패 시 인증 상태 초기화
-          console.warn('Token refresh failed in request interceptor');
+        // 단순히 현재 토큰을 헤더에 추가 (요청 인터셉터에서는 갱신하지 않음)
+        const token = useTokenStore.getState().getAccessToken();
+        if (token && config.headers) {
+          config.headers.Authorization = `Bearer ${token}`;
+        } else if (!token) {
+          // 토큰이 없으면 인증 실패
+          console.error('❌ [RequestInterceptor] 토큰이 없음, 인증 초기화');
           await onUnauthorized();
-          return Promise.reject(new Error('Authentication failed'));
+          return Promise.reject(new Error('No access token'));
         }
       }
 
       return config;
     },
     (error: AxiosError) => {
-      console.error('요청 interceptor error: ', error);
+      console.error('❌ [RequestInterceptor] 요청 interceptor error: ', error);
       return Promise.reject(error);
     }
   );
@@ -47,29 +42,54 @@ export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnaut
     (response: AxiosResponse) => {
       if (response.data && typeof response.data === 'object') {
         if (!('status' in response.data)) {
-          console.warn(`잘못된 api 형식 :`, response.data);
+          console.warn(`⚠️ [ResponseInterceptor] 잘못된 api 형식 :`, response.data);
         }
       }
       return response;
     },
     async (error: AxiosError) => {
       const originalRequest = error.config;
+      
       // 토큰 만료 또는 인증 실패
       if (error.response?.status === 401 && originalRequest) {
+        console.log('🔴 [ResponseInterceptor] 401 에러 발생:', originalRequest?.url);
+        
+        // refresh API 호출은 별도 처리 (무한 루프 방지)
+        const isRefreshRequest = originalRequest.url?.includes('/api/auth/refresh');
+        
+        if (isRefreshRequest) {
+          console.error('❌ [ResponseInterceptor] Refresh API 자체가 401 에러, 로그아웃 처리');
+          await onUnauthorized();
+          return Promise.reject(error);
+        }
+
+        // 이미 재시도한 요청인지 체크 (무한 재시도 방지)
+        if ((originalRequest as any)._isRetry) {
+          console.error('❌ [ResponseInterceptor] 이미 재시도한 요청이므로 로그아웃 처리');
+          await onUnauthorized();
+          return Promise.reject(error);
+        }
+
+        console.log('🔄 [ResponseInterceptor] 401 에러 - 토큰 갱신 시도');
+        
         // 토큰 갱신 시도
         const refreshResult = await useTokenStore.getState().refreshTokens();
 
         if (isOk(refreshResult) && refreshResult.data) {
+          console.log('✅ [ResponseInterceptor] 토큰 갱신 성공 - 원래 요청 재시도');
+          
           // 토큰 갱신 성공 - 원래 요청 재시도
           const newToken = useTokenStore.getState().getAccessToken();
           if (originalRequest.headers && newToken) {
             originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            (originalRequest as any)._isRetry = true; // 재시도 플래그 설정
           }
           return client(originalRequest);
         } else {
+          console.error('❌ [ResponseInterceptor] 토큰 갱신 실패 - 로그아웃 처리');
+          
           // 토큰 갱신 실패 - 콜백 실행
           if (onUnauthorized) {
-            console.error('토큰 갱신에 실패하였습니다.');
             await onUnauthorized();
           }
         }

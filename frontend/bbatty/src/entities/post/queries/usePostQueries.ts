@@ -236,3 +236,14 @@ export const useTeamSearchPostsInfinite = (teamId: number, q: string) =>
     getNextPageParam: (last) => (last?.hasNext ? last.nextCursor : undefined),
     staleTime: 60_000,
   });
+
+  export const useMyPostsInfinite = (userId?: number) =>
+  useInfiniteQuery<CursorPostListResponse>({
+    queryKey: ['myPosts', userId],
+    enabled: !!userId,                           // userId 있어야 동작
+    queryFn: ({ pageParam = undefined }) =>
+      postApi.getMyPosts(userId as number, pageParam as number | undefined),
+    initialPageParam: undefined,
+    getNextPageParam: (last) => (last?.hasNext ? last.nextCursor : undefined),
+    staleTime: 60_000,
+  });

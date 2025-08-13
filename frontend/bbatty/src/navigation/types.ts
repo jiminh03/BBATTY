@@ -31,28 +31,22 @@ export type MainTabParamList = {
 // 홈 스택 파라미터
 export type HomeStackParamList = {
   Home: undefined;
-  PostForm: { postId?: number } | undefined; 
-  PostList: {teamId?: number} | undefined;
-  PostDetail: {
-    postId: number;
-  };
-  PopularPosts: {teamId:number};
-  PostCreate: {
-    category?: string;
-  };
-  TeamPostSearch: { teamId: number; initialKeyword?:string}
+  PostForm: { teamId?: number; postId?: number } | undefined; // ← teamId 추가
+  PostList: { teamId?: number } | undefined;
+  PostDetail: { postId: number };
+  PopularPosts: { teamId: number };
+  PostCreate: { category?: string };
+  TeamPostSearch: { teamId: number; initialKeyword?: string };
   Notifications: undefined;
-  Search: {
-    initialQuery?: string;
-  };
+  Search: { initialQuery?: string };
 };
-
 // 탐색 스택 파라미터
 export type ExploreStackParamList = {
   CommunityHome: undefined;
+  PostDetail: { postId: number };
   TeamRanking: undefined;
   UserRanking: undefined;
-  TeamCommunity: undefined;
+  TeamCommunity: {teamId?:number};
   PostEdit: {
     postId: string;
   };
@@ -120,6 +114,7 @@ export type MyPageStackParamList = {
   };
   ProfileEdit: undefined;
   Settings: undefined;
+  PostDetail: { postId: number}
 };
 
 // 스크린 Props 타입
