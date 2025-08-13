@@ -5,10 +5,12 @@ import com.ssafy.bbatty.domain.board.dto.response.PostCreateResponse;
 import com.ssafy.bbatty.domain.board.dto.response.PostDetailResponse;
 import com.ssafy.bbatty.domain.board.dto.response.PostListPageResponse;
 import com.ssafy.bbatty.domain.board.dto.response.PostListResponse;
+import com.ssafy.bbatty.domain.board.dto.response.NewsSummaryDto;
 import com.ssafy.bbatty.domain.board.service.PostCountService;
 import com.ssafy.bbatty.domain.board.service.PostService;
 import com.ssafy.bbatty.domain.board.service.PostImageService;
 import com.ssafy.bbatty.domain.board.service.PopularPostService;
+import com.ssafy.bbatty.domain.board.service.NewsService;
 import com.ssafy.bbatty.global.constants.ErrorCode;
 import com.ssafy.bbatty.global.constants.SuccessCode;
 import com.ssafy.bbatty.global.exception.ApiException;
@@ -36,6 +38,7 @@ public class PostController {
     private final PostCountService postCountService;
     private final PostImageService postImageService;
     private final PopularPostService popularPostService;
+    private final NewsService newsService;
 
     // 게시물 생성
     @PostMapping
@@ -185,6 +188,19 @@ public class PostController {
             @RequestParam(required = false) Long cursor) {
         
         PostListPageResponse response = postService.searchPostsByTeam(teamId, keyword, cursor);
+        
+        return ResponseEntity.status(SuccessCode.SUCCESS_DEFAULT.getStatus())
+                .body(ApiResponse.success(SuccessCode.SUCCESS_DEFAULT, response));
+    }
+
+    /**
+     * 팀별 뉴스 요약 조회
+     */
+    @GetMapping("/team/{teamId}/news")
+    public ResponseEntity<ApiResponse<List<NewsSummaryDto>>> getNewsSummaryByTeam(
+            @PathVariable Long teamId) {
+        
+        List<NewsSummaryDto> response = newsService.getNewsSummaryByTeam(teamId);
         
         return ResponseEntity.status(SuccessCode.SUCCESS_DEFAULT.getStatus())
                 .body(ApiResponse.success(SuccessCode.SUCCESS_DEFAULT, response));

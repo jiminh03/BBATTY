@@ -84,7 +84,7 @@ public class PopularPostRankingService {
                     double newScore = post.getScore() * decayRate;
                     
                     // 점수가 너무 낮아지면 제거 (0.1 미만)
-                    if (newScore < 0.1) {
+                    if (newScore < 0.05) {
                         zSetOps.remove(key, post.getValue());
                     } else {
                         zSetOps.add(key, post.getValue(), newScore);
