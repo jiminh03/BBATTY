@@ -165,29 +165,73 @@ getPosts: async (teamId: number, cursor?: number): Promise<CursorPostListRespons
   },
 
   // 팀별 검색 (query, cursor)
-async searchTeamPosts(teamId: number, q: string, cursor?: number): Promise<CursorPostListResponse> {
-  const query = (q ?? '').trim();
-  if (!teamId || teamId <= 0 || !query) {
-    return { posts: [], hasNext: false, nextCursor: undefined } as CursorPostListResponse;
-  }
-  const params: Record<string, any> = { query };
+async searchTeamPosts(
+    teamId: number,
+    rawQuery: string,
+    cursor?: number
+  ): Promise<CursorPostListResponse> {
+    const query = (rawQuery ?? '').trim();
+    if (!teamId || teamId <= 0 || !query) {
+      return { posts: [], hasNext: false, nextCursor: undefined };
+    }
+
+    const params: Record<string, any> = {
+      // 서버가 keyword 를 쓰든 q 를 쓰든 대응
+      keyword: query,
+      q: query,
+    };
+    if (cursor !== undefined) params.cursor = cursor;
+
+    const res = await apiClient.get(`/api/posts/team/${teamId}/search`, { params });
+    const root: any = (res as any)?.data ?? res;
+
+    if (root?.status !== 'SUCCESS' || !root?.data) {
+      return { posts: [], hasNext: false, nextCursor: undefined };
+    }
+
+    const data = root.data;
+
+    // ✅ 방어적 파싱 + nextCursor 숫자 정규화
+    const posts = Array.isArray(data?.posts) ? data.posts : [];
+    const hasNext = Boolean(data?.hasNext);
+    const nextRaw = data?.nextCursor;
+    const nextCursor =
+      typeof nextRaw === 'number'
+        ? nextRaw
+        : typeof nextRaw === 'string' && nextRaw !== ''
+        ? Number(nextRaw)
+        : undefined;
+
+    return { posts, hasNext, nextCursor };
+  },
+
+  // 회원별 게시글 조회
+  async getMyPosts(userId: number, cursor?: number): Promise<CursorPostListResponse> {
+  const params: Record<string, any> = {};
   if (cursor !== undefined) params.cursor = cursor;
 
-  const res = await apiClient.get(`/api/posts/team/${teamId}/search`, { params });
+  const res = await apiClient.get(`/api/posts/user/${userId}`, { params });
   const root: any = (res as any)?.data ?? res;
 
+  // 공통 래퍼 파싱
   const payload = root?.data ?? root;
-  const container = payload ?? root;
 
+  // 다양한 서버 포맷 방어적 파싱
   const posts =
-    Array.isArray(container?.posts) ? container.posts :
-    Array.isArray(container) ? container : [];
+    Array.isArray(payload?.posts) ? payload.posts :
+    Array.isArray(payload?.content) ? payload.content :
+    Array.isArray(payload) ? payload : [];
 
-  const hasNext = Boolean(container?.hasNext);
-  const nextCursor = typeof container?.nextCursor === 'number'
-    ? container.nextCursor
-    : undefined;
+  const hasNext = Boolean(payload?.hasNext ?? payload?.page?.hasNext ?? false);
 
-  return { posts, hasNext, nextCursor } as CursorPostListResponse;
+  const rawNext =
+    payload?.nextCursor ?? payload?.page?.nextCursor ??
+    payload?.next ?? payload?.nextId ?? payload?.next_id;
+
+  const nextCursor =
+    typeof rawNext === 'string' ? Number(rawNext) :
+    (typeof rawNext === 'number' ? rawNext : undefined);
+
+  return { posts, hasNext, nextCursor };
 },
 }
