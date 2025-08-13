@@ -232,6 +232,8 @@ export const styles = StyleSheet.create({
   myMessage: {
     alignSelf: 'flex-end',
     backgroundColor: '#007AFF',
+    paddingTop: 12,
+    paddingBottom: 8,
   },
   pendingMessage: {
     opacity: 0.8,
@@ -250,16 +252,36 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#666',
   },
+  myMessageNickname: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#fff',
+    opacity: 0.9,
+  },
   messageContent: {
     fontSize: 16,
-    lineHeight: 20,
+    lineHeight: 22,
     color: '#333',
     marginBottom: 4,
+    fontWeight: '500',
+  },
+  myMessageContent: {
+    fontSize: 16,
+    lineHeight: 22,
+    color: '#fff',
+    marginBottom: 4,
+    fontWeight: '600',
   },
   messageTime: {
     fontSize: 10,
     color: '#999',
     alignSelf: 'flex-end',
+  },
+  myMessageTime: {
+    fontSize: 10,
+    color: '#fff',
+    alignSelf: 'flex-end',
+    opacity: 0.8,
   },
   systemMessage: {
     alignItems: 'center',

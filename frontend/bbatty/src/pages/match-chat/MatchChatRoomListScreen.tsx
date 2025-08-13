@@ -7,7 +7,7 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
@@ -107,7 +107,7 @@ export const MatchChatRoomListScreen = () => {
       }
 
       const watchRequest = {
-        gameId: 1258,
+        gameId: 1303,
         teamId: currentUser.teamId,
         isAttendanceVerified: true
       };
@@ -290,6 +290,7 @@ export const MatchChatRoomListScreen = () => {
           <TouchableOpacity
             style={styles.searchButton}
             onPress={() => navigation.navigate('ChatRoomSearch')}
+            activeOpacity={0.7}
           >
             <Text style={styles.searchButtonText}>⌕</Text>
           </TouchableOpacity>
