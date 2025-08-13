@@ -81,12 +81,17 @@ export const CreateMatchChatRoomScreen = () => {
   const loadGames = async () => {
     try {
       setGamesLoading(true);
+      console.log('📅 경기 목록 로드 시작...');
       const response = await gameApi.getGames();
+      console.log('📅 경기 목록 API 응답:', response);
       if (response.status === 'SUCCESS') {
         setGames(response.data);
+        console.log('📅 경기 목록 설정 완료:', response.data);
+      } else {
+        console.warn('📅 경기 목록 로드 실패:', response);
       }
     } catch (error) {
-      console.error('경기 목록 로드 실패:', error);
+      console.error('📅 경기 목록 로드 에러:', error);
     } finally {
       setGamesLoading(false);
     }
