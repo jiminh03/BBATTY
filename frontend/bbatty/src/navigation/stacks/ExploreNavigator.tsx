@@ -5,6 +5,8 @@ import { CommunityHomeScreen } from '../../pages/explore';
 import TeamRankingScreen from '../../pages/explore/TeamRankingScreen';
 import UserRankingScreen from '../../pages/explore/UserRankingScreen';
 import TeamCommunityScreen from '../../pages/explore/TeamCommunityScreen';
+import PostDetailScreen from '../../pages/home/PostDetailScreen';
+
 
 const Stack = createStackNavigator<ExploreStackParamList>();
 
@@ -31,6 +33,9 @@ export default function ExploreNavigator() {
         name="TeamCommunity" 
         component={TeamCommunityScreen}
       />
+      <Stack.Screen
+        name="PostDetail"
+        component={PostDetailScreen}/>
     </Stack.Navigator>
   );
 }

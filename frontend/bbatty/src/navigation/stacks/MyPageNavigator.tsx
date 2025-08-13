@@ -6,6 +6,7 @@ import { MyPageStackParamList } from '../types';
 import UserProfileScreen from '../../pages/myPage/ui/UserProfileScreen';
 import EditProfileScreen from '../../pages/myPage/ui/EditProfileScreen';
 import SettingsScreen from '../../pages/myPage/ui/SettingsScreen';
+import PostDetailScreen from '../../pages/home/PostDetailScreen';
 
 const Stack = createStackNavigator<MyPageStackParamList>();
 
@@ -16,6 +17,7 @@ export default function MyPageNavigator() {
       <Stack.Screen name='Profile' component={UserProfileScreen} />
       <Stack.Screen name='ProfileEdit' component={EditProfileScreen} />
       <Stack.Screen name='Settings' component={SettingsScreen} />
+      <Stack.Screen name='PostDetail' component={PostDetailScreen}/>
     </Stack.Navigator>
   );
 }
