@@ -28,8 +28,18 @@ export interface CheckNicknameRequest {
   nickname: string;
 }
 
+export interface PresignedUrlRequest {
+  fileName: string;
+}
+
 // ================================= Response ======================================
 
 export interface CheckNicknameResponse {
   available: boolean;
+}
+
+export interface PresignedUrlResponse {
+  uploadUrl: string;
+  fileUrl: string;
+  filePath: string;
 }
