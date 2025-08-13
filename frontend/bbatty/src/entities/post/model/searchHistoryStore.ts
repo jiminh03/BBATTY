@@ -7,6 +7,7 @@ type State = {
   add: (teamId: number, q: string) => void;
   remove: (teamId: number, q: string) => void;
   clear: (teamId?: number) => void;
+  getHistoryForTeam: (teamId: number) => string[];
 };
 
 const MAX = 10;
@@ -15,11 +16,15 @@ export const useSearchHistoryStore = create<State>()(
   persist(
     (set, get) => ({
       byTeam: {},
+      getHistoryForTeam: (teamId) => {
+        const state = get();
+        return state.byTeam[teamId] ?? [];
+      },
       add: (teamId, q) =>
         set((s) => {
           const cur = s.byTeam[teamId] ?? [];
           const nq = q.trim();
-          if (!nq) return {};
+          if (!nq) return s;
           const arr = [nq, ...cur.filter((x) => x !== nq)].slice(0, MAX);
           return { byTeam: { ...s.byTeam, [teamId]: arr } };
         }),

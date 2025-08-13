@@ -98,7 +98,8 @@ export default function HomeScreen({ navigation }: Props) {
   const [keyword, setKeyword] = useState('');
   const [submittedKeyword, setSubmittedKeyword] = useState(''); // 제출된 검색어
   const addHistory = useSearchHistoryStore((s) => s.add);
-  const history = useSearchHistoryStore((s) => s.byTeam[teamId] ?? []);
+  const getHistoryForTeam = useSearchHistoryStore((s) => s.getHistoryForTeam);
+  const history = getHistoryForTeam(teamId);
   const isSearching = submittedKeyword.length > 0;
 
   const searchQ = useTeamSearchPostsInfinite(teamId, submittedKeyword);
