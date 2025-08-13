@@ -67,4 +67,7 @@ public class RedisKey {
     
     /** 사용자 시즌 직관 경기 뱃지 획득 여부: badge:games:{user_id}:{season}:{game_count} */
     public static final String BADGE_GAMES = "badge:games:";
+
+    public static final String NEWS_SUMMARY = "news:summary:";
+
 }
