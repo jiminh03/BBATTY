@@ -22,8 +22,8 @@ type Props = HomeStackScreenProps<'PostForm'>;
 
 export const PostForm: React.FC<Props> = ({ route, navigation }) => {
   const themeColor = useThemeColor(); // 헤더/버튼 색
-  const postId = route.params?.postId;
-  const isEdit = postId != null;
+  const postId = route.params?.postId ?? null;
+  const isEdit = postId !== null && postId !== undefined;
 
   // 작성 팀
   const teamId = useUserStore((s) => s.currentUser?.teamId) ?? 1;
@@ -174,13 +174,13 @@ const styles = StyleSheet.create({
 
   // HEADER
   header: {
-    height: 56,
-    paddingHorizontal: 16,
+    height: 90,
+    paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
   },
-  backText: { color: '#fff', fontSize: 28, fontWeight: '600', width: 24 },
-  headerTitle: { flex: 1, textAlign: 'left', marginLeft: 8, color: '#fff', fontSize: 18, fontWeight: '700' },
+  backText: { color: '#fff', fontSize: 28, marginTop: 23, fontWeight: '600', width: 24 },
+  headerTitle: { flex: 1, textAlign: 'left', marginTop: 25, marginLeft: 3, color: '#fff', fontSize: 18, fontWeight: '700' },
 
   // CONTENT
   contentWrap: {
