@@ -71,6 +71,8 @@ export const MatchChatRoomScreen = () => {
   const [networkConnected, setNetworkConnected] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [gameInfo, setGameInfo] = useState<any>(null);
+  const [isLoadingOlderMessages, setIsLoadingOlderMessages] = useState(false);
+  const [hasOlderMessages, setHasOlderMessages] = useState(true); // 나중에 백엔드 API 연동시 사용
   
   // 사용자 친화적 기능들
   const {
@@ -117,6 +119,28 @@ export const MatchChatRoomScreen = () => {
     }
   }, [messages.length]);
 
+  // 이전 메시지 로드 (백엔드 API 준비시 구현)
+  const loadOlderMessages = useCallback(async () => {
+    if (isLoadingOlderMessages || !hasOlderMessages) return;
+    
+    setIsLoadingOlderMessages(true);
+    
+    try {
+      // TODO: 백엔드 API 연동시 구현
+      // const oldestMessage = messages[0];
+      // const olderMessages = await chatApi.getMessageHistory(room.matchId, oldestMessage?.timestamp);
+      
+      // 임시로 2초 후 완료 처리
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log('이전 메시지 로드 기능 - 백엔드 API 준비 중');
+      
+    } catch (error) {
+      console.error('이전 메시지 로드 실패:', error);
+    } finally {
+      setIsLoadingOlderMessages(false);
+    }
+  }, [isLoadingOlderMessages, hasOlderMessages, messages, room.matchId]);
+
   const addMessage = useCallback((message: ChatMessage, isMyMessage: boolean = false) => {
     setMessages(prev => {
       const isDuplicate = prev.some(m => 
@@ -134,9 +158,6 @@ export const MatchChatRoomScreen = () => {
       const newMessages = [...prev, markedMessage];
       newMessages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
       
-      if (newMessages.length > 100) {
-        return newMessages.slice(-100);
-      }
       return newMessages;
     });
   }, []);
@@ -671,6 +692,16 @@ export const MatchChatRoomScreen = () => {
           contentContainerStyle={styles.messagesContent}
           data={[...messages, ...pendingMessages.map(p => ({ ...p, _isPending: true }))].reverse()}
           keyExtractor={(item, index) => item.id || index.toString()}
+          onEndReached={loadOlderMessages}
+          onEndReachedThreshold={0.1}
+          ListFooterComponent={
+            isLoadingOlderMessages ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator color="#666" />
+                <Text style={styles.loadingText}>이전 메시지 로드 중...</Text>
+              </View>
+            ) : null
+          }
           renderItem={({ item }) => (
             <View style={styles.messageItem}>
               {(item.messageType === 'CHAT' || item.type === 'CHAT_MESSAGE') ? (

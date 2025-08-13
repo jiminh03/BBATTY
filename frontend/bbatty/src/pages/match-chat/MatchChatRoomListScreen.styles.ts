@@ -465,4 +465,14 @@ export const styles = StyleSheet.create({
   placeholder: {
     width: 48,
   },
+  loadingFooter: {
+    paddingVertical: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+  },
 });

@@ -9,6 +9,26 @@ export type RootStackParamList = {
   MainTabs: NavigatorScreenParams<MainTabParamList>;
   // 직관 인증 화면
   AttendanceVerification: undefined;
+  // 직관 채팅방 모달
+  WatchChatModal: {
+    room: {
+      matchId: string;
+      gameId: string | null;
+      matchTitle: string;
+      matchDescription: string;
+      teamId: string;
+      minAge: number;
+      maxAge: number;
+      genderCondition: 'ALL' | 'MALE' | 'FEMALE';
+      maxParticipants: number;
+      currentParticipants: number;
+      createdAt: string;
+      status: 'ACTIVE' | 'INACTIVE';
+      websocketUrl: string;
+    };
+    websocketUrl: string;
+    sessionToken: string;
+  };
 };
 
 // 인증 스택 파라미터
