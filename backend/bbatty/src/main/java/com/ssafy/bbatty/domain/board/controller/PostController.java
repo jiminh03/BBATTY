@@ -39,6 +39,7 @@ public class PostController {
     private final PostCountService postCountService;
     private final PostImageService postImageService;
     private final PopularPostService popularPostService;
+    private final NewsService newsService;
 
     // 게시물 생성
     @PostMapping
