@@ -30,5 +30,7 @@ export const profileApi = {
     wrapApiCall(() => apiClient.get<CheckNicknameResponse>('/api/auth/check-nickname', { params: request })),
 
   getPresignedUrl: (request: PresignedUrlRequest): AsyncResult<PresignedUrlResponse, ApiError> =>
-    wrapApiCall(() => apiClient.post<PresignedUrlResponse>('/api/posts/images/presigned-url', request)),
+    wrapApiCall<PresignedUrlResponse>(() =>
+      apiClient.post('/api/posts/images/presigned-url', null, { params: request } as any)
+    ),
 };

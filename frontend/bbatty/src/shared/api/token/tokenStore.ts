@@ -30,6 +30,8 @@ interface TokenState {
   refreshPromise: Promise<Result<boolean, TokenError>> | null;
   lastRefreshTime: number | null;
   proactiveRefreshInterval: NodeJS.Timeout | null;
+  lastExpiryCheckTime: number | null;
+  lastExpiryCheckResult: boolean | null;
 }
 
 interface TokenActions {
@@ -64,6 +66,8 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
   refreshPromise: null,
   lastRefreshTime: null,
   proactiveRefreshInterval: null,
+  lastExpiryCheckTime: null,
+  lastExpiryCheckResult: null,
 
   setApiClient: (client: AxiosInstance) => {
     set({ apiClient: client });
@@ -146,6 +150,8 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
           refreshPromise: null,
           lastRefreshTime: null,
           proactiveRefreshInterval: null,
+          lastExpiryCheckTime: null,
+          lastExpiryCheckResult: null,
         });
       },
       (error) => createTokenError('STORAGE_ERROR', 'Failed to clear tokens', error)
@@ -153,23 +159,33 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
   },
 
   isAccessTokenExpiringSoon: (minutesBeforeExpiry = DEFAULT_REFRESH_THRESHOLD_MINUTES): boolean => {
-    const { accessTokenExpiresAt } = get();
+    const now = Date.now();
+    const { lastExpiryCheckTime, lastExpiryCheckResult, accessTokenExpiresAt } = get();
+
+    // 1초 이내 중복 체크 방지 (캐싱)
+    if (lastExpiryCheckTime && now - lastExpiryCheckTime < 1000 && lastExpiryCheckResult !== null) {
+      return lastExpiryCheckResult;
+    }
 
     if (!accessTokenExpiresAt) {
+      set({ lastExpiryCheckTime: now, lastExpiryCheckResult: false });
       return false;
     }
 
     try {
       const expiryDate = new Date(accessTokenExpiresAt);
-      const now = new Date();
+      const nowDate = new Date();
       const thresholdTime = new Date(expiryDate.getTime() - minutesBeforeExpiry * 60 * 1000);
 
-      const isExpiring = now >= thresholdTime;
+      const isExpiring = nowDate >= thresholdTime;
+
+      // 캐시 업데이트
+      set({ lastExpiryCheckTime: now, lastExpiryCheckResult: isExpiring });
 
       // 토큰이 만료 임박할 때만 로그 출력 (과도한 로그 방지)
       if (isExpiring) {
         console.log('⚠️ [TokenStore] 토큰 만료 임박 감지:', {
-          now: now.toISOString(),
+          now: nowDate.toISOString(),
           expiryDate: expiryDate.toISOString(),
           thresholdTime: thresholdTime.toISOString(),
           minutesBeforeExpiry,
@@ -179,6 +195,7 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
       return isExpiring;
     } catch (error) {
       console.error('❌ [TokenStore] 토큰 만료 시간 파싱 실패:', error);
+      set({ lastExpiryCheckTime: now, lastExpiryCheckResult: false });
       return false;
     }
   },
@@ -201,6 +218,7 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
 
     // 토큰이 만료 임박하지 않으면 갱신하지 않음
     const isExpiringSoon = isAccessTokenExpiringSoon();
+    console.log('isExpiringSoon : ', isExpiringSoon);
 
     if (!isExpiringSoon) {
       return Ok(true);
@@ -372,6 +390,8 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
       refreshPromise: null,
       lastRefreshTime: null,
       proactiveRefreshInterval: null,
+      lastExpiryCheckTime: null,
+      lastExpiryCheckResult: null,
     });
   },
 }));
