@@ -4,7 +4,7 @@ import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { MainTabParamList } from './types';
 import { useThemeColor } from '../shared/team/ThemeContext';
-import HomeNavigator from './stacks/HomeNavgator';
+import HomeNavigator from './stacks/HomeNavigator';
 import ChatNavigator from './stacks/ChatNavigator';
 import ExploreNavigator from './stacks/ExploreNavigator';
 import MyPageNavigator from './stacks/MyPageNavigator';
@@ -12,7 +12,7 @@ import MyPageNavigator from './stacks/MyPageNavigator';
 // 탭바를 숨길 화면들 정의
 const getTabBarVisibility = (route: any) => {
   const routeName = getFocusedRouteNameFromRoute(route) ?? 'MatchChatRoomList';
-  
+
   console.log('현재 화면:', routeName); // 디버깅용
 
   if (routeName === 'MatchChatRoom') {
