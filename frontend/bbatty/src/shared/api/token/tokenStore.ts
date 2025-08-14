@@ -114,7 +114,7 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
         });
 
         console.log('🔑 [TokenStore] 토큰 저장 성공');
-        
+
         // 토큰 저장 후 선제적 갱신 시작
         get().startProactiveRefresh();
       },
@@ -154,7 +154,7 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
 
   isAccessTokenExpiringSoon: (minutesBeforeExpiry = DEFAULT_REFRESH_THRESHOLD_MINUTES): boolean => {
     const { accessTokenExpiresAt } = get();
-    
+
     if (!accessTokenExpiresAt) {
       return false;
     }
@@ -163,16 +163,16 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
       const expiryDate = new Date(accessTokenExpiresAt);
       const now = new Date();
       const thresholdTime = new Date(expiryDate.getTime() - minutesBeforeExpiry * 60 * 1000);
-      
+
       const isExpiring = now >= thresholdTime;
-      
+
       // 토큰이 만료 임박할 때만 로그 출력 (과도한 로그 방지)
       if (isExpiring) {
         console.log('⚠️ [TokenStore] 토큰 만료 임박 감지:', {
           now: now.toISOString(),
           expiryDate: expiryDate.toISOString(),
           thresholdTime: thresholdTime.toISOString(),
-          minutesBeforeExpiry
+          minutesBeforeExpiry,
         });
       }
 
@@ -194,14 +194,14 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
 
     // 최근 30초 이내에 갱신했다면 스킵 (무한 갱신 방지)
     const now = Date.now();
-    if (lastRefreshTime && (now - lastRefreshTime) < 30000) {
+    if (lastRefreshTime && now - lastRefreshTime < 30000) {
       console.log('🚫 [TokenStore] 최근 갱신함, 스킵 (30초 쿨다운)');
       return Ok(true);
     }
 
     // 토큰이 만료 임박하지 않으면 갱신하지 않음
     const isExpiringSoon = isAccessTokenExpiringSoon();
-    
+
     if (!isExpiringSoon) {
       return Ok(true);
     }
@@ -212,7 +212,7 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
 
   startProactiveRefresh: () => {
     const { proactiveRefreshInterval } = get();
-    
+
     // 이미 실행 중이면 중단
     if (proactiveRefreshInterval) {
       clearInterval(proactiveRefreshInterval);
@@ -221,7 +221,7 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
     // 5분마다 토큰 만료 임박 여부 체크
     const interval = setInterval(async () => {
       const { isAccessTokenExpiringSoon, refreshTokens, isRefreshing, refreshPromise } = get();
-      
+
       // 이미 갱신 중이면 스킵
       if (isRefreshing || refreshPromise) {
         return;
@@ -244,7 +244,7 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
 
   refreshTokens: async (): Promise<Result<boolean, TokenError>> => {
     const state = get();
-    
+
     // 이미 갱신 중인 Promise가 있다면 재사용
     if (state.refreshPromise) {
       console.log('🔄 [TokenStore] 기존 갱신 Promise 재사용');
@@ -287,10 +287,10 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
           }
 
           console.log('✅ [TokenStore] 토큰 갱신 완전 성공');
-          
+
           // 갱신 완료 시간 기록
           set({ lastRefreshTime: Date.now() });
-          
+
           return Ok(true);
         } else {
           console.error('❌ [TokenStore] refresh API 실패:', result.error);
@@ -309,7 +309,7 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
 
     // Promise를 스토어에 저장
     set({ refreshPromise });
-    
+
     return refreshPromise;
   },
 
@@ -357,7 +357,7 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
 
   resetToken: () => {
     console.log('🔄 [TokenStore] 토큰 리셋');
-    
+
     const { proactiveRefreshInterval } = get();
     if (proactiveRefreshInterval) {
       clearInterval(proactiveRefreshInterval);

@@ -116,11 +116,11 @@ export default function AppNavigator() {
     }
   };
 
+  // 유저로부터 팀 상태 정보 설정
   const handleSetUserAndTeam = async (userInfo: any) => {
     await setCurrentUser(userInfo);
     console.log('userInfo', userInfo);
 
-    // 사용자 정보로부터 팀 설정
     if (userInfo.teamId) {
       const team = findTeamById(userInfo.teamId);
       if (team) {
