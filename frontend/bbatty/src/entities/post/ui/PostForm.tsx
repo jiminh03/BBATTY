@@ -4,20 +4,47 @@ import {
   View,
   Text,
   TextInput,
-  StyleSheet,
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   Switch,
   ActivityIndicator,
+  Image,
+  Alert,
 } from 'react-native';
+import { PanGestureHandler, State } from 'react-native-gesture-handler';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  useAnimatedScrollHandler,
+  runOnJS,
+  withSpring,
+} from 'react-native-reanimated';
+import * as ImagePicker from 'expo-image-picker';
+import { styles } from './PostForm.style';
+import { uploadImageToS3 } from '../../../shared/utils/imageUpload';
+import { postApi } from '../api/api';
 import { HomeStackScreenProps } from '../../../navigation/types';
 import { useCreatePost, usePostDetailQuery, useUpdatePost } from '../queries/usePostQueries';
 import { useUserStore } from '../../user/model/userStore';
 import { isValidPost, validatePostContent } from '../../post/utils/vaildation';
 import { useThemeColor } from '../../../shared/team/ThemeContext';
 
+interface ImageItem {
+  id: string;
+  uri: string;
+  url?: string;
+  isUploading?: boolean;
+}
+
+interface DraggableImageProps {
+  item: ImageItem;
+  index: number;
+  onDelete: (id: string) => void;
+  onMove: (fromIndex: number, toIndex: number) => void;
+  totalImages: number;
+}
 type Props = HomeStackScreenProps<'PostForm'>;
 
 export const PostForm: React.FC<Props> = ({ route, navigation }) => {
@@ -40,12 +67,54 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
   const [content, setContent] = useState('');
   const [onlySameTeamReply, setOnlySameTeamReply] = useState(false); // 토글(서버 연동 필요 시 payload에 포함)
   const [error, setError] = useState('');
+  const [imageList, setImageList] = useState<ImageItem[]>([]);
+  const [cursorPosition, setCursorPosition] = useState(0);
+
+  // 이미지를 마크다운 형식으로 content에 삽입
+  const insertImageToContent = (imageUrl: string, imageId: string) => {
+    const markdown = `![image](${imageUrl})`;
+    const beforeCursor = content.substring(0, cursorPosition);
+    const afterCursor = content.substring(cursorPosition);
+    const newContent = beforeCursor + markdown + afterCursor;
+    setContent(newContent);
+    setCursorPosition(cursorPosition + markdown.length);
+  };
+
+  // content에서 특정 이미지 마크다운 제거
+  const removeImageFromContent = (imageUrl: string) => {
+    const markdown = `![image](${imageUrl})`;
+    const newContent = content.replace(markdown, '');
+    setContent(newContent);
+  };
+
+  // content에서 이미지 URL들 추출
+  const extractImageUrlsFromContent = (text: string): string[] => {
+    const regex = /!\[image\]\(([^)]+)\)/g;
+    const urls: string[] = [];
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      urls.push(match[1]);
+    }
+    return urls;
+  };
 
   useEffect(() => {
     if (isEdit && detail) {
       setTitle(detail.title ?? '');
-      setContent(detail.content ?? '');
+      const detailContent = detail.content ?? '';
+      setContent(detailContent);
       // setOnlySameTeamReply(detail.onlySameTeamReply ?? false)  // 서버 스키마 맞으면 사용
+
+      // content에서 이미지 URL들 추출하여 imageList 생성
+      const imageUrls = extractImageUrlsFromContent(detailContent);
+      if (imageUrls.length > 0) {
+        const existingImages: ImageItem[] = imageUrls.map((url, index) => ({
+          id: `existing_${index}`,
+          uri: url,
+          url: url,
+        }));
+        setImageList(existingImages);
+      }
     }
   }, [isEdit, detail]);
 
@@ -54,7 +123,112 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
     [isEdit, updatePost.isPending, createPost.isPending]
   );
 
+  const hasUploadingImages = useMemo(() => imageList.some((img) => img.isUploading), [imageList]);
+
+  const handleImagePick = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: 'images',
+        allowsEditing: false,
+        quality: 0.8,
+        allowsMultipleSelection: false,
+      });
+
+      if (result.canceled) return;
+
+      const asset = result.assets[0];
+      const fileName = asset.fileName || `image.${asset.type?.split('/')[1] || 'jpg'}`;
+      const imageId = `${Date.now()}_${Math.random().toString(36).substring(2)}`;
+
+      // 임시 이미지 추가
+      const newImage: ImageItem = {
+        id: imageId,
+        uri: asset.uri,
+        isUploading: true,
+      };
+
+      setImageList((prev) => [...prev, newImage]);
+
+      // S3에 업로드
+      const uploadResult = await uploadImageToS3(asset.uri, fileName, 'post');
+
+      if (uploadResult.success) {
+        const imageUrl = uploadResult.data.fileUrl;
+        setImageList((prev) =>
+          prev.map((img) => (img.id === imageId ? { ...img, url: imageUrl, isUploading: false } : img))
+        );
+        // content에 이미지 마크다운 삽입
+        insertImageToContent(imageUrl, imageId);
+      } else {
+        Alert.alert('업로드 실패', uploadResult.error.message, [{ text: '확인' }]);
+        setImageList((prev) => prev.filter((img) => img.id !== imageId));
+      }
+    } catch (error) {
+      Alert.alert('오류', '이미지 선택 중 오류가 발생했습니다.', [{ text: '확인' }]);
+    }
+  };
+
+  const handleImageDelete = async (imageId: string) => {
+    const image = imageList.find((img) => img.id === imageId);
+    if (!image) return;
+
+    // content에서 이미지 마크다운 제거
+    if (image.url) {
+      removeImageFromContent(image.url);
+    }
+
+    // 서버에 업로드된 이미지인 경우 삭제 API 호출
+    if (image.url && postId) {
+      try {
+        await postApi.deletePostImage(postId, image.url);
+      } catch (error) {
+        console.warn('이미지 삭제 API 오류:', error);
+      }
+    }
+
+    setImageList((prev) => prev.filter((img) => img.id !== imageId));
+  };
+
+  const handleImageMove = (fromIndex: number, toIndex: number) => {
+    setImageList((prev) => {
+      const newList = [...prev];
+      const [draggedItem] = newList.splice(fromIndex, 1);
+      newList.splice(toIndex, 0, draggedItem);
+      
+      // content에서 이미지 순서도 업데이트
+      updateImageOrderInContent(newList);
+      
+      return newList;
+    });
+  };
+
+  const updateImageOrderInContent = (orderedImages: ImageItem[]) => {
+    // 현재 content에서 모든 이미지 마크다운 제거
+    let newContent = content;
+    orderedImages.forEach((img) => {
+      if (img.url) {
+        const markdown = `![image](${img.url})`;
+        newContent = newContent.replace(markdown, '');
+      }
+    });
+
+    // 새로운 순서로 이미지들을 content 끝에 추가
+    orderedImages.forEach((img) => {
+      if (img.url) {
+        const markdown = `![image](${img.url})`;
+        newContent += `\n${markdown}`;
+      }
+    });
+
+    setContent(newContent.trim());
+  };
+
   const handleSubmit = async () => {
+    if (hasUploadingImages) {
+      Alert.alert('업로드 중', '이미지 업로드가 완료될 때까지 기다려주세요.', [{ text: '확인' }]);
+      return;
+    }
+
     const t = title.trim();
     const c = content.trim();
 
@@ -67,7 +241,12 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
 
     try {
       if (isEdit) {
-        await updatePost.mutateAsync({ postId: postId!, title: t, content: c, teamId });
+        await updatePost.mutateAsync({
+          postId: postId!,
+          title: t,
+          content: c,
+          teamId,
+        });
       } else {
         await createPost.mutateAsync({
           title: t,
@@ -99,13 +278,13 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
         behavior={Platform.select({ ios: 'padding', android: undefined })}
         keyboardVerticalOffset={Platform.select({ ios: 12, android: 0 })}
       >
-        <ScrollView contentContainerStyle={styles.contentWrap} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={styles.contentWrap} keyboardShouldPersistTaps='handled'>
           {/* 제목 */}
           <Text style={styles.label}>제목</Text>
           <TextInput
             style={styles.titleInput}
-            placeholder="최대 30글자까지 입력 가능"
-            placeholderTextColor="#B9BDC1"
+            placeholder='최대 30글자까지 입력 가능'
+            placeholderTextColor='#B9BDC1'
             value={title}
             onChangeText={setTitle}
             maxLength={30}
@@ -115,24 +294,50 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
           <Text style={[styles.label, { marginTop: 18 }]}>내용</Text>
           <TextInput
             style={styles.bodyInput}
-            placeholder="내용을 입력해주세요."
-            placeholderTextColor="#B9BDC1"
+            placeholder='내용을 입력해주세요.'
+            placeholderTextColor='#B9BDC1'
             value={content}
             onChangeText={setContent}
+            onSelectionChange={(event) => {
+              setCursorPosition(event.nativeEvent.selection.start);
+            }}
             multiline
-            textAlignVertical="top"
+            textAlignVertical='top'
           />
+
+          {/* 이미지 갤러리 */}
+          {imageList.length > 0 && (
+            <View style={styles.imageGallery}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {imageList.map((item) => (
+                  <View key={item.id} style={styles.imageContainer}>
+                    <Image source={{ uri: item.uri }} style={styles.imageItem} />
+                    {item.isUploading && (
+                      <View style={styles.uploadingOverlay}>
+                        <ActivityIndicator size='small' color='#007AFF' />
+                      </View>
+                    )}
+                    <TouchableOpacity
+                      style={styles.imageDeleteButton}
+                      onPress={() => handleImageDelete(item.id)}
+                      disabled={item.isUploading}
+                    >
+                      <Text style={styles.imageDeleteText}>×</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
           {/* 하단 툴바: 이미지 버튼 + 토글 */}
           <View style={styles.toolbar}>
-            <TouchableOpacity
-              style={styles.imageBtn}
-              onPress={() => {
-                // TODO: 이미지 선택/첨부 연결
-              }}
-            >
-              {/* 간단한 아이콘 대체 (원하면 react-native-vector-icons로 변경 가능) */}
-              <Text style={{ fontSize: 20 }}>🖼️</Text>
+            <TouchableOpacity style={styles.imageBtn} onPress={handleImagePick} disabled={hasUploadingImages}>
+              {hasUploadingImages ? (
+                <ActivityIndicator size='small' color='#007AFF' />
+              ) : (
+                <Text style={{ fontSize: 20 }}>🖼️</Text>
+              )}
             </TouchableOpacity>
 
             {/* <View style={styles.toggleWrap}>
@@ -153,100 +358,16 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
         <View style={[styles.bottomBar, { backgroundColor: themeColor }]}>
           <TouchableOpacity
             style={styles.submitBtn}
-            disabled={isSubmitting}
+            disabled={isSubmitting || hasUploadingImages}
             onPress={handleSubmit}
             activeOpacity={0.9}
           >
-            {isSubmitting ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.submitText}>등록하기</Text>
-            )}
+            {isSubmitting ? <ActivityIndicator color='#fff' /> : <Text style={styles.submitText}>등록하기</Text>}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#fff' },
-
-  // HEADER
-  header: {
-    height: 90,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backText: { color: '#fff', fontSize: 28, marginTop: 23, fontWeight: '600', width: 24 },
-  headerTitle: { flex: 1, textAlign: 'left', marginTop: 25, marginLeft: 3, color: '#fff', fontSize: 18, fontWeight: '700' },
-
-  // CONTENT
-  contentWrap: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 24,
-  },
-  label: { fontSize: 16, color: '#111', fontWeight: '700', marginBottom: 8 },
-  titleInput: {
-    height: 44,
-    borderRadius: 8,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#E3E5E7',
-    backgroundColor: '#F5F6F7',
-    paddingHorizontal: 12,
-    fontSize: 14,
-    color: '#111',
-  },
-  bodyInput: {
-    minHeight: 280,
-    borderRadius: 8,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#E3E5E7',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 15,
-    color: '#111',
-  },
-
-  // TOOLBAR
-  toolbar: {
-    marginTop: 10,
-    marginBottom: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  imageBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#D7DBE0',
-    backgroundColor: '#FFF',
-  },
-  toggleWrap: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  toggleLabel: { fontSize: 14, color: '#333' },
-
-  errorText: { color: '#FF3B30', marginTop: 6 },
-
-  // BOTTOM BUTTON
-  bottomBar: {
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: Platform.select({ ios: 24, android: 16 }),
-  },
-  submitBtn: {
-    height: 48,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  submitText: { color: '#fff', fontSize: 18, fontWeight: '700' },
-});
 
 export default PostForm;

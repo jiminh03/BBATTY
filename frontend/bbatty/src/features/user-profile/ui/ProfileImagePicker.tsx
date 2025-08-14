@@ -3,7 +3,7 @@ import { View, Image, TouchableOpacity, ActivityIndicator, Alert } from 'react-n
 import { styles } from './ProfileImagePicker.style';
 
 import * as ImagePicker from 'expo-image-picker';
-import { uploadImageToS3 } from '../utils/imageUpload';
+import { uploadImageToS3 } from '../../../shared/utils/imageUpload';
 
 interface ProfileImagePickerProps {
   imageUri?: string | null;
@@ -40,7 +40,7 @@ export const ProfileImagePicker: React.FC<ProfileImagePickerProps> = ({
       setIsUploading(true);
       onUploadStart?.();
 
-      const uploadResult = await uploadImageToS3(asset.uri, fileName);
+      const uploadResult = await uploadImageToS3(asset.uri, fileName, 'profile');
 
       if (uploadResult.success) {
         onImageSelect(uploadResult.data.fileUrl);
