@@ -21,6 +21,9 @@ public class UserResponseDto {
     private Boolean postsPublic;
     private Boolean statsPublic;
     private Boolean attendanceRecordsPublic;
+    
+    // 알림 설정 (본인만 볼 수 있음)
+    private Boolean trafficSpikeAlertEnabled;
 
     public static UserResponseDto from(User user, boolean isOwnProfile) {
         UserResponseDtoBuilder builder = UserResponseDto.builder()
@@ -29,11 +32,12 @@ public class UserResponseDto {
                 .profileImg(user.getProfileImg())
                 .introduction(user.getIntroduction());
 
-        // 본인 프로필인 경우에만 프라이버시 설정 포함
+        // 본인 프로필인 경우에만 프라이버시 설정 및 알림 설정 포함
         if (isOwnProfile) {
             builder.postsPublic(user.getPostsPublic())
                    .statsPublic(user.getStatsPublic())
-                   .attendanceRecordsPublic(user.getAttendanceRecordsPublic());
+                   .attendanceRecordsPublic(user.getAttendanceRecordsPublic())
+                   .trafficSpikeAlertEnabled(user.getTrafficSpikeAlertEnabled());
         }
 
         return builder.build();

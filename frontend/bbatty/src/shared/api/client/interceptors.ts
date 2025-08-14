@@ -32,6 +32,7 @@ export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnaut
         const token = tokenStore.getAccessToken();
         if (token && config.headers) {
           config.headers.Authorization = `Bearer ${token}`;
+            // console.log(`Bearer ${token}`);
         } else if (!token) {
           console.error('❌ [RequestInterceptor] 토큰이 없음, 인증 초기화');
           await onUnauthorized();
