@@ -174,12 +174,10 @@ getPosts: async (teamId: number, cursor?: number): Promise<CursorPostListRespons
   // 게시글 좋아요 취소
   unlikePost: (postId: string) => apiClient.delete(`/api/posts/${postId}/like`),
 
-  // presigned-url 발급
-  createPresignedUrl: (payload: PresignedUrlPayload) =>
-    apiClient.post<PresignedUrlResponse>('/api/posts/presigned-url', payload),
+  // 게시글 이미지 삭제
+  deletePostImage: (postId: number, imageUrl: string) => 
+    apiClient.delete(`/api/posts/${postId}/images`, { params: { imageUrl } }),
 
-  // 이미지 삭제
-  deleteImage: (imageId: string) => apiClient.delete(`/api/images/${imageId}`),
 
   // 팀 별 게시글 검색
   async getTeamSearchPosts(
