@@ -29,12 +29,8 @@ export const attendanceApi = {
         return error.response.data;
       }
       
-      // 네트워크 오류 등의 경우 기본 에러 응답
-      return {
-        status: 'ERROR',
-        message: '네트워크 오류가 발생했습니다. 다시 시도해주세요.',
-        data: null
-      };
+      // 네트워크 오류 등의 경우 예외를 다시 던져서 상위에서 처리하도록 함
+      throw error;
     }
   },
 };

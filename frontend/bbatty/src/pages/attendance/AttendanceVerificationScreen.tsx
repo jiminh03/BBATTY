@@ -19,6 +19,7 @@ import type { RootStackParamList } from '../../navigation/types';
 import { attendanceApi } from '../../entities/attendance/api/api';
 import { useAttendanceStore } from '../../entities/attendance/model/attendanceStore';
 import { gameApi } from '../../entities/game/api/api';
+import { useTokenStore } from '../../shared/api/token/tokenStore';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'AttendanceVerification'>;
 
@@ -158,6 +159,7 @@ export const AttendanceVerificationScreen = () => {
   const navigation = useNavigation<NavigationProp>();
   const mapRef = useRef<MapView>(null);
   const { setAttendanceVerified } = useAttendanceStore();
+  const { getAccessToken } = useTokenStore();
   const [selectedStadium, setSelectedStadium] = useState<Stadium>(getDefaultStadium());
   const [currentLocation, setCurrentLocation] = useState<{latitude: number; longitude: number} | null>(null);
   const [mapRegion, setMapRegion] = useState({
@@ -173,6 +175,13 @@ export const AttendanceVerificationScreen = () => {
 
   useEffect(() => {
     getCurrentLocation();
+    
+    // 토큰 정보 로깅
+    const token = getAccessToken();
+    console.log('🔑 [직관인증] 현재 액세스 토큰:', token);
+    if (token) {
+      console.log('🔑 [직관인증] 토큰 길이:', token.length);
+    }
   }, []);
 
 
@@ -255,11 +264,20 @@ export const AttendanceVerificationScreen = () => {
     try {
       console.log('현재 위치:', currentLocation);
       
-      // API 호출로 직관 인증 (서버에서 거리 검증)
-      const response = await attendanceApi.verifyAttendance({
+      // 토큰 정보 재확인
+      const token = getAccessToken();
+      console.log('🔑 [직관인증API] 요청 전 토큰 확인:', token ? `${token.substring(0, 20)}...` : 'null');
+      
+      // API 요청 데이터 로깅
+      const requestData = {
         latitude: currentLocation.latitude,
         longitude: currentLocation.longitude,
-      });
+      };
+      console.log('📤 [직관인증API] 요청 데이터:', requestData);
+      console.log('📤 [직관인증API] 요청 URL: 8080/api/attendance/verify');
+      
+      // API 호출로 직관 인증 (서버에서 거리 검증)
+      const response = await attendanceApi.verifyAttendance(requestData);
 
       console.log('🎯 직관 인증 API 응답:', response);
 
