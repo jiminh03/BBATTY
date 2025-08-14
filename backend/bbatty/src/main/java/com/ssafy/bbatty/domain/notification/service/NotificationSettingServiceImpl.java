@@ -1,7 +1,6 @@
 package com.ssafy.bbatty.domain.notification.service;
 
 import com.ssafy.bbatty.domain.notification.dto.request.FCMTokenRequest;
-import com.ssafy.bbatty.domain.notification.dto.request.NotificationSettingRequest;
 import com.ssafy.bbatty.domain.notification.dto.response.NotificationSettingResponse;
 import com.ssafy.bbatty.domain.notification.entity.NotificationSetting;
 import com.ssafy.bbatty.domain.notification.repository.NotificationSettingRepository;
@@ -48,25 +47,10 @@ public class NotificationSettingServiceImpl implements NotificationSettingServic
         }
     }
 
-    @Override
-    public NotificationSettingResponse updateNotificationSettings(Long userId, NotificationSettingRequest request) {
-        NotificationSetting setting = findNotificationSettingByUserId(userId);
-        
-        setting.updateNotificationSettings(request.getTrafficSpikeAlertEnabled());
-        
-        log.info("알림 설정 업데이트 완료 - userId: {}, trafficSpikeAlertEnabled: {}", 
-                userId, request.getTrafficSpikeAlertEnabled());
-                
-        return NotificationSettingResponse.from(setting);
-    }
 
     private User findUserById(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
     }
 
-    private NotificationSetting findNotificationSettingByUserId(Long userId) {
-        return notificationSettingRepository.findByUserId(userId)
-                .orElseThrow(() -> new ApiException(ErrorCode.NOTIFICATION_SETTING_NOT_FOUND));
-    }
 }

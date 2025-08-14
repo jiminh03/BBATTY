@@ -6,8 +6,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 /**
- * 사용자 알림 설정 및 FCM 토큰 관리 엔티티
- * 사용자별 FCM 토큰과 알림 수신 설정을 저장합니다.
+ * 사용자 FCM 토큰 관리 엔티티
+ * 사용자별 FCM 토큰과 디바이스 정보를 저장합니다.
  */
 @Entity
 @Table(name = "notification_setting", schema = "BBATTY")
@@ -26,7 +26,7 @@ public class NotificationSetting extends BaseEntity {
     private Long id;
 
     /**
-     * User와 1:1 관계 (사용자별 하나의 알림 설정)
+     * User와 1:1 관계 (사용자별 하나의 FCM 토큰)
      */
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false, unique = true)
@@ -51,12 +51,6 @@ public class NotificationSetting extends BaseEntity {
     @Builder.Default
     private String deviceType = "ANDROID";
 
-    /**
-     * 팀 트래픽 급증 알림 (핵심 기능)
-     */
-    @Column(name = "traffic_spike_alert_enabled", nullable = false)
-    @Builder.Default
-    private Boolean trafficSpikeAlertEnabled = true;
 
 
     /**
@@ -83,14 +77,4 @@ public class NotificationSetting extends BaseEntity {
             this.deviceType = deviceType;
         }
     }
-
-    /**
-     * 알림 설정 업데이트
-     */
-    public void updateNotificationSettings(Boolean trafficSpikeAlertEnabled) {
-        if (trafficSpikeAlertEnabled != null) {
-            this.trafficSpikeAlertEnabled = trafficSpikeAlertEnabled;
-        }
-    }
-
 }

@@ -1,7 +1,6 @@
 package com.ssafy.bbatty.domain.notification.controller;
 
 import com.ssafy.bbatty.domain.notification.dto.request.FCMTokenRequest;
-import com.ssafy.bbatty.domain.notification.dto.request.NotificationSettingRequest;
 import com.ssafy.bbatty.domain.notification.dto.response.NotificationSettingResponse;
 import com.ssafy.bbatty.domain.notification.service.NotificationSettingService;
 import com.ssafy.bbatty.global.response.ApiResponse;
@@ -35,17 +34,4 @@ public class NotificationController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
-    /**
-     * 알림 설정 업데이트 (응답 일관성을 위해 설정 정보 반환)
-     */
-    @PutMapping("/setting")
-    public ResponseEntity<ApiResponse<NotificationSettingResponse>> updateNotificationSettings(
-            @RequestBody NotificationSettingRequest request,
-            @AuthenticationPrincipal UserPrincipal userPrincipal) {
-        
-        Long userId = userPrincipal.getUserId();
-        NotificationSettingResponse response = notificationSettingService.updateNotificationSettings(userId, request);
-        
-        return ResponseEntity.ok(ApiResponse.success(response));
-    }
 }
