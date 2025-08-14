@@ -1,8 +1,18 @@
 // pages/home/HomeScreen.tsx
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import {
-  View, FlatList, ActivityIndicator, StyleSheet, TouchableOpacity,
-  Pressable, Text, TextInput, Alert,
+  View,
+  FlatList,
+  ActivityIndicator,
+  StyleSheet,
+  TouchableOpacity,
+  Pressable,
+  Text,
+  TextInput,
+  Alert,
+  LayoutAnimation,
+  UIManager,
+  Platform,
 } from 'react-native';
 import { HomeStackScreenProps } from '../../navigation/types';
 import TeamHeaderCard from '../../entities/team/ui/TeamHeaderCard';
@@ -23,7 +33,12 @@ import { chatRoomApi } from '../../entities/chat-room/api/api';
 import { gameApi } from '../../entities/game/api/api';
 import TeamNewsSection from '../../entities/post/ui/TeamNewsSection';
 
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 type Props = HomeStackScreenProps<'Home'>;
+const ACTIONS_TOP = Platform.select({ android: 96, ios: 102 }); // 버튼 세로 위치
 
 function SearchHeader({
   keyword,
@@ -91,6 +106,17 @@ export default function HomeScreen({ navigation }: Props) {
 
   const [tab, setTab] = useState<'best' | 'all'>('all');
 
+  // 헤더 안에서 펼칠 팀 최신 뉴스 상태 (부모가 제어)
+  const [newsOpen, setNewsOpen] = useState(false);
+  const toggleNews = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setNewsOpen((v) => !v);
+  };
+  // 탭 바뀌면 접기 (안드릭 addView index 에러 예방)
+  useEffect(() => {
+    if (newsOpen) setNewsOpen(false);
+  }, [tab]);
+
   // 전체/베스트
   const { data: popular = [], isLoading: pLoading } = useTeamPopularPostsQuery(teamId, 20);
   const listQ = usePostListQuery(teamId);
@@ -99,9 +125,9 @@ export default function HomeScreen({ navigation }: Props) {
     [listQ.data]
   );
 
-  // 검색 상태 (페이지 이동 없이)
+  // 검색 상태
   const [keyword, setKeyword] = useState('');
-  const [submittedKeyword, setSubmittedKeyword] = useState(''); // 제출된 검색어
+  const [submittedKeyword, setSubmittedKeyword] = useState('');
   const addHistory = useSearchHistoryStore((s) => s.add);
   const getHistoryForTeam = useSearchHistoryStore((s) => s.getHistoryForTeam);
   const history = getHistoryForTeam(teamId);
@@ -118,13 +144,12 @@ export default function HomeScreen({ navigation }: Props) {
       const t = q.trim();
       if (!t) return;
       addHistory(teamId, t);
-      setSubmittedKeyword(t); // ✅ 여기서 검색 모드로 전환
+      setSubmittedKeyword(t);
     },
     [addHistory, teamId]
   );
 
   const handleSubmit = useCallback(() => submitWith(keyword), [submitWith, keyword]);
-
   const handleClearSearch = useCallback(() => {
     setSubmittedKeyword('');
     setKeyword('');
@@ -198,12 +223,14 @@ export default function HomeScreen({ navigation }: Props) {
   };
 
   const listData = tab === 'best' ? popular : isSearching ? searchPosts : allPosts;
+
   const isFetchingNext =
     tab === 'all'
       ? isSearching
         ? searchQ.isFetchingNextPage
         : listQ.isFetchingNextPage
       : false;
+
   const hasNext =
     tab === 'all'
       ? isSearching
@@ -213,28 +240,63 @@ export default function HomeScreen({ navigation }: Props) {
 
   const fetchMore = () => {
     if (!hasNext || isFetchingNext) return;
-    if (tab === 'all') {
-      isSearching ? searchQ.fetchNextPage() : listQ.fetchNextPage();
-    }
+    if (tab === 'all') (isSearching ? searchQ.fetchNextPage() : listQ.fetchNextPage());
   };
 
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
-      <TeamHeaderCard
-        teamLogo={String(team?.imagePath ?? '')}
-        teamName={team?.name ?? 'KBO 팀'}
-        rankText={rankText}
-        recordText={recordText}
-        onPressChat={handleChatPress}
-        accentColor={teamColor}
-      />
+      {/* 헤더(팀색 배경) */}
+      <View style={[styles.headerWrap, { backgroundColor: teamColor }]}>
+        {/* 팀 카드 – 살짝 아래 여백 주기 */}
+        <View style={{ paddingTop: 8 }}>
+          <TeamHeaderCard
+            teamLogo={String(team?.imagePath ?? '')}
+            teamName={team?.name ?? 'KBO 팀'}
+            rankText={rankText}
+            recordText={recordText}
+            onPressChat={handleChatPress}
+            accentColor={teamColor}
+          />
+        </View>
+
+        {/* 오른쪽에 나란히 떠 있는 알약 버튼 두 개 */}
+        <View style={[styles.actionRow, { top: ACTIONS_TOP }]}>
+          {/* <TouchableOpacity onPress={handleChatPress} activeOpacity={0.9} style={styles.pill}>
+            <Text style={[styles.pillText, { color: teamColor }]}>직관인증하기</Text>
+          </TouchableOpacity> */}
+
+          <TouchableOpacity onPress={toggleNews} activeOpacity={0.9} style={styles.pill}>
+            <Text style={[styles.pillText, { color: 'black' }]}>
+              팀 최신 뉴스 {newsOpen ? '▴' : '▾'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* 헤더 아래에 즉시 펼쳐지는 뉴스 영역 */}
+        {newsOpen && (
+          <View style={{ paddingTop: 8, paddingBottom: 8 }}>
+            <TeamNewsSection
+              teamId={teamId}
+              titleColor="#fff"
+              accentColor={teamColor}
+              expanded={true}
+              showHeader={false}               // 헤더 버튼을 사용 중이므로 내부 타이틀 숨김
+              style={{ backgroundColor: 'transparent' }}
+            />
+          </View>
+        )}
+      </View>
+
+      {/* 탭 */}
       <SegmentTabs value={tab} onChange={setTab} />
 
+      {/* 리스트 */}
       {tab === 'best' ? (
         pLoading ? (
           <ActivityIndicator style={{ marginTop: 16 }} />
         ) : (
           <FlatList
+            key={tab}
             data={listData}
             keyExtractor={(i) => String(i.id)}
             renderItem={({ item }) => (
@@ -243,15 +305,14 @@ export default function HomeScreen({ navigation }: Props) {
                 onPress={() => navigation.navigate('PostDetail', { postId: item.id })}
               />
             )}
-            ListHeaderComponent={
-              <TeamNewsSection teamId={teamId} style={{ marginTop: 8, marginBottom: 12 }} />
-            }
+            ListHeaderComponent={<View />}      // 항상 단일 View
             removeClippedSubviews={false}
             contentContainerStyle={styles.listPad}
           />
         )
       ) : (
         <FlatList
+          key={tab}
           data={listData}
           keyExtractor={(i) => String(i.id)}
           renderItem={({ item }) => (
@@ -261,22 +322,21 @@ export default function HomeScreen({ navigation }: Props) {
             />
           )}
           ListHeaderComponent={
-              <>
-                <TeamNewsSection teamId={teamId} style={{ marginTop: 8, marginBottom: 12 }} />
-                <SearchHeader
-                  keyword={keyword}
-                  onChangeKeyword={setKeyword}
-                  onSubmit={handleSubmit}
-                  onClear={handleClearSearch}
-                  history={history}
-                  onPressChip={(q) => {
-                    setKeyword(q);
-                    submitWith(q);
-                  }}
-                  isSearching={isSearching}
-                />
-              </>
-            }
+            <View>
+              <SearchHeader
+                keyword={keyword}
+                onChangeKeyword={setKeyword}
+                onSubmit={handleSubmit}
+                onClear={handleClearSearch}
+                history={history}
+                onPressChip={(q) => {
+                  setKeyword(q);
+                  submitWith(q);
+                }}
+                isSearching={isSearching}
+              />
+            </View>
+          }
           onEndReachedThreshold={0.35}
           onEndReached={fetchMore}
           removeClippedSubviews={false}
@@ -287,6 +347,7 @@ export default function HomeScreen({ navigation }: Props) {
         />
       )}
 
+      {/* 새 글 FAB */}
       <TouchableOpacity
         style={styles.fab}
         onPress={() => navigation.navigate('PostForm')}
@@ -304,6 +365,33 @@ export default function HomeScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   listPad: { paddingBottom: 16 },
 
+  headerWrap: {
+    position: 'relative',
+    paddingBottom: 12,
+  },
+  actionRow: {
+    position: 'absolute',
+    right: 16,
+    flexDirection: 'row',
+  },
+  pill: {
+    height: 33,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    // shadowColor: '#000',
+    // shadowOpacity: 0.12,
+    // shadowOffset: { width: 0, height: 2 },
+    // shadowRadius: 6,
+    // elevation: 3,
+    marginLeft: 8,
+    marginRight: 12,
+  },
+  pillText: { fontSize: 11.5, fontWeight: '700' },
+
+  // 검색 UI
   searchSection: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8, backgroundColor: '#fff' },
   searchRow: { flexDirection: 'row', gap: 8 },
   searchInput: {
@@ -324,7 +412,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   searchBtnText: { color: '#fff', fontWeight: '700' },
-
   clearBtn: {
     height: 44,
     paddingHorizontal: 14,
@@ -334,7 +421,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   clearBtnText: { color: '#111', fontWeight: '700' },
-
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
   chip: {
     paddingHorizontal: 10,
@@ -346,6 +432,7 @@ const styles = StyleSheet.create({
   },
   chipText: { color: '#5F6368', fontSize: 12 },
 
+  // FAB
   fab: { position: 'absolute', right: 16, bottom: 24 },
   fabCircle: {
     width: 64,
