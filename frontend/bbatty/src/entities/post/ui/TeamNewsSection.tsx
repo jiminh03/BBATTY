@@ -22,19 +22,27 @@ const ITEM_W = Math.min(300, Math.round(width * 0.78));
 
 type Props = {
   teamId: number;
+  /** 카드/강조 색 */
   accentColor?: string;
-  limit?: number;
-  style?: StyleProp<ViewStyle>; // ✅ style prop 추가
+  /** 타이틀 색 (헤더 위면 흰색 권장) */
+  titleColor?: string;
+  /** 외부에서 펼침 제어 */
+  expanded?: boolean;
+  /** 내부 헤더(“팀 최신 뉴스”) 표시 여부 */
+  showHeader?: boolean;
+  style?: StyleProp<ViewStyle>;
 };
 
 export default function TeamNewsSection({
   teamId,
   accentColor = '#E95F2E',
-  limit = 5,
+  titleColor = '#111',
+  expanded = true,
+  showHeader = true,
   style,
 }: Props) {
   const nav = useNavigation<any>();
-  const q = useTeamNewsQuery(teamId, limit);
+  const q = useTeamNewsQuery(teamId);
 
   const openItem = (item: any) => {
     if (item?.postId) {
@@ -47,7 +55,7 @@ export default function TeamNewsSection({
   if (q.isLoading) {
     return (
       <View style={[s.section, style]}>
-        <Text style={[s.title, { color: accentColor }]}>팀 최신 뉴스</Text>
+        {showHeader && <Text style={[s.title, { color: titleColor }]}>팀 최신 뉴스</Text>}
         <ActivityIndicator style={{ marginTop: 12 }} />
       </View>
     );
@@ -56,15 +64,24 @@ export default function TeamNewsSection({
   if (q.isError || !q.data?.length) {
     return (
       <View style={[s.section, style]}>
-        <Text style={[s.title, { color: accentColor }]}>팀 최신 뉴스</Text>
+        {showHeader && <Text style={[s.title, { color: titleColor }]}>팀 최신 뉴스</Text>}
         <Text style={s.empty}>지금 보여줄 뉴스가 없어요.</Text>
+      </View>
+    );
+  }
+
+  // 접혀있으면 리스트 자체를 렌더하지 않음 (안드 addView index 에러 예방)
+  if (!expanded) {
+    return (
+      <View style={[s.section, style]}>
+        {showHeader && <Text style={[s.title, { color: titleColor }]}>팀 최신 뉴스</Text>}
       </View>
     );
   }
 
   return (
     <View style={[s.section, style, { overflow: 'visible' }]}>
-      <Text style={[s.title, { color: accentColor }]}>팀 최신 뉴스</Text>
+      {showHeader && <Text style={[s.title, { color: titleColor }]}>팀 최신 뉴스</Text>}
 
       <FlatList
         data={q.data}
@@ -77,7 +94,7 @@ export default function TeamNewsSection({
         removeClippedSubviews={false}
         contentContainerStyle={{
           paddingVertical: 8,
-          paddingLeft: 16,
+          paddingLeft: 6,
           paddingRight: 28,
         }}
         ItemSeparatorComponent={() => <View style={{ width: H_GAP }} />}
@@ -117,7 +134,7 @@ function fmt(iso?: string) {
 }
 
 const s = StyleSheet.create({
-  section: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8, backgroundColor: '#fff' },
+  section: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8, backgroundColor: 'transparent' },
   title: { fontSize: 18, fontWeight: '800' },
   empty: { marginTop: 12, color: '#999' },
 
