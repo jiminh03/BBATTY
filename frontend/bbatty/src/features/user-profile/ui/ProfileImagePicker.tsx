@@ -12,11 +12,11 @@ interface ProfileImagePickerProps {
   onUploadComplete?: () => void;
 }
 
-export const ProfileImagePicker: React.FC<ProfileImagePickerProps> = ({ 
-  imageUri, 
-  onImageSelect, 
-  onUploadStart, 
-  onUploadComplete 
+export const ProfileImagePicker: React.FC<ProfileImagePickerProps> = ({
+  imageUri,
+  onImageSelect,
+  onUploadStart,
+  onUploadComplete,
 }) => {
   const [isUploading, setIsUploading] = useState(false);
 
@@ -45,18 +45,10 @@ export const ProfileImagePicker: React.FC<ProfileImagePickerProps> = ({
       if (uploadResult.success) {
         onImageSelect(uploadResult.data.fileUrl);
       } else {
-        Alert.alert(
-          '업로드 실패',
-          uploadResult.error.message,
-          [{ text: '확인' }]
-        );
+        Alert.alert('업로드 실패', uploadResult.error.message, [{ text: '확인' }]);
       }
     } catch (error) {
-      Alert.alert(
-        '오류',
-        '이미지 선택 중 오류가 발생했습니다.',
-        [{ text: '확인' }]
-      );
+      Alert.alert('오류', '이미지 선택 중 오류가 발생했습니다.', [{ text: '확인' }]);
     } finally {
       setIsUploading(false);
       onUploadComplete?.();
@@ -64,9 +56,9 @@ export const ProfileImagePicker: React.FC<ProfileImagePickerProps> = ({
   };
 
   return (
-    <TouchableOpacity 
-      style={[styles.profileImageContainer, isUploading && { opacity: 0.7 }]} 
-      onPress={handlePress} 
+    <TouchableOpacity
+      style={[styles.profileImageContainer, isUploading && { opacity: 0.7 }]}
+      onPress={handlePress}
       activeOpacity={0.8}
       disabled={isUploading}
     >
@@ -80,10 +72,10 @@ export const ProfileImagePicker: React.FC<ProfileImagePickerProps> = ({
           </View>
         </View>
       )}
-      
+
       {isUploading ? (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="small" color="#007AFF" />
+          <ActivityIndicator size='small' color='#007AFF' />
         </View>
       ) : (
         <View style={styles.cameraButton}>

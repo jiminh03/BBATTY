@@ -49,9 +49,9 @@ export const uploadImageToS3 = async (
 ): Promise<Result<ImageUploadResult, ImageUploadError>> => {
   try {
     const uniqueFileName = generateUniqueFileName(originalFileName);
-    
-    const presignedResult = await profileApi.getPresignedUrl({ fileName: uniqueFileName });
-    
+
+    const presignedResult = await profileApi.getPresignedUrl({ filename: uniqueFileName });
+    console.log('presignedResult : ', presignedResult);
     if (!presignedResult.success) {
       return Err({
         type: 'PRESIGNED_URL_ERROR',

@@ -31,14 +31,18 @@ export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnaut
         // 최신 토큰을 헤더에 추가
         const token = tokenStore.getAccessToken();
         if (token && config.headers) {
+          console.log(token);
           config.headers.Authorization = `Bearer ${token}`;
-            // console.log(`Bearer ${token}`);
+
+          // console.log(`Bearer ${token}`);
         } else if (!token) {
           console.error('❌ [RequestInterceptor] 토큰이 없음, 인증 초기화');
           await onUnauthorized();
           return Promise.reject(new Error('No access token'));
         }
       }
+
+      console.log(config.url, config.params);
 
       return config;
     },
@@ -97,12 +101,12 @@ export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnaut
         }
       }
 
-      // 네트워크 에러 처리
-      if (error.code === 'ECONNABORTED' || error.message === 'Network Error') {
-        if (API_CONFIG.errors.showToast) {
-          Alert.alert('네트워크 오류', '인터넷 연결을 확인해주세요.');
-        }
-      }
+      // // 네트워크 에러 처리
+      // if (error.code === '' || error.message === 'Network Error') {
+      //   if (API_CONFIG.errors.showToast) {
+      //     Alert.alert('네트워크 오류', '인터넷 연결을 확인해주세요.');
+      //   }
+      // }
 
       // 에러 처리 및 로깅
       handleApiError(error);
