@@ -120,7 +120,7 @@ public class UserController {
     /**
      * 프라이버시 설정 업데이트
      */
-    @PutMapping("/privacy")
+    @PutMapping("/privacy-setting")
     public ResponseEntity<ApiResponse<Void>> updatePrivacySettings(
             @RequestBody PrivacyUpdateRequestDto request,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
