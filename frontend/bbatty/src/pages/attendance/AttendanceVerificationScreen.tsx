@@ -176,12 +176,8 @@ export const AttendanceVerificationScreen = () => {
   useEffect(() => {
     getCurrentLocation();
     
-    // 토큰 정보 로깅
+    // 토큰 정보 확인
     const token = getAccessToken();
-    console.log('🔑 [직관인증] 현재 액세스 토큰:', token);
-    if (token) {
-      console.log('🔑 [직관인증] 토큰 길이:', token.length);
-    }
   }, []);
 
 
@@ -205,8 +201,6 @@ export const AttendanceVerificationScreen = () => {
       });
 
       const { latitude, longitude } = location.coords;
-      console.log('현재 위치 획득:', { latitude, longitude });
-      console.log('목표 위치:', selectedStadium.name, selectedStadium);
       setCurrentLocation({ latitude, longitude });
       
       const newRegion = {
@@ -233,25 +227,6 @@ export const AttendanceVerificationScreen = () => {
     }
   };
 
-  // 두 지점 간의 거리 계산 (Haversine formula)
-  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-    console.log('거리 계산 입력값:', { lat1, lon1, lat2, lon2 });
-    
-    const R = 6371000; // 지구 반지름을 미터로 직접 설정
-    const φ1 = lat1 * Math.PI / 180; // φ, λ는 라디안으로 변환
-    const φ2 = lat2 * Math.PI / 180;
-    const Δφ = (lat2 - lat1) * Math.PI / 180;
-    const Δλ = (lon2 - lon1) * Math.PI / 180;
-
-    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    const distance = R * c; // 미터 단위
-    console.log('계산된 거리 (미터):', distance);
-    return distance;
-  };
 
   const handleAttendanceVerification = async () => {
     if (!currentLocation) {
@@ -262,36 +237,30 @@ export const AttendanceVerificationScreen = () => {
     setIsVerifying(true);
 
     try {
-      console.log('현재 위치:', currentLocation);
-      
-      // 토큰 정보 재확인
-      const token = getAccessToken();
-      console.log('🔑 [직관인증API] 요청 전 토큰 확인:', token ? `${token.substring(0, 20)}...` : 'null');
-      
-      // API 요청 데이터 로깅
+      console.log('현재 설정된 위치:', currentLocation);
       const requestData = {
         latitude: currentLocation.latitude,
         longitude: currentLocation.longitude,
       };
-      console.log('📤 [직관인증API] 요청 데이터:', requestData);
-      console.log('📤 [직관인증API] 요청 URL: 8080/api/attendance/verify');
+      console.log('API 요청할 데이터:', requestData);
       
       // API 호출로 직관 인증 (서버에서 거리 검증)
       const response = await attendanceApi.verifyAttendance(requestData);
-
-      console.log('🎯 직관 인증 API 응답:', response);
+      console.log('🎯 직관 인증 응답 전체:', {
+        status: response.status,
+        message: response.message,
+        data: response.data
+      });
 
       if (response.status === 'SUCCESS') {
-        // 오늘의 게임 정보 가져오기
-        let gameInfo = null;
-        try {
-          const gameResponse = await gameApi.getTodayGame();
-          if (gameResponse.status === 'SUCCESS') {
-            gameInfo = gameResponse.data;
-          }
-        } catch (error) {
-          console.error('게임 정보 로드 실패:', error);
-        }
+        // 백엔드에서 받은 게임 정보 사용
+        const gameInfo = response.data?.gameInfo ? {
+          gameId: response.data.gameInfo.gameId,
+          awayTeamName: response.data.gameInfo.awayTeam,
+          homeTeamName: response.data.gameInfo.homeTeam,
+          dateTime: response.data.gameInfo.gameDateTime,
+          stadium: response.data.stadiumInfo?.stadiumName || '야구장',
+        } : null;
 
         // 상태 저장
         setAttendanceVerified(true, gameInfo);
@@ -327,12 +296,23 @@ export const AttendanceVerificationScreen = () => {
           ]
         );
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('직관 인증 중 오류:', error);
       setIsVerifying(false);
+      
+      // 에러 메시지 추출
+      let errorMessage = '서버와 연결할 수 없어요. 잠시 후 다시 시도해주세요.';
+      
+      // API 응답에서 메시지 추출 시도
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message && error.message !== 'Network Error') {
+        errorMessage = error.message;
+      }
+      
       Alert.alert(
-        '오류 발생',
-        '네트워크 오류가 발생했습니다. 다시 시도해주세요.',
+        '직관 인증 실패',
+        errorMessage,
         [
           {
             text: '확인',
@@ -413,16 +393,6 @@ export const AttendanceVerificationScreen = () => {
         <Text style={styles.infoText}>인증 범위: {MAX_DISTANCE}m 이내</Text>
         {currentLocation && (
           <>
-            <Text style={styles.infoText}>
-              현재 거리: {Math.round(
-                calculateDistance(
-                  currentLocation.latitude,
-                  currentLocation.longitude,
-                  selectedStadium.latitude,
-                  selectedStadium.longitude
-                )
-              )}m
-            </Text>
             <Text style={styles.currentLocationText}>
               현재 위치: {currentLocation.latitude.toFixed(4)}, {currentLocation.longitude.toFixed(4)}
             </Text>
@@ -449,7 +419,6 @@ export const AttendanceVerificationScreen = () => {
               longitude: selectedStadium.longitude + 0.0009,
             };
             
-            console.log('테스트 위치로 설정:', selectedStadium.name, testLocation);
             setCurrentLocation(testLocation);
             
             const newRegion = {

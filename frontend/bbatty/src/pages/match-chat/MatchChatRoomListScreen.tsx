@@ -11,18 +11,23 @@ import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { StackNavigationProp, RouteProp } from '@react-navigation/stack';
+import type { CompositeNavigationProp } from '@react-navigation/native';
 import { chatRoomApi } from '../../entities/chat-room/api/api';
 import { gameApi } from '../../entities/game/api/api';
 import type { MatchChatRoom } from '../../entities/chat-room/api/types';
 import type { Game } from '../../entities/game/api/types';
-import type { ChatStackParamList } from '../../navigation/types';
+import type { ChatStackParamList, RootStackParamList } from '../../navigation/types';
 import { useUserStore } from '../../entities/user/model/userStore';
 import { useTokenStore } from '../../shared/api/token/tokenStore';
+import { useAttendanceStore } from '../../entities/attendance/model/attendanceStore';
 import { useThemeColor } from '../../shared/team/ThemeContext';
 import { BaseballAnimation } from '../../features/match-chat/components/BaseballAnimation';
 import { styles } from './MatchChatRoomListScreen.styles';
 
-type NavigationProp = StackNavigationProp<ChatStackParamList>;
+type NavigationProp = CompositeNavigationProp<
+  StackNavigationProp<ChatStackParamList>,
+  StackNavigationProp<RootStackParamList>
+>;
 type RoutePropType = RouteProp<ChatStackParamList, 'MatchChatRoomList'>;
 
 export const MatchChatRoomListScreen = () => {
@@ -30,6 +35,7 @@ export const MatchChatRoomListScreen = () => {
   const route = useRoute<RoutePropType>();
   const getCurrentUser = useUserStore((state) => state.getCurrentUser);
   const { getAccessToken } = useTokenStore();
+  const { isVerifiedToday } = useAttendanceStore();
   const [rooms, setRooms] = useState<MatchChatRoom[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -176,6 +182,25 @@ export const MatchChatRoomListScreen = () => {
 
 
   const handleWatchChatJoin = async () => {
+    // 직관 인증 상태 확인
+    if (!isVerifiedToday()) {
+      Alert.alert(
+        '직관 인증 필요',
+        '직관 채팅은 직관 인증 후에만 사용할 수 있습니다.\n직관 인증을 먼저 진행해주세요.',
+        [
+          {
+            text: '취소',
+            style: 'cancel',
+          },
+          {
+            text: '직관 인증하기',
+            onPress: () => navigation.navigate('AttendanceVerification'),
+          },
+        ]
+      );
+      return;
+    }
+
     // 애니메이션 시작
     setShowAnimation(true);
   };
@@ -204,7 +229,7 @@ export const MatchChatRoomListScreen = () => {
       const watchRequest = {
         gameId: todayGame.gameId,
         teamId: currentUser.teamId,
-        isAttendanceVerified: true
+        isAttendanceVerified: isVerifiedToday()
       };
 
       
