@@ -10,8 +10,49 @@ import {
 import axios, { AxiosHeaders, AxiosResponse } from 'axios';
 import { Post } from '../model/types';
 import { CursorPostListResponse } from './types';
+export type TeamNewsItem = {
+    id?: number;
+    postId?: number;          // 내부 포스트로 연결 가능하면 사용
+    title: string;
+    summary?: string;
+    thumbnailUrl?: string;
+    publishedAt?: string;
+    source?: string;
+    link?: string;            // 외부 기사 원문
+  };
 
 export const postApi = {
+    // ai 기사
+   async getTeamNews(teamId: number, limit = 5): Promise<TeamNewsItem[]> {
+    const res = await apiClient.get(`/api/posts/team/${teamId}/news`, { params: { limit } });
+    const root: any = (res as any)?.data ?? res;
+
+    // 공통 래퍼 대응
+    const payload = root?.status === 'SUCCESS' ? root?.data : root?.data ?? root;
+
+    // 배열을 찾아서 방어적으로 파싱
+    const list: any[] = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.items)
+      ? payload.items
+      : Array.isArray(payload?.news)
+      ? payload.news
+      : [];
+
+    const safe: TeamNewsItem[] = list.map((n: any) => ({
+      id: n?.id ?? n?.newsId ?? n?.postId,
+      postId: n?.postId,
+      title: String(n?.title ?? '제목 없음'),
+      summary: n?.summary ?? n?.description ?? '',
+      thumbnailUrl: n?.thumbnailUrl ?? n?.imageUrl ?? n?.thumbnail ?? undefined,
+      publishedAt: n?.publishedAt ?? n?.createdAt ?? undefined,
+      source: n?.source ?? n?.publisher ?? undefined,
+      link: n?.link ?? n?.url ?? undefined,
+    }));
+
+    return safe.slice(0, limit);
+  },
+
   // 게시글 생성
   createPost: (payload: CreatePostPayload): Promise<AxiosResponse<ApiResponse<Post>>> =>
     apiClient.post('/api/posts', payload),
