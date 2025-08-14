@@ -42,7 +42,7 @@ export const styles = StyleSheet.create({
     color: '#111',
   },
 
-  // IMAGE GALLERY
+  // LEGACY IMAGE GALLERY (keeping for compatibility)
   imageGallery: {
     marginTop: 8,
     marginBottom: 8,
@@ -67,11 +67,6 @@ export const styles = StyleSheet.create({
     backgroundColor: '#FF3B30',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  imageDeleteText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
   },
 
   // TOOLBAR
@@ -122,5 +117,16 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 8,
+  },
+
+  // DRAG & DROP
+  draggingImage: {
+    opacity: 0.7,
+    transform: [{ scale: 1.05 }],
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
 });

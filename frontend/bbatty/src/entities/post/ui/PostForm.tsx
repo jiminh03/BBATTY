@@ -1,5 +1,5 @@
 // entities/post/ui/PostForm.tsx
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,15 +12,10 @@ import {
   ActivityIndicator,
   Image,
   Alert,
+  PanResponder,
+  Dimensions,
+  Animated,
 } from 'react-native';
-import { PanGestureHandler, State } from 'react-native-gesture-handler';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  useAnimatedScrollHandler,
-  runOnJS,
-  withSpring,
-} from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
 import { styles } from './PostForm.style';
 import { uploadImageToS3 } from '../../../shared/utils/imageUpload';
@@ -30,6 +25,7 @@ import { useCreatePost, usePostDetailQuery, useUpdatePost } from '../queries/use
 import { useUserStore } from '../../user/model/userStore';
 import { isValidPost, validatePostContent } from '../../post/utils/vaildation';
 import { useThemeColor } from '../../../shared/team/ThemeContext';
+import { RichTextEditor } from '../../../shared/ui/RichTextEditor';
 
 interface ImageItem {
   id: string;
@@ -38,13 +34,6 @@ interface ImageItem {
   isUploading?: boolean;
 }
 
-interface DraggableImageProps {
-  item: ImageItem;
-  index: number;
-  onDelete: (id: string) => void;
-  onMove: (fromIndex: number, toIndex: number) => void;
-  totalImages: number;
-}
 type Props = HomeStackScreenProps<'PostForm'>;
 
 export const PostForm: React.FC<Props> = ({ route, navigation }) => {
@@ -76,6 +65,14 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
     const beforeCursor = content.substring(0, cursorPosition);
     const afterCursor = content.substring(cursorPosition);
     const newContent = beforeCursor + markdown + afterCursor;
+    
+    console.log('[PostForm] insertImageToContent');
+    console.log('[PostForm] current content:', content);
+    console.log('[PostForm] cursorPosition:', cursorPosition);
+    console.log('[PostForm] imageUrl:', imageUrl);
+    console.log('[PostForm] markdown:', markdown);
+    console.log('[PostForm] newContent:', newContent);
+    
     setContent(newContent);
     setCursorPosition(cursorPosition + markdown.length);
   };
@@ -189,15 +186,75 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
     setImageList((prev) => prev.filter((img) => img.id !== imageId));
   };
 
+  // 드래그 앤 드롭 상태
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const dragOffsetX = useRef(new Animated.Value(0)).current;
+  const dragOffsetY = useRef(new Animated.Value(0)).current;
+  const dragScale = useRef(new Animated.Value(1)).current;
+
+  const createPanResponder = (index: number) => {
+    return PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      
+      onPanResponderGrant: () => {
+        setDraggedIndex(index);
+        Animated.parallel([
+          Animated.timing(dragScale, {
+            toValue: 1.1,
+            duration: 150,
+            useNativeDriver: false,
+          }),
+        ]).start();
+      },
+      
+      onPanResponderMove: (_, gestureState) => {
+        dragOffsetX.setValue(gestureState.dx);
+        dragOffsetY.setValue(gestureState.dy);
+      },
+      
+      onPanResponderRelease: (_, gestureState) => {
+        const dragDistance = Math.abs(gestureState.dx);
+        const imageWidth = 88; // 80 + 8 margin
+        const targetIndex = Math.round(dragDistance / imageWidth);
+        
+        if (targetIndex > 0 && targetIndex < imageList.length) {
+          const newIndex = Math.min(index + Math.sign(gestureState.dx) * targetIndex, imageList.length - 1);
+          if (newIndex !== index && newIndex >= 0) {
+            handleImageMove(index, newIndex);
+          }
+        }
+        
+        // 애니메이션 리셋
+        Animated.parallel([
+          Animated.timing(dragOffsetX, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: false,
+          }),
+          Animated.timing(dragOffsetY, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: false,
+          }),
+          Animated.timing(dragScale, {
+            toValue: 1,
+            duration: 200,
+            useNativeDriver: false,
+          }),
+        ]).start(() => {
+          setDraggedIndex(null);
+        });
+      },
+    });
+  };
+
   const handleImageMove = (fromIndex: number, toIndex: number) => {
     setImageList((prev) => {
       const newList = [...prev];
       const [draggedItem] = newList.splice(fromIndex, 1);
       newList.splice(toIndex, 0, draggedItem);
-      
-      // content에서 이미지 순서도 업데이트
       updateImageOrderInContent(newList);
-      
       return newList;
     });
   };
@@ -292,43 +349,57 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
 
           {/* 내용 */}
           <Text style={[styles.label, { marginTop: 18 }]}>내용</Text>
-          <TextInput
+          <RichTextEditor
             style={styles.bodyInput}
             placeholder='내용을 입력해주세요.'
-            placeholderTextColor='#B9BDC1'
             value={content}
             onChangeText={setContent}
-            onSelectionChange={(event) => {
-              setCursorPosition(event.nativeEvent.selection.start);
+            onSelectionChange={setCursorPosition}
+            onImageDelete={(imageUrl) => {
+              // imageUrl로 imageList에서 해당 이미지를 찾아서 삭제
+              const targetImage = imageList.find(img => img.url === imageUrl);
+              if (targetImage) {
+                handleImageDelete(targetImage.id);
+              }
             }}
-            multiline
-            textAlignVertical='top'
+            onImageMove={(fromImageUrl, toPosition) => {
+              // 이미지 순서 변경 시 content에서 마크다운 순서도 변경
+              const imageMarkdowns = extractImageUrlsFromContent(content).map(url => `![image](${url})`);
+              const fromIndex = imageMarkdowns.findIndex(md => md.includes(fromImageUrl));
+              
+              if (fromIndex >= 0 && toPosition >= 0 && toPosition < imageMarkdowns.length) {
+                // 텍스트에서 모든 이미지 마크다운 제거
+                let newContent = content;
+                imageMarkdowns.forEach(md => {
+                  newContent = newContent.replace(md, '');
+                });
+                
+                // 이미지 순서 변경
+                const reorderedImages = [...imageMarkdowns];
+                const [movedImage] = reorderedImages.splice(fromIndex, 1);
+                reorderedImages.splice(toPosition, 0, movedImage);
+                
+                // 새로운 순서로 이미지들을 content에 추가
+                reorderedImages.forEach(md => {
+                  newContent += `\n${md}`;
+                });
+                
+                setContent(newContent.trim());
+                
+                // imageList도 순서 변경
+                const fromImageIndex = imageList.findIndex(img => img.url === fromImageUrl);
+                if (fromImageIndex >= 0) {
+                  setImageList(prev => {
+                    const newList = [...prev];
+                    const [movedItem] = newList.splice(fromImageIndex, 1);
+                    newList.splice(toPosition, 0, movedItem);
+                    return newList;
+                  });
+                }
+              }
+            }}
           />
 
-          {/* 이미지 갤러리 */}
-          {imageList.length > 0 && (
-            <View style={styles.imageGallery}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {imageList.map((item) => (
-                  <View key={item.id} style={styles.imageContainer}>
-                    <Image source={{ uri: item.uri }} style={styles.imageItem} />
-                    {item.isUploading && (
-                      <View style={styles.uploadingOverlay}>
-                        <ActivityIndicator size='small' color='#007AFF' />
-                      </View>
-                    )}
-                    <TouchableOpacity
-                      style={styles.imageDeleteButton}
-                      onPress={() => handleImageDelete(item.id)}
-                      disabled={item.isUploading}
-                    >
-                      <Text style={styles.imageDeleteText}>×</Text>
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </ScrollView>
-            </View>
-          )}
 
           {/* 하단 툴바: 이미지 버튼 + 토글 */}
           <View style={styles.toolbar}>
