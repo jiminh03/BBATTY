@@ -17,7 +17,6 @@ public class NotificationSettingResponse {
     private String fcmToken;
     private String deviceId;
     private String deviceType;
-    private Boolean trafficSpikeAlertEnabled;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -27,7 +26,6 @@ public class NotificationSettingResponse {
                 setting.getFcmToken(),
                 setting.getDeviceId(),
                 setting.getDeviceType(),
-                setting.getTrafficSpikeAlertEnabled(),
                 setting.getCreatedAt(),
                 setting.getUpdatedAt()
         );

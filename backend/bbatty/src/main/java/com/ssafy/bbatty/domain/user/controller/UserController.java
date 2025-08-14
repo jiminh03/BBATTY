@@ -1,6 +1,7 @@
 package com.ssafy.bbatty.domain.user.controller;
 
 import com.ssafy.bbatty.domain.auth.dto.response.NicknameCheckResponse;
+import com.ssafy.bbatty.domain.notification.dto.request.NotificationSettingRequest;
 import com.ssafy.bbatty.domain.user.dto.response.UserBadgeResponse;
 import com.ssafy.bbatty.domain.user.dto.request.PrivacyUpdateRequestDto;
 import com.ssafy.bbatty.domain.user.dto.request.UserUpdateRequestDto;
@@ -128,6 +129,20 @@ public class UserController {
             request.getPostsPublic(), 
             request.getStatsPublic(), 
             request.getAttendanceRecordsPublic()
+        );
+        return ResponseEntity.ok(ApiResponse.success());
+    }
+
+    /**
+     * 알림 설정 업데이트
+     */
+    @PutMapping("/notification-setting")
+    public ResponseEntity<ApiResponse<Void>> updateNotificationSettings(
+            @RequestBody NotificationSettingRequest request,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        userService.updateNotificationSettings(
+            userPrincipal.getUserId(),
+            request.getTrafficSpikeAlertEnabled()
         );
         return ResponseEntity.ok(ApiResponse.success());
     }

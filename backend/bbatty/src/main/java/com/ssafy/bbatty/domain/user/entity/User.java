@@ -62,6 +62,10 @@ public class User extends BaseEntity {
     @Builder.Default
     private Boolean attendanceRecordsPublic = true;
 
+    @Column(name = "traffic_spike_alert_enabled", nullable = false)
+    @Builder.Default
+    private Boolean trafficSpikeAlertEnabled = true;
+
     // UserInfo와 1:1 관계
     @Setter
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
@@ -101,6 +105,13 @@ public class User extends BaseEntity {
         this.postsPublic = postsPublic;
         this.statsPublic = statsPublic;
         this.attendanceRecordsPublic = attendanceRecordsPublic;
+    }
+
+    /**
+     * 알림 설정 업데이트
+     */
+    public void updateNotificationSettings(Boolean trafficSpikeAlertEnabled) {
+        this.trafficSpikeAlertEnabled = trafficSpikeAlertEnabled;
     }
 
     /**

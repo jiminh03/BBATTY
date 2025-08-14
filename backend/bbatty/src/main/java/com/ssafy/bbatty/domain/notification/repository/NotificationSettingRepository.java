@@ -33,7 +33,7 @@ public interface NotificationSettingRepository extends JpaRepository<Notificatio
            "JOIN FETCH ns.user u " +
            "JOIN FETCH u.team t " +
            "WHERE t.id = :teamId " +
-           "AND ns.trafficSpikeAlertEnabled = true " +
+           "AND u.trafficSpikeAlertEnabled = true " +
            "AND u.isDeleted = false")
     List<NotificationSetting> findTrafficSpikeAlertEnabledUsers(@Param("teamId") Long teamId);
 
