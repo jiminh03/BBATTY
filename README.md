@@ -4,7 +4,7 @@
 
 ### SSAFY 13기 공통 프로젝트 403팀
 
-## 🎯 프로젝트 소개
+## 🏟️  프로젝트 소개
 
 **BBATTY**는 **같은 팀을 응원하는 팬들끼리 소통**하고, **나만의 직관 통계**를 확인하며, **함께 응원할 메이트**를 찾을 수 있는 **야구팬 전용 플랫폼**입니다.
 
@@ -51,6 +51,21 @@
 [![Notion](https://img.shields.io/badge/Notion-000000?logo=notion&logoColor=white)](https://uncovered-ceramic-be3.notion.site/SSAFY-403_Forbidden-229ec477aea580dbafc7d7c41ccd9353)
 [![Figma](https://img.shields.io/badge/Figma-F24E1E?logo=figma&logoColor=white)](https://www.figma.com/design/qhU5f2pm2Sg2tIyHWAvdGn/%EB%B9%A0%EB%9D%A0?node-id=303-7390&p=f&t=0NHbCLZbEjOP5qVi-0)
 
+## 💡 서비스 기획 배경
+
+### 기획 목적
+**혼자** 직관하는 팬들의 소외감을 해소하고, 야구의 본질적 가치인 "우리"라는 소속감을 **디지털 커뮤니티 플랫폼으로 구현**하고자 합니다.
+
+### Pain Point
+- **소외감**: 혼자 직관 시 좋은 플레이가 나와도 함께 기뻐할 사람이 없는 아쉬움
+- **파편화된 커뮤니티**: MLB Park, 디시인사이드 팀 갤러리, 포털 카페 등 여러 플랫폼에 분산된 소통
+- **데이터 부재**: 개인의 직관 기록이나 승률 등 통계 정보 제공 미흡
+
+### BBATTY의 차별화 포인트
+- **야구 직관 특화 플랫폼**: 직관 문화에 최적화된 전용 서비스
+- **GPS 기반 위치 인증**: 실제 직관자만의 신뢰할 수 있는 전용 공간
+- **야구 문화 특성 반영**: 연고지/응원 팀 기반의 "우리"라는 소속감과 "승리 요정" 문화를 디지털로 구현
+
 ## ⭐ 주요 기능
 
 ### 📍 GPS 기반 직관 인증
@@ -65,7 +80,7 @@
 - 시간/위치에 대한 이중 검증
 - 같은 경기에 대한 중복 인증 방지
 - 직관 기록과 경기 결과 자동 매칭을 통한 개인 승률 산출
-- 당일 경기 정보를 레디스에 캐싱(캐시 힛/미스)하여 과도한 DB 조회 방지
+- 당일 경기 정보를 레디스에 캐싱하여 과도한 DB 조회 방지
 
 ### 📊 야구팬 맞춤 통계 & 뱃지 시스템
 **기획 배경**
@@ -124,30 +139,14 @@
 - 이미지 업로드 시 클라이언트 직접 업로드로 서버 부하 최소화
 - 프론트엔드 악성 요청 방지 로직 (연속 좋아요 방지 등)
 
+
 ## 🏗️ 시스템 구조
-
-
 ### 아키텍처
-
 ![아키텍처](img/architecture.png)
 
-
 ### ERD
+[![ERD](img/erd.png)](https://www.erdcloud.com/d/or5ngZvQWRQkWEWX8)
 
-![ERD](img/erd.png)
-
-https://www.erdcloud.com/d/or5ngZvQWRQkWEWX8
-
-
-## 🔧 주요 기술적 도전
-
-### 대용량 실시간 트래픽
-- Kafka 비동기 처리로 응답시간 단축
-- Redis 클러스터링으로 확장성 확보
-
-### 이중화 채팅 시스템
-- 직관 채팅: Redis Pub/Sub (휘발성, 빠른 응답)
-- 매칭 채팅: Kafka (영속성, 메시지 순서 보장)
 
 ## 🎨 디자인
 
