@@ -180,13 +180,10 @@ export default function HomeScreen({ navigation }: Props) {
             websocketUrl: response.data.data.websocketUrl,
           };
 
-          navigation.navigate('ChatStack', {
-            screen: 'MatchChatRoom',
-            params: {
-              room: watchChatRoom,
-              websocketUrl: response.data.data.websocketUrl,
-              sessionToken: response.data.data.sessionToken,
-            },
+          (navigation as any).navigate('WatchChatModal', {
+            room: watchChatRoom,
+            websocketUrl: response.data.data.websocketUrl,
+            sessionToken: response.data.data.sessionToken,
           });
         } else {
           Alert.alert('연결 실패', response.data.message || JSON.stringify(response.data) || '직관채팅 연결에 실패했습니다.');
@@ -196,7 +193,7 @@ export default function HomeScreen({ navigation }: Props) {
         Alert.alert('오류', '직관채팅 연결 중 문제가 발생했습니다.');
       }
     } else {
-      navigation.navigate('AttendanceVerification' as never);
+      (navigation as any).navigate('AttendanceVerification');
     }
   };
 
@@ -292,7 +289,7 @@ export default function HomeScreen({ navigation }: Props) {
 
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => navigation.navigate('PostForm' as never)}
+        onPress={() => navigation.navigate('PostForm')}
         activeOpacity={0.85}
         accessibilityLabel="게시글 작성"
       >

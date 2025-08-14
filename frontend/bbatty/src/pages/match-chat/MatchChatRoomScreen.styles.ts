@@ -365,4 +365,16 @@ export const styles = StyleSheet.create({
     marginHorizontal: 4,
     alignSelf: 'flex-end',
   },
+  loadingContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 16,
+    backgroundColor: '#f5f5f5',
+  },
+  loadingText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#666',
+  },
 });

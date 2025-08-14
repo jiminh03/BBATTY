@@ -32,7 +32,10 @@ export const MatchChatRoomListScreen = () => {
   const { getAccessToken } = useTokenStore();
   const [rooms, setRooms] = useState<MatchChatRoom[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [showAnimation, setShowAnimation] = useState(false);
   const [gameInfoMap, setGameInfoMap] = useState<Map<string, Game>>(new Map());
   const themeColor = useThemeColor();
@@ -91,49 +94,84 @@ export const MatchChatRoomListScreen = () => {
     return null;
   };
 
-  const loadRooms = async () => {
+  const loadRooms = async (isRefresh = false, cursor?: string | null) => {
     try {
-      setLoading(true);
-      const response = await chatRoomApi.getMatchChatRooms();
+      if (isRefresh) {
+        setLoading(true);
+        setRooms([]);
+        setNextCursor(null);
+        setHasMore(true);
+      } else if (!isRefresh && cursor) {
+        setLoadingMore(true);
+      } else if (!isRefresh && !cursor && rooms.length === 0) {
+        setLoading(true);
+      }
+
+      const response = await chatRoomApi.getMatchChatRooms({
+        lastCreatedAt: cursor || undefined,
+        limit: 20 // 한 번에 20개씩 로드
+      });
       
       let roomList: MatchChatRoom[] = [];
-      if (response.data?.data?.chatRooms) {
-        roomList = response.data.data.chatRooms;
-      } else if (response.data?.data?.rooms) {
-        roomList = response.data.data.rooms;
+      let responseHasMore = false;
+      let responseNextCursor: string | null = null;
+
+      // 백엔드 응답 형식 처리
+      if (response.data?.data?.chatRooms || response.data?.data?.rooms) {
+        const data = response.data.data;
+        roomList = data.chatRooms || data.rooms || [];
+        responseHasMore = data.hasMore || false;
+        responseNextCursor = data.nextCursor || null;
       } else if (response.data?.rooms) {
         // 목 데이터 형식 (기존 호환성)
-        roomList = response.data.rooms;
+        const data = response.data;
+        roomList = data.rooms || [];
+        responseHasMore = data.hasMore || false;
+        responseNextCursor = data.nextCursor || null;
       } else {
-        Alert.alert('오류', '채팅방 목록을 불러오는데 실패했습니다.');
-        return;
+        console.warn('예상하지 못한 응답 형식:', response);
+        roomList = [];
       }
       
-      setRooms(roomList);
+      // 방 목록 업데이트
+      if (isRefresh || (!cursor && rooms.length === 0)) {
+        setRooms(roomList);
+      } else {
+        setRooms(prev => [...prev, ...roomList]);
+      }
+      
+      setHasMore(responseHasMore);
+      setNextCursor(responseNextCursor);
       
       // 각 방의 게임 정보 로드
       const gameIds = roomList
         .filter(room => room.gameId)
-        .map(room => String(room.gameId!)) // number를 string으로 변환
-        .filter((gameId, index, self) => self.indexOf(gameId) === index); // 중복 제거
-      
-      
+        .map(room => String(room.gameId!))
+        .filter((gameId, index, self) => self.indexOf(gameId) === index);
       
       for (const gameId of gameIds) {
         await loadGameInfo(gameId);
       }
     } catch (error) {
       console.error('채팅방 목록 로드 실패:', error);
-      Alert.alert('오류', '채팅방 목록을 불러오는데 실패했습니다.');
+      if (isRefresh || rooms.length === 0) {
+        Alert.alert('오류', '채팅방 목록을 불러오는데 실패했습니다.');
+      }
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await loadRooms();
+    await loadRooms(true); // isRefresh = true
     setRefreshing(false);
+  };
+
+  const loadMore = async () => {
+    if (!hasMore || loadingMore || loading) return;
+    await loadRooms(false, nextCursor);
   };
 
 
@@ -365,6 +403,15 @@ export const MatchChatRoomListScreen = () => {
         contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.1}
+        ListFooterComponent={
+          loadingMore ? (
+            <View style={styles.loadingFooter}>
+              <Text style={styles.loadingText}>더 많은 채팅방 로드 중...</Text>
+            </View>
+          ) : null
         }
         ListEmptyComponent={!loading ? EmptyComponent : null}
         showsVerticalScrollIndicator={false}

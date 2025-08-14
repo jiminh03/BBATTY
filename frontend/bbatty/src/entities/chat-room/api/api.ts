@@ -153,33 +153,59 @@ export const chatRoomApi = {
     }
   },
 
-  // 매치 채팅방 목록 조회 - 직접 타입 정의
-  getMatchChatRooms: async (keyword?: string): Promise<MatchChatRoomsResponse> => {
+  // 매치 채팅방 목록 조회 - 페이징 지원
+  getMatchChatRooms: async (params?: {
+    keyword?: string;
+    lastCreatedAt?: string;
+    limit?: number;
+  }): Promise<MatchChatRoomsResponse> => {
     try {
-      const url = keyword ? `/api/match-chat-rooms?keyword=${encodeURIComponent(keyword)}` : '/api/match-chat-rooms';
+      const searchParams = new URLSearchParams();
+      
+      if (params?.keyword) {
+        searchParams.append('keyword', params.keyword);
+      }
+      if (params?.lastCreatedAt) {
+        searchParams.append('lastCreatedAt', params.lastCreatedAt);
+      }
+      if (params?.limit) {
+        searchParams.append('limit', params.limit.toString());
+      }
+      
+      const url = `/api/match-chat-rooms${searchParams.toString() ? '?' + searchParams.toString() : ''}`;
       const response = await chatApiClient.get(url);
       return response;
     } catch (error: any) {
       console.warn('서버 연결 실패, 목 데이터 반환:', error);
       
       // 검색 키워드가 있으면 필터링된 목 데이터 반환
-      const filteredRooms = keyword 
+      const filteredRooms = params?.keyword 
         ? MOCK_ROOMS.filter(room => 
-            room.matchTitle.toLowerCase().includes(keyword.toLowerCase()) ||
-            room.matchDescription.toLowerCase().includes(keyword.toLowerCase()) ||
-            room.teamId.toLowerCase().includes(keyword.toLowerCase())
+            room.matchTitle.toLowerCase().includes(params.keyword!.toLowerCase()) ||
+            room.matchDescription.toLowerCase().includes(params.keyword!.toLowerCase()) ||
+            room.teamId.toLowerCase().includes(params.keyword!.toLowerCase())
           )
         : MOCK_ROOMS;
+      
+      // 페이징 시뮬레이션
+      const limit = params?.limit || 50;
+      const startIndex = params?.lastCreatedAt 
+        ? filteredRooms.findIndex(room => room.createdAt < params.lastCreatedAt!) + 1
+        : 0;
+      
+      const pagedRooms = filteredRooms.slice(startIndex, startIndex + limit);
+      const hasMore = startIndex + limit < filteredRooms.length;
+      const nextCursor = hasMore ? pagedRooms[pagedRooms.length - 1]?.createdAt : null;
       
       // 목 응답 반환
       return {
         status: 'SUCCESS',
-        message: `채팅방 목록 조회 성공 (목 데이터)${keyword ? ` - 검색: ${keyword}` : ''}`,
+        message: `채팅방 목록 조회 성공 (목 데이터)${params?.keyword ? ` - 검색: ${params.keyword}` : ''}`,
         data: {
-          rooms: filteredRooms,
-          nextCursor: null,
-          hasMore: false,
-          count: filteredRooms.length
+          rooms: pagedRooms,
+          nextCursor: nextCursor,
+          hasMore: hasMore,
+          count: pagedRooms.length
         }
       };
     }
