@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import { NavigationContainer } from '@react-navigation/native';
 import AuthNavigator from './AuthNavigator';
@@ -12,16 +12,19 @@ import { useUserStore } from '../entities/user/model/userStore';
 import { isErr, isOk } from '../shared/utils/result';
 import { Alert } from 'react-native';
 import { Token } from '../shared/api/token/tokenTypes';
-import { initializeApiClient } from '../shared/api/client/apiClient';
+import { initializeApiClient, setUnauthorizedCallback } from '../shared/api/client/apiClient';
 import { useTheme } from '../shared/team/ThemeContext';
 import { findTeamById } from '../shared/team/teamTypes';
 import { AttendanceVerificationScreen } from '../pages/attendance';
 
 const Stack = createStackNavigator();
 
+// 컴포넌트 외부에서 selector 정의 (안정적인 참조)
+const selectHasToken = (state: any) => !!state.refreshToken;
+const selectHasUser = (state: any) => !!state.currentUser;
+
 export default function AppNavigator() {
   const [showSplash, setShowSplash] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isExistingUser, setIsExistingUser] = useState(false);
 
   const { setKakaoUserInfo, setKakaoAccessToken } = usekakaoStore();
@@ -29,40 +32,47 @@ export default function AppNavigator() {
   const { initializeUser, setCurrentUser, reset } = useUserStore();
   const { setCurrentTeam } = useTheme();
 
-  // Zustand 상태를 직접 구독 (상태 변경시 자동 리렌더링)
-  const refreshToken = useTokenStore((state) => state.refreshToken);
-  const currentUser = useUserStore((state) => state.currentUser);
+  const hasToken = useTokenStore(selectHasToken);
+  const hasUser = useUserStore(selectHasUser);
+  const isAuthenticated = useMemo(() => {
+    return hasToken && hasUser;
+  }, [hasToken, hasUser]);
+
+  // 로그아웃 처리 콜백
+  const handleLogout = useCallback(() => {
+    resetToken();
+    reset();
+    setIsExistingUser(false);
+    setShowSplash(false);
+  }, [resetToken, reset]);
+
+  // 앱 초기화 함수
+  const initializeApp = useCallback(async () => {
+    try {
+      // 순차적으로 초기화 (의존성 때문에)
+      await initializeTokens();
+      await initializeUser();
+      // await testReset();
+      await initializeApiClient();
+      setUnauthorizedCallback(handleLogout);
+      console.log('✅ [AppNavigator] 앱 초기화 완료');
+    } catch (error) {
+      console.error('❌ [AppNavigator] 앱 초기화 실패:', error);
+      // 인증 상태는 Zustand 상태에서 자동으로 계산됨
+    }
+  }, [initializeTokens, initializeUser, handleLogout]);
 
   useEffect(() => {
     initializeApp();
-  }, []);
-
-  // 상태가 변경될 때만 인증 상태 업데이트
-  useEffect(() => {
-    const isAuth = !!refreshToken && !!currentUser;
-    console.log('Auth status changed:', { isAuth, hasToken: !!refreshToken, hasUser: !!currentUser });
-    setIsAuthenticated(isAuth);
-  }, [refreshToken, currentUser]);
+  }, [initializeApp]);
 
   const testReset = () => {
     resetToken();
     reset();
   };
 
-  const initializeApp = async () => {
-    try {
-      await Promise.all([initializeTokens(), initializeUser()]);
-      // await testReset();
-      initializeApiClient();
-    } catch (error) {
-      console.error('App initialization failed:', error);
-      setIsAuthenticated(false);
-    }
-  };
-
   // 자동로그인 성공 시 호출
   const handleAutoLoginSuccess = () => {
-    setIsAuthenticated(true);
     setIsExistingUser(true);
     setShowSplash(false);
   };
@@ -75,7 +85,7 @@ export default function AppNavigator() {
 
       // 먼저 서버에 로그인을 시도해서 기존 사용자인지 확인
       const { authApi } = await import('../features/user-auth/api/authApi');
-      
+
       const loginResult = await authApi.login({
         accessToken: accessToken,
       });
@@ -90,10 +100,9 @@ export default function AppNavigator() {
         }
 
         await handleSetUserAndTeam(userProfile);
-        setIsAuthenticated(true);
         setIsExistingUser(true);
         setShowSplash(false);
-        
+
         console.log('Existing user login successful');
       } else {
         // 신규 사용자 - 회원가입 화면으로
@@ -106,7 +115,6 @@ export default function AppNavigator() {
       setShowSplash(false);
     }
   };
-
 
   const handleSetUserAndTeam = async (userInfo: any) => {
     await setCurrentUser(userInfo);
@@ -131,7 +139,6 @@ export default function AppNavigator() {
       }
 
       await handleSetUserAndTeam(userInfo);
-      setIsAuthenticated(true);
       setIsExistingUser(true);
     } catch (error) {
       console.error('Sign up completion failed:', error);

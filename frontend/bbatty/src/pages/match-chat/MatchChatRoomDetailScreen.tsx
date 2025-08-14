@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,13 +6,15 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import type { RouteProp } from '@react-navigation/native';
 import { chatRoomApi } from '../../entities/chat-room/api/api';
+import { gameApi } from '../../entities/game/api/api';
 import type { MatchChatRoom } from '../../entities/chat-room/api/types';
+import type { Game } from '../../entities/game/api/types';
 import type { ChatStackParamList } from '../../navigation/types';
 import { useUserStore } from '../../entities/user/model/userStore';
 import { useThemeColor } from '../../shared/team/ThemeContext';
@@ -30,6 +32,7 @@ export const MatchChatRoomDetailScreen = () => {
   const insets = useSafeAreaInsets();
   
   const [joining, setJoining] = useState(false);
+  const [gameInfo, setGameInfo] = useState<Game | null>(null);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -40,6 +43,29 @@ export const MatchChatRoomDetailScreen = () => {
       hour: '2-digit',
       minute: '2-digit',
     });
+  };
+
+  const formatGameDateTime = (dateTimeString: string) => {
+    const date = new Date(dateTimeString);
+    return date.toLocaleString('ko-KR', {
+      month: 'numeric',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const loadGameInfo = async () => {
+    if (room.gameId && !gameInfo) {
+      try {
+        const response = await gameApi.getGameById(room.gameId);
+        if (response.status === 'SUCCESS') {
+          setGameInfo(response.data);
+        }
+      } catch (error) {
+        console.error('게임 정보 로드 실패:', error);
+      }
+    }
   };
 
   const handleJoinRoom = async () => {
@@ -96,17 +122,17 @@ export const MatchChatRoomDetailScreen = () => {
 
   const getTeamInfo = (teamId: string | number) => {
     const teamInfoMap: { [key: string]: { name: string; colors: string[] } } = {
-      // 숫자 ID로 매핑
-      '1': { name: 'KIA', colors: ['#EA0029', '#DC143C'] },
-      '2': { name: '삼성', colors: ['#074CA1', '#0066CC'] },
-      '3': { name: 'LG', colors: ['#C30452', '#8B0000'] },
-      '4': { name: '두산', colors: ['#131230', '#000080'] },
-      '5': { name: 'KT', colors: ['#000000', '#2F2F2F'] },
-      '6': { name: 'SSG', colors: ['#CE0E2D', '#B22222'] },
-      '7': { name: '롯데', colors: ['#041E42', '#000080'] },
-      '8': { name: '한화', colors: ['#FF6600', '#FF4500'] },
-      '9': { name: 'NC', colors: ['#315288', '#4169E1'] },
-      '10': { name: '키움', colors: ['#570514', '#8B0000'] },
+      // 숫자 ID로 매핑 (teamTypes.ts 기준)
+      '1': { name: '한화', colors: ['#FF6600', '#FF4500'] },
+      '2': { name: 'LG', colors: ['#C30452', '#8B0000'] },
+      '3': { name: '롯데', colors: ['#002955', '#000080'] },
+      '4': { name: 'KT', colors: ['#000000', '#2F2F2F'] },
+      '5': { name: '삼성', colors: ['#0066B3', '#0066CC'] },
+      '6': { name: 'KIA', colors: ['#EA0029', '#DC143C'] },
+      '7': { name: 'SSG', colors: ['#CE0E2D', '#B22222'] },
+      '8': { name: 'NC', colors: ['#1D467F', '#4169E1'] },
+      '9': { name: '두산', colors: ['#131230', '#000080'] },
+      '10': { name: '키움', colors: ['#820024', '#8B0000'] },
       // 문자열 ID도 지원 (기존 호환성)
       'LG': { name: 'LG', colors: ['#C30452', '#8B0000'] },
       '두산': { name: '두산', colors: ['#131230', '#000080'] },
@@ -125,6 +151,10 @@ export const MatchChatRoomDetailScreen = () => {
 
   const teamInfo = getTeamInfo(room.teamId);
 
+  useEffect(() => {
+    loadGameInfo();
+  }, [room.gameId]);
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <View style={[styles.header, { backgroundColor: themeColor }]}>
@@ -135,7 +165,14 @@ export const MatchChatRoomDetailScreen = () => {
         }}>
           <Text style={[styles.backButton, { color: '#ffffff' }]}>← 뒤로</Text>
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: '#ffffff' }]}>매치룸 정보</Text>
+        <View style={styles.headerCenter}>
+          <Text style={[styles.headerTitle, { color: '#ffffff' }]}>매치룸 정보</Text>
+          {gameInfo && (
+            <Text style={[styles.headerSubtitle, { color: '#ffffff' }]}>
+              {gameInfo.awayTeamName} vs {gameInfo.homeTeamName}
+            </Text>
+          )}
+        </View>
         <View style={styles.placeholder} />
       </View>
 
@@ -149,41 +186,27 @@ export const MatchChatRoomDetailScreen = () => {
               style={styles.gradientBackground}
             />
             
-            {/* 장식적 테두리 요소 */}
-            <View style={styles.borderElement} />
             
-            {/* 헤더 영역 */}
-            <View style={styles.roomHeader}>
+            {/* 헤더 영역 - 팀 배지만 */}
+            <View style={styles.simpleRoomHeader}>
               <View style={[styles.teamBadge, { backgroundColor: teamInfo.colors[0] }]}>
                 <Text style={styles.teamText}>{teamInfo.name}</Text>
-              </View>
-              <View style={styles.statusContainer}>
-                <View style={[
-                  styles.statusBadge,
-                  isRoomActive ? styles.activeBadge : styles.inactiveBadge
-                ]}>
-                  <Text style={[
-                    styles.statusText,
-                    isRoomActive ? styles.activeText : styles.inactiveText
-                  ]}>
-                    {isRoomActive ? '경기중' : '대기중'}
-                  </Text>
-                </View>
-                
-                {isRoomFull && (
-                  <View style={styles.fullBadge}>
-                    <Text style={styles.fullText}>만루</Text>
-                  </View>
-                )}
               </View>
             </View>
 
             {/* 제목 영역 */}
-            <View style={styles.titleContainer}>
+            <View style={styles.detailTitleContainer}>
               <Text style={styles.roomTitle}>{room.matchTitle}</Text>
-              <Text style={styles.participantCount}>
-                {room.currentParticipants}/{room.maxParticipants} 명 참여중
-              </Text>
+              {gameInfo && (
+                <View style={styles.gameInfoMain}>
+                  <Text style={styles.gameTeamsText}>
+                    {gameInfo.awayTeamName} vs {gameInfo.homeTeamName}
+                  </Text>
+                  <Text style={styles.gameDetailsText}>
+                    {formatGameDateTime(gameInfo.dateTime)} | {gameInfo.stadium}
+                  </Text>
+                </View>
+              )}
               <Text style={styles.roomDescription}>{room.matchDescription}</Text>
             </View>
           </View>
@@ -194,28 +217,21 @@ export const MatchChatRoomDetailScreen = () => {
         </View>
 
         <View style={styles.infoSection}>
-          <Text style={styles.sectionTitle}>참여 정보</Text>
+          <Text style={styles.sectionTitle}>방 정보</Text>
           
           <View style={styles.infoGrid}>
-            <View style={styles.infoCard}>
-              <Text style={styles.infoCardLabel}>참여자</Text>
-              <Text style={styles.infoCardValue}>
-                {room.currentParticipants}/{room.maxParticipants}명
-              </Text>
-            </View>
-            
             <View style={styles.infoCard}>
               <Text style={styles.infoCardLabel}>연령대</Text>
               <Text style={styles.infoCardValue}>{room.minAge}-{room.maxAge}세</Text>
             </View>
-          </View>
-
-          <View style={styles.infoGrid}>
+            
             <View style={styles.infoCard}>
               <Text style={styles.infoCardLabel}>성별 조건</Text>
               <Text style={styles.infoCardValue}>{getGenderText(room.genderCondition)}</Text>
             </View>
-            
+          </View>
+
+          <View style={styles.infoGrid}>
             <View style={styles.infoCard}>
               <Text style={styles.infoCardLabel}>개설일</Text>
               <Text style={styles.infoCardValue}>
@@ -223,37 +239,20 @@ export const MatchChatRoomDetailScreen = () => {
               </Text>
             </View>
           </View>
-          
-          {room.gameId && (
-            <View style={styles.gameIdCard}>
-              <View style={styles.gameIdInfo}>
-                <Text style={styles.gameIdLabel}>경기 정보</Text>
-                <Text style={styles.gameIdValue}>{room.gameId}</Text>
-              </View>
-            </View>
-          )}
         </View>
 
         <View style={styles.actionSection}>
-          {(!isRoomActive || isRoomFull) ? (
-            <View style={styles.joinButtonDisabled}>
-              <Text style={styles.joinButtonTextDisabled}>
-                {!isRoomActive ? '대기중' : '인원 마감'}
-              </Text>
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={[styles.joinButton, { backgroundColor: '#FF6B35' }]}
-              onPress={handleJoinRoom}
-              disabled={joining}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.joinButtonText}>
-                {joining ? '참여중...' : '채팅방 참여하기'}
-              </Text>
-              <Text style={styles.joinButtonSubtext}>지금 바로 입장하기</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={[styles.joinButton, { backgroundColor: '#FF6B35' }]}
+            onPress={handleJoinRoom}
+            disabled={joining}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.joinButtonText}>
+              {joining ? '참여중...' : '채팅방 참여하기'}
+            </Text>
+            <Text style={styles.joinButtonSubtext}>지금 바로 입장하기</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
 

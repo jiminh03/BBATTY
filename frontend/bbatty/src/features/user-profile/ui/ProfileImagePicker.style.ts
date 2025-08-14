@@ -64,4 +64,18 @@ export const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#000000ff',
   },
+
+  loadingOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#bcbcbcff',
+  },
 });

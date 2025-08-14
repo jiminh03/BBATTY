@@ -4,11 +4,13 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
+  FlatList,
   Alert,
   TextInput,
   KeyboardAvoidingView,
   Platform,
   AppState,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import NetInfo from '@react-native-community/netinfo';
@@ -27,6 +29,7 @@ import { getErrorMessage, logChatError } from '../../shared/utils/error';
 import { useUserStore } from '../../entities/user/model/userStore';
 import { useThemeColor } from '../../shared/team/ThemeContext';
 import { styles } from './MatchChatRoomScreen.styles';
+import { gameApi } from '../../entities/game/api/api';
 
 type NavigationProp = StackNavigationProp<ChatStackParamList>;
 type RoutePropType = RouteProp<ChatStackParamList, 'MatchChatRoom'>;
@@ -46,7 +49,7 @@ export const MatchChatRoomScreen = () => {
   const currentUser = getCurrentUser();
   const currentUserId = currentUser?.userId || 45;
   
-  const scrollViewRef = useRef<ScrollView>(null);
+  const flatListRef = useRef<FlatList>(null);
 
   // 🔧 FIX 1: ref로 상태 관리하여 무한 루프 방지
   const connectionStateRef = useRef({
@@ -66,6 +69,8 @@ export const MatchChatRoomScreen = () => {
   const [sentMessages, setSentMessages] = useState<Set<string>>(new Set());
   const [appState, setAppState] = useState(AppState.currentState);
   const [networkConnected, setNetworkConnected] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [gameInfo, setGameInfo] = useState<any>(null);
   
   // 사용자 친화적 기능들
   const {
@@ -99,11 +104,18 @@ export const MatchChatRoomScreen = () => {
     maxRetries: 3,
   });
 
-  const scrollToBottom = useCallback(() => {
-    setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 50);
-  }, []);
+  const scrollToBottom = useCallback((animated: boolean = false) => {
+    if (messages.length === 0) return;
+    
+    if (animated) {
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 50);
+    } else {
+      // 애니메이션 없이 즉시 스크롤
+      flatListRef.current?.scrollToEnd({ animated: false });
+    }
+  }, [messages.length]);
 
   const addMessage = useCallback((message: ChatMessage, isMyMessage: boolean = false) => {
     setMessages(prev => {
@@ -254,10 +266,13 @@ export const MatchChatRoomScreen = () => {
         // 인증 데이터 전송 (기존 로직 유지)
         let authData;
         if (isWatchChat) {
+          if (!currentUser?.teamId) {
+            console.warn('⚠️ 사용자 teamId가 없습니다. 기본값(두산) 사용');
+          }
           authData = {
             type: 'AUTH',
-            gameId: room.gameId || '1258',
-            teamId: currentUser?.teamId || 3,
+            gameId: room.gameId || '1303',
+            teamId: currentUser?.teamId || 9, // 두산 베어스 기본값
             nickname: currentUser?.nickname || 'Anonymous',
             userId: currentUser?.userId || currentUserId
           };
@@ -285,7 +300,12 @@ export const MatchChatRoomScreen = () => {
           }
           
           const messageKey = `${messageData.content}_${messageData.timestamp}`;
-          const isMyMessage = sentMessages.has(messageKey);
+          const isMyMessage = messageData.userId && (
+            messageData.userId.toString() === currentUserId.toString() ||
+            messageData.userId.toString() === currentUser?.userId?.toString()
+          ) || (!isWatchChat && messageData.nickname === currentUser?.nickname);
+          
+          
           
           if (messageData.messageType === 'CHAT' || messageData.type === 'CHAT_MESSAGE') {
             const content = messageData.content || '';
@@ -298,14 +318,32 @@ export const MatchChatRoomScreen = () => {
             );
               
             if (!isAuthDataMessage) {
-              addMessage(messageData, isMyMessage);
-              
-              if (isMyMessage) {
-                setSentMessages(prev => {
-                  const newSet = new Set(prev);
-                  newSet.delete(messageKey);
-                  return newSet;
-                });
+              if (isWatchChat) {
+                // 직관채팅: 단순하게 메시지 추가
+                addMessage(messageData, isMyMessage);
+              } else {
+                // 매치채팅: 내 메시지인 경우 로컬 메시지를 서버 메시지로 교체
+                if (isMyMessage) {
+                  setMessages(prev => {
+                    // 같은 내용의 로컬 메시지 제거 (pending 메시지)
+                    const filtered = prev.filter(m => 
+                      !(m.content === messageData.content && (m as any)._isMyMessage && m.status)
+                    );
+                    
+                    // 서버 메시지 추가
+                    const serverMessage = {
+                      ...messageData,
+                      _isMyMessage: true
+                    };
+                    
+                    const newMessages = [...filtered, serverMessage];
+                    newMessages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+                    return newMessages;
+                  });
+                } else {
+                  // 다른 사용자 메시지는 그대로 추가
+                  addMessage(messageData, isMyMessage);
+                }
               }
             }
           } else if (
@@ -398,19 +436,30 @@ export const MatchChatRoomScreen = () => {
   }, [canReconnect, connectToWebSocket, clearReconnectTimer, showConnectionNotification]);
 
   const disconnect = useCallback(() => {
+    const state = connectionStateRef.current;
+    
+    // 이미 해제된 경우 중복 실행 방지
+    if (state.isDestroyed) {
+      console.log('📱 WebSocket 이미 해제됨 - 중복 호출 무시');
+      return;
+    }
+    
     console.log('📱 WebSocket 연결 해제');
     
-    const state = connectionStateRef.current;
     state.isDestroyed = true;
     state.isConnecting = false;
     state.isConnected = false;
     
     clearReconnectTimer();
     
-    if (ws) {
-      ws.close(1000, 'Client disconnect');
-      setWs(null);
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      try {
+        ws.close(1000, 'Client disconnect');
+      } catch (error) {
+        console.log('📱 WebSocket 종료 중 에러 (무시):', error);
+      }
     }
+    setWs(null);
     
     setConnectionStatus('DISCONNECTED');
     setSentMessages(new Set());
@@ -428,21 +477,23 @@ export const MatchChatRoomScreen = () => {
       // 메시지 큐에 추가 (자동으로 전송 시도)
       const messageId = await addMessageToQueue(messageContent);
       
-      // 로컬에서 즉시 메시지 표시 (낙관적 업데이트)
-      const timestamp = new Date().toISOString();
-      const localMessage: MessageWithStatus = {
-        messageType: 'CHAT',
-        roomId: room.matchId || '',
-        userId: currentUser?.userId?.toString() || currentUserId.toString(),
-        nickname: currentUser?.nickname || 'Anonymous',
-        content: messageContent,
-        timestamp,
-        id: messageId,
-        status: 'sending',
-        _isMyMessage: true,
-      };
-      
-      addMessage(localMessage, true);
+      // 매치채팅에서만 로컬에서 즉시 메시지 표시 (낙관적 업데이트)
+      if (!isWatchChat) {
+        const timestamp = new Date().toISOString();
+        const localMessage: MessageWithStatus = {
+          messageType: 'CHAT',
+          roomId: room.matchId || '',
+          userId: currentUser?.userId?.toString() || currentUserId.toString(),
+          nickname: currentUser?.nickname || 'Anonymous',
+          content: messageContent,
+          timestamp,
+          id: messageId,
+          status: 'sent',
+          _isMyMessage: true,
+        };
+        
+        addMessage(localMessage, true);
+      }
       
       console.log('메시지 큐에 추가:', messageContent);
     } catch (error) {
@@ -461,12 +512,7 @@ export const MatchChatRoomScreen = () => {
 
   // 🔧 FIX 7: useEffect 의존성 배열 최적화
   
-  // 메시지 스크롤
-  useEffect(() => {
-    if (messages.length > 0) {
-      scrollToBottom();
-    }
-  }, [messages, scrollToBottom]);
+  // inverted FlatList 사용으로 자동 스크롤 처리됨
 
   // 초기 연결 (한 번만)
   useEffect(() => {
@@ -512,14 +558,8 @@ export const MatchChatRoomScreen = () => {
       disconnect();
     });
 
-    const unsubscribeBlur = navigation.addListener('blur', () => {
-      console.log('📱 MatchChatRoom 화면 블러됨 - WebSocket 연결 해제');
-      disconnect();
-    });
-
     return () => {
       unsubscribeBeforeRemove();
-      unsubscribeBlur();
     };
   }, [navigation, disconnect]);
 
@@ -557,13 +597,31 @@ export const MatchChatRoomScreen = () => {
     return () => unsubscribe();
   }, [networkConnected, ws, appState, canReconnect, connectToWebSocket, showConnectionNotification]);
 
+  // 게임 정보 로드
+  useEffect(() => {
+    const loadGameInfo = async () => {
+      if (room.gameId) {
+        try {
+          const response = await gameApi.getGameById(room.gameId.toString());
+          if (response.status === 'SUCCESS') {
+            setGameInfo(response.data);
+          }
+        } catch (error) {
+          console.error('게임 정보 로드 실패:', error);
+        }
+      }
+    };
+    
+    loadGameInfo();
+  }, [room.gameId]);
+
   // 컴포넌트 언마운트 시 정리
   useEffect(() => {
     return () => {
       console.log('📱 MatchChatRoomScreen 언마운트됨');
       disconnect();
     };
-  }, [disconnect]);
+  }, []); // disconnect를 dependency에서 제거
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -593,6 +651,11 @@ export const MatchChatRoomScreen = () => {
               </Text>
               <SimpleConnectionStatus status={connectionStatus} />
             </View>
+            {gameInfo && (
+              <Text style={styles.headerSubtitle}>
+                {gameInfo.awayTeamName} vs {gameInfo.homeTeamName}
+              </Text>
+            )}
             <ConnectionStatusIndicator 
               status={connectionStatus}
               reconnectAttempts={connectionStateRef.current.reconnectAttempts}
@@ -602,85 +665,90 @@ export const MatchChatRoomScreen = () => {
         </View>
 
         {/* 메시지 목록 */}
-        <ScrollView
-          ref={scrollViewRef}
+        <FlatList
+          ref={flatListRef}
           style={styles.messagesList}
           contentContainerStyle={styles.messagesContent}
-        >
-          {/* 실제 메시지들 */}
-          {messages.map((message, index) => (
-            <View key={message.id || index} style={styles.messageItem}>
-              {message.messageType === 'CHAT' ? (
+          data={[...messages, ...pendingMessages.map(p => ({ ...p, _isPending: true }))].reverse()}
+          keyExtractor={(item, index) => item.id || index.toString()}
+          renderItem={({ item }) => (
+            <View style={styles.messageItem}>
+              {(item.messageType === 'CHAT' || item.type === 'CHAT_MESSAGE') ? (
                 <View style={[
-                  styles.chatMessage,
-                  (message as any)._isMyMessage && styles.myMessage
+                  styles.messageRow,
+                  ((item as any)._isMyMessage || (item as any)._isPending) ? styles.myMessageRow : styles.otherMessageRow
                 ]}>
-                  <View style={styles.messageHeader}>
-                    <Text style={styles.messageNickname}>{(message as MatchChatMessage).nickname}</Text>
-                    {(message as any)._isMyMessage && (
-                      <SimpleMessageStatus 
-                        status={message.status} 
-                        size={14}
-                      />
-                    )}
-                  </View>
-                  <Text style={styles.messageContent}>{message.content}</Text>
-                  <Text style={styles.messageTime}>
-                    {new Date(message.timestamp).toLocaleTimeString('ko-KR', { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
-                    })}
-                  </Text>
-                  
-                  {/* 내 메시지의 상태 표시 */}
-                  {(message as any)._isMyMessage && message.status && message.status !== 'sent' && (
-                    <MessageStatusIndicator
-                      status={message.status}
-                      onRetry={message.id ? () => retryMessage(message.id!) : undefined}
-                      retryCount={message.retryCount}
-                      maxRetries={3}
+                  {/* 프로필 사진 (내 메시지가 아닌 경우만) */}
+                  {!((item as any)._isMyMessage || (item as any)._isPending) && (
+                    <Image 
+                      source={{ 
+                        uri: (item as MatchChatMessage).profileImgUrl || 'https://via.placeholder.com/40x40/cccccc/666666?text=?' 
+                      }}
+                      style={styles.profileImage}
                     />
                   )}
+                  
+                  {/* 메시지 영역 */}
+                  <View style={[
+                    styles.messageBubbleContainer,
+                    ((item as any)._isMyMessage || (item as any)._isPending) ? styles.myMessageBubbleContainer : styles.otherMessageBubbleContainer
+                  ]}>
+                    {/* 닉네임 (내 메시지가 아닌 경우만) */}
+                    {!((item as any)._isMyMessage || (item as any)._isPending) && (
+                      <Text style={styles.messageNickname}>
+                        {(item as MatchChatMessage).nickname}
+                      </Text>
+                    )}
+                    
+                    {/* 말풍선과 시간을 담는 컨테이너 */}
+                    <View style={[
+                      styles.bubbleAndTimeContainer,
+                      ((item as any)._isMyMessage || (item as any)._isPending) ? styles.myBubbleAndTimeContainer : styles.otherBubbleAndTimeContainer
+                    ]}>
+                      {/* 시간 (내 메시지인 경우 왼쪽에) */}
+                      {((item as any)._isMyMessage || (item as any)._isPending) && (
+                        <Text style={styles.myMessageTime}>
+                          {new Date(item.timestamp).toLocaleTimeString('ko-KR', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })}
+                        </Text>
+                      )}
+                      
+                      {/* 말풍선 */}
+                      <View style={[
+                        styles.chatMessage,
+                        ((item as any)._isMyMessage || (item as any)._isPending) ? styles.myMessage : styles.otherMessage
+                      ]}>
+                        <Text style={[
+                          ((item as any)._isMyMessage || (item as any)._isPending) ? styles.myMessageContent : styles.messageContent
+                        ]}>
+                          {item.content}
+                        </Text>
+                      </View>
+                      
+                      {/* 시간 (다른 사용자 메시지인 경우 오른쪽에) */}
+                      {!((item as any)._isMyMessage || (item as any)._isPending) && (
+                        <Text style={styles.otherMessageTime}>
+                          {new Date(item.timestamp).toLocaleTimeString('ko-KR', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
                 </View>
               ) : (
                 <View style={styles.systemMessage}>
-                  <Text style={styles.systemMessageText}>{message.content}</Text>
+                  <Text style={styles.systemMessageText}>{item.content}</Text>
                 </View>
               )}
             </View>
-          ))}
-          
-          {/* 대기 중인 메시지들 표시 */}
-          {pendingMessages.map((pendingMsg) => (
-            <View key={pendingMsg.id} style={styles.messageItem}>
-              <View style={[styles.chatMessage, styles.myMessage, styles.pendingMessage]}>
-                <View style={styles.messageHeader}>
-                  <Text style={styles.messageNickname}>
-                    {currentUser?.nickname || 'Anonymous'}
-                  </Text>
-                  <SimpleMessageStatus 
-                    status={pendingMsg.status} 
-                    size={14}
-                  />
-                </View>
-                <Text style={styles.messageContent}>{pendingMsg.content}</Text>
-                <Text style={styles.messageTime}>
-                  {new Date(pendingMsg.timestamp).toLocaleTimeString('ko-KR', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                  })}
-                </Text>
-                
-                <MessageStatusIndicator
-                  status={pendingMsg.status}
-                  onRetry={() => retryMessage(pendingMsg.id)}
-                  retryCount={pendingMsg.retryCount}
-                  maxRetries={pendingMsg.maxRetries}
-                />
-              </View>
-            </View>
-          ))}
-        </ScrollView>
+          )}
+          inverted
+          showsVerticalScrollIndicator={false}
+        />
 
         {/* 메시지 입력 */}
         <View style={styles.messageInput}>

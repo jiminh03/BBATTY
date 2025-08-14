@@ -3,6 +3,7 @@ import { ApiResponse } from '../types/response';
 import { API_CONFIG } from './config';
 import { setupInterceptors } from './interceptors';
 import { useTokenStore } from '../token/tokenStore';
+import { isErr } from '../../utils/result';
 
 interface CustomAxiosInstance extends AxiosInstance {
   get<T = unknown, R = AxiosResponse<ApiResponse<T>>, D = any>(
@@ -81,8 +82,14 @@ const handleUnauthorized = async () => {
   }
 };
 
-export const initializeApiClient = (): void => {
+export const initializeApiClient = async (): Promise<void> => {
   useTokenStore.getState().setApiClient(apiClient);
+
+  // 저장된 토큰 초기화
+  const initResult = await useTokenStore.getState().initializeTokens();
+  if (isErr(initResult)) {
+    console.error('❌ [ApiClient] 토큰 초기화 실패:', initResult.error);
+  }
 
   const token = useTokenStore.getState().getAccessToken();
   applyTokenToClients(token);
@@ -90,6 +97,8 @@ export const initializeApiClient = (): void => {
   setupInterceptors(apiClient, handleUnauthorized);
   setupInterceptors(chatApiClient, handleUnauthorized);
   setupInterceptors(uploadClient, handleUnauthorized);
+  
+  console.log('✅ [ApiClient] API 클라이언트 초기화 완료');
 };
 
 // AppNavigator에서 호출할 함수

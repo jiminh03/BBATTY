@@ -1,13 +1,17 @@
 package com.ssafy.bbatty.global.util;
 
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.stereotype.Component;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
+import org.springframework.stereotype.Component;
 
 import java.time.Duration;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
@@ -48,7 +52,7 @@ public class RedisUtil {
     }
 
     public boolean hasKey(String key) {
-        return redisTemplate.hasKey(key);
+        return Boolean.TRUE.equals(redisTemplate.hasKey(key));
     }
 
     /**
@@ -59,10 +63,13 @@ public class RedisUtil {
     }
 
     /**
-     * 패턴에 매칭되는 키들 삭제 (와일드카드 지원)
+     * 패턴에 매칭되는 키들 삭제 (SCAN 사용으로 non-blocking)
      */
     public void deleteByPattern(String pattern) {
-        redisTemplate.delete(Objects.requireNonNull(redisTemplate.keys(pattern)));
+        Set<String> keysToDelete = getKeys(pattern);
+        if (!keysToDelete.isEmpty()) {
+            redisTemplate.delete(keysToDelete);
+        }
     }
 
     /**
@@ -98,12 +105,8 @@ public class RedisUtil {
     /**
      * Hash의 모든 필드와 값 조회
      */
-    public java.util.Map<String, String> getHashAll(String key) {
-        return redisTemplate.opsForHash().entries(key).entrySet().stream()
-                .collect(java.util.stream.Collectors.toMap(
-                    entry -> String.valueOf(entry.getKey()),
-                    entry -> String.valueOf(entry.getValue())
-                ));
+    public java.util.Map<Object, Object> getHashAll(String key) {
+        return redisTemplate.opsForHash().entries(key);
     }
     
     
@@ -142,5 +145,30 @@ public class RedisUtil {
      */
     public void addToSortedSet(String key, String value, double score) {
         redisTemplate.opsForZSet().add(key, value, score);
+    }
+
+    /**
+     * 패턴으로 키 조회 (SCAN 사용으로 non-blocking)
+     */
+    public Set<String> getKeys(String pattern) {
+        Set<String> keys = new HashSet<>();
+        ScanOptions options = ScanOptions.scanOptions()
+                .match(pattern)
+                .count(1000)
+                .build();
+        
+        try (Cursor<String> cursor = redisTemplate.scan(options)) {
+            while (cursor.hasNext()) {
+                keys.add(cursor.next());
+            }
+        }
+        return keys;
+    }
+
+    /**
+     * String 값 조회 (편의 메서드)
+     */
+    public String getValue(String key) {
+        return getValue(key, String.class);
     }
 }

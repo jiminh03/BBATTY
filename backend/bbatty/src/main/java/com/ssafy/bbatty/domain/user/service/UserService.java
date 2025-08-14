@@ -42,6 +42,11 @@ public interface UserService {
     void updatePrivacySettings(Long currentUserId, Boolean postsPublic, Boolean statsPublic, Boolean attendanceRecordsPublic);
 
     /**
+     * 알림 설정 업데이트
+     */
+    void updateNotificationSettings(Long currentUserId, Boolean trafficSpikeAlertEnabled);
+
+    /**
      * 회원 탈퇴
      */
     void deleteUser(Long currentUserId);

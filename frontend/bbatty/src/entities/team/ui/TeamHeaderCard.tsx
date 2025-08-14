@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, Image, StyleSheet, Pressable } from 'react-native';
+import { useAttendanceStore } from '../../attendance/model/attendanceStore';
+import { gameApi } from '../../game/api/api';
 
 type Props = {
   teamLogo: string;
@@ -18,6 +20,47 @@ export default function TeamHeaderCard({
   onPressChat,
   accentColor = '#E85A5A',
 }: Props) {
+  const { isVerifiedToday, todayGameInfo } = useAttendanceStore();
+  const [gameInfo, setGameInfo] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const isVerified = isVerifiedToday();
+
+  useEffect(() => {
+    const loadTodayGame = async () => {
+      if (isVerified && todayGameInfo) {
+        setGameInfo(todayGameInfo);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const response = await gameApi.getTodayGame();
+        if (response.status === 'SUCCESS') {
+          setGameInfo(response.data);
+        }
+      } catch (error) {
+        console.error('오늘의 게임 정보 로드 실패:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadTodayGame();
+  }, [isVerified, todayGameInfo]);
+
+  const getChatButtonText = () => {
+    if (isLoading) {
+      return '로딩중...';
+    }
+    
+    if (isVerified && gameInfo) {
+      return `${gameInfo.homeTeamName.split(' ')[0]} VS ${gameInfo.awayTeamName.split(' ')[0]}\n실시간 채팅방 가기`;
+    }
+    
+    return '직관인증하기';
+  };
+
   return (
     <View style={[s.wrap, { backgroundColor: accentColor }]}>
       <View style={s.left}>
@@ -31,8 +74,8 @@ export default function TeamHeaderCard({
           <Text style={s.record}>{recordText}</Text>
         </View>
       </View>
-      <Pressable style={s.chat} onPress={onPressChat}>
-        <Text style={s.chatTxt}>VS 두산{'\n'}실시간 채팅방 가기</Text>
+      <Pressable style={s.chat} onPress={onPressChat} disabled={isLoading}>
+        <Text style={s.chatTxt}>{getChatButtonText()}</Text>
       </Pressable>
     </View>
   );

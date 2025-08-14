@@ -1,7 +1,7 @@
 // entities/post/queries/usePostQueries.ts
 import { useMutation, useInfiniteQuery, useQueryClient, useQuery } from '@tanstack/react-query';
 import { useCallback, useRef, useState } from 'react';
-import { postApi } from '../api/api';
+import { postApi, TeamNewsItem } from '../api/api';
 import { CreatePostPayload, CursorPostListResponse, PostListItem } from '../api/types';
 import { Post } from '../model/types';
 import { apiClient } from '../../../shared/api/client/apiClient';
@@ -235,4 +235,23 @@ export const useTeamSearchPostsInfinite = (teamId: number, q: string) =>
     initialPageParam: undefined,
     getNextPageParam: (last) => (last?.hasNext ? last.nextCursor : undefined),
     staleTime: 60_000,
+  });
+
+  export const useMyPostsInfinite = (userId?: number) =>
+  useInfiniteQuery<CursorPostListResponse>({
+    queryKey: ['myPosts', userId],
+    enabled: !!userId,                           // userId 있어야 동작
+    queryFn: ({ pageParam = undefined }) =>
+      postApi.getMyPosts(userId as number, pageParam as number | undefined),
+    initialPageParam: undefined,
+    getNextPageParam: (last) => (last?.hasNext ? last.nextCursor : undefined),
+    staleTime: 60_000,
+  });
+
+  export const useTeamNewsQuery = (teamId?: number, limit = 5) =>
+  useQuery<TeamNewsItem[]>({
+    queryKey: ['teamNews', teamId, limit],
+    enabled: !!teamId,
+    staleTime: 5 * 60 * 1000, // 5분 캐시
+    queryFn: () => postApi.getTeamNews(teamId!, limit),
   });

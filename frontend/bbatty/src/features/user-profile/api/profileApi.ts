@@ -7,6 +7,8 @@ import {
   UserPrivacySettings,
   CheckNicknameRequest,
   CheckNicknameResponse,
+  PresignedUrlRequest,
+  PresignedUrlResponse,
 } from '../model/profileTypes';
 
 export const profileApi = {
@@ -26,4 +28,7 @@ export const profileApi = {
 
   checkNickname: (request: CheckNicknameRequest): AsyncResult<CheckNicknameResponse, ApiError> =>
     wrapApiCall(() => apiClient.get<CheckNicknameResponse>('/api/auth/check-nickname', { params: request })),
+
+  getPresignedUrl: (request: PresignedUrlRequest): AsyncResult<PresignedUrlResponse, ApiError> =>
+    wrapApiCall(() => apiClient.post<PresignedUrlResponse>('/api/posts/images/presigned-url', request)),
 };

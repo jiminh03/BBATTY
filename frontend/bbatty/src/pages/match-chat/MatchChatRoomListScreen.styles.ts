@@ -37,18 +37,21 @@ export const styles = StyleSheet.create({
     gap: 8,
   },
   searchButton: {
-    paddingHorizontal: 8,
-    paddingVertical: 8,
     alignItems: 'center',
     justifyContent: 'center',
     width: 48,
     height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   searchButtonText: {
     color: '#fff',
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '400',
-    lineHeight: 28,
+    lineHeight: 24,
+    textAlign: 'center',
   },
   watchChatButton: {
     backgroundColor: 'rgba(255,255,255,0.15)',
@@ -95,10 +98,10 @@ export const styles = StyleSheet.create({
     elevation: 8,
   },
   topSection: {
-    height: 150,
-    borderRadius: 15,
+    height: 120,
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 15,
     position: 'relative',
-    marginBottom: 15,
     overflow: 'hidden',
   },
   gradientBackground: {
@@ -106,16 +109,7 @@ export const styles = StyleSheet.create({
     left: 0,
     right: 0,
     top: 0,
-    height: 150,
-  },
-  borderElement: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    height: 30,
-    width: 130,
-    backgroundColor: '#1b233d',
-    transform: [{ skewX: '-40deg' }],
+    height: 120,
   },
   roomHeader: {
     position: 'absolute',
@@ -160,25 +154,153 @@ export const styles = StyleSheet.create({
     opacity: 0.9,
     lineHeight: 20,
   },
-  teamBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+  gameInfoContainer: {
+    marginBottom: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  gameInfoText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#ffffff',
+    marginBottom: 2,
+    textAlign: 'center',
+  },
+  gameTimeText: {
+    fontSize: 12,
+    color: '#ffffff',
+    opacity: 0.8,
+    textAlign: 'center',
+  },
+  
+  // 새로운 단순화된 레이아웃
+  simpleHeader: {
+    position: 'absolute',
+    top: 12,
+    right: 15,
+  },
+  
+  centeredContent: {
+    position: 'absolute',
+    top: 15,
+    left: 15,
+    right: 15,
+    justifyContent: 'flex-start',
+  },
+  
+  gameInfoMain: {
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  
+  gameTeamsText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#ffffff',
+    marginBottom: 4,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+  },
+  
+  gameDetailsText: {
+    fontSize: 13,
+    color: '#ffffff',
+    opacity: 0.9,
+    fontWeight: '500',
+  },
+  
+  // 새로운 하단 정보 스타일들
+  newRoomInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  
+  participantInfo: {
+    alignItems: 'flex-start',
+  },
+  
+  participantLabel: {
+    fontSize: 10,
+    color: '#999',
+    marginTop: 2,
+  },
+  
+  roomMetaInfo: {
+    flex: 1,
+    marginHorizontal: 15,
+  },
+  
+  metaText: {
+    fontSize: 12,
+    color: '#ffffff',
+    opacity: 0.8,
+    marginBottom: 2,
+  },
+  
+  newStatusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    minWidth: 60,
+    alignItems: 'center',
+  },
+  
+  // 새로운 컴팩트 하단 정보 스타일
+  compactBottomInfo: {
+    backgroundColor: '#1b233d',
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomLeftRadius: 15,
+    borderBottomRightRadius: 15,
+  },
+  
+  ageGenderInfo: {
+    fontSize: 12,
+    color: '#ffffff',
+    opacity: 0.8,
+    flex: 1,
+    textAlign: 'left',
+  },
+  
+  timeInfo: {
+    fontSize: 11,
+    color: '#999',
+    textAlign: 'right',
+  },
+  teamBadge: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.3)',
+    minWidth: 60,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   teamText: {
     color: '#fff',
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     textAlign: 'center',
     letterSpacing: -0.2,
-  },
-  bottomContent: {
-    backgroundColor: '#1b233d',
-    paddingHorizontal: 15,
-    paddingBottom: 15,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
+    textAlignVertical: 'center',
+    includeFontPadding: false,
+    lineHeight: 14,
+    marginTop: -2,
   },
   roomInfo: {
     flexDirection: 'row',
@@ -202,6 +324,8 @@ export const styles = StyleSheet.create({
   },
   participantCount: {
     color: '#50f0ff',
+    fontSize: 16,
+    fontWeight: '700',
   },
   roomFooter: {
     flexDirection: 'row',
@@ -327,10 +451,9 @@ export const styles = StyleSheet.create({
   },
   searchButtonInline: {
     backgroundColor: '#007AFF',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
     borderRadius: 20,
     height: 44,
+    width: 80,
     justifyContent: 'center',
     alignItems: 'center',
   },

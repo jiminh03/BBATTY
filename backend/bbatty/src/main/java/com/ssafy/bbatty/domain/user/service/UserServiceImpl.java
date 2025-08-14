@@ -1,27 +1,20 @@
 package com.ssafy.bbatty.domain.user.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ssafy.bbatty.domain.attendance.repository.UserAttendedRepository;
 import com.ssafy.bbatty.domain.board.service.PostService;
+import com.ssafy.bbatty.domain.notification.repository.NotificationSettingRepository;
 import com.ssafy.bbatty.domain.user.dto.request.UserUpdateRequestDto;
-import com.ssafy.bbatty.domain.user.dto.response.UserResponseDto;
-import com.ssafy.bbatty.domain.user.dto.response.UserBadgeResponse;
 import com.ssafy.bbatty.domain.user.dto.response.BadgeCategoryResponse;
 import com.ssafy.bbatty.domain.user.dto.response.BadgeResponse;
-import com.ssafy.bbatty.global.constants.BadgeType;
-import com.ssafy.bbatty.global.constants.BadgeCategory;
-import com.ssafy.bbatty.global.constants.Stadium;
+import com.ssafy.bbatty.domain.user.dto.response.UserBadgeResponse;
+import com.ssafy.bbatty.domain.user.dto.response.UserResponseDto;
 import com.ssafy.bbatty.domain.user.entity.User;
-import com.ssafy.bbatty.domain.user.repository.UserRepository;
 import com.ssafy.bbatty.domain.user.repository.UserInfoRepository;
-import com.ssafy.bbatty.domain.attendance.repository.UserAttendedRepository;
-import com.ssafy.bbatty.domain.board.repository.PostRepository;
-import com.ssafy.bbatty.domain.board.repository.CommentRepository;
-import com.ssafy.bbatty.domain.board.repository.PostLikeRepository;
-import com.ssafy.bbatty.domain.board.repository.PostViewRepository;
-import com.ssafy.bbatty.global.constants.ErrorCode;
-import com.ssafy.bbatty.global.constants.RedisKey;
+import com.ssafy.bbatty.domain.user.repository.UserRepository;
+import com.ssafy.bbatty.global.constants.*;
 import com.ssafy.bbatty.global.exception.ApiException;
 import com.ssafy.bbatty.global.util.RedisUtil;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -45,6 +38,7 @@ public class UserServiceImpl implements UserService {
     
     private final UserInfoRepository userInfoRepository;
     private final UserAttendedRepository userAttendedRepository;
+    private final NotificationSettingRepository notificationSettingRepository;
 
     @Override
     public UserResponseDto getUserProfile(Long targetUserId, Long currentUserId) {
@@ -134,6 +128,19 @@ public class UserServiceImpl implements UserService {
         user.updatePrivacySettings(postsPublic, statsPublic, attendanceRecordsPublic);
     }
 
+    /**
+     * 알림 설정 업데이트
+     */
+    @Override
+    @Transactional
+    public void updateNotificationSettings(Long currentUserId, Boolean trafficSpikeAlertEnabled) {
+        User user = findUserById(currentUserId);
+        user.updateNotificationSettings(trafficSpikeAlertEnabled);
+
+        log.info("알림 설정 업데이트 완료 - userId: {}, trafficSpikeAlertEnabled: {}",
+                currentUserId, trafficSpikeAlertEnabled);
+    }
+
     @Override
     @Transactional
     public void deleteUser(Long currentUserId) {
@@ -155,6 +162,7 @@ public class UserServiceImpl implements UserService {
      * 개인정보 하드 삭제 (GDPR, 개인정보보호법 준수)
      * - UserInfo: 카카오 ID, 이메일 등 개인식별정보
      * - UserAttended: 개인의 직관 활동 기록
+     * - NotificationSetting: FCM 토큰, 알림 설정 등 개인정보
      */
     @Transactional
     public void deletePersonalInformation(Long userId) {
@@ -166,6 +174,10 @@ public class UserServiceImpl implements UserService {
             // UserAttended 하드 삭제 (개인의 직관 기록)
             userAttendedRepository.deleteByUserId(userId);
             log.info("UserAttended 삭제 완료: userId={}", userId);
+            
+            // NotificationSetting 하드 삭제 (FCM 토큰, 알림 설정)
+            notificationSettingRepository.deleteByUserId(userId);
+            log.info("NotificationSetting 삭제 완료: userId={}", userId);
             
         } catch (Exception e) {
             log.error("개인정보 삭제 중 오류 발생: userId={}, error={}", userId, e.getMessage(), e);
@@ -439,7 +451,7 @@ public class UserServiceImpl implements UserService {
             })
             .collect(Collectors.toList());
     }
-    
+
     /**
      * 시즌별 뱃지 조회 (승리/직관)
      */
