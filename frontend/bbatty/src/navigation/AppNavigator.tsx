@@ -16,6 +16,7 @@ import { initializeApiClient, setUnauthorizedCallback } from '../shared/api/clie
 import { useTheme } from '../shared/team/ThemeContext';
 import { findTeamById } from '../shared/team/teamTypes';
 import { AttendanceVerificationScreen } from '../pages/attendance';
+import { WatchChatModalScreen } from '../pages/match-chat/WatchChatModalScreen';
 
 const Stack = createStackNavigator();
 
@@ -162,12 +163,26 @@ export default function AppNavigator() {
         {isAuthenticated ? (
           <>
             <Stack.Screen name='MainTabs' component={MainNavigator} />
-            <Stack.Screen name='AttendanceVerification' component={AttendanceVerificationScreen} />
+            <Stack.Screen 
+              name='AttendanceVerification' 
+              component={AttendanceVerificationScreen}
+              options={{
+                presentation: 'modal',
+                headerShown: true,
+                headerTitle: '직관 인증',
+              }}
+            />
+            <Stack.Screen 
+              name='WatchChatModal' 
+              component={WatchChatModalScreen}
+              options={{
+                presentation: 'modal',
+                headerShown: false,
+              }}
+            />
           </>
         ) : (
-          <Stack.Screen name='AuthStack'>
-            {() => <AuthNavigator onSignUpComplete={handleSignUpComplete} isExistingUser={isExistingUser} />}
-          </Stack.Screen>
+          <Stack.Screen name='AuthStack' component={AuthNavigator} />
         )}
       </Stack.Navigator>
     </NavigationContainer>
