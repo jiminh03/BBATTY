@@ -12,6 +12,8 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
@@ -23,6 +25,11 @@ public class MatchChatKafkaComsumer {
     private final MatchChatService matchChatService;
     private final ObjectMapper objectMapper;
 
+    @Retryable(
+        value = {Exception.class},
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 1000, multiplier = 2)
+    )
     @KafkaListener(
             topicPattern = "match-chat-match_.*",
             groupId = "match-chat-consumer-group"
@@ -56,7 +63,8 @@ public class MatchChatKafkaComsumer {
             log.error("🚨 JSON 파싱 실패 - topic: {}, json: {}", topic, messageJson, e);
             throw new ApiException(ErrorCode.JSON_PARSING_FAILED);
         } catch (Exception e) {
-            log.error("🚨 Kafka 메시지 처리 실패 - topic: {}", topic, e);
+            log.error("🚨 Kafka 메시지 처리 실패 - topic: {}, 재시도 중...", topic, e);
+            throw e; // 재시도를 위해 예외 재발생
         }
     }
 

@@ -12,7 +12,7 @@ import { useUserStore } from '../entities/user/model/userStore';
 import { isErr, isOk } from '../shared/utils/result';
 import { Alert } from 'react-native';
 import { Token } from '../shared/api/token/tokenTypes';
-import { initializeApiClient } from '../shared/api/client/apiClient';
+import { initializeApiClient, setUnauthorizedCallback } from '../shared/api/client/apiClient';
 import { useTheme } from '../shared/team/ThemeContext';
 import { findTeamById } from '../shared/team/teamTypes';
 import { AttendanceVerificationScreen } from '../pages/attendance';
@@ -33,27 +33,35 @@ export default function AppNavigator() {
   const { initializeUser, setCurrentUser, reset } = useUserStore();
   const { setCurrentTeam } = useTheme();
 
-  // 임시: 인증 상태를 단순 boolean으로 고정 (무한 루프 디버깅)
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  
-  // 무한 루프 테스트를 위해 임시 비활성화
-  // const hasToken = useTokenStore(selectHasToken);
-  // const hasUser = useUserStore(selectHasUser);
-  // const isAuthenticated = useMemo(() => {
-  //   return hasToken && hasUser;
-  // }, [hasToken, hasUser]);
+  const hasToken = useTokenStore(selectHasToken);
+  const hasUser = useUserStore(selectHasUser);
+  const isAuthenticated = useMemo(() => {
+    return hasToken && hasUser;
+  }, [hasToken, hasUser]);
+
+  // 로그아웃 처리 콜백
+  const handleLogout = useCallback(() => {
+    resetToken();
+    reset();
+    setIsExistingUser(false);
+    setShowSplash(false);
+  }, [resetToken, reset]);
 
   // 앱 초기화 함수
   const initializeApp = useCallback(async () => {
     try {
-      await Promise.all([initializeTokens(), initializeUser()]);
+      // 순차적으로 초기화 (의존성 때문에)
+      await initializeTokens();
+      await initializeUser();
       // await testReset();
       await initializeApiClient();
+      setUnauthorizedCallback(handleLogout);
+      console.log('✅ [AppNavigator] 앱 초기화 완료');
     } catch (error) {
-      console.error('App initialization failed:', error);
+      console.error('❌ [AppNavigator] 앱 초기화 실패:', error);
       // 인증 상태는 Zustand 상태에서 자동으로 계산됨
     }
-  }, [initializeTokens, initializeUser]);
+  }, [initializeTokens, initializeUser, handleLogout]);
 
   useEffect(() => {
     initializeApp();
@@ -66,7 +74,6 @@ export default function AppNavigator() {
 
   // 자동로그인 성공 시 호출
   const handleAutoLoginSuccess = () => {
-    setIsAuthenticated(true);
     setIsExistingUser(true);
     setShowSplash(false);
   };
@@ -94,7 +101,6 @@ export default function AppNavigator() {
         }
 
         await handleSetUserAndTeam(userProfile);
-        setIsAuthenticated(true);
         setIsExistingUser(true);
         setShowSplash(false);
 
@@ -111,11 +117,11 @@ export default function AppNavigator() {
     }
   };
 
+  // 유저로부터 팀 상태 정보 설정
   const handleSetUserAndTeam = async (userInfo: any) => {
     await setCurrentUser(userInfo);
     console.log('userInfo', userInfo);
 
-    // 사용자 정보로부터 팀 설정
     if (userInfo.teamId) {
       const team = findTeamById(userInfo.teamId);
       if (team) {
@@ -134,7 +140,6 @@ export default function AppNavigator() {
       }
 
       await handleSetUserAndTeam(userInfo);
-      setIsAuthenticated(true);
       setIsExistingUser(true);
     } catch (error) {
       console.error('Sign up completion failed:', error);
@@ -152,7 +157,6 @@ export default function AppNavigator() {
     );
   }
 
-  // 임시: 무한 루프 디버깅을 위해 조건부 렌더링 제거
   return (
     <NavigationContainer ref={navigationRef} linking={linking}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>

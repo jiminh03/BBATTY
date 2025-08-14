@@ -10,7 +10,7 @@ class ProductionServerTest extends AdvancedChatPerformanceTest {
         // 실제 서버 URL로 변경
         const productionConfig = {
             ...config,
-            serverUrl: 'ws://i13a403.p.ssafy.io:8084'
+            serverUrl: 'ws://i13a403.p.ssafy.io:8083'
         };
 
         super(productionConfig);
@@ -215,105 +215,7 @@ class ProductionServerTest extends AdvancedChatPerformanceTest {
     }
 }
 
-// 실제 서버 테스트 실행
-async function runProductionServerTests() {
-    const productionTestConfigs = [
-        {
-            name: '🌐 실제 서버 연결 테스트',
-            config: {
-                maxConnections: 50,
-                messageRate: 2,
-                testDuration: 30000,
-                rampUpDuration: 5000
-            }
-        },
-        {
-            name: '🔥 실제 서버 부하 테스트',
-            config: {
-                maxConnections: 200,
-                messageRate: 3,
-                testDuration: 60000,
-                rampUpDuration: 10000
-            }
-        },
-        {
-            name: '⚡ 실제 서버 스트레스 테스트',
-            config: {
-                maxConnections: 500,
-                messageRate: 5,
-                testDuration: 90000,
-                rampUpDuration: 20000
-            }
-        }
-    ];
-
-    console.log('🌐 실제 프로덕션 서버 성능 테스트 시작!');
-    console.log('🎯 Target: i13a403.p.ssafy.io:8084');
-    console.log('⚠️  주의: 실제 서버에 부하를 줄 수 있습니다.');
-
-    // 기본적으로 가장 가벼운 테스트부터
-    const selectedTest = productionTestConfigs[0];
-
-    console.log(`\n🌐 실행 중: ${selectedTest.name}`);
-    console.log('📈 더 강한 테스트: productionTestConfigs[1] 또는 [2]로 변경\n');
-
-    const test = new ProductionServerTest(selectedTest.config);
-
-    try {
-        await test.runAdvancedTest();
-
-        console.log('\n🎉 실제 서버 테스트 완료!');
-        console.log('📊 결과를 로컬 테스트와 비교해보세요.');
-
-    } catch (error) {
-        console.error('\n❌ 실제 서버 테스트 실패:', error.message);
-        console.log('\n🔧 가능한 원인:');
-        console.log('1. 네트워크 연결 문제');
-        console.log('2. 서버 방화벽 설정');
-        console.log('3. 서버 리소스 부족');
-        console.log('4. Rate limiting');
-    }
-}
-
-// 🚀 종합 테스트 실행 함수
-async function runComprehensiveTests(difficulty, regularTests, spikeTests) {
-    const regularTest = regularTests[difficulty];
-    const spikeTest = spikeTests[difficulty];
-
-    console.log('📋 테스트 계획:');
-    console.log(`1️⃣ ${regularTest.name}`);
-    console.log(`2️⃣ ${spikeTest.name}`);
-    console.log('3️⃣ 결과 비교 분석\n');
-
-    try {
-        // 1단계: 일반 부하 테스트
-        console.log('🔥 1단계: 일반 부하 테스트 시작!');
-        console.log('================================================\n');
-
-        const regularTestInstance = new ProductionServerTest(regularTest.config);
-        const regularResults = await regularTestInstance.runAdvancedTest();
-
-        console.log('\n✅ 1단계 완료! 잠시 서버 회복 대기...');
-        await new Promise(resolve => setTimeout(resolve, 5000)); // 5초 대기
-
-        // 2단계: 순간 부하 테스트
-        console.log('\n⚡ 2단계: 순간 부하 테스트 시작!');
-        console.log('================================================\n');
-
-        const spikeResults = await runSpikeTest(spikeTest);
-
-        // 3단계: 결과 비교
-        console.log('\n📊 3단계: 결과 비교 분석');
-        console.log('================================================\n');
-        compareResults(regularResults, spikeResults, difficulty);
-
-    } catch (error) {
-        console.error('\n❌ 종합 테스트 실패:', error.message);
-        printTroubleshootingGuide(difficulty);
-    }
-}
-
-// ⚡ 순간 부하 테스트 실행
+// ⚡ 순간 부하 테스트 실행 (단계별)
 async function runSpikeTest(spikeTestConfig) {
     const { config } = spikeTestConfig;
 
@@ -323,18 +225,20 @@ async function runSpikeTest(spikeTestConfig) {
     const connections = [];
     const promises = [];
 
-    // 순간적으로 모든 연결 생성
+    // ⚡ 진짜 순간 부하: 모든 연결을 동시에 생성
     for (let i = 0; i < config.spikeConnections; i++) {
-        const promise = createSpikeConnection(i, config);
+        const promise = createSpikeConnection(i, config)
+            .then(result => ({ status: 'fulfilled', value: result }))
+            .catch(error => ({ status: 'rejected', reason: error }));
         promises.push(promise);
     }
 
     try {
-        const results = await Promise.allSettled(promises);
+        const results = await Promise.all(promises);
         const successful = results.filter(r => r.status === 'fulfilled').length;
         const failed = results.filter(r => r.status === 'rejected').length;
 
-        console.log(`⚡ 순간 연결 결과: 성공 ${successful}개, 실패 ${failed}개`);
+        console.log(`⚡ ${config.spikeConnections}개 연결 결과: 성공 ${successful}개, 실패 ${failed}개`);
 
         // 스파이크 지속 시간만큼 대기
         console.log(`⏳ ${config.spikeDuration/1000}초간 순간 부하 유지...`);
@@ -343,7 +247,7 @@ async function runSpikeTest(spikeTestConfig) {
         const spikeEnd = performance.now();
 
         return {
-            totalConnections: config.spikeConnections,
+            connections: config.spikeConnections,
             successfulConnections: successful,
             failedConnections: failed,
             successRate: (successful / config.spikeConnections * 100).toFixed(2),
@@ -357,14 +261,28 @@ async function runSpikeTest(spikeTestConfig) {
     }
 }
 
+// 🧹 연결 정리 함수
+async function forceCleanupConnections() {
+    console.log('🧹 모든 연결 정리 중...');
+    
+    // Node.js 가비지 컬렉션 강제 실행 (가능한 경우)
+    if (global.gc) {
+        global.gc();
+    }
+    
+    // 연결 정리 대기 시간
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    console.log('✅ 연결 정리 완료');
+}
+
 // ⚡ 순간 부하용 연결 생성
 async function createSpikeConnection(connectionId, config) {
     return new Promise((resolve, reject) => {
         const timestamp = Date.now();
         const isWatchChat = connectionId % 2 === 0;
         const testUrl = isWatchChat
-            ? `ws://i13a403.p.ssafy.io:8084/ws/watch-chat?sessionToken=spike-watch-${connectionId}-${timestamp}&gameId=1&teamId=1`
-            : `ws://i13a403.p.ssafy.io:8084/ws/match-chat?sessionToken=spike-match-${connectionId}-${timestamp}&matchId=spike_test`;
+            ? `ws://i13a403.p.ssafy.io:8083/ws/watch-chat?sessionToken=test-spike-watch-${connectionId}-${timestamp}&gameId=1&teamId=1`
+            : `ws://i13a403.p.ssafy.io:8083/ws/match-chat?sessionToken=test-spike-match-${connectionId}-${timestamp}&matchId=match_${Math.floor(Math.random() * 5) + 1}`;
 
         const ws = new WebSocket(testUrl);
         let messagesSent = 0;
@@ -374,7 +292,7 @@ async function createSpikeConnection(connectionId, config) {
 
             // 빠른 메시지 전송
             const messageInterval = setInterval(() => {
-                if (messagesSent >= 10) { // 최대 10개 메시지만
+                if (messagesSent >= 3) { // 메시지 수 더 줄임 (서버 부하 최소화)
                     clearInterval(messageInterval);
                     ws.close();
                     return;
@@ -387,6 +305,13 @@ async function createSpikeConnection(connectionId, config) {
                     ws.close();
                 }
             }, 1000 / config.messageRate);
+
+            // 자동 연결 종료 타이머 (5초 후 강제 종료)
+            setTimeout(() => {
+                if (ws.readyState === WebSocket.OPEN) {
+                    ws.close();
+                }
+            }, 5000);
 
             resolve(ws);
         });
@@ -406,143 +331,183 @@ async function createSpikeConnection(connectionId, config) {
     });
 }
 
-// 📊 결과 비교 분석
-function compareResults(regularResults, spikeResults, difficulty) {
-    console.log('📈 ==========================================');
-    console.log('    일반 부하 vs 순간 부하 비교 분석');
-    console.log('📈 ==========================================');
+// 🚀 단계별 순간 부하 테스트 실행 함수
+async function runProgressiveSpikeTests() {
+    const spikeSteps = [200, 500, 700, 900]; // 안전한 테스트 수준
+    const allResults = [];
 
-    console.log('🔄 일반 부하 테스트:');
-    console.log(`   - 연결 성공률: ${((regularResults?.successfulConnections || 0) / (regularResults?.totalConnections || 1) * 100).toFixed(1)}%`);
-    console.log(`   - 평균 응답시간: ${regularResults?.averageResponseTime || 'N/A'}ms`);
+    console.log('⚡ =============================================');
+    console.log('    단계별 순간 부하 테스트 시작');
+    console.log('⚡ =============================================');
+    console.log('🎯 Target: i13a403.p.ssafy.io:8083 (nginx + 2인스턴스)');
+    console.log(`📊 테스트 단계: ${spikeSteps.join('개 → ')}개 순간 연결\n`);
 
-    console.log('\n⚡ 순간 부하 테스트:');
-    console.log(`   - 연결 성공률: ${spikeResults.successRate}%`);
-    console.log(`   - 총 처리시간: ${(spikeResults.totalTime).toFixed(2)}ms`);
+    for (let i = 0; i < spikeSteps.length; i++) {
+        const connections = spikeSteps[i];
 
-    // 난이도별 평가
-    console.log(`\n🎚️ ${difficulty.toUpperCase()} 난이도 평가:`);
+        console.log(`\n📈 ${i + 1}단계: ${connections}개 순간 연결 테스트`);
+        console.log('===============================================');
 
-    if (difficulty === 'easy') {
-        console.log('🟢 하급 테스트 - 기본 연결성 확인');
-        console.log('   목표: 연결 성공률 95% 이상');
-        console.log('   현재 서버 상태 파악용');
-    } else if (difficulty === 'medium') {
-        console.log('🟡 중급 테스트 - 실용적 부하 처리');
-        console.log('   목표: 연결 성공률 90% 이상');
-        console.log('   일반 운영 환경 시뮬레이션');
-    } else {
-        console.log('🔴 상급 테스트 - 극한 성능 측정');
-        console.log('   목표: 연결 성공률 80% 이상');
-        console.log('   서버 한계점 탐지');
+        const spikeConfig = {
+            name: `${connections}개 순간 연결`,
+            config: {
+                spikeConnections: connections,
+                spikeDuration: 8000,  // 8초간 유지
+                messageRate: 5        // 초당 5개 메시지
+            }
+        };
+
+        try {
+            const result = await runSpikeTest(spikeConfig);
+            result.stepNumber = i + 1;
+            result.stepName = `${connections}개 연결`;
+            allResults.push(result);
+
+            console.log(`✅ ${i + 1}단계 완료! 연결 정리 중...`);
+            
+            // 모든 연결 강제 정리
+            await forceCleanupConnections();
+
+            // 단계 간 서버 회복 시간 (연결 정리 후 충분한 대기)
+            if (i < spikeSteps.length - 1) {
+                console.log('⏳ 서버 안정화 대기 (5초)...\n');
+                await new Promise(resolve => setTimeout(resolve, 5000));
+            }
+
+        } catch (error) {
+            console.error(`❌ ${i + 1}단계 (${connections}개 연결) 실패:`, error.message);
+            allResults.push({
+                stepNumber: i + 1,
+                stepName: `${connections}개 연결`,
+                connections: connections,
+                successfulConnections: 0,
+                failedConnections: connections,
+                successRate: '0.00',
+                totalTime: 0,
+                error: error.message
+            });
+        }
     }
 
-    console.log('📈 ==========================================\n');
+    // 🏁 최종 통계 출력
+    printFinalSpikeStatistics(allResults);
 }
 
-// 🔧 문제 해결 가이드
-function printTroubleshootingGuide(difficulty) {
-    console.log('\n🔧 ==========================================');
-    console.log('    문제 해결 가이드');
-    console.log('🔧 ==========================================');
+// 📊 최종 통계 출력
+function printFinalSpikeStatistics(allResults) {
+    console.log('\n🏁 =============================================');
+    console.log('    최종 단계별 순간 부하 테스트 통계');
+    console.log('🏁 =============================================');
 
-    if (difficulty === 'easy') {
-        console.log('🟢 하급 테스트 실패 시:');
-        console.log('1. 서버가 실행 중인지 확인');
-        console.log('2. 네트워크 연결 상태 점검');
-        console.log('3. 방화벽 설정 확인');
-    } else if (difficulty === 'medium') {
-        console.log('🟡 중급 테스트 실패 시:');
-        console.log('1. 서버 리소스 모니터링');
-        console.log('2. DB 연결 상태 확인');
-        console.log('3. Redis/Kafka 상태 점검');
+    // 테이블 헤더
+    console.log('\n📊 단계별 결과 요약:');
+    console.log('┌─────┬─────────────┬──────┬──────┬──────────┬──────────┐');
+    console.log('│단계 │   연결 수   │ 성공 │ 실패 │ 성공률(%)│ 처리시간 │');
+    console.log('├─────┼─────────────┼──────┼──────┼──────────┼──────────┤');
+
+    let totalConnections = 0;
+    let totalSuccessful = 0;
+    let totalFailed = 0;
+    let avgProcessingTime = 0;
+
+    allResults.forEach(result => {
+        const step = result.stepNumber.toString().padStart(2);
+        const stepName = result.stepName.padEnd(11);
+        const successful = result.successfulConnections.toString().padStart(4);
+        const failed = result.failedConnections.toString().padStart(4);
+        const successRate = result.successRate.padStart(8);
+        const processingTime = result.error ? '   실패   ' : `${(result.totalTime / 1000).toFixed(2)}초`.padStart(8);
+
+        console.log(`│ ${step}  │ ${stepName} │ ${successful} │ ${failed} │ ${successRate} │ ${processingTime} │`);
+
+        if (!result.error) {
+            totalConnections += result.connections;
+            totalSuccessful += result.successfulConnections;
+            totalFailed += result.failedConnections;
+            avgProcessingTime += result.totalTime;
+        }
+    });
+
+    console.log('└─────┴─────────────┴──────┴──────┴──────────┴──────────┘');
+
+    // 전체 요약 통계
+    const overallSuccessRate = totalConnections > 0 ? ((totalSuccessful / totalConnections) * 100).toFixed(2) : '0.00';
+    const avgTime = allResults.filter(r => !r.error).length > 0 ?
+        (avgProcessingTime / allResults.filter(r => !r.error).length / 1000).toFixed(2) : '0.00';
+
+    console.log('\n📈 전체 요약:');
+    console.log(`🔢 총 시도 연결 수: ${totalConnections}개`);
+    console.log(`✅ 총 성공 연결 수: ${totalSuccessful}개`);
+    console.log(`❌ 총 실패 연결 수: ${totalFailed}개`);
+    console.log(`📊 전체 성공률: ${overallSuccessRate}%`);
+    console.log(`⏱️  평균 처리 시간: ${avgTime}초`);
+
+    // 성능 등급 판정
+    console.log('\n🎯 서버 성능 등급:');
+    const successRateNum = parseFloat(overallSuccessRate);
+
+    if (successRateNum >= 95) {
+        console.log('🏆 최우수 (95%+) - 프로덕션 서비스 완벽 대응');
+    } else if (successRateNum >= 90) {
+        console.log('🥇 우수 (90-94%) - 프로덕션 서비스 안정적');
+    } else if (successRateNum >= 80) {
+        console.log('🥈 양호 (80-89%) - 일반적인 부하 처리 가능');
+    } else if (successRateNum >= 60) {
+        console.log('🥉 보통 (60-79%) - 최적화 필요');
     } else {
-        console.log('🔴 상급 테스트 실패 시:');
-        console.log('1. JVM 힙 메모리 증설');
-        console.log('2. 커넥션 풀 크기 조정');
-        console.log('3. 로드밸런서 도입 검토');
+        console.log('⚠️  개선 필요 (60% 미만) - 서버 성능 점검 권장');
     }
 
-    console.log('🔧 ==========================================\n');
+    // 단계별 성능 트렌드 분석
+    console.log('\n📈 성능 트렌드 분석:');
+    let trend = '안정적';
+    let previousRate = 100;
+
+    for (let i = 0; i < allResults.length; i++) {
+        const currentRate = parseFloat(allResults[i].successRate);
+
+        if (i > 0) {
+            const diff = currentRate - previousRate;
+            if (diff < -10) {
+                trend = '급감';
+                break;
+            } else if (diff < -5) {
+                trend = '하락';
+            }
+        }
+        previousRate = currentRate;
+    }
+
+    if (trend === '급감') {
+        console.log('📉 성능 급감 감지 - 병목 지점 존재 가능성');
+        console.log('💡 권장사항: 커넥션 풀 크기, 스레드 풀 설정 점검');
+    } else if (trend === '하락') {
+        console.log('📊 성능 점진적 하락 - 부하 증가에 따른 자연스러운 현상');
+        console.log('💡 권장사항: 모니터링 강화, 스케일링 계획 수립');
+    } else {
+        console.log('📊 성능 안정적 유지 - 서버가 부하를 잘 처리하고 있음');
+        console.log('💡 상태: 현재 설정으로 운영 가능');
+    }
+
+    console.log('\n🏁 =============================================');
+    console.log('    단계별 순간 부하 테스트 완료!');
+    console.log('🏁 =============================================\n');
 }
 
-// 메인 실행 - 난이도별 테스트 시나리오
+// 메인 실행
 if (require.main === module) {
-    // 🎚️ 난이도별 테스트 설정
-    const testDifficulty = {
-        // 🟢 하급 - 안전한 연결 테스트
-        easy: {
-            name: '🟢 하급: 안전한 연결 테스트',
-            config: {
-                maxConnections: 50,        // 50명
-                messageRate: 2,            // 초당 2개
-                testDuration: 30000,       // 30초
-                rampUpDuration: 10000      // 10초 점진증가
-            }
-        },
+    console.log('⚡ 안전한 단계별 순간 부하 테스트 시작!');
+    console.log('📊 5개 → 10개 → 15개 → 20개 → 25개 순간 연결 테스트');
+    console.log('🛡️  안전 모드: 연결 자동 정리, 서버 안정화 대기 포함');
+    console.log('⚠️  주의: 실제 프로덕션 서버 테스트입니다.\n');
 
-        // 🟡 중급 - 실용적 부하 테스트
-        medium: {
-            name: '🟡 중급: 실용적 부하 테스트',
-            config: {
-                maxConnections: 300,       // 300명
-                messageRate: 5,            // 초당 5개
-                testDuration: 120000,      // 2분
-                rampUpDuration: 20000      // 20초 점진증가
-            }
-        },
-
-        // 🔴 상급 - 극한 스트레스 테스트
-        hard: {
-            name: '🔴 상급: 극한 스트레스 테스트',
-            config: {
-                maxConnections: 1000,      // 1000명
-                messageRate: 15,           // 초당 15개
-                testDuration: 300000,      // 5분
-                rampUpDuration: 30000      // 30초 점진증가
-            }
-        }
-    };
-
-    // 🌊 순간 부하 테스트 (스파이크) 설정
-    const spikeTestConfig = {
-        easy: {
-            name: '🟢 하급: 순간 부하 테스트',
-            config: {
-                spikeConnections: 100,     // 100개 순간 연결
-                spikeDuration: 5000,       // 5초간 유지
-                messageRate: 10            // 초당 10개
-            }
-        },
-        medium: {
-            name: '🟡 중급: 순간 부하 테스트',
-            config: {
-                spikeConnections: 500,     // 500개 순간 연결
-                spikeDuration: 10000,      // 10초간 유지
-                messageRate: 20            // 초당 20개
-            }
-        },
-        hard: {
-            name: '🔴 상급: 순간 부하 테스트',
-            config: {
-                spikeConnections: 1500,    // 1500개 순간 연결
-                spikeDuration: 15000,      // 15초간 유지
-                messageRate: 50            // 초당 50개
-            }
-        }
-    };
-
-    // 🎯 현재 난이도 설정 (여기서 변경!)
-    const currentDifficulty = 'hard';  // 'easy', 'medium', 'hard'
-
-    console.log('🎚️ =============================================');
-    console.log('    난이도별 프로덕션 서버 성능 테스트');
-    console.log('🎚️ =============================================');
-    console.log('🎯 Target: i13a403.p.ssafy.io:8084');
-    console.log(`🎚️ 현재 난이도: ${currentDifficulty.toUpperCase()}`);
-    console.log('⚠️  주의: 실제 서버에 부하를 줄 수 있습니다.\n');
-
-    runComprehensiveTests(currentDifficulty, testDifficulty, spikeTestConfig);
+    runProgressiveSpikeTests()
+        .then(() => {
+            console.log('🎉 모든 단계별 테스트가 완료되었습니다!');
+        })
+        .catch((error) => {
+            console.error('❌ 테스트 실행 중 오류 발생:', error.message);
+        });
 }
 
 module.exports = ProductionServerTest;

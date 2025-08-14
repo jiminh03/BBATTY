@@ -1,28 +1,20 @@
 package com.ssafy.bbatty.domain.user.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ssafy.bbatty.domain.attendance.repository.UserAttendedRepository;
 import com.ssafy.bbatty.domain.board.service.PostService;
+import com.ssafy.bbatty.domain.notification.repository.NotificationSettingRepository;
 import com.ssafy.bbatty.domain.user.dto.request.UserUpdateRequestDto;
-import com.ssafy.bbatty.domain.user.dto.response.UserResponseDto;
-import com.ssafy.bbatty.domain.user.dto.response.UserBadgeResponse;
 import com.ssafy.bbatty.domain.user.dto.response.BadgeCategoryResponse;
 import com.ssafy.bbatty.domain.user.dto.response.BadgeResponse;
-import com.ssafy.bbatty.global.constants.BadgeType;
-import com.ssafy.bbatty.global.constants.BadgeCategory;
-import com.ssafy.bbatty.global.constants.Stadium;
+import com.ssafy.bbatty.domain.user.dto.response.UserBadgeResponse;
+import com.ssafy.bbatty.domain.user.dto.response.UserResponseDto;
 import com.ssafy.bbatty.domain.user.entity.User;
-import com.ssafy.bbatty.domain.user.repository.UserRepository;
 import com.ssafy.bbatty.domain.user.repository.UserInfoRepository;
-import com.ssafy.bbatty.domain.attendance.repository.UserAttendedRepository;
-import com.ssafy.bbatty.domain.board.repository.PostRepository;
-import com.ssafy.bbatty.domain.board.repository.CommentRepository;
-import com.ssafy.bbatty.domain.board.repository.PostLikeRepository;
-import com.ssafy.bbatty.domain.board.repository.PostViewRepository;
-import com.ssafy.bbatty.domain.notification.repository.NotificationSettingRepository;
-import com.ssafy.bbatty.global.constants.ErrorCode;
-import com.ssafy.bbatty.global.constants.RedisKey;
+import com.ssafy.bbatty.domain.user.repository.UserRepository;
+import com.ssafy.bbatty.global.constants.*;
 import com.ssafy.bbatty.global.exception.ApiException;
 import com.ssafy.bbatty.global.util.RedisUtil;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -134,6 +126,19 @@ public class UserServiceImpl implements UserService {
     public void updatePrivacySettings(Long currentUserId, Boolean postsPublic, Boolean statsPublic, Boolean attendanceRecordsPublic) {
         User user = findUserById(currentUserId);
         user.updatePrivacySettings(postsPublic, statsPublic, attendanceRecordsPublic);
+    }
+
+    /**
+     * 알림 설정 업데이트
+     */
+    @Override
+    @Transactional
+    public void updateNotificationSettings(Long currentUserId, Boolean trafficSpikeAlertEnabled) {
+        User user = findUserById(currentUserId);
+        user.updateNotificationSettings(trafficSpikeAlertEnabled);
+
+        log.info("알림 설정 업데이트 완료 - userId: {}, trafficSpikeAlertEnabled: {}",
+                currentUserId, trafficSpikeAlertEnabled);
     }
 
     @Override
@@ -446,7 +451,7 @@ public class UserServiceImpl implements UserService {
             })
             .collect(Collectors.toList());
     }
-    
+
     /**
      * 시즌별 뱃지 조회 (승리/직관)
      */

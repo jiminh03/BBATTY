@@ -1,5 +1,5 @@
 import { profileApi } from '../api/profileApi';
-import { Result } from '../../../shared/utils/result';
+import { Ok, Err, type Result } from '../../../shared/utils/result';
 
 interface ImageUploadError {
   type: 'PRESIGNED_URL_ERROR' | 'UPLOAD_ERROR' | 'FILE_ERROR';
@@ -53,13 +53,13 @@ export const uploadImageToS3 = async (
     const presignedResult = await profileApi.getPresignedUrl({ fileName: uniqueFileName });
     
     if (!presignedResult.success) {
-      return Result.error({
+      return Err({
         type: 'PRESIGNED_URL_ERROR',
         message: 'presigned URL 요청 실패: ' + presignedResult.error.message,
       });
     }
 
-    const { uploadUrl, fileUrl, filePath } = presignedResult.data.data;
+    const { uploadUrl, fileUrl, filePath } = presignedResult.data;
 
     const response = await fetch(fileUri);
     const blob = await response.blob();
@@ -73,18 +73,18 @@ export const uploadImageToS3 = async (
     });
 
     if (!uploadResponse.ok) {
-      return Result.error({
+      return Err({
         type: 'UPLOAD_ERROR',
         message: `S3 업로드 실패: ${uploadResponse.status} ${uploadResponse.statusText}`,
       });
     }
 
-    return Result.success({
+    return Ok({
       fileUrl,
       filePath,
     });
   } catch (error) {
-    return Result.error({
+    return Err({
       type: 'FILE_ERROR',
       message: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.',
     });

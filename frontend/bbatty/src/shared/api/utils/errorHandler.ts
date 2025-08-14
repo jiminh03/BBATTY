@@ -83,7 +83,7 @@ const showErrorToUser = (processedError: ProcessedError): void => {
   ];
 
   if (criticalErrors.includes(processedError.code)) {
-    Alert.alert('Critical 오류 발생', processedError.message);
+    Alert.alert('오류 ', processedError.message);
   } else {
     // Toast 메시지 표시 (실제 구현에서는 Toast 라이브러리 사용)
     console.log(' Toast:', processedError.message);

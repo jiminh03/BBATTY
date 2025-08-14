@@ -20,7 +20,6 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLogi
   const { width } = screen;
 
   const [shouldShowLogin, setShouldShowLogin] = useState(false);
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   // 애니메이션 값들
   const ballPosition = useRef(new Animated.Value(-100)).current;
@@ -40,6 +39,8 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLogi
 
   const initializeApp = async () => {
     await initializeKakao();
+    // AppNavigator에서 초기화가 완료될 때까지 잠시 대기
+    await new Promise((resolve) => setTimeout(resolve, 100));
     await checkAutoLogin();
   };
 
@@ -54,30 +55,45 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLogi
 
   const checkAutoLogin = async () => {
     try {
-      setIsCheckingAuth(true);
+      // 토큰 스토어의 초기화 상태 확인
+      const { isTokenInitialized } = useTokenStore.getState();
+      if (!isTokenInitialized) {
+        console.log('⏳ [SplashScreen] 토큰 스토어 초기화 대기 중...');
+        // 최대 3초까지 초기화 완료 대기
+        let waitCount = 0;
+        while (!useTokenStore.getState().isTokenInitialized && waitCount < 30) {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          waitCount++;
+        }
 
-      // 1. 사용자 정보 확인
+        if (!useTokenStore.getState().isTokenInitialized) {
+          console.log('⚠️ [SplashScreen] 토큰 스토어 초기화 시간 초과');
+        }
+      }
+
+      // 1. 사용자 정보 및 토큰 확인
       const hasUserResult = await hasUser();
       const userExists = isOk(hasUserResult) && hasUserResult.data;
-      // const user = getCurrentUser();
+      const hasTokens = hasRefreshToken();
 
-      // // 테스트용: teamId를 1로 설정
-      // if (user) {
-      //   const newUser = { ...user, teamId: 1 };
-      //   await setCurrentUser(newUser);
-      //   console.log('🏀 테스트: teamId를 1로 변경했습니다');
-      // }
+      console.log('🔍 [SplashScreen] 자동로그인 체크:', {
+        userExists,
+        hasTokens,
+        isRefreshTokenExpired: isRefreshTokenExpired(),
+        isTokenInitialized: useTokenStore.getState().isTokenInitialized,
+      });
 
       // 2. 토큰 유효성 확인 및 갱신 시도
-      if (userExists && hasRefreshToken()) {
+      if (userExists && hasTokens) {
         // Refresh 토큰 만료 여부 추가 체크
         if (isRefreshTokenExpired()) {
-          console.log('Refresh token expired, requiring login');
+          console.log('🔴 [SplashScreen] Refresh token expired, requiring login');
           setShouldShowLogin(true);
           startAnimationWithLogin();
           return;
         }
 
+        console.log('🔄 [SplashScreen] 토큰 갱신 시도');
         const refreshResult = await refreshTokens();
 
         if (isOk(refreshResult) && refreshResult.data) {
@@ -90,23 +106,23 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLogi
             }
           }
 
-          console.log('Auto login successful');
+          console.log('✅ [SplashScreen] Auto login successful');
           startAnimationAndComplete();
           return;
         } else {
-          console.log('Token refresh failed:', refreshResult.error);
+          console.log('❌ [SplashScreen] Token refresh failed:', refreshResult.error);
         }
+      } else {
+        console.log('🔴 [SplashScreen] No user or tokens found');
       }
 
       // 자동로그인 실패 - 로그인 버튼 표시
       setShouldShowLogin(true);
       startAnimationWithLogin();
     } catch (error) {
-      console.error('Auto login check failed:', error);
+      console.error('❌ [SplashScreen] Auto login check failed:', error);
       setShouldShowLogin(true);
       startAnimationWithLogin();
-    } finally {
-      setIsCheckingAuth(false);
     }
   };
 
@@ -229,6 +245,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLogi
 
       const userInfo = await response.json();
 
+      console.log(kakaoData.accessToken);
       if (onLoginSuccess) {
         onLoginSuccess(userInfo, kakaoData.accessToken);
       } else {

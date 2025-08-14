@@ -31,6 +31,8 @@ services:
     container_name: bbatty-service
     ports:
       - "8080:8080"
+    volumes:
+      - ./bbatty-a403-dcb47aea992d.json:/app/bbatty-a403-dcb47aea992d.json:ro
     depends_on:
       mysql:
         condition: service_healthy
@@ -58,6 +60,9 @@ services:
       KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID}
       KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET}
       KAKAO_REDIRECT_URI: ${KAKAO_REDIRECT_URI}
+
+      FIREBASE_CREDENTIALS_PATH: ${FIREBASE_CREDENTIALS_PATH}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
 
   # 채팅 서비스 인스턴스 1
   chat-service-1:

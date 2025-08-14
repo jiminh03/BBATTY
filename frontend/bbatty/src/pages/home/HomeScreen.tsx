@@ -21,6 +21,7 @@ import { useTeamStanding } from '../../entities/team/queries/useTeamStanding';
 import { useSearchHistoryStore } from '../../entities/post/model/searchHistoryStore';
 import { chatRoomApi } from '../../entities/chat-room/api/api';
 import { gameApi } from '../../entities/game/api/api';
+import TeamNewsSection from '../../entities/post/ui/TeamNewsSection';
 
 type Props = HomeStackScreenProps<'Home'>;
 
@@ -227,7 +228,6 @@ export default function HomeScreen({ navigation }: Props) {
         onPressChat={handleChatPress}
         accentColor={teamColor}
       />
-
       <SegmentTabs value={tab} onChange={setTab} />
 
       {tab === 'best' ? (
@@ -243,6 +243,10 @@ export default function HomeScreen({ navigation }: Props) {
                 onPress={() => navigation.navigate('PostDetail', { postId: item.id })}
               />
             )}
+            ListHeaderComponent={
+              <TeamNewsSection teamId={teamId} style={{ marginTop: 8, marginBottom: 12 }} />
+            }
+            removeClippedSubviews={false}
             contentContainerStyle={styles.listPad}
           />
         )
@@ -257,21 +261,25 @@ export default function HomeScreen({ navigation }: Props) {
             />
           )}
           ListHeaderComponent={
-            <SearchHeader
-              keyword={keyword}
-              onChangeKeyword={setKeyword}
-              onSubmit={handleSubmit}
-              onClear={handleClearSearch}
-              history={history}
-              onPressChip={(q) => {
-                setKeyword(q);
-                submitWith(q);
-              }}
-              isSearching={isSearching}
-            />
-          }
+              <>
+                <TeamNewsSection teamId={teamId} style={{ marginTop: 8, marginBottom: 12 }} />
+                <SearchHeader
+                  keyword={keyword}
+                  onChangeKeyword={setKeyword}
+                  onSubmit={handleSubmit}
+                  onClear={handleClearSearch}
+                  history={history}
+                  onPressChip={(q) => {
+                    setKeyword(q);
+                    submitWith(q);
+                  }}
+                  isSearching={isSearching}
+                />
+              </>
+            }
           onEndReachedThreshold={0.35}
           onEndReached={fetchMore}
+          removeClippedSubviews={false}
           ListFooterComponent={
             isFetchingNext ? <ActivityIndicator style={{ marginVertical: 12 }} /> : <View />
           }
