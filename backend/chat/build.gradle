@@ -44,6 +44,10 @@ dependencies {
 	// Jakarta Annotation API (PostConstruct, PreDestroy)
 	implementation 'jakarta.annotation:jakarta.annotation-api:2.1.1'
 
+	// Spring Retry 및 AspectJ 의존성
+	implementation 'org.springframework.retry:spring-retry'
+	implementation 'org.springframework:spring-aspects'
+
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
