@@ -38,7 +38,6 @@
     "react-native-image-resizer": "^1.4.5",
     "react-native-linear-gradient": "^2.8.3",
     "react-native-maps": "^1.25.3",
-    "react-native-reanimated": "^4.0.2",
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.11.1",
     "react-native-svg": "^15.12.1",
