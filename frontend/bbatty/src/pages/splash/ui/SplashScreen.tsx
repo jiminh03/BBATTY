@@ -20,7 +20,6 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLogi
   const { width } = screen;
 
   const [shouldShowLogin, setShouldShowLogin] = useState(false);
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   // 애니메이션 값들
   const ballPosition = useRef(new Animated.Value(-100)).current;
@@ -56,8 +55,6 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLogi
 
   const checkAutoLogin = async () => {
     try {
-      setIsCheckingAuth(true);
-
       // 토큰 스토어의 초기화 상태 확인
       const { isTokenInitialized } = useTokenStore.getState();
       if (!isTokenInitialized) {
@@ -126,8 +123,6 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLogi
       console.error('❌ [SplashScreen] Auto login check failed:', error);
       setShouldShowLogin(true);
       startAnimationWithLogin();
-    } finally {
-      setIsCheckingAuth(false);
     }
   };
 

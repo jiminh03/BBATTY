@@ -156,51 +156,40 @@ export default function HomeScreen({ navigation }: Props) {
   }, []);
 
   const handleChatPress = async () => {
-    const verified = isVerifiedToday();
-    if (!verified) {
-      navigation.navigate('AttendanceVerification' as never);
-      return;
-    }
+    const isVerified = isVerifiedToday();
+    if (isVerified) {
+      try {
+        const currentUser = useUserStore.getState().currentUser;
+        if (!currentUser) {
+          Alert.alert('오류', '사용자 정보를 찾을 수 없습니다.');
+          return;
+        }
 
-    try {
-      const currentUser = useUserStore.getState().currentUser;
-      if (!currentUser) {
-        Alert.alert('오류', '사용자 정보를 찾을 수 없습니다.');
-        return;
-      }
+        // 오늘의 게임 정보 가져오기
+        const todayGameResponse = await gameApi.getTodayGame();
+        if (todayGameResponse.status !== 'SUCCESS' || !todayGameResponse.data) {
+          Alert.alert('오류', '오늘의 경기 정보를 가져올 수 없습니다.');
+          return;
+        }
+        const todayGame = todayGameResponse.data;
 
-      const todayGameResponse = await gameApi.getTodayGame();
-      if (todayGameResponse.status !== 'SUCCESS' || !todayGameResponse.data) {
-        Alert.alert('오류', '오늘의 경기 정보를 가져올 수 없습니다.');
-        return;
-      }
-      const todayGame = todayGameResponse.data;
+        const watchRequest = {
+          gameId: todayGame.gameId,
+          teamId: currentUser.teamId,
+          isAttendanceVerified: true,
+        };
 
-      const watchRequest = {
-        gameId: todayGame.gameId,
-        teamId: currentUser.teamId,
-        isAttendanceVerified: true,
-      };
+        const response = await chatRoomApi.joinWatchChat(watchRequest);
 
-      const response = await chatRoomApi.joinWatchChat(watchRequest);
-      if (response.data.status !== 'SUCCESS') {
-        Alert.alert(
-          '연결 실패',
-          response.data.message || JSON.stringify(response.data) || '직관채팅 연결에 실패했습니다.'
-        );
-        return;
-      }
+        if (response.data.status === 'SUCCESS') {
+          // 게임 정보 로드
+          const gameDetails = await gameApi.getGameById(todayGame.gameId.toString());
+          if (!gameDetails || gameDetails.status !== 'SUCCESS') {
+            Alert.alert('오류', '게임 정보를 불러올 수 없습니다.');
+            return;
+          }
 
-      const gameDetails = await gameApi.getGameById(todayGame.gameId.toString());
-      if (!gameDetails || gameDetails.status !== 'SUCCESS') {
-        Alert.alert('오류', '게임 정보를 불러올 수 없습니다.');
-        return;
-      }
-
-      navigation.navigate('ChatStack', {
-        screen: 'MatchChatRoom',
-        params: {
-          room: {
+          const watchChatRoom = {
             matchId: `watch_chat_${todayGame.gameId}_${currentUser.teamId}`,
             gameId: todayGame.gameId.toString(),
             matchTitle: `직관채팅 - ${gameDetails.data.awayTeamName} vs ${gameDetails.data.homeTeamName}`,
@@ -214,14 +203,22 @@ export default function HomeScreen({ navigation }: Props) {
             createdAt: new Date().toISOString(),
             status: 'ACTIVE',
             websocketUrl: response.data.data.websocketUrl,
-          },
-          websocketUrl: response.data.data.websocketUrl,
-          sessionToken: response.data.data.sessionToken,
-        },
-      });
-    } catch (e) {
-      console.error('직관채팅 연결 중 오류:', e);
-      Alert.alert('오류', '직관채팅 연결 중 문제가 발생했습니다.');
+          };
+
+          (navigation as any).navigate('WatchChatModal', {
+            room: watchChatRoom,
+            websocketUrl: response.data.data.websocketUrl,
+            sessionToken: response.data.data.sessionToken,
+          });
+        } else {
+          Alert.alert('연결 실패', response.data.message || JSON.stringify(response.data) || '직관채팅 연결에 실패했습니다.');
+        }
+      } catch (error) {
+        console.error('직관채팅 연결 중 오류:', error);
+        Alert.alert('오류', '직관채팅 연결 중 문제가 발생했습니다.');
+      }
+    } else {
+      (navigation as any).navigate('AttendanceVerification');
     }
   };
 
@@ -353,7 +350,7 @@ export default function HomeScreen({ navigation }: Props) {
       {/* 새 글 FAB */}
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => navigation.navigate('PostForm' as never)}
+        onPress={() => navigation.navigate('PostForm')}
         activeOpacity={0.85}
         accessibilityLabel="게시글 작성"
       >

@@ -29,7 +29,7 @@ export interface CheckNicknameRequest {
 }
 
 export interface PresignedUrlRequest {
-  fileName: string;
+  filename: string;
 }
 
 // ================================= Response ======================================

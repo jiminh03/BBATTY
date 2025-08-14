@@ -23,12 +23,14 @@ export const profileApi = {
     wrapApiCall(() => apiClient.put('/api/profile/update', data)),
 
   updatePrivacySettings: (settings: UserPrivacySettings): AsyncResult<null, ApiError> => {
-    return wrapApiCall(() => apiClient.put('/api/profile/privacy', settings));
+    return wrapApiCall(() => apiClient.put('/api/profile/privacy-setting', settings));
   },
 
   checkNickname: (request: CheckNicknameRequest): AsyncResult<CheckNicknameResponse, ApiError> =>
     wrapApiCall(() => apiClient.get<CheckNicknameResponse>('/api/auth/check-nickname', { params: request })),
 
   getPresignedUrl: (request: PresignedUrlRequest): AsyncResult<PresignedUrlResponse, ApiError> =>
-    wrapApiCall(() => apiClient.post<PresignedUrlResponse>('/api/posts/images/presigned-url', request)),
+    wrapApiCall<PresignedUrlResponse>(() =>
+      apiClient.post('/api/posts/images/presigned-url', null, { params: request } as any)
+    ),
 };

@@ -151,9 +151,15 @@ export default function UserRankingScreen({ navigation, route }: Props) {
   }
 
   const { rankings: currentRankings, myRanking: currentMyRanking } = getCurrentRankingData();
-  const top3Users = currentRankings.filter(user => user.rank <= 3 && !user.isCurrentUser);
-  const restUsers = currentRankings.filter(user => user.rank > 3 && user.rank <= 10 && !user.isCurrentUser);
+  
+  // 현재 사용자 정보 먼저 찾기
   const currentUserRanking = currentRankings.find(user => user.isCurrentUser) || currentMyRanking;
+  
+  // Top 3 사용자 (현재 사용자 포함)
+  const top3Users = currentRankings.filter(user => user.rank <= 3);
+  
+  // 4-10위 사용자 (현재 사용자 포함)
+  const restUsers = currentRankings.filter(user => user.rank > 3 && user.rank <= 10);
 
   const getPodiumHeight = (rank: number) => {
     switch (rank) {
@@ -372,8 +378,12 @@ export default function UserRankingScreen({ navigation, route }: Props) {
           {/* 4-10위 일반 리스트 */}
           {restUsers.map((user) => {
             const team = findTeamById(user.userTeamId || 0);
+            const isCurrentUser = user.isCurrentUser;
             return (
-              <View key={user.rank} style={styles.userRankingItem}>
+              <View key={user.rank} style={[
+                styles.userRankingItem, 
+                isCurrentUser && styles.currentUserItem
+              ]}>
                 <View style={styles.userLeftInfo}>
                   <Text style={styles.userRank}>{user.rank}</Text>
                   {team && (
@@ -387,6 +397,9 @@ export default function UserRankingScreen({ navigation, route }: Props) {
                 </View>
                 <View style={styles.userStats}>
                   <Text style={styles.userWinRate}>{(user.winRate * 100).toFixed(1)}%</Text>
+                  {isCurrentUser && user.percentile && (
+                    <Text style={styles.userPercentile}>상위 {(100 - user.percentile).toFixed(1)}%</Text>
+                  )}
                 </View>
               </View>
             );
