@@ -83,6 +83,12 @@ jwt:
   refresh-token-validity-days: 30
   refresh-threshold-minutes: 10
 
+# Firebase 설정
+firebase:
+  credentials:
+    path: ${FIREBASE_CREDENTIALS_PATH}
+  project-id: ${FIREBASE_PROJECT_ID}
+
 logging:
   level:
     root: INFO
