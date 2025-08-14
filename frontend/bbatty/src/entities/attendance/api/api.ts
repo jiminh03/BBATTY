@@ -2,72 +2,66 @@ import { apiClient } from '../../../shared/api';
 import type { AttendanceVerificationRequest, AttendanceVerificationResponse } from './types';
 
 export const attendanceApi = {
-  // 직관 인증
+  // 직관 인증 - 서버 응답 메시지만 사용하는 단순한 구현
   verifyAttendance: async (location: AttendanceVerificationRequest): Promise<AttendanceVerificationResponse> => {
+    console.log('🎯 직관 인증 API 요청 시작:', location);
+    console.log('🔍 요청 세부사항:', {
+      url: '/api/attendance/verify',
+      method: 'POST',
+      body: location,
+      timestamp: new Date().toISOString(),
+      headers: {
+        'X-Skip-Error-Toast': 'true',
+        // Authorization은 interceptor에서 자동 추가됨
+      }
+    });
+    
     try {
-      console.log('🎯 직관 인증 API 요청 시작:', location);
-      const response = await apiClient.post('/api/attendance/verify', location);
-      console.log('🎯 직관 인증 API 응답 성공:', response.data);
+      // 성공한 경우
+      const response = await apiClient.post('/api/attendance/verify', location, {
+        headers: {
+          'X-Skip-Error-Toast': 'true',
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+      
+      console.log('✅ 직관 인증 성공:', response.data);
       return response.data;
+      
     } catch (error: any) {
-      // 400 에러는 비즈니스 로직 실패이므로 에러 로그 없이 응답만 반환
-      if (error.response?.status === 400 && error.response?.data) {
-        console.log('🎯 직관 인증 API 응답:', error.response.data);
-        return error.response.data;
-      }
-      
-      // 에러 응답이 있으면 그대로 반환
-      if (error.response?.data) {
-        console.log('🎯 직관 인증 API 응답:', error.response.data);
-        return error.response.data;
-      }
-      
-      // error.response가 없지만 request.status가 4xx인 경우 (React Native 환경에서 발생)
-      const requestStatus = error.request?.status;
-      if (requestStatus && requestStatus >= 400 && requestStatus < 500 && !error.response) {
-        console.log(`📋 ${requestStatus} 에러 - response 파싱 시도`);
-        
-        // XMLHttpRequest의 responseText에서 실제 응답 데이터 추출 시도
-        let responseData = null;
-        try {
-          if (error.request.responseText) {
-            responseData = JSON.parse(error.request.responseText);
-          }
-        } catch (parseError) {
-          // 파싱 실패는 정상적인 상황이므로 로깅하지 않음
-        }
-        
-        // 파싱된 데이터가 있으면 사용, 없으면 상태코드별 기본 메시지
-        if (responseData) {
-          console.log('🎯 직관 인증 API 응답:', responseData);
-          return responseData;
-        }
-        
-        // 파싱 실패 시 상태코드별 기본 메시지
-        const defaultMessages = {
-          400: '경기 시간에만 인증할 수 있어요.',
-          404: '오늘은 우리 팀 경기가 없어요.',
-          409: '이미 해당 경기에 대해 직관 인증이 완료되었어요.',
-        };
-        
-        const response = {
-          status: 'ERROR',
-          message: defaultMessages[requestStatus as keyof typeof defaultMessages] || '인증에 실패했습니다.',
-          data: null
-        };
-        console.log('🎯 직관 인증 API 응답:', response);
-        return response;
-      }
-      
-      // 여기까지 왔다면 실제 네트워크 오류나 예상치 못한 에러
-      console.error('🚨 직관 인증 API 요청 실패:', {
+      console.log('❌ 직관 인증 실패 - 전체 에러 정보:', {
         message: error.message,
         code: error.code,
         status: error.response?.status,
+        hasResponse: !!error.response,
+        hasRequest: !!error.request
       });
       
-      // 네트워크 오류 등의 경우 예외를 다시 던져서 상위에서 처리하도록 함
-      throw error;
+      // 1. error.response.data가 있으면 (가장 일반적인 경우)
+      if (error.response?.data) {
+        console.log('📨 서버 응답 데이터 (HTTP ' + error.response.status + '):', error.response.data);
+        return error.response.data;
+      }
+      
+      // 2. React Native에서 responseText 파싱 시도
+      if (error.request?.responseText) {
+        try {
+          const parsedResponse = JSON.parse(error.request.responseText);
+          console.log('📨 파싱된 서버 응답:', parsedResponse);
+          return parsedResponse;
+        } catch (parseError) {
+          console.log('⚠️ 응답 파싱 실패');
+        }
+      }
+      
+      // 3. 모든 방법이 실패한 경우에만 기본 메시지
+      console.log('🚨 서버 응답을 읽을 수 없음 - 기본 메시지 사용');
+      return {
+        status: 'ERROR',
+        message: '서버와 연결할 수 없어요. 잠시 후 다시 시도해주세요.',
+        data: null
+      };
     }
   },
 };

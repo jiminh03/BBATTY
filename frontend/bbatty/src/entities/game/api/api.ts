@@ -5,20 +5,10 @@ export const gameApi = {
   // 경기 목록 조회
   getGames: async (): Promise<GamesResponse> => {
     try {
-      console.log('🎯 API 요청 시작: /api/games/three-weeks');
       const response = await apiClient.get('/api/games/three-weeks');
-      console.log('🎯 API 응답 성공:', response.data);
       return response.data;
     } catch (error: any) {
-      console.error('🚨 API 요청 실패 상세:', {
-        message: error.message,
-        code: error.code,
-        status: error.response?.status,
-        data: error.response?.data,
-      });
-      
       // 목 데이터 반환
-      console.log('📦 목 데이터 반환 중...');
       return {
         status: 'SUCCESS',
         message: '경기 목록 조회 성공 (목 데이터)',
@@ -45,20 +35,10 @@ export const gameApi = {
   // 개별 게임 정보 조회
   getGameById: async (gameId: string | number): Promise<GameResponse> => {
     try {
-      console.log(`🎯 API 요청 시작: /api/games/${gameId}`);
       const response = await apiClient.get(`/api/games/${gameId}`);
-      console.log('🎯 API 응답 성공:', response.data);
       return response.data;
     } catch (error: any) {
-      console.error('🚨 API 요청 실패 상세:', {
-        message: error.message,
-        code: error.code,
-        status: error.response?.status,
-        data: error.response?.data,
-      });
-      
       // 목 데이터 반환
-      console.log('📦 목 데이터 반환 중...');
       return {
         status: 'SUCCESS',
         message: '게임 정보 조회 성공 (목 데이터)',
@@ -76,20 +56,10 @@ export const gameApi = {
   // 오늘의 게임 정보 조회
   getTodayGame: async (): Promise<TodayGameResponse> => {
     try {
-      console.log('🎯 API 요청 시작: /api/games/today');
       const response = await apiClient.get('/api/games/today');
-      console.log('🎯 API 응답 성공:', response.data);
       return response.data;
     } catch (error: any) {
-      console.error('🚨 API 요청 실패 상세:', {
-        message: error.message,
-        code: error.code,
-        status: error.response?.status,
-        data: error.response?.data,
-      });
-      
       // 목 데이터 반환
-      console.log('📦 목 데이터 반환 중...');
       return {
         status: 'SUCCESS',
         message: '오늘 게임 정보 조회 성공 (목 데이터)',

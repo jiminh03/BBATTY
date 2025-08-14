@@ -82,9 +82,9 @@ export const MatchChatRoomDetailScreen = () => {
       const joinRequest = {
         matchId: room.matchId,
         nickname: currentUser.nickname,
-        winRate: 75, // TODO: 실제 승률 데이터 연결
-        profileImgUrl: currentUser.profileImageURL || 'https://example.com/profile.jpg',
-        isWinFairy: false, // TODO: 실제 승부요정 여부 연결
+        winRate: currentUser.winRate || 0,
+        profileImgUrl: currentUser.profileImg || '',
+        isWinFairy: (currentUser.winRate || 0) >= 70,
       };
 
       const response = await chatRoomApi.joinMatchChat(joinRequest);

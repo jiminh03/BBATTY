@@ -5,6 +5,8 @@ export interface User {
   teamId: number;
   age: number;
   gender: string;
+  winRate?: number;
+  isVictoryFairy?: boolean;
 }
 
 export interface UserSummary {
