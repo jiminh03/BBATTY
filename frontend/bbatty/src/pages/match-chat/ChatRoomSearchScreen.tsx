@@ -68,18 +68,33 @@ export default function ChatRoomSearchScreen() {
 
     try {
       setLoading(true);
-      const response = await chatRoomApi.getMatchChatRooms(searchKeyword.trim());
+      const response = await chatRoomApi.getMatchChatRooms({
+        keyword: searchKeyword.trim()
+      });
       
+      let roomList: MatchChatRoom[] = [];
       if (response.data?.data?.chatRooms) {
-        setSearchResults(response.data.data.chatRooms);
+        roomList = response.data.data.chatRooms;
       } else if (response.data?.data?.rooms) {
-        setSearchResults(response.data.data.rooms);
+        roomList = response.data.data.rooms;
       } else if (response.data?.rooms) {
-        setSearchResults(response.data.rooms);
+        roomList = response.data.rooms;
       } else {
-        setSearchResults([]);
+        roomList = [];
       }
+      
+      setSearchResults(roomList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
       setHasSearched(true);
+
+      // 검색 결과의 게임 정보 로드
+      const gameIds = roomList
+        .filter(room => room.gameId)
+        .map(room => String(room.gameId!))
+        .filter((gameId, index, self) => self.indexOf(gameId) === index);
+      
+      for (const gameId of gameIds) {
+        await loadGameInfo(gameId);
+      }
     } catch (error) {
       console.error('채팅방 검색 실패:', error);
       Alert.alert('오류', '채팅방 검색에 실패했습니다.');
@@ -98,9 +113,11 @@ export default function ChatRoomSearchScreen() {
       
       const response = await gameApi.getGameById(gameId);
       if (response.status === 'SUCCESS') {
-        const newGameInfoMap = new Map(gameInfoMap);
-        newGameInfoMap.set(gameId, response.data);
-        setGameInfoMap(newGameInfoMap);
+        setGameInfoMap(prevMap => {
+          const newMap = new Map(prevMap);
+          newMap.set(gameId, response.data);
+          return newMap;
+        });
         return response.data;
       }
     } catch (error) {
@@ -134,12 +151,7 @@ export default function ChatRoomSearchScreen() {
 
   const renderRoomItem = ({ item }: { item: MatchChatRoom }) => {
     const teamInfo = getTeamInfo(item.teamId);
-    const gameInfo = item.gameId ? gameInfoMap.get(item.gameId) : null;
-
-    // 게임 정보가 없으면 로드 시도 (hook 없이)
-    if (item.gameId && !gameInfoMap.has(item.gameId)) {
-      loadGameInfo(item.gameId);
-    }
+    const gameInfo = item.gameId ? gameInfoMap.get(String(item.gameId)) : null;
     
     return (
       <TouchableOpacity
@@ -167,6 +179,10 @@ export default function ChatRoomSearchScreen() {
           <View style={styles.centeredContent}>
             <Text style={styles.roomTitle}>{item.matchTitle}</Text>
             
+            <Text style={styles.roomDescription} numberOfLines={2}>
+              {item.matchDescription}
+            </Text>
+            
             {gameInfo && (
               <View style={styles.gameInfoMain}>
                 <Text style={styles.gameTeamsText}>
@@ -177,10 +193,6 @@ export default function ChatRoomSearchScreen() {
                 </Text>
               </View>
             )}
-            
-            <Text style={styles.roomDescription} numberOfLines={2}>
-              {item.matchDescription}
-            </Text>
           </View>
         </View>
 
@@ -218,17 +230,22 @@ export default function ChatRoomSearchScreen() {
   );
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={[styles.header, { backgroundColor: themeColor }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Text style={styles.backButtonText}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>채팅방 검색</Text>
-        <View style={styles.placeholder} />
-      </View>
+    <View style={styles.container}>
+      <LinearGradient
+        colors={[themeColor, themeColor]}
+        style={[styles.headerGradient, { paddingTop: insets.top }]}
+      >
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Text style={[styles.backButtonText, { color: '#ffffff' }]}>←</Text>
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: '#ffffff' }]}>채팅방 검색</Text>
+          <View style={styles.placeholder} />
+        </View>
+      </LinearGradient>
 
       <View style={styles.searchContainer}>
         <View style={styles.searchInputContainer}>
@@ -258,7 +275,6 @@ export default function ChatRoomSearchScreen() {
       <FlatList
         data={searchResults}
         renderItem={renderRoomItem}
-        keyExtractor={(item) => item.matchId}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={EmptyComponent}
         showsVerticalScrollIndicator={false}

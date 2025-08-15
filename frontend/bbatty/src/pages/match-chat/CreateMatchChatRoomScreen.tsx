@@ -11,6 +11,7 @@ import {
   Modal,
   FlatList,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
@@ -192,12 +193,12 @@ export const CreateMatchChatRoomScreen = () => {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <KeyboardAvoidingView 
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <View style={styles.container}>
+      <LinearGradient
+        colors={[themeColor, themeColor]}
+        style={[styles.headerGradient, { paddingTop: insets.top }]}
       >
-        <View style={[styles.header, { backgroundColor: themeColor }]}>
+        <View style={styles.header}>
           <TouchableOpacity onPress={() => {
             if (navigation.canGoBack()) {
               navigation.goBack();
@@ -212,6 +213,12 @@ export const CreateMatchChatRoomScreen = () => {
             </Text>
           </TouchableOpacity>
         </View>
+      </LinearGradient>
+
+      <KeyboardAvoidingView 
+        style={styles.keyboardContainer}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.section}>

@@ -2,61 +2,45 @@ import { apiClient } from '../../../shared/api';
 import type { AttendanceVerificationRequest, AttendanceVerificationResponse } from './types';
 
 export const attendanceApi = {
-  // 직관 인증 - 서버 응답 메시지만 사용하는 단순한 구현
+  // 직관 인증 - 단순한 API 호출로 원인 분석
   verifyAttendance: async (location: AttendanceVerificationRequest): Promise<AttendanceVerificationResponse> => {
-    console.log('🎯 직관 인증 API 요청 시작:', location);
-    console.log('🔍 요청 세부사항:', {
-      url: '/api/attendance/verify',
-      method: 'POST',
-      body: location,
-      timestamp: new Date().toISOString(),
-      headers: {
-        'X-Skip-Error-Toast': 'true',
-        // Authorization은 interceptor에서 자동 추가됨
-      }
-    });
+    console.log('🎯 직관 인증 시작');
+    console.log('📍 위치:', location);
+    console.log('🌐 서버:', apiClient.defaults.baseURL);
+    console.log('🔑 토큰 존재:', !!apiClient.defaults.headers.common['Authorization']);
     
     try {
-      // 성공한 경우
       const response = await apiClient.post('/api/attendance/verify', location, {
         headers: {
-          'X-Skip-Error-Toast': 'true',
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
+        },
+        timeout: 10000
       });
       
-      console.log('✅ 직관 인증 성공:', response.data);
+      console.log('✅ 직관 인증 성공:', response.status);
+      console.log('📦 응답 데이터:', response.data);
       return response.data;
       
     } catch (error: any) {
-      console.log('❌ 직관 인증 실패 - 전체 에러 정보:', {
-        message: error.message,
-        code: error.code,
-        status: error.response?.status,
-        hasResponse: !!error.response,
-        hasRequest: !!error.request
-      });
+      console.log('❌ 직관 인증 실패 상세 분석:');
+      console.log('- 에러 코드:', error.code);
+      console.log('- 에러 메시지:', error.message);
+      console.log('- 응답 상태:', error.response?.status);
+      console.log('- 응답 데이터:', error.response?.data);
+      console.log('- 요청 URL:', error.config?.url);
+      console.log('- 베이스 URL:', error.config?.baseURL);
+      console.log('- 요청 메소드:', error.config?.method);
+      console.log('- 요청 헤더:', error.config?.headers);
+      console.log('- 타임아웃:', error.config?.timeout);
+      console.log('- 네트워크 에러 여부:', error.code === 'ERR_NETWORK');
+      console.log('- 전체 에러 객체:', JSON.stringify(error, null, 2));
       
-      // 1. error.response.data가 있으면 (가장 일반적인 경우)
+      // 서버 응답이 있으면 그대로 반환
       if (error.response?.data) {
-        console.log('📨 서버 응답 데이터 (HTTP ' + error.response.status + '):', error.response.data);
         return error.response.data;
       }
       
-      // 2. React Native에서 responseText 파싱 시도
-      if (error.request?.responseText) {
-        try {
-          const parsedResponse = JSON.parse(error.request.responseText);
-          console.log('📨 파싱된 서버 응답:', parsedResponse);
-          return parsedResponse;
-        } catch (parseError) {
-          console.log('⚠️ 응답 파싱 실패');
-        }
-      }
-      
-      // 3. 모든 방법이 실패한 경우에만 기본 메시지
-      console.log('🚨 서버 응답을 읽을 수 없음 - 기본 메시지 사용');
+      // 기본 에러 메시지
       return {
         status: 'ERROR',
         message: '서버와 연결할 수 없어요. 잠시 후 다시 시도해주세요.',
