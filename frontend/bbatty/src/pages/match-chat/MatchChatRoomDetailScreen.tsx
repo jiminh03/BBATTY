@@ -156,25 +156,30 @@ export const MatchChatRoomDetailScreen = () => {
   }, [room.gameId]);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={[styles.header, { backgroundColor: themeColor }]}>
-        <TouchableOpacity onPress={() => {
-          if (navigation.canGoBack()) {
-            navigation.goBack();
-          }
-        }}>
-          <Text style={[styles.backButton, { color: '#ffffff' }]}>← 뒤로</Text>
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Text style={[styles.headerTitle, { color: '#ffffff' }]}>매치룸 정보</Text>
-          {gameInfo && (
-            <Text style={[styles.headerSubtitle, { color: '#ffffff' }]}>
-              {gameInfo.awayTeamName} vs {gameInfo.homeTeamName}
-            </Text>
-          )}
+    <View style={styles.container}>
+      <LinearGradient
+        colors={[themeColor, themeColor]}
+        style={[styles.headerGradient, { paddingTop: insets.top }]}
+      >
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => {
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            }
+          }}>
+            <Text style={[styles.backButton, { color: '#ffffff' }]}>← 뒤로</Text>
+          </TouchableOpacity>
+          <View style={styles.headerCenter}>
+            <Text style={[styles.headerTitle, { color: '#ffffff' }]}>매치룸 정보</Text>
+            {gameInfo && (
+              <Text style={[styles.headerSubtitle, { color: '#ffffff' }]}>
+                {gameInfo.awayTeamName} vs {gameInfo.homeTeamName}
+              </Text>
+            )}
+          </View>
+          <View style={styles.placeholder} />
         </View>
-        <View style={styles.placeholder} />
-      </View>
+      </LinearGradient>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.roomCard}>

@@ -21,7 +21,6 @@ import { useUserStore } from '../../entities/user/model/userStore';
 import { useTokenStore } from '../../shared/api/token/tokenStore';
 import { useAttendanceStore } from '../../entities/attendance/model/attendanceStore';
 import { useThemeColor } from '../../shared/team/ThemeContext';
-import { BaseballAnimation } from '../../features/match-chat/components/BaseballAnimation';
 import { styles } from './MatchChatRoomListScreen.styles';
 
 type NavigationProp = CompositeNavigationProp<
@@ -42,7 +41,6 @@ export const MatchChatRoomListScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [showAnimation, setShowAnimation] = useState(false);
   const [gameInfoMap, setGameInfoMap] = useState<Map<string, Game>>(new Map());
   const themeColor = useThemeColor();
   const insets = useSafeAreaInsets();
@@ -139,11 +137,11 @@ export const MatchChatRoomListScreen = () => {
         roomList = [];
       }
       
-      // 방 목록 업데이트
+      // 방 목록 업데이트 및 최신순 정렬
       if (isRefresh || (!cursor && rooms.length === 0)) {
-        setRooms(roomList);
+        setRooms(roomList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
       } else {
-        setRooms(prev => [...prev, ...roomList]);
+        setRooms(prev => [...prev, ...roomList].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
       }
       
       setHasMore(responseHasMore);
@@ -181,102 +179,6 @@ export const MatchChatRoomListScreen = () => {
   };
 
 
-  const handleWatchChatJoin = async () => {
-    // 직관 인증 상태 확인
-    if (!isVerifiedToday()) {
-      Alert.alert(
-        '직관 인증 필요',
-        '직관 채팅은 직관 인증 후에만 사용할 수 있습니다.\n직관 인증을 먼저 진행해주세요.',
-        [
-          {
-            text: '취소',
-            style: 'cancel',
-          },
-          {
-            text: '직관 인증하기',
-            onPress: () => navigation.navigate('AttendanceVerification'),
-          },
-        ]
-      );
-      return;
-    }
-
-    // 애니메이션 시작
-    setShowAnimation(true);
-  };
-
-  const onNavigateToChat = async () => {
-    try {
-      const currentUser = getCurrentUser();
-      
-      if (!currentUser) {
-        Alert.alert('오류', '사용자 정보를 찾을 수 없습니다.');
-        return;
-      }
-
-      // 오늘의 게임 정보 가져오기
-      
-      const todayGameResponse = await gameApi.getTodayGame();
-      
-      if (todayGameResponse.status !== 'SUCCESS') {
-        Alert.alert('오류', '오늘의 경기 정보를 가져올 수 없습니다.');
-        return;
-      }
-
-      const todayGame = todayGameResponse.data;
-      
-
-      const watchRequest = {
-        gameId: todayGame.gameId,
-        teamId: currentUser.teamId,
-        isAttendanceVerified: isVerifiedToday()
-      };
-
-      
-      const response = await chatRoomApi.joinWatchChat(watchRequest);
-      
-      
-      if (response.data.status === 'SUCCESS') {
-        // 게임 정보 로드
-        const gameDetails = await loadGameInfo(todayGame.gameId.toString());
-        if (!gameDetails) {
-          Alert.alert('오류', '게임 정보를 불러올 수 없습니다.');
-          return;
-        }
-
-        const watchChatRoom = {
-          matchId: `watch_chat_${todayGame.gameId}_${currentUser.teamId}`,
-          gameId: todayGame.gameId.toString(),
-          matchTitle: `직관채팅 - ${gameDetails.awayTeamName} vs ${gameDetails.homeTeamName}`,
-          matchDescription: `${gameDetails.stadium}에서 열리는 경기를 함께 시청하며 채팅하는 공간`,
-          teamId: getTeamInfo(currentUser.teamId).name,
-          minAge: 0,
-          maxAge: 100,
-          genderCondition: 'ALL',
-          maxParticipants: 999,
-          currentParticipants: 0,
-          createdAt: new Date().toISOString(),
-          status: 'ACTIVE',
-          websocketUrl: response.data.data.websocketUrl,
-        };
-
-        navigation.navigate('MatchChatRoom', {
-          room: watchChatRoom,
-          websocketUrl: response.data.data.websocketUrl,
-          sessionToken: response.data.data.sessionToken,
-        });
-      } else {
-        Alert.alert('오류', response.data.message || '워치 채팅 참여에 실패했습니다.');
-      }
-    } catch (error) {
-      console.error('워치 채팅 참여 실패:', error);
-      Alert.alert('오류', '워치 채팅 참여에 실패했습니다.');
-    }
-  };
-
-  const onAnimationComplete = () => {
-    setShowAnimation(false);
-  };
 
   
 
@@ -344,6 +246,10 @@ export const MatchChatRoomListScreen = () => {
           <View style={styles.centeredContent}>
             <Text style={styles.roomTitle}>{item.matchTitle}</Text>
             
+            <Text style={styles.roomDescription} numberOfLines={2}>
+              {item.matchDescription}
+            </Text>
+            
             {gameInfo && (
               <View style={styles.gameInfoMain}>
                 <Text style={styles.gameTeamsText}>
@@ -354,10 +260,6 @@ export const MatchChatRoomListScreen = () => {
                 </Text>
               </View>
             )}
-            
-            <Text style={styles.roomDescription} numberOfLines={2}>
-              {item.matchDescription}
-            </Text>
           </View>
         </View>
 
@@ -386,29 +288,27 @@ export const MatchChatRoomListScreen = () => {
         style={[styles.createButton, { backgroundColor: themeColor }]}
         onPress={() => navigation.navigate('CreateMatchChatRoom')}
       >
-        <Text style={styles.createButtonText}>매치룸 개설하기</Text>
+        <Text style={styles.createButtonText}>채팅방 개설하기</Text>
       </TouchableOpacity>
     </View>
   );
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={[styles.header, { backgroundColor: themeColor }]}>
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>매칭채팅</Text>
-        </View>
+    <View style={styles.container}>
+      <LinearGradient
+        colors={[themeColor, themeColor]}
+        style={[styles.headerGradient, { paddingTop: insets.top }]}
+      >
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <Text style={styles.headerTitle}>매칭채팅</Text>
+          </View>
         <View style={styles.headerButtons}>
-          <TouchableOpacity
-            style={styles.watchChatButton}
-            onPress={() => handleWatchChatJoin()}
-          >
-            <Text style={styles.watchChatButtonText}>직관채팅</Text>
-          </TouchableOpacity>
           <TouchableOpacity
             style={styles.headerButton}
             onPress={() => navigation.navigate('CreateMatchChatRoom')}
           >
-            <Text style={styles.headerButtonText}>매치룸 개설</Text>
+            <Text style={styles.headerButtonText}>채팅방 개설</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.searchButton}
@@ -417,14 +317,14 @@ export const MatchChatRoomListScreen = () => {
           >
             <Text style={styles.searchButtonText}>⌕</Text>
           </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      </LinearGradient>
 
 
       <FlatList
         data={rooms}
         renderItem={renderRoomItem}
-        keyExtractor={(item) => item.matchId}
         contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -441,14 +341,6 @@ export const MatchChatRoomListScreen = () => {
         ListEmptyComponent={!loading ? EmptyComponent : null}
         showsVerticalScrollIndicator={false}
       />
-      
-      {/* 야구 애니메이션 */}
-      {showAnimation && (
-        <BaseballAnimation 
-          onAnimationComplete={onAnimationComplete}
-          onNavigate={onNavigateToChat}
-        />
-      )}
     </View>
   );
 };

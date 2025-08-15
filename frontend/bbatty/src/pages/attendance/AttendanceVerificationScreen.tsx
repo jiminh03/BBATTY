@@ -7,226 +7,80 @@ import {
   SafeAreaView,
   Alert,
   ActivityIndicator,
-  Modal,
   ScrollView,
-  FlatList,
 } from 'react-native';
+import MapView, { Marker } from 'react-native-maps';
 import { useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import * as Location from 'expo-location';
-import MapView, { Marker } from 'react-native-maps';
 import type { RootStackParamList } from '../../navigation/types';
 import { attendanceApi } from '../../entities/attendance/api/api';
 import { useAttendanceStore } from '../../entities/attendance/model/attendanceStore';
 import { gameApi } from '../../entities/game/api/api';
-import { useTokenStore } from '../../shared/api/token/tokenStore';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'AttendanceVerification'>;
 
-// KBO 야구장 데이터 (백엔드 Stadium enum 기반)
-interface Stadium {
-  id: string;
-  name: string;
-  latitude: number;
-  longitude: number;
-  homeTeams: string[];
-  region: string;
-}
-
-const STADIUMS: Stadium[] = [
-  // 정규 9개 구장
-  {
-    id: 'JAMSIL',
-    name: '잠실야구장',
-    latitude: 37.5124,
-    longitude: 127.0719,
-    homeTeams: ['LG 트윈스', '두산 베어스'],
-    region: '서울'
-  },
-  {
-    id: 'GOCHEOK',
-    name: '고척스카이돔',
-    latitude: 37.4982,
-    longitude: 126.8672,
-    homeTeams: ['키움 히어로즈'],
-    region: '서울'
-  },
-  {
-    id: 'SUWON',
-    name: '수원KT위즈파크',
-    latitude: 37.2997,
-    longitude: 127.0097,
-    homeTeams: ['KT 위즈'],
-    region: '경기'
-  },
-  {
-    id: 'INCHEON',
-    name: '인천SSG랜더스필드',
-    latitude: 37.4370,
-    longitude: 126.6934,
-    homeTeams: ['SSG 랜더스'],
-    region: '인천'
-  },
-  {
-    id: 'DAEJEON',
-    name: '대전한화생명볼파크',
-    latitude: 36.3171,
-    longitude: 127.4290,
-    homeTeams: ['한화 이글스'],
-    region: '대전'
-  },
-  {
-    id: 'GWANGJU',
-    name: '광주기아챔피언스필드',
-    latitude: 35.1681,
-    longitude: 126.8887,
-    homeTeams: ['KIA 타이거즈'],
-    region: '광주'
-  },
-  {
-    id: 'DAEGU',
-    name: '대구삼성라이온즈파크',
-    latitude: 35.8408,
-    longitude: 128.6819,
-    homeTeams: ['삼성 라이온즈'],
-    region: '대구'
-  },
-  {
-    id: 'BUSAN',
-    name: '부산사직야구장',
-    latitude: 35.1940,
-    longitude: 129.0617,
-    homeTeams: ['롯데 자이언츠'],
-    region: '부산'
-  },
-  {
-    id: 'CHANGWON',
-    name: '창원NC파크',
-    latitude: 35.2225,
-    longitude: 128.5823,
-    homeTeams: ['NC 다이노스'],
-    region: '창원'
-  },
-  // 제2구장 3개
-  {
-    id: 'CHEONGJU',
-    name: '청주야구장',
-    latitude: 36.6358,
-    longitude: 127.4918,
-    homeTeams: [],
-    region: '충북'
-  },
-  {
-    id: 'POHANG',
-    name: '포항야구장',
-    latitude: 36.0323,
-    longitude: 129.3445,
-    homeTeams: [],
-    region: '경북'
-  },
-  {
-    id: 'ULSAN',
-    name: '울산문수야구장',
-    latitude: 35.5537,
-    longitude: 129.2585,
-    homeTeams: [],
-    region: '울산'
-  },
+// KBO 야구장 테스트 데이터
+const STADIUMS = [
+  { name: '잠실야구장', latitude: 37.5124, longitude: 127.0719, teams: 'LG/두산' },
+  { name: '고척스카이돔', latitude: 37.4982, longitude: 126.8672, teams: '키움' },
+  { name: '수원KT위즈파크', latitude: 37.2997, longitude: 127.0097, teams: 'KT' },
+  { name: '인천SSG랜더스필드', latitude: 37.4370, longitude: 126.6934, teams: 'SSG' },
+  { name: '대전한화생명볼파크', latitude: 36.3171, longitude: 127.4290, teams: '한화' },
+  { name: '광주기아챔피언스필드', latitude: 35.1681, longitude: 126.8887, teams: 'KIA' },
+  { name: '대구삼성라이온즈파크', latitude: 35.8408, longitude: 128.6819, teams: '삼성' },
+  { name: '부산사직야구장', latitude: 35.1940, longitude: 129.0617, teams: '롯데' },
+  { name: '창원NC파크', latitude: 35.2225, longitude: 128.5823, teams: 'NC' },
 ];
-
-// 현재 선택된 구장 (기본값: 잠실야구장)
-const getDefaultStadium = () => STADIUMS.find(s => s.id === 'JAMSIL') || STADIUMS[0];
-
-// 직관 인증을 위한 최대 거리 (미터)
-const MAX_DISTANCE = 500;
-
-// 원을 그리기 위한 점들 생성
-const createCircle = (center: {latitude: number, longitude: number}, radius: number) => {
-  const points = [];
-  const earthRadius = 6371000; // 지구 반지름 (미터)
-  const numPoints = 50; // 원을 구성하는 점의 개수
-  
-  for (let i = 0; i < numPoints; i++) {
-    const angle = (i * 360 / numPoints) * Math.PI / 180;
-    const lat = center.latitude + (radius / earthRadius) * (180 / Math.PI) * Math.cos(angle);
-    const lon = center.longitude + (radius / earthRadius) * (180 / Math.PI) * Math.sin(angle) / Math.cos(center.latitude * Math.PI / 180);
-    points.push({ latitude: lat, longitude: lon });
-  }
-  return points;
-};
 
 export const AttendanceVerificationScreen = () => {
   const navigation = useNavigation<NavigationProp>();
-  const mapRef = useRef<MapView>(null);
   const { setAttendanceVerified } = useAttendanceStore();
-  const { getAccessToken } = useTokenStore();
-  const [selectedStadium, setSelectedStadium] = useState<Stadium>(getDefaultStadium());
+  const mapRef = useRef<MapView>(null);
   const [currentLocation, setCurrentLocation] = useState<{latitude: number; longitude: number} | null>(null);
-  const [mapRegion, setMapRegion] = useState({
-    latitude: getDefaultStadium().latitude,
-    longitude: getDefaultStadium().longitude,
-    latitudeDelta: 0.01,
-    longitudeDelta: 0.01,
-  });
   const [isLoading, setIsLoading] = useState(true);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [mapInitialized, setMapInitialized] = useState(false);
-  const [showStadiumModal, setShowStadiumModal] = useState(false);
+  const [todayGame, setTodayGame] = useState<any>(null);
+  const [showStadiumTest, setShowStadiumTest] = useState(false);
+  const [selectedStadium, setSelectedStadium] = useState(STADIUMS[0]);
 
   useEffect(() => {
-    getCurrentLocation();
-    
-    // 토큰 정보 확인
-    const token = getAccessToken();
+    loadTodayGameAndLocation();
   }, []);
 
-
-  const getCurrentLocation = async () => {
+  const loadTodayGameAndLocation = async () => {
+    setIsLoading(true);
+    
     try {
-      setIsLoading(true);
-
-      // 위치 권한 요청
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('권한 오류', '위치 접근 권한이 필요합니다. 설정에서 권한을 허용해주세요.');
-        setIsLoading(false);
-        return;
+      // 오늘 경기 정보 가져오기
+      const gameResponse = await gameApi.getTodayGame();
+      if (gameResponse.status === 'SUCCESS' && gameResponse.data) {
+        setTodayGame(gameResponse.data);
       }
 
       // 현재 위치 가져오기
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('권한 오류', '위치 접근 권한이 필요합니다.');
+        return;
+      }
+
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
-        timeInterval: 15000,
-        distanceInterval: 10,
       });
 
-      const { latitude, longitude } = location.coords;
-      setCurrentLocation({ latitude, longitude });
-      
-      const newRegion = {
-        latitude,
-        longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      };
-      
-      setMapRegion(newRegion);
-      
-      // 지도를 새로운 지역으로 애니메이션
-      setTimeout(() => {
-        if (mapRef.current) {
-          mapRef.current.animateToRegion(newRegion, 1000);
-        }
-      }, 500);
-      
-      setIsLoading(false);
+      setCurrentLocation({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+
     } catch (error) {
-      console.error('위치 정보 오류:', error);
-      Alert.alert('위치 오류', '현재 위치를 가져올 수 없습니다. GPS를 활성화해주세요.');
+      console.error('초기 데이터 로딩 실패:', error);
+      Alert.alert('오류', '데이터를 불러오는 중 문제가 발생했습니다.');
+    } finally {
       setIsLoading(false);
     }
   };
-
 
   const handleAttendanceVerification = async () => {
     if (!currentLocation) {
@@ -237,23 +91,14 @@ export const AttendanceVerificationScreen = () => {
     setIsVerifying(true);
 
     try {
-      console.log('현재 설정된 위치:', currentLocation);
       const requestData = {
         latitude: currentLocation.latitude,
         longitude: currentLocation.longitude,
       };
-      console.log('API 요청할 데이터:', requestData);
       
-      // API 호출로 직관 인증 (서버에서 거리 검증)
       const response = await attendanceApi.verifyAttendance(requestData);
-      console.log('🎯 직관 인증 응답 전체:', {
-        status: response.status,
-        message: response.message,
-        data: response.data
-      });
 
       if (response.status === 'SUCCESS') {
-        // 백엔드에서 받은 게임 정보 사용
         const gameInfo = response.data?.gameInfo ? {
           gameId: response.data.gameInfo.gameId,
           awayTeamName: response.data.gameInfo.awayTeam,
@@ -262,10 +107,8 @@ export const AttendanceVerificationScreen = () => {
           stadium: response.data.stadiumInfo?.stadiumName || '야구장',
         } : null;
 
-        // 상태 저장
         setAttendanceVerified(true, gameInfo);
 
-        setIsVerifying(false);
         Alert.alert(
           '직관 인증 성공! 🎉',
           '직관 인증이 완료되었습니다!',
@@ -273,21 +116,19 @@ export const AttendanceVerificationScreen = () => {
             {
               text: '확인',
               onPress: () => {
-                // 홈으로 돌아가기 (MainTabs의 HomeStack으로 이동)
                 navigation.navigate('MainTabs', { screen: 'HomeStack', params: { screen: 'Home' } });
               },
             },
           ]
         );
       } else {
-        setIsVerifying(false);
         Alert.alert(
-          '직관 인증 실패 😔',
-          response.message || '인증에 실패했습니다. 다시 시도해주세요.',
+          '직관 인증 실패',
+          response.message || '인증에 실패했습니다.',
           [
             {
               text: '위치 새로고침',
-              onPress: getCurrentLocation,
+              onPress: loadTodayGameAndLocation,
             },
             {
               text: '확인',
@@ -298,29 +139,35 @@ export const AttendanceVerificationScreen = () => {
       }
     } catch (error: any) {
       console.error('직관 인증 중 오류:', error);
+      Alert.alert('직관 인증 실패', '서버와 연결할 수 없습니다. 잠시 후 다시 시도해주세요.');
+    } finally {
       setIsVerifying(false);
-      
-      // 에러 메시지 추출
-      let errorMessage = '서버와 연결할 수 없어요. 잠시 후 다시 시도해주세요.';
-      
-      // API 응답에서 메시지 추출 시도
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.message && error.message !== 'Network Error') {
-        errorMessage = error.message;
-      }
-      
-      Alert.alert(
-        '직관 인증 실패',
-        errorMessage,
-        [
-          {
-            text: '확인',
-            style: 'cancel',
-          },
-        ]
-      );
     }
+  };
+
+  const setTestLocation = (stadium: any) => {
+    // 구장 근처 100m 이내 랜덤 위치 설정
+    const randomOffset = () => (Math.random() - 0.5) * 0.002; // 약 100m 내외
+    const testLocation = {
+      latitude: stadium.latitude + randomOffset(),
+      longitude: stadium.longitude + randomOffset(),
+    };
+    
+    setCurrentLocation(testLocation);
+    setSelectedStadium(stadium);
+    
+    // 지도를 해당 위치로 이동
+    if (mapRef.current) {
+      mapRef.current.animateToRegion({
+        latitude: testLocation.latitude,
+        longitude: testLocation.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      }, 1000);
+    }
+    
+    Alert.alert('테스트 위치 설정', `${stadium.name} 근처로 위치가 설정되었습니다.`);
+    setShowStadiumTest(false);
   };
 
   if (isLoading) {
@@ -328,7 +175,7 @@ export const AttendanceVerificationScreen = () => {
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>현재 위치를 확인하는 중...</Text>
+          <Text style={styles.loadingText}>데이터를 불러오는 중...</Text>
         </View>
       </SafeAreaView>
     );
@@ -336,113 +183,127 @@ export const AttendanceVerificationScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.backButton}>← 뒤로가기</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>직관 인증</Text>
-        <View style={styles.placeholder} />
-      </View>
+      <ScrollView style={styles.content}>
+        {todayGame && (
+          <View style={styles.gameInfo}>
+            <Text style={styles.gameTitle}>🏟️ 오늘의 경기</Text>
+            <Text style={styles.gameDetails}>
+              {todayGame.awayTeamName} vs {todayGame.homeTeamName}
+            </Text>
+            <Text style={styles.gameTime}>
+              {new Date(todayGame.dateTime).toLocaleString('ko-KR')}
+            </Text>
+            <Text style={styles.gameStadium}>{todayGame.stadium}</Text>
+          </View>
+        )}
 
-      <View style={styles.mapContainer}>
-        <MapView
-          ref={mapRef}
-          style={styles.map}
-          initialRegion={{
-            latitude: selectedStadium.latitude,
-            longitude: selectedStadium.longitude,
-            latitudeDelta: 0.01,
-            longitudeDelta: 0.01,
-          }}
-          showsUserLocation={false}
-          showsMyLocationButton={true}
-          mapType="standard"
-          onLayout={() => {
-            if (!mapInitialized) {
-              setMapInitialized(true);
-            }
-          }}
-        >
-          <Marker
-            coordinate={{
+        {/* 지도 */}
+        <View style={styles.mapContainer}>
+          <MapView
+            ref={mapRef}
+            style={styles.map}
+            initialRegion={{
               latitude: selectedStadium.latitude,
               longitude: selectedStadium.longitude,
+              latitudeDelta: 0.01,
+              longitudeDelta: 0.01,
             }}
-            title={selectedStadium.name}
-            description={`직관 인증 목표 위치${selectedStadium.homeTeams.length > 0 ? ` (${selectedStadium.homeTeams.join(', ')})` : ''}`}
-            pinColor="red"
-          />
-          
-          {currentLocation && (
+            showsUserLocation={false}
+            showsMyLocationButton={false}
+            mapType="standard"
+          >
+            {/* 구장 마커 */}
             <Marker
               coordinate={{
-                latitude: currentLocation.latitude,
-                longitude: currentLocation.longitude,
+                latitude: selectedStadium.latitude,
+                longitude: selectedStadium.longitude,
               }}
-              title="현재 위치"
-              description="현재 있는 위치"
-              pinColor="blue"
+              title={selectedStadium.name}
+              description={`${selectedStadium.teams} 홈구장`}
+              pinColor="red"
             />
-          )}
-        </MapView>
-      </View>
+            
+            {/* 현재 위치 마커 */}
+            {currentLocation && (
+              <Marker
+                coordinate={{
+                  latitude: currentLocation.latitude,
+                  longitude: currentLocation.longitude,
+                }}
+                title="현재 위치"
+                description="GPS 위치"
+                pinColor="blue"
+              />
+            )}
+          </MapView>
+        </View>
 
-      <View style={styles.infoContainer}>
-        <Text style={styles.infoTitle}>📍 인증 정보</Text>
-        <Text style={styles.infoText}>목표 위치: {selectedStadium.name}</Text>
-        <Text style={styles.infoText}>인증 범위: {MAX_DISTANCE}m 이내</Text>
-        {currentLocation && (
-          <>
-            <Text style={styles.currentLocationText}>
-              현재 위치: {currentLocation.latitude.toFixed(4)}, {currentLocation.longitude.toFixed(4)}
+        <View style={styles.locationInfo}>
+          <Text style={styles.locationTitle}>📍 현재 위치</Text>
+          {currentLocation ? (
+            <Text style={styles.locationText}>
+              위도: {currentLocation.latitude.toFixed(6)}{'\n'}
+              경도: {currentLocation.longitude.toFixed(6)}
             </Text>
-          </>
+          ) : (
+            <Text style={styles.locationError}>위치를 확인할 수 없습니다</Text>
+          )}
+        </View>
+
+        <View style={styles.infoBox}>
+          <Text style={styles.infoTitle}>ℹ️ 인증 안내</Text>
+          <Text style={styles.infoText}>
+            • 경기장 150m 이내에서만 인증 가능합니다{'\n'}
+            • 경기 시작 2시간 전부터 인증 가능합니다{'\n'}
+            • 하루에 한 번만 인증할 수 있습니다
+          </Text>
+        </View>
+        
+        {/* 구장 테스트 버튼들 */}
+        {showStadiumTest && (
+          <View style={styles.stadiumTestContainer}>
+            <Text style={styles.stadiumTestTitle}>🏟️ 테스트용 구장 위치 설정</Text>
+            {STADIUMS.map((stadium, index) => (
+              <TouchableOpacity
+                key={index}
+                style={styles.stadiumTestButton}
+                onPress={() => setTestLocation(stadium)}
+              >
+                <Text style={styles.stadiumTestButtonText}>
+                  {stadium.name} ({stadium.teams})
+                </Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={styles.stadiumTestCloseButton}
+              onPress={() => setShowStadiumTest(false)}
+            >
+              <Text style={styles.stadiumTestCloseButtonText}>닫기</Text>
+            </TouchableOpacity>
+          </View>
         )}
-      </View>
+      </ScrollView>
 
       <View style={styles.buttonContainer}>
         <TouchableOpacity
           style={styles.refreshButton}
-          onPress={getCurrentLocation}
+          onPress={loadTodayGameAndLocation}
           disabled={isLoading}
         >
-          <Text style={styles.refreshButtonText}>📍 위치 새로고침</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={styles.stadiumSelectButton}
-          onPress={() => setShowStadiumModal(true)}
-          onLongPress={() => {
-            // 테스트용: 선택된 구장 근처 위치로 설정 (100m 이내)
-            const testLocation = {
-              latitude: selectedStadium.latitude + 0.0009, // 약 100m 떨어진 위치
-              longitude: selectedStadium.longitude + 0.0009,
-            };
-            
-            setCurrentLocation(testLocation);
-            
-            const newRegion = {
-              latitude: testLocation.latitude,
-              longitude: testLocation.longitude,
-              latitudeDelta: 0.01,
-              longitudeDelta: 0.01,
-            };
-            
-            setMapRegion(newRegion);
-            
-            if (mapRef.current) {
-              mapRef.current.animateToRegion(newRegion, 1000);
-            }
-            
-            Alert.alert('테스트 모드', `${selectedStadium.name} 근처 위치로 설정되었습니다.`);
-          }}
-        >
-          <Text style={styles.stadiumSelectButtonText}>🏟️ 구장 선택 ({selectedStadium.name})</Text>
-          <Text style={styles.stadiumSelectSubText}>길게 누르면 테스트 위치</Text>
+          <Text style={styles.refreshButtonText}>🔄 새로고침</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.verifyButton, isVerifying && styles.verifyButtonDisabled]}
+          style={styles.testButton}
+          onPress={() => setShowStadiumTest(!showStadiumTest)}
+        >
+          <Text style={styles.testButtonText}>
+            {showStadiumTest ? '테스트 메뉴 닫기' : '🧪 구장 위치 테스트'}
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[styles.verifyButton, (isVerifying || !currentLocation) && styles.verifyButtonDisabled]}
           onPress={handleAttendanceVerification}
           disabled={isVerifying || !currentLocation}
         >
@@ -453,78 +314,6 @@ export const AttendanceVerificationScreen = () => {
           )}
         </TouchableOpacity>
       </View>
-
-      {/* 구장 선택 모달 */}
-      <Modal
-        visible={showStadiumModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowStadiumModal(false)}
-      >
-        <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>구장 선택</Text>
-            <TouchableOpacity 
-              style={styles.modalCloseButton}
-              onPress={() => setShowStadiumModal(false)}
-            >
-              <Text style={styles.modalCloseButtonText}>✕</Text>
-            </TouchableOpacity>
-          </View>
-          
-          <FlatList
-            data={STADIUMS}
-            keyExtractor={(item) => item.id}
-            style={styles.stadiumList}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[
-                  styles.stadiumItem,
-                  selectedStadium.id === item.id && styles.selectedStadiumItem
-                ]}
-                onPress={() => {
-                  setSelectedStadium(item);
-                  
-                  // 지도를 새 구장으로 이동
-                  const newRegion = {
-                    latitude: item.latitude,
-                    longitude: item.longitude,
-                    latitudeDelta: 0.01,
-                    longitudeDelta: 0.01,
-                  };
-                  setMapRegion(newRegion);
-                  
-                  if (mapRef.current) {
-                    mapRef.current.animateToRegion(newRegion, 1000);
-                  }
-                  
-                  setShowStadiumModal(false);
-                }}
-              >
-                <View style={styles.stadiumItemHeader}>
-                  <Text style={[
-                    styles.stadiumName,
-                    selectedStadium.id === item.id && styles.selectedStadiumName
-                  ]}>
-                    {item.name}
-                  </Text>
-                  <Text style={styles.stadiumRegion}>{item.region}</Text>
-                </View>
-                {item.homeTeams.length > 0 && (
-                  <Text style={styles.homeTeams}>
-                    홈팀: {item.homeTeams.join(', ')}
-                  </Text>
-                )}
-                <Text style={styles.coordinates}>
-                  📍 {item.latitude.toFixed(4)}, {item.longitude.toFixed(4)}
-                </Text>
-              </TouchableOpacity>
-            )}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.stadiumListContent}
-          />
-        </SafeAreaView>
-      </Modal>
     </SafeAreaView>
   );
 };
@@ -566,59 +355,102 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
-  mapContainer: {
+  content: {
     flex: 1,
-    margin: 16,
+    padding: 16,
+  },
+  mapContainer: {
+    height: 250,
+    marginBottom: 16,
     borderRadius: 12,
     overflow: 'hidden',
-    elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
-    height: 400,
+    elevation: 3,
   },
   map: {
     flex: 1,
   },
-  mapPlaceholder: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
-  },
-  mapPlaceholderText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-  },
-  infoContainer: {
+  gameInfo: {
     backgroundColor: '#fff',
-    margin: 16,
     padding: 16,
     borderRadius: 12,
-    elevation: 2,
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
+    elevation: 2,
   },
-  infoTitle: {
+  gameTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 12,
+    marginBottom: 8,
+  },
+  gameDetails: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#007AFF',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  gameTime: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  gameStadium: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+  },
+  locationInfo: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  locationTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+  },
+  locationText: {
+    fontSize: 14,
+    color: '#666',
+    fontFamily: 'monospace',
+  },
+  locationError: {
+    fontSize: 14,
+    color: '#ff6b6b',
+  },
+  infoBox: {
+    backgroundColor: '#e3f2fd',
+    padding: 16,
+    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#2196f3',
+  },
+  infoTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1976d2',
+    marginBottom: 8,
   },
   infoText: {
     fontSize: 14,
-    color: '#666',
-    marginBottom: 6,
-  },
-  currentLocationText: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 4,
+    color: '#1565c0',
+    lineHeight: 20,
   },
   buttonContainer: {
     paddingHorizontal: 16,
@@ -637,23 +469,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  stadiumSelectButton: {
+  testButton: {
     backgroundColor: '#28a745',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
     alignItems: 'center',
   },
-  stadiumSelectButtonText: {
+  testButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  stadiumSelectSubText: {
-    color: '#fff',
-    fontSize: 12,
-    opacity: 0.8,
-    marginTop: 2,
   },
   verifyButton: {
     backgroundColor: '#007AFF',
@@ -670,93 +496,50 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
-  // 모달 스타일
-  modalContainer: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+  // 구장 테스트 스타일
+  stadiumTestContainer: {
     backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  modalCloseButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#f0f0f0',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalCloseButtonText: {
-    fontSize: 18,
-    color: '#666',
-    fontWeight: 'bold',
-  },
-  stadiumList: {
-    flex: 1,
-  },
-  stadiumListContent: {
-    padding: 16,
-  },
-  stadiumItem: {
-    backgroundColor: '#fff',
+    margin: 16,
     padding: 16,
     borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  selectedStadiumItem: {
-    borderColor: '#007AFF',
-    backgroundColor: '#f0f8ff',
-  },
-  stadiumItemHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  stadiumName: {
+  stadiumTestTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
-    flex: 1,
+    marginBottom: 12,
+    textAlign: 'center',
   },
-  selectedStadiumName: {
-    color: '#007AFF',
+  stadiumTestButton: {
+    backgroundColor: '#f8f9fa',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
   },
-  stadiumRegion: {
+  stadiumTestButtonText: {
+    color: '#495057',
     fontSize: 14,
-    color: '#666',
-    backgroundColor: '#f0f0f0',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    textAlign: 'center',
   },
-  homeTeams: {
+  stadiumTestCloseButton: {
+    backgroundColor: '#dc3545',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  stadiumTestCloseButtonText: {
+    color: '#fff',
     fontSize: 14,
-    color: '#007AFF',
-    marginBottom: 4,
-    fontWeight: '500',
-  },
-  coordinates: {
-    fontSize: 12,
-    color: '#999',
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
 });

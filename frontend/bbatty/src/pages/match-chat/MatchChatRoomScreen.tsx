@@ -13,6 +13,7 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import NetInfo from '@react-native-community/netinfo';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -821,9 +822,33 @@ export const MatchChatRoomScreen = () => {
   }, []); // disconnect를 dependency에서 제거
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={styles.container}>
+      <LinearGradient
+        colors={[themeColor, themeColor]}
+        style={[styles.headerGradient, { paddingTop: insets.top }]}
+      >
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          >
+            <Text style={[styles.backButtonText, { color: '#ffffff' }]}>←</Text>
+          </TouchableOpacity>
+          <View style={styles.headerContent}>
+            <Text style={[styles.headerTitle, { color: '#ffffff' }]}>
+              {isWatchChat ? '직관채팅' : room.matchTitle || '매치채팅'}
+            </Text>
+            {gameInfo && (
+              <Text style={[styles.headerSubtitle, { color: '#ffffff' }]}>
+                {gameInfo.awayTeamName} vs {gameInfo.homeTeamName}
+              </Text>
+            )}
+          </View>
+        </View>
+      </LinearGradient>
+
       <KeyboardAvoidingView 
-        style={styles.container}
+        style={styles.keyboardContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
@@ -832,26 +857,6 @@ export const MatchChatRoomScreen = () => {
           notifications={notifications}
           onDismiss={dismissNotification}
         />
-
-        {/* 헤더 */}
-        <View style={[styles.header, { backgroundColor: themeColor }]}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
-          >
-            <Text style={styles.backButtonText}>←</Text>
-          </TouchableOpacity>
-          <View style={styles.headerContent}>
-            <Text style={styles.headerTitle}>
-              {isWatchChat ? '직관채팅' : room.matchTitle || '매치채팅'}
-            </Text>
-            {gameInfo && (
-              <Text style={styles.headerSubtitle}>
-                {gameInfo.awayTeamName} vs {gameInfo.homeTeamName}
-              </Text>
-            )}
-          </View>
-        </View>
 
         {/* 메시지 목록 */}
         <FlatList

@@ -8,12 +8,7 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f6fa',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    height: HEADER_HEIGHT,
+  headerGradient: {
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -22,6 +17,13 @@ export const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 4,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    height: HEADER_HEIGHT,
   },
   headerContent: {
     flex: 1,
@@ -41,10 +43,6 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     width: 48,
     height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
   },
   searchButtonText: {
     color: '#fff',

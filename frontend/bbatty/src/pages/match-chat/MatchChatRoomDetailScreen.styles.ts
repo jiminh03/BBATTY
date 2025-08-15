@@ -8,6 +8,16 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f6fa',
   },
+  headerGradient: {
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
