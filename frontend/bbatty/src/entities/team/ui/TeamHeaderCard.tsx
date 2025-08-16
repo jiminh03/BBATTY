@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Image, StyleSheet, Pressable } from 'react-native';
+import { View, Text, Image, StyleSheet, Pressable, ImageSourcePropType } from 'react-native';
 import { useAttendanceStore } from '../../attendance/model/attendanceStore';
 import { gameApi } from '../../game/api/api';
 
 type Props = {
-  teamLogo: string;
+  teamLogo?: ImageSourcePropType;
   teamName: string;
   rankText: string;
   recordText: string;
@@ -85,25 +85,31 @@ export default function TeamHeaderCard({
   };
 
   return (
-    <View style={[s.wrap, { backgroundColor: accentColor }]}>
-      <View style={s.left}>
-        <Image source={{ uri: teamLogo }} style={s.logo} />
-        <View style={{ marginLeft: 12 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={s.team}>{teamName}</Text>
-            <View style={s.badge}/>
-          </View>
-          <Text style={s.rank}>{rankText}</Text>
-          <Text style={s.record}>{recordText}</Text>
+  <View style={[s.wrap, { backgroundColor: accentColor }]}>
+    <View style={s.left}>
+      <Image
+        source={
+          typeof teamLogo === 'string'
+            ? { uri: teamLogo } // URL일 때
+            : teamLogo          // require(...)나 undefined일 때
+        }
+        style={s.logo}
+        resizeMode="contain"
+      />
+      <View style={{ marginLeft: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Text style={s.team}>{teamName}</Text>
+          <View style={s.badge} />
         </View>
+        <Text style={s.rank}>{rankText}</Text>
+        <Text style={s.record}>{recordText}</Text>
       </View>
-      {showButton && (
-        <Pressable style={s.chat} onPress={onPressChat} disabled={isLoading}>
-          <Text style={s.chatTxt}>{getChatButtonText()}</Text>
-        </Pressable>
-      )}
     </View>
-  );
+    <Pressable style={s.chat} onPress={onPressChat} disabled={isLoading}>
+      <Text style={s.chatTxt}>{getChatButtonText()}</Text>
+    </Pressable>
+  </View>
+);
 }
 
 const s = StyleSheet.create({

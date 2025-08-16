@@ -13,6 +13,7 @@ import {
   LayoutAnimation,
   UIManager,
   Platform,
+  ImageSourcePropType,
 } from 'react-native';
 import { HomeStackScreenProps } from '../../navigation/types';
 import TeamHeaderCard from '../../entities/team/ui/TeamHeaderCard';
@@ -244,6 +245,12 @@ export default function HomeScreen({ navigation }: Props) {
     if (tab === 'all') (isSearching ? searchQ.fetchNextPage() : listQ.fetchNextPage());
   };
 
+  const teamLogoSrc: ImageSourcePropType | undefined = team?.imagePath
+  ? (typeof team.imagePath === 'string'
+      ? { uri: team.imagePath }           // CDN/URL
+      : (team.imagePath as any))          // require('...') 모듈
+  : undefined;
+
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
       {/* 헤더(팀색 배경) */}
@@ -251,7 +258,7 @@ export default function HomeScreen({ navigation }: Props) {
         {/* 팀 카드 – 살짝 아래 여백 주기 */}
         <View style={{ paddingTop: 8 }}>
           <TeamHeaderCard
-            teamLogo={String(team?.imagePath ?? '')}
+            teamLogo={teamLogoSrc}
             teamName={team?.name ?? 'KBO 팀'}
             rankText={rankText}
             recordText={recordText}
@@ -372,7 +379,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   pill: {
-    height: 33,
+    height: 30,
     paddingHorizontal: 10,
     borderRadius: 10,
     backgroundColor: '#fff',
