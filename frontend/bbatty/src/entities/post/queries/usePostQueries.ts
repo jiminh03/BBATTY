@@ -31,7 +31,7 @@ export const useCreatePost = () => {
 };
 
 /* ================= 상세(서버우선 + 스토어 fallback) ================= */
-export const usePostDetailQuery = (postId: number, opts?: { refetchOnFocus?: boolean }) => {
+export const usePostDetailQuery = (postId: number | null, opts?: { refetchOnFocus?: boolean }) => {
   const userId = useUserStore((s: any) => s.currentUser?.id ?? s.currentUser?.userId ?? null) ?? null;
 
   // 렌더 중 set 금지: userId 바뀔 때만 세션 동기화
@@ -43,9 +43,10 @@ export const usePostDetailQuery = (postId: number, opts?: { refetchOnFocus?: boo
 
   return useQuery<Post>({
     queryKey: ['post', postId],
-    queryFn: () => postApi.getPostById(postId),
+    queryFn: () => postApi.getPostById(postId!),
+    enabled: postId !== null,
     select: (p) => {
-      const local = getLiked(postId, userId);
+      const local = getLiked(postId!, userId);
 
       const serverLikedRaw =
         typeof (p as any).isLiked === 'boolean'

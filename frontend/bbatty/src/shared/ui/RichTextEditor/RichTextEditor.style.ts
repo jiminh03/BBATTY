@@ -24,10 +24,11 @@ export const styles = StyleSheet.create({
 
   textSegmentContainer: {
     marginVertical: 1,
-    minHeight: 22, // textInput/textContent와 일치
+    minHeight: 24,
     borderRadius: 4,
     paddingHorizontal: 4,
-    paddingVertical: 1, // 더 일관된 여백
+    paddingVertical: 1,
+    position: 'relative',
   },
 
   textInput: {
@@ -60,9 +61,9 @@ export const styles = StyleSheet.create({
   },
 
   imageBlock: {
-    marginVertical: 8,
+    marginVertical: 6,
     position: 'relative',
-    padding: 4, // 터치 영역 확대
+    padding: 4,
   },
 
   imageBlockDragging: {
@@ -112,17 +113,17 @@ export const styles = StyleSheet.create({
 
   dropZoneLine: {
     position: 'absolute',
-    left: 0,
-    right: 0,
+    left: -12,
+    right: -12,
     height: 3,
     backgroundColor: '#007AFF',
     borderRadius: 1.5,
     shadowColor: '#007AFF',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.5,
-    shadowRadius: 2,
-    elevation: 2,
-    zIndex: 100, // 오버레이(99999)보다 훨씬 낮게 설정
+    shadowOpacity: 0.4,
+    shadowRadius: 3,
+    elevation: 5,
+    zIndex: 1000,
   },
 
   dropZoneLineInside: {
