@@ -376,19 +376,22 @@ const styles = StyleSheet.create({
   actionRow: {
     position: 'absolute',
     right: 16,
+    top: 100,
     flexDirection: 'row',
   },
   pill: {
     height: 30,
+    width: 81,
     paddingHorizontal: 10,
     borderRadius: 10,
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 8,
-    marginRight: 12,
+    marginRight: 4.5,
+    marginTop:30,
   },
-  pillText: { fontSize: 11.5, fontWeight: '700' },
+  pillText: { fontSize: 10.5, fontWeight: '600' },
 
   // 검색 UI
   searchSection: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8, backgroundColor: '#fff' },

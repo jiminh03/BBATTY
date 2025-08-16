@@ -95,7 +95,7 @@ function PostItemBase({ post, teamId, onPress }: Props) {
             <Text style={s.dot}>·</Text>
             <Text style={s.meta}>👁 {views}</Text>
             <Text style={s.dot}>·</Text>
-            <Text style={s.meta}>{liked ? '❤️' : '🤍'} {likeCount}</Text>
+            <Text style={s.meta}>{liked ? '🤍' : '🤍'} {likeCount}</Text>
             <Text style={s.dot}>·</Text>
             <Text style={s.meta}>💬 {commentCount}</Text>
           </View>
