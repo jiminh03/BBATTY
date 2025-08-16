@@ -30,19 +30,33 @@ const TEAMS = [
   'LG', 'KT', 'SSG', 'NC', '두산', '기아', 'KIA', 'SK', '삼성', '롯데', '한화'
 ];
 
-// 팀 이름을 ID로 매핑
+// 팀 이름을 ID로 매핑 (실제 teamTypes.ts와 일치)
 const TEAM_ID_MAP: { [key: string]: number } = {
-  'LG': 1,
-  'KT': 2, 
-  'SSG': 3,
-  'NC': 4,
-  '두산': 5,
+  'LG': 2,
+  'KT': 4, 
+  'SSG': 7,
+  'NC': 8,
+  '두산': 9,
   '기아': 6,
-  'KIA': 6, // 기아와 KIA는 같은 팀
+  'KIA': 6,
   'SK': 7,
-  '삼성': 8,
-  '롯데': 9,
-  '한화': 10
+  '삼성': 5,
+  '롯데': 3,
+  '한화': 1
+};
+
+// ID를 팀 이름으로 역매핑 (실제 teamTypes.ts와 일치)
+const ID_TO_TEAM_NAME_MAP: { [key: number]: string[] } = {
+  1: ['한화 이글스'],
+  2: ['LG 트윈스'],
+  3: ['롯데 자이언츠'],
+  4: ['KT 위즈'],
+  5: ['삼성 라이온즈'],
+  6: ['KIA 타이거즈'],
+  7: ['SSG 랜더스'],
+  8: ['NC 다이노스'],
+  9: ['두산 베어스'],
+  10: ['키움 히어로즈']
 };
 
 const GENDER_OPTIONS = [
@@ -69,7 +83,7 @@ export const CreateMatchChatRoomScreen = () => {
     matchDescription: '',
     teamId: currentUser?.teamId || 1,
     minAge: 20,
-    maxAge: 30,
+    maxAge: 100,
     genderCondition: 'ALL',
     maxParticipants: 10,
     nickname: currentUser?.nickname || '',
@@ -86,8 +100,18 @@ export const CreateMatchChatRoomScreen = () => {
       const response = await gameApi.getGames();
       console.log('📅 경기 목록 API 응답:', response);
       if (response.status === 'SUCCESS') {
-        setGames(response.data);
-        console.log('📅 경기 목록 설정 완료:', response.data);
+        // 내 팀의 경기만 필터링
+        const myTeamGames = currentUser?.teamId 
+          ? response.data.filter(game => {
+              const myTeamNames = ID_TO_TEAM_NAME_MAP[currentUser.teamId] || [];
+              return myTeamNames.some(teamName => 
+                game.awayTeamName.includes(teamName.split(' ')[0]) || 
+                game.homeTeamName.includes(teamName.split(' ')[0])
+              );
+            })
+          : response.data;
+        setGames(myTeamGames);
+        console.log('📅 내 팀 경기 목록 설정 완료:', myTeamGames);
       } else {
         console.warn('📅 경기 목록 로드 실패:', response);
       }
@@ -126,6 +150,33 @@ export const CreateMatchChatRoomScreen = () => {
     }
   };
 
+  const checkUserConditions = () => {
+    if (!currentUser) {
+      Alert.alert('오류', '사용자 정보를 확인할 수 없습니다.');
+      return false;
+    }
+
+    // 나이 조건 체크
+    if (currentUser.age < formData.minAge || currentUser.age > formData.maxAge) {
+      Alert.alert('참여 불가', `이 채팅방은 ${formData.minAge}세-${formData.maxAge}세만 참여할 수 있습니다.`);
+      return false;
+    }
+
+    // 성별 조건 체크
+    if (formData.genderCondition !== 'ALL') {
+      if (formData.genderCondition === 'MALE' && currentUser.gender !== 'MALE') {
+        Alert.alert('참여 불가', '이 채팅방은 남성만 참여할 수 있습니다.');
+        return false;
+      }
+      if (formData.genderCondition === 'FEMALE' && currentUser.gender !== 'FEMALE') {
+        Alert.alert('참여 불가', '이 채팅방은 여성만 참여할 수 있습니다.');
+        return false;
+      }
+    }
+
+    return true;
+  };
+
   const handleSubmit = async () => {
     if (!selectedGame) {
       Alert.alert('알림', '경기를 먼저 선택해주세요.');
@@ -142,9 +193,13 @@ export const CreateMatchChatRoomScreen = () => {
       return;
     }
 
-
     if (formData.minAge >= formData.maxAge) {
       Alert.alert('알림', '최대 나이는 최소 나이보다 커야 합니다.');
+      return;
+    }
+
+    // 사용자 조건 체크
+    if (!checkUserConditions()) {
       return;
     }
 
@@ -187,6 +242,16 @@ export const CreateMatchChatRoomScreen = () => {
       // 팀 이름을 ID로 변환
       const teamId = TEAM_ID_MAP[value];
       setFormData(prev => ({ ...prev, [key]: teamId || 1 }));
+    } else if (key === 'minAge' || key === 'maxAge') {
+      // 나이 제한 적용 (20-100세)
+      const numericValue = value.toString().replace(/[^0-9]/g, ''); // 숫자만 추출
+      if (numericValue === '') {
+        return; // 빈 문자열일 때는 업데이트하지 않음
+      }
+      const age = parseInt(numericValue);
+      if (isNaN(age)) return;
+      const clampedAge = Math.max(20, Math.min(100, age));
+      setFormData(prev => ({ ...prev, [key]: clampedAge }));
     } else {
       setFormData(prev => ({ ...prev, [key]: value }));
     }
@@ -283,18 +348,58 @@ export const CreateMatchChatRoomScreen = () => {
                 <View style={styles.ageInputContainer}>
                   <TextInput
                     style={styles.ageInput}
-                    value={formData.minAge.toString()}
-                    onChangeText={(text) => updateFormData('minAge', parseInt(text) || 0)}
+                    value={formData.minAge === 0 ? '' : formData.minAge.toString()}
+                    onChangeText={(text) => {
+                      // 빈 문자열이면 0으로 임시 저장 (화면에는 빈 문자열 표시)
+                      if (text === '') {
+                        setFormData(prev => ({ ...prev, minAge: 0 }));
+                        return;
+                      }
+                      // 숫자만 허용
+                      const numValue = parseInt(text);
+                      if (!isNaN(numValue) && numValue >= 0) {
+                        setFormData(prev => ({ ...prev, minAge: numValue }));
+                      }
+                    }}
+                    onBlur={() => {
+                      // 포커스를 잃을 때만 범위 체크
+                      if (formData.minAge === 0) {
+                        setFormData(prev => ({ ...prev, minAge: 20 }));
+                      } else {
+                        const clampedValue = Math.max(20, Math.min(100, formData.minAge));
+                        setFormData(prev => ({ ...prev, minAge: clampedValue }));
+                      }
+                    }}
                     keyboardType="numeric"
-                    maxLength={2}
+                    maxLength={3}
                   />
                   <Text style={styles.ageText}>-</Text>
                   <TextInput
                     style={styles.ageInput}
-                    value={formData.maxAge.toString()}
-                    onChangeText={(text) => updateFormData('maxAge', parseInt(text) || 0)}
+                    value={formData.maxAge === 0 ? '' : formData.maxAge.toString()}
+                    onChangeText={(text) => {
+                      // 빈 문자열이면 0으로 임시 저장 (화면에는 빈 문자열 표시)
+                      if (text === '') {
+                        setFormData(prev => ({ ...prev, maxAge: 0 }));
+                        return;
+                      }
+                      // 숫자만 허용
+                      const numValue = parseInt(text);
+                      if (!isNaN(numValue) && numValue >= 0) {
+                        setFormData(prev => ({ ...prev, maxAge: numValue }));
+                      }
+                    }}
+                    onBlur={() => {
+                      // 포커스를 잃을 때만 범위 체크
+                      if (formData.maxAge === 0) {
+                        setFormData(prev => ({ ...prev, maxAge: 20 }));
+                      } else {
+                        const clampedValue = Math.max(20, Math.min(100, formData.maxAge));
+                        setFormData(prev => ({ ...prev, maxAge: clampedValue }));
+                      }
+                    }}
                     keyboardType="numeric"
-                    maxLength={2}
+                    maxLength={3}
                   />
                   <Text style={styles.ageText}>세</Text>
                 </View>

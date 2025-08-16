@@ -16,6 +16,7 @@ import { gameApi } from '../../entities/game/api/api';
 import type { MatchChatRoom } from '../../entities/chat-room/api/types';
 import type { Game } from '../../entities/game/api/types';
 import type { ChatStackParamList } from '../../navigation/types';
+import { useUserStore } from '../../entities/user/model/userStore';
 import { useThemeColor } from '../../shared/team/ThemeContext';
 import { styles } from './MatchChatRoomListScreen.styles';
 
@@ -23,6 +24,7 @@ type NavigationProp = StackNavigationProp<ChatStackParamList>;
 
 export default function ChatRoomSearchScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const getCurrentUser = useUserStore((state) => state.getCurrentUser);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searchResults, setSearchResults] = useState<MatchChatRoom[]>([]);
   const [loading, setLoading] = useState(false);
@@ -126,6 +128,42 @@ export default function ChatRoomSearchScreen() {
     return null;
   };
 
+  const checkJoinConditions = (room: MatchChatRoom) => {
+    const currentUser = getCurrentUser();
+    
+    if (!currentUser) {
+      Alert.alert('오류', '사용자 정보를 확인할 수 없습니다.');
+      return false;
+    }
+
+    // 팀 조건 체크
+    if (currentUser.teamId !== Number(room.teamId)) {
+      const teamInfo = getTeamInfo(room.teamId);
+      Alert.alert('입장 불가', `이 채팅방은 ${teamInfo.name} 팬 전용입니다.`);
+      return false;
+    }
+
+    // 나이 조건 체크
+    if (currentUser.age < room.minAge || currentUser.age > room.maxAge) {
+      Alert.alert('입장 불가', `이 채팅방은 ${room.minAge}세-${room.maxAge}세만 참여할 수 있습니다.`);
+      return false;
+    }
+
+    // 성별 조건 체크
+    if (room.genderCondition !== 'ALL') {
+      if (room.genderCondition === 'MALE' && currentUser.gender !== 'MALE') {
+        Alert.alert('입장 불가', '이 채팅방은 남성만 참여할 수 있습니다.');
+        return false;
+      }
+      if (room.genderCondition === 'FEMALE' && currentUser.gender !== 'FEMALE') {
+        Alert.alert('입장 불가', '이 채팅방은 여성만 참여할 수 있습니다.');
+        return false;
+      }
+    }
+
+    return true;
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -156,7 +194,11 @@ export default function ChatRoomSearchScreen() {
     return (
       <TouchableOpacity
         style={styles.roomItem}
-        onPress={() => navigation.navigate('MatchChatRoomDetail', { room: item })}
+        onPress={() => {
+          if (checkJoinConditions(item)) {
+            navigation.navigate('MatchChatRoomDetail', { room: item });
+          }
+        }}
         activeOpacity={0.9}
       >
         <View style={styles.topSection}>

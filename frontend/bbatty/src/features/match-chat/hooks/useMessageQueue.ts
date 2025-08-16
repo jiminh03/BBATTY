@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import type { PendingMessage, MessageStatus } from '../types';
 import { getErrorMessage, calculateRetryDelay, canRetry, logChatError } from '../../../shared/utils/error';
 
@@ -43,8 +43,9 @@ export const useMessageQueue = ({
   // 메시지 전송 시도
   const attemptSendMessage = useCallback(async (message: PendingMessage) => {
     if (!isConnected) {
-      // 연결되지 않은 상태에서는 대기
-      updateMessageStatus(message.id, 'failed');
+      // 연결되지 않은 상태에서는 대기 상태로 유지 (재연결 시 자동 재시도)
+      console.log(`📤 연결 대기 중: ${message.content.substring(0, 30)}...`);
+      updateMessageStatus(message.id, 'sending');
       return;
     }
 
@@ -166,6 +167,23 @@ export const useMessageQueue = ({
   const flushQueue = useCallback(async () => {
     await retryAllFailedMessages();
   }, [retryAllFailedMessages]);
+
+  // 연결 상태 변경 시 대기 중인 메시지들 재시도
+  useEffect(() => {
+    if (isConnected) {
+      console.log('🔄 연결 복구됨 - 대기 중인 메시지들 재시도');
+      const waitingMessages = pendingMessages.filter(msg => 
+        msg.status === 'sending' || msg.status === 'failed'
+      );
+      
+      if (waitingMessages.length > 0) {
+        console.log(`📤 ${waitingMessages.length}개 메시지 재시도 중...`);
+        setTimeout(() => {
+          retryAllFailedMessages();
+        }, 1000); // 연결 안정화를 위해 1초 대기
+      }
+    }
+  }, [isConnected, pendingMessages, retryAllFailedMessages]);
 
   return {
     pendingMessages,
