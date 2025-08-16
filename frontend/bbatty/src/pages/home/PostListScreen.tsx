@@ -1,13 +1,14 @@
-// pages/post/PostListScreen.tsx
+// pages/post/PostListScreen.tsx (전체 파일 대체)
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { FlatList, View, ActivityIndicator, Text } from 'react-native';
 import { HomeStackScreenProps } from '../../navigation/types';
 import { usePostListQuery } from '../../entities/post/queries/usePostQueries';
 import { PostItem } from '../../entities/post/ui/PostItem';
 import { useUserStore } from '../../entities/user/model/userStore';
+import { useFocusEffect } from '@react-navigation/native';
+import { useQueryClient } from '@tanstack/react-query';
 
 export const PostListScreen = ({ route }: HomeStackScreenProps<'PostList'>) => {
-  // teamId가 없으면 기본값 1
   const storeTeamId = useUserStore((s) => s.currentUser?.teamId);
   const teamId = route.params?.teamId ?? storeTeamId ?? 1;
 
@@ -23,23 +24,33 @@ export const PostListScreen = ({ route }: HomeStackScreenProps<'PostList'>) => {
     isFetchingNextPage,
   } = usePostListQuery(teamId);
 
-  // React Query 캐시에서 평탄화 (data 참조가 바뀔 때만 재계산)
+  // 캐시 → 평탄화
   const posts = useMemo(
     () => (data?.pages ?? []).flatMap((p) => p?.posts ?? []),
-    [data]
+    [data?.pages]
   );
 
-  // 무한스크롤 보호(초기 진입 직후 onEndReached 과호출 방지)
   useEffect(() => {
-    const timer = setTimeout(() => setCanLoadMore(true), 500);
-    return () => clearTimeout(timer);
+    const t = setTimeout(() => setCanLoadMore(true), 400);
+    return () => clearTimeout(t);
   }, []);
 
   const onEndReached = useCallback(() => {
-    if (canLoadMore && hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
+    if (canLoadMore && hasNextPage && !isFetchingNextPage) fetchNextPage();
   }, [canLoadMore, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // ✅ 목록 화면 포커스 시 가볍게 재검증(선택)
+  const qc = useQueryClient();
+  useFocusEffect(
+    useCallback(() => {
+      // 상세에서 낙관 반영은 이미 되어 있음. 여기서는 서버 정합성만 맞춤.
+      qc.invalidateQueries({ queryKey: ['posts', teamId], refetchType: 'active' });
+      // 인기/검색도 필요하면 아래 주석 해제
+      // qc.invalidateQueries({ queryKey: ['popularPostsAll', teamId], refetchType: 'active' });
+      // qc.invalidateQueries({ queryKey: ['popularPostsPreview', teamId], refetchType: 'active' });
+      return () => {};
+    }, [qc, teamId])
+  );
 
   if (isLoading) {
     return (
@@ -62,23 +73,11 @@ export const PostListScreen = ({ route }: HomeStackScreenProps<'PostList'>) => {
       <FlatList
         data={posts}
         keyExtractor={(item) => String(item.id)}
-        // ✅ 캐시가 바뀌면 강제로 리스트가 다시 그려지도록
-        //    (syncLikeEverywhere가 ['posts', teamId] 캐시를 갱신하면 여기 값도 바뀜)
+        // 캐시가 바뀌면 리렌더 보장
         extraData={data?.pages}
-        renderItem={({ item }) => (
-          // PostItem은 반드시 item.isLiked / item.likes를 사용해 렌더링해야 합니다.
-          <PostItem post={item} />
-        )}
+        renderItem={({ item }) => <PostItem post={item as any} teamId={teamId} />}
         onEndReached={onEndReached}
-        onEndReachedThreshold={0.1}
-        ListFooterComponent={
-          isFetchingNextPage ? (
-            <View style={{ paddingVertical: 16 }}>
-              <ActivityIndicator />
-            </View>
-          ) : null
-        }
-        // 스크롤 성능 튜닝(선택)
+        onEndReachedThreshold={0.15}
         initialNumToRender={8}
         windowSize={7}
         removeClippedSubviews
@@ -86,3 +85,5 @@ export const PostListScreen = ({ route }: HomeStackScreenProps<'PostList'>) => {
     </View>
   );
 };
+
+export default PostListScreen;
