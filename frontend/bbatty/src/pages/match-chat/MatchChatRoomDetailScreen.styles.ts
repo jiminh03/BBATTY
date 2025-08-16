@@ -85,6 +85,7 @@ export const styles = StyleSheet.create({
     right: 0,
     top: 0,
     height: 140,
+    backgroundColor: '#ffffff',
   },
   roomHeader: {
     position: 'absolute',
@@ -106,15 +107,15 @@ export const styles = StyleSheet.create({
   roomTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: '#333333',
     marginBottom: 8,
     letterSpacing: -0.3,
   },
   participantCount: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#ffffff',
-    opacity: 0.9,
+    color: '#666666',
+    opacity: 1,
   },
   teamBadge: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
@@ -294,17 +295,14 @@ export const styles = StyleSheet.create({
   gameTeamsText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#ffffff',
+    color: '#333333',
     marginBottom: 4,
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
   },
   
   gameDetailsText: {
     fontSize: 13,
-    color: '#ffffff',
-    opacity: 0.9,
+    color: '#666666',
+    opacity: 1,
     fontWeight: '500',
   },
   actionSection: {
@@ -485,5 +483,94 @@ export const styles = StyleSheet.create({
     color: '#2E7D32',
     lineHeight: 24,
     fontStyle: 'italic',
+  },
+
+  // 개선된 디자인 스타일들
+  conditionsSection: {
+    backgroundColor: '#ffffff',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  gameSection: {
+    backgroundColor: '#ffffff',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  headerIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f8f9fa',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  headerIconText: {
+    fontSize: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333333',
+  },
+  conditionItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f8f9fa',
+  },
+  conditionLabel: {
+    fontSize: 14,
+    color: '#666666',
+    fontWeight: '500',
+  },
+  conditionValue: {
+    fontSize: 16,
+    color: '#333333',
+    fontWeight: '600',
+  },
+  fullText: {
+    color: '#EF4444',
+    fontWeight: '700',
+  },
+  gameContent: {
+    alignItems: 'center',
+  },
+  gameTeams: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#333333',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  gameDetails: {
+    fontSize: 14,
+    color: '#666666',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });

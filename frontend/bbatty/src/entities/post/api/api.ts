@@ -1,36 +1,50 @@
-import { apiClient, ApiResponse, ApiErrorResponse, extractData } from '../../../shared/api';
-import {
-  CreatePostPayload,
-  UpdatePostPayload,
-  PresignedUrlPayload,
-  PresignedUrlResponse,
-  GetPostsParams,
-  PostListItem,
-} from './types';
-import axios, { AxiosHeaders, AxiosResponse } from 'axios';
+// entities/post/api/api.ts
+import axios from 'axios';
+import { apiClient, extractData } from '../../../shared/api';
+import { CreatePostPayload, UpdatePostPayload, PostListItem, CursorPostListResponse } from './types';
 import { Post } from '../model/types';
-import { CursorPostListResponse } from './types';
+
 export type TeamNewsItem = {
   id?: number;
-  postId?: number; // 내부 포스트로 연결 가능하면 사용
+  postId?: number;
   title: string;
   summary?: string;
   thumbnailUrl?: string;
   publishedAt?: string;
   source?: string;
-  link?: string; // 외부 기사 원문
+  link?: string;
 };
 
+const toNum = (v: unknown): number => (typeof v === 'number' ? v : Number(v ?? 0) || 0);
+const idNum = (x: any) => (typeof x?.id === 'number' ? x.id : Number(x?.id ?? 0) || 0);
+
+/** 서버 응답을 우리 Post 타입에 맞게 정규화 */
+function normalizePost(raw: any): Post {
+  const likes = toNum(raw?.likes ?? raw?.likeCount ?? raw?.likesCount);
+  const views = toNum(raw?.views ?? raw?.viewCount);
+  const commentCount = toNum(raw?.commentCount ?? raw?.commentsCount);
+  const isLiked =
+    raw?.isLiked === true ||
+    raw?.liked === true ||
+    raw?.likedByMe === true ||
+    String(raw?.isLiked ?? raw?.liked ?? raw?.likedByMe) === 'true';
+
+  return {
+    ...(raw as object),
+    // id는 string일 수도 있으니 그대로 유지(비교 시 숫자화)
+    likes,
+    views,
+    commentCount,
+    isLiked,
+  } as Post;
+}
+
 export const postApi = {
-  // ai 기사
   async getTeamNews(teamId: number, limit = 5): Promise<TeamNewsItem[]> {
     const res = await apiClient.get(`/api/posts/team/${teamId}/news`, { params: { limit } });
     const root: any = (res as any)?.data ?? res;
-
-    // 공통 래퍼 대응
     const payload = root?.status === 'SUCCESS' ? root?.data : root?.data ?? root;
 
-    // 배열을 찾아서 방어적으로 파싱
     const list: any[] = Array.isArray(payload)
       ? payload
       : Array.isArray(payload?.items)
@@ -39,7 +53,7 @@ export const postApi = {
       ? payload.news
       : [];
 
-    const safe: TeamNewsItem[] = list.map((n: any) => ({
+    return list.slice(0, limit).map((n: any) => ({
       id: n?.id ?? n?.newsId ?? n?.postId,
       postId: n?.postId,
       title: String(n?.title ?? '제목 없음'),
@@ -49,180 +63,124 @@ export const postApi = {
       source: n?.source ?? n?.publisher ?? undefined,
       link: n?.link ?? n?.url ?? undefined,
     }));
-
-    return safe.slice(0, limit);
   },
 
-  // 게시글 생성
-  createPost: (payload: CreatePostPayload): Promise<AxiosResponse<ApiResponse<Post>>> =>
-    apiClient.post('/api/posts', payload),
+  createPost: (payload: CreatePostPayload) => apiClient.post('/api/posts', payload),
 
-  // 게시글 수정
-  updatePost: async (
-    postId: number,
-    payload: { title: string; content: string; teamId?: number } // teamId까지 허용
-  ) => {
+  updatePost: async (postId: number, payload: UpdatePostPayload & { teamId?: number }) => {
     const body = {
       title: payload.title,
       content: payload.content,
       ...(payload.teamId != null ? { teamId: payload.teamId } : {}),
     };
-
-    try {
-      console.log('[updatePost] PUT /api/posts/%d body=', postId, body);
-      const res = await apiClient.put<any>(`/api/posts/${postId}`, body);
-      const apiRes: any = (res as any)?.data ?? res;
-      const data = 'data' in apiRes ? extractData<any>(apiRes) : apiRes;
-      console.log('[updatePost][OK]', data);
-      return data;
-    } catch (e) {
-      if (axios.isAxiosError(e)) {
-        console.log('[updatePost][AXIOS]', e.response?.status, e.response?.data);
-      } else {
-        console.log('[updatePost][ERROR]', e);
-      }
-      throw e;
-    }
+    const res = await apiClient.put<any>(`/api/posts/${postId}`, body);
+    const apiRes: any = (res as any)?.data ?? res;
+    return 'data' in apiRes ? extractData<any>(apiRes) : apiRes;
   },
 
-  // 게시글 삭제
-  deletePost: (postId: string) => apiClient.delete(`/api/posts/${postId}`),
+  deletePost: (postId: number) => apiClient.delete(`/api/posts/${postId}`),
 
-  // 게시글 상세 조회
   getPostById: async (postId: number): Promise<Post> => {
     const res = await apiClient.get(`/api/posts/${postId}`);
-    const api = (res as any).data as { status: string; message?: string; data?: Post };
-    if (api?.status !== 'SUCCESS' || !api?.data) {
-      throw new Error(api?.message ?? '게시글 상세 조회 실패');
-    }
-    return api.data; // ✅ Post
+    const api = (res as any).data as { status?: string; message?: string; data?: any };
+    const raw = api?.data ?? (api?.status ? undefined : (res as any).data);
+    if (!raw) throw new Error(api?.message ?? '게시글 상세 조회 실패');
+    return normalizePost(raw);
   },
 
-  // 게시글 목록 조회 (cursor 기반)
   getPosts: async (teamId: number, cursor?: number): Promise<CursorPostListResponse> => {
     const params: Record<string, any> = {};
     if (cursor !== undefined) params.cursor = cursor;
 
     const res = await apiClient.get(`/api/posts/team/${teamId}`, { params });
-    const api = (res as any).data as { status: string; message?: string; data?: any };
+    const api = (res as any).data as { status?: string; message?: string; data?: any };
+    const raw = api?.data ?? (api?.status ? undefined : (res as any).data);
+    if (!raw) throw new Error(api?.message ?? '게시글 목록 조회 실패');
 
-    if (api?.status !== 'SUCCESS' || !api?.data) {
-      throw new Error(api?.message ?? '게시글 목록 조회 실패');
-    }
-
-    const raw = api.data;
-    // ✅ 서버가 nextCursor를 string으로 주거나 누락해도 대비
-    const normNextCursor =
-      typeof raw?.nextCursor === 'string'
-        ? Number(raw.nextCursor)
-        : typeof raw?.nextCursor === 'number'
-        ? raw.nextCursor
+    const posts = Array.isArray(raw?.posts) ? raw.posts.map(normalizePost) : [];
+    const hasNext = Boolean(raw?.hasNext);
+    const nextRaw = raw?.nextCursor;
+    const nextCursor =
+      typeof nextRaw === 'number'
+        ? nextRaw
+        : typeof nextRaw === 'string' && nextRaw !== ''
+        ? Number(nextRaw)
         : undefined;
 
-    return {
-      posts: Array.isArray(raw?.posts) ? raw.posts : [],
-      hasNext: Boolean(raw?.hasNext),
-      nextCursor: normNextCursor,
-    };
+    return { posts, hasNext, nextCursor };
   },
 
-  // 인기 게시글 목록 조회
   async getPopularByTeam(teamId: number, limit = 20) {
     let cursor: number | undefined;
     const acc: PostListItem[] = [];
-    const seen = new Set<number>();
+    const seen = new Set<string>();
 
     while (acc.length < limit) {
       const res = await apiClient.get(`/api/posts/team/${teamId}/popular`, {
         params: cursor !== undefined ? { cursor } : {},
       });
       const api = (res as any).data as any;
-
-      const page: PostListItem[] = Array.isArray(api.data) ? api.data : api.data?.posts ?? [];
-
-      console.log('[popular][page]', {
-        got: page.length,
-        hasNext: api.data?.hasNext,
-        nextCursor: api.data?.nextCursor,
-        acc: acc.length,
-      });
+      const pageRaw: any[] = Array.isArray(api?.data) ? api.data : api?.data?.posts ?? [];
+      const page = pageRaw.map(normalizePost) as unknown as PostListItem[];
 
       for (const p of page) {
-        if (!seen.has(p.id)) {
+        const key = String((p as any).id);
+        if (!seen.has(key)) {
           acc.push(p);
-          seen.add(p.id);
+          seen.add(key);
           if (acc.length >= limit) break;
         }
       }
-
-      const hasNext = !Array.isArray(api.data) && api.data?.hasNext === true;
-      cursor = !Array.isArray(api.data) ? api.data?.nextCursor : undefined;
+      const hasNext = !Array.isArray(api?.data) && api?.data?.hasNext === true;
+      cursor = !Array.isArray(api?.data) ? api?.data?.nextCursor : undefined;
       if (!hasNext) break;
     }
-
-    console.log('[popular][done] total=', acc.length);
     return acc.slice(0, limit);
   },
 
-  // 게시글 좋아요
   likePost(postId: number) {
-    return apiClient.post(`/api/posts/${postId}/like`); // 성공 코드만 내려옴
+    return apiClient.post(`/api/posts/${postId}/like`);
+  },
+  unlikePost(postId: number) {
+    return apiClient.delete(`/api/posts/${postId}/like`);
   },
 
-  // 게시글 좋아요 취소
-  unlikePost: (postId: string) => apiClient.delete(`/api/posts/${postId}/like`),
-
-  // 게시글 이미지 삭제
   deletePostImage: (postId: number, imageUrl: string) =>
-    apiClient.delete(`/api/posts/${postId}/images`, { params: { imageUrl } } as any),
+    apiClient.delete(`/api/posts/${postId}/images`, { params: { imageUrl } }),
 
-  // 팀 별 게시글 검색
   async getTeamSearchPosts(teamId: number, keyword: string, cursor?: number): Promise<CursorPostListResponse> {
     const res = await apiClient.get(`/api/posts/team/${teamId}/search`, {
-      params: {
-        keyword, // optional이지만 빈문자면 서버에서 전체검색 취급할 수도 있으니 trim 권장
-        ...(cursor !== undefined ? { cursor } : {}),
-      },
+      params: { keyword, ...(cursor !== undefined ? { cursor } : {}) },
     });
+    const api = (res as any).data as { status?: string; message?: string; data?: any };
+    const data = api?.data;
+    if (!data) throw new Error(api?.message ?? '검색 실패');
 
-    // 서버 공통 포맷 파싱 (SUCCESS / ERROR)
-    const api = (res as any).data as {
-      status: string;
-      message?: string;
-      data?: CursorPostListResponse;
-    };
+    const posts = Array.isArray(data?.posts) ? data.posts.map(normalizePost) : [];
+    const hasNext = Boolean(data?.hasNext);
+    const nextCursor =
+      typeof data?.nextCursor === 'number'
+        ? data.nextCursor
+        : typeof data?.nextCursor === 'string' && data.nextCursor !== ''
+        ? Number(data.nextCursor)
+        : undefined;
 
-    if (api?.status !== 'SUCCESS' || !api?.data) {
-      throw new Error(api?.message ?? '검색 실패');
-    }
-    return api.data; // { posts, hasNext, nextCursor }
+    return { posts, hasNext, nextCursor };
   },
 
-  // 팀별 검색 (query, cursor)
-  async searchTeamPosts(teamId: number, rawQuery: string, cursor?: number): Promise<CursorPostListResponse> {
+  async searchTeamPosts(teamId: number, rawQuery: string, cursor?: number) {
     const query = (rawQuery ?? '').trim();
-    if (!teamId || teamId <= 0 || !query) {
-      return { posts: [], hasNext: false, nextCursor: undefined };
-    }
+    if (!teamId || teamId <= 0 || !query) return { posts: [], hasNext: false, nextCursor: undefined };
 
-    const params: Record<string, any> = {
-      // 서버가 keyword 를 쓰든 q 를 쓰든 대응
-      keyword: query,
-      q: query,
-    };
+    const params: Record<string, any> = { keyword: query, q: query };
     if (cursor !== undefined) params.cursor = cursor;
 
     const res = await apiClient.get(`/api/posts/team/${teamId}/search`, { params });
     const root: any = (res as any)?.data ?? res;
+    const data = root?.data;
+    if (!data) return { posts: [], hasNext: false, nextCursor: undefined };
 
-    if (root?.status !== 'SUCCESS' || !root?.data) {
-      return { posts: [], hasNext: false, nextCursor: undefined };
-    }
-
-    const data = root.data;
-
-    // ✅ 방어적 파싱 + nextCursor 숫자 정규화
-    const posts = Array.isArray(data?.posts) ? data.posts : [];
+    const posts = Array.isArray(data?.posts) ? data.posts.map(normalizePost) : [];
     const hasNext = Boolean(data?.hasNext);
     const nextRaw = data?.nextCursor;
     const nextCursor =
@@ -235,31 +193,26 @@ export const postApi = {
     return { posts, hasNext, nextCursor };
   },
 
-  // 회원별 게시글 조회
   async getMyPosts(userId: number, cursor?: number): Promise<CursorPostListResponse> {
     const params: Record<string, any> = {};
     if (cursor !== undefined) params.cursor = cursor;
 
     const res = await apiClient.get(`/api/posts/user/${userId}`, { params });
     const root: any = (res as any)?.data ?? res;
-
-    // 공통 래퍼 파싱
     const payload = root?.data ?? root;
 
-    // 다양한 서버 포맷 방어적 파싱
-    const posts = Array.isArray(payload?.posts)
+    const postsRaw = Array.isArray(payload?.posts)
       ? payload.posts
       : Array.isArray(payload?.content)
       ? payload.content
       : Array.isArray(payload)
       ? payload
       : [];
+    const posts = postsRaw.map(normalizePost);
 
     const hasNext = Boolean(payload?.hasNext ?? payload?.page?.hasNext ?? false);
-
     const rawNext =
       payload?.nextCursor ?? payload?.page?.nextCursor ?? payload?.next ?? payload?.nextId ?? payload?.next_id;
-
     const nextCursor =
       typeof rawNext === 'string' ? Number(rawNext) : typeof rawNext === 'number' ? rawNext : undefined;
 

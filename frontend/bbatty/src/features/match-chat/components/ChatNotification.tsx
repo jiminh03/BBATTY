@@ -7,6 +7,7 @@ import {
   Animated,
   Dimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ChatNotification } from '../types';
 
 interface ChatNotificationProps {
@@ -119,8 +120,12 @@ export const ChatNotificationManager: React.FC<ChatNotificationManagerProps> = (
   notifications,
   onDismiss,
 }) => {
+  const insets = useSafeAreaInsets();
+  // 헤더 바로 아래에 표시하기 위해 safe area만 고려
+  const notificationTop = insets.top + 8; // safe area + 최소 여백만
+
   return (
-    <View style={styles.manager}>
+    <View style={[styles.manager, { top: notificationTop }]}>
       {notifications.map((notification) => (
         <ChatNotificationComponent
           key={notification.id}
@@ -135,7 +140,6 @@ export const ChatNotificationManager: React.FC<ChatNotificationManagerProps> = (
 const styles = StyleSheet.create({
   manager: {
     position: 'absolute',
-    top: 60,
     left: 16,
     right: 16,
     zIndex: 9999,

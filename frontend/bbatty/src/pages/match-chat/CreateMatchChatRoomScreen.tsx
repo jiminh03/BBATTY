@@ -326,24 +326,6 @@ export const CreateMatchChatRoomScreen = () => {
           </View>
 
 
-          <View style={styles.section}>
-            <Text style={styles.label}>최대 참여 인원</Text>
-            <View style={styles.participantContainer}>
-              <TouchableOpacity
-                style={styles.participantButton}
-                onPress={() => updateFormData('maxParticipants', Math.max(2, formData.maxParticipants - 1))}
-              >
-                <Text style={styles.participantButtonText}>-</Text>
-              </TouchableOpacity>
-              <Text style={styles.participantCount}>{formData.maxParticipants}명</Text>
-              <TouchableOpacity
-                style={styles.participantButton}
-                onPress={() => updateFormData('maxParticipants', Math.min(50, formData.maxParticipants + 1))}
-              >
-                <Text style={styles.participantButtonText}>+</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
         </ScrollView>
       </KeyboardAvoidingView>
 

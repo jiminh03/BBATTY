@@ -139,17 +139,26 @@ export const styles = StyleSheet.create({
     left: 15,
     right: 15,
   },
+  whiteBackground: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: '#ffffff',
+    borderRadius: 15,
+  },
   roomTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#ffffff',
+    color: '#333333',
     marginBottom: 6,
     letterSpacing: -0.3,
   },
   roomDescription: {
     fontSize: 14,
-    color: '#ffffff',
-    opacity: 0.9,
+    color: '#666666',
+    opacity: 1,
     lineHeight: 20,
   },
   gameInfoContainer: {
@@ -198,17 +207,14 @@ export const styles = StyleSheet.create({
   gameTeamsText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#ffffff',
+    color: '#333333',
     marginBottom: 4,
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
   },
   
   gameDetailsText: {
     fontSize: 13,
-    color: '#ffffff',
-    opacity: 0.9,
+    color: '#666666',
+    opacity: 1,
     fontWeight: '500',
   },
   
@@ -265,14 +271,15 @@ export const styles = StyleSheet.create({
   ageGenderInfo: {
     fontSize: 12,
     color: '#ffffff',
-    opacity: 0.8,
+    opacity: 0.9,
     flex: 1,
     textAlign: 'left',
   },
   
   timeInfo: {
     fontSize: 11,
-    color: '#999',
+    color: '#ffffff',
+    opacity: 0.7,
     textAlign: 'right',
   },
   teamBadge: {

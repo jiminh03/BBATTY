@@ -1,76 +1,77 @@
-import { useNavigation } from '@react-navigation/native';
-import React, { useMemo } from 'react';
+// entities/post/ui/PostItem.tsx
+import React, { memo, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { useQueryClient } from '@tanstack/react-query';
-import { useLikeStore } from '../model/store';
-import type { PostListItem } from '../api/types';
+import { useNavigation } from '@react-navigation/native';
 
-type AnyCmt = {
-  id?: number | string;
-  commentId?: number | string;
-  content?: string;
-  authorNickname?: string;
+// 최소 속성만 사용 (리스트 아이템은 쿼리에서 normalize 되어 옴)
+type AnyPost = {
+  id: number | string;
+  title?: string;
   nickname?: string;
   createdAt?: string;
-  updatedAt?: string;
-  is_deleted?: number;
-  isDeleted?: boolean;
-  replies?: AnyCmt[];
+  // 정규화 필드
+  likes?: number;
+  likeCount?: number;
+  isLiked?: boolean;
+  likedByMe?: boolean;
+  liked?: boolean;
+  commentCount?: number;
+  commentsCount?: number;
+  viewCount?: number;
+  views?: number;
+  teamId?: number;
 };
 
-type PostItemProps = {
-  post: PostListItem;
-  onPress?: () => void; // ← 추가
+type Props = {
+  post: AnyPost;
+  teamId?: number; // 목록 화면에서 전달 (없으면 post.teamId 사용)
+  onPress?: () => void;
 };
 
-export const PostItem = ({ post, onPress }: PostItemProps) => {
+function PostItemBase({ post, teamId, onPress }: Props) {
   const navigation = useNavigation<any>();
-  const qc = useQueryClient();
 
   const handlePress = () => {
-    if (onPress) {
-      onPress();
-    } else {
-      navigation.navigate('PostDetail', { postId: post.id });
+    if (onPress) onPress();
+    else {
+      const teamIdParam =
+        typeof post.teamId === 'number' ? post.teamId : (typeof teamId === 'number' ? teamId : undefined);
+      navigation.navigate('PostDetail', { postId: Number(post.id), teamId: teamIdParam });
     }
   };
 
-  // 상세 캐시
-  const detail = qc.getQueryData<any>(['post', post.id]) as any | undefined;
+  // ✅ 표시는 항상 아이템의 정규화 필드를 신뢰 (스토어/다른 캐시 직접 접근 금지)
+  const liked =
+    typeof post.isLiked === 'boolean'
+      ? post.isLiked
+      : typeof post.likedByMe === 'boolean'
+      ? post.likedByMe
+      : !!post.liked;
 
-  // 좋아요: 로컬 스토어 우선
-  const likedLocal = useLikeStore((s) => s.byPostId[post.id]);
-  const likeCountLocal = useLikeStore((s) => s.byPostCount[post.id]);
+  const likeCount =
+    typeof post.likes === 'number'
+      ? post.likes
+      : typeof post.likeCount === 'number'
+      ? post.likeCount
+      : 0;
 
-  const liked = (detail?.likedByMe ?? likedLocal) ?? false;
-  const likeCount = (likeCountLocal ?? detail?.likes ?? post.likeCount ?? 0) as number;
-  const commentCount = (detail?.commentCount ?? post.commentCount ?? 0) as number;
-  const views = (detail?.views ?? detail?.viewCount ?? post.viewCount ?? 0) as number;
+  const commentCount =
+    typeof post.commentCount === 'number'
+      ? post.commentCount
+      : typeof post.commentsCount === 'number'
+      ? post.commentsCount
+      : 0;
 
-  // 댓글 캐시 평탄화 → 최신 1~2개만 미리보기
-  const cmtCache = qc.getQueryData<any>(['comments', post.id]);
-  const parents: AnyCmt[] = (cmtCache?.pages ?? []).flatMap((p: any) => p?.comments ?? []);
-
-  const flat: AnyCmt[] = useMemo(() => {
-    const out: AnyCmt[] = [];
-    const dfs = (n: AnyCmt) => {
-      const id = Number(n.id ?? n.commentId);
-      const isDeleted = Number(n?.is_deleted ?? (n as any)?.isDeleted ?? 0) === 1 || !!n?.isDeleted;
-      out.push({ ...n, id, isDeleted });
-      if (Array.isArray(n.replies)) n.replies.forEach(dfs);
-    };
-    parents.forEach(dfs);
-    return out;
-  }, [parents]);
-
-  const preview: AnyCmt[] = useMemo(() => {
-    const byTime = (c: AnyCmt) => new Date((c.updatedAt ?? c.createdAt) ?? 0).getTime();
-    return flat.slice().sort((a, b) => byTime(a) - byTime(b)).slice(-2);
-  }, [flat]);
+  const views =
+    typeof post.views === 'number'
+      ? post.views
+      : typeof post.viewCount === 'number'
+      ? post.viewCount
+      : 0;
 
   const timeText = useMemo(() => {
     try {
-      const d = new Date(post.createdAt);
+      const d = new Date(post.createdAt ?? 0);
       const hh = String(d.getHours()).padStart(2, '0');
       const mm = String(d.getMinutes()).padStart(2, '0');
       return `${hh}:${mm}`;
@@ -80,57 +81,43 @@ export const PostItem = ({ post, onPress }: PostItemProps) => {
   }, [post.createdAt]);
 
   return (
-    <TouchableOpacity
-      onPress={handlePress} activeOpacity={0.8}>
+    <TouchableOpacity onPress={handlePress} activeOpacity={0.8}>
       <View style={s.card}>
-        {/* 왼쪽 본문 */}
         <View style={s.content}>
           <Text style={s.title} numberOfLines={1}>
-            {post.title}
+            {post.title ?? `#${post.id}`}
           </Text>
 
-          {/* 한 줄 프리뷰(있으면) */}
-          {!!(post as any)?.content && (
-            <Text style={s.preview} numberOfLines={1}>
-              {(post as any).content}
-            </Text>
-          )}
-
           <View style={s.metaRow}>
-            <Text style={s.meta}>{post.nickname}</Text>
-            <Text style={s.dot}>·</Text>
+            {!!post.nickname && <Text style={s.meta}>{post.nickname}</Text>}
+            {!!post.nickname && <Text style={s.dot}>·</Text>}
             <Text style={s.meta}>{timeText}</Text>
             <Text style={s.dot}>·</Text>
             <Text style={s.meta}>👁 {views}</Text>
             <Text style={s.dot}>·</Text>
             <Text style={s.meta}>{liked ? '❤️' : '🤍'} {likeCount}</Text>
+            <Text style={s.dot}>·</Text>
+            <Text style={s.meta}>💬 {commentCount}</Text>
           </View>
-
-          {/* 댓글 미리보기(있을 때만) */}
-          {preview.length > 0 && (
-            <View style={s.previewWrap}>
-              {preview.map((c) => {
-                const nick = c.authorNickname ?? c.nickname ?? '익명';
-                const text = c.isDeleted ? '(삭제된 댓글입니다)' : (c.content ?? '');
-                return (
-                  <Text key={String(c.id)} style={s.previewLine} numberOfLines={1}>
-                    <Text style={s.previewNick}>{nick}:</Text> {text}
-                  </Text>
-                );
-              })}
-            </View>
-          )}
-        </View>
-
-        {/* 오른쪽 댓글 배지 */}
-        <View style={s.cBadge}>
-          <Text style={s.cNum}>{commentCount}</Text>
-          <Text style={s.cLabel}>댓글</Text>
         </View>
       </View>
     </TouchableOpacity>
   );
-};
+}
+
+// likes/isLiked/댓글/조회수 변화도 감지하도록 비교
+export const PostItem = memo(
+  PostItemBase,
+  (prev, next) =>
+    String(prev.post.id) === String(next.post.id) &&
+    (prev.post.likes ?? prev.post.likeCount) === (next.post.likes ?? next.post.likeCount) &&
+    (prev.post.isLiked ?? prev.post.likedByMe ?? prev.post.liked) ===
+      (next.post.isLiked ?? next.post.likedByMe ?? next.post.liked) &&
+    (prev.post.viewCount ?? prev.post.views) === (next.post.viewCount ?? next.post.views) &&
+    (prev.post.commentCount ?? prev.post.commentsCount) ===
+      (next.post.commentCount ?? next.post.commentsCount) &&
+    prev.teamId === next.teamId
+);
 
 const s = StyleSheet.create({
   card: {
@@ -144,28 +131,9 @@ const s = StyleSheet.create({
   },
   content: { flex: 1, paddingRight: 12 },
   title: { fontWeight: '800', fontSize: 16, color: '#111', marginBottom: 4 },
-  preview: { fontSize: 13, color: '#666' },
-  metaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 6, flexWrap: 'wrap' },
   meta: { fontSize: 12, color: '#888' },
   dot: { marginHorizontal: 6, color: '#bbb' },
-
-  // 오른쪽 댓글 박스(배지)
-  cBadge: {
-    width: 56,
-    height: 60,
-    borderRadius: 12,
-    backgroundColor: '#F2F2F2',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
-  },
-  cNum: { fontWeight: '800', fontSize: 16, color: '#222' },
-  cLabel: { fontSize: 12, color: '#888', marginTop: 2 },
-
-  // 댓글 미리보기
-  previewWrap: { marginTop: 6 },
-  previewLine: { fontSize: 12, color: '#444', marginTop: 2 },
-  previewNick: { fontWeight: '600' },
 });
 
 export default PostItem;
