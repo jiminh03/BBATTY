@@ -13,7 +13,7 @@ import {
   Dimensions,
   Keyboard,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
+// import * as Haptics from 'expo-haptics';
 import { styles } from './RichTextEditor.style';
 
 interface RichTextEditorProps {
