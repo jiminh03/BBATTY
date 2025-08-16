@@ -68,7 +68,11 @@ export const postApi = {
   createPost: (payload: CreatePostPayload) => apiClient.post('/api/posts', payload),
 
   updatePost: async (postId: number, payload: UpdatePostPayload & { teamId?: number }) => {
-    const body = { title: payload.title, content: payload.content, ...(payload.teamId != null ? { teamId: payload.teamId } : {}) };
+    const body = {
+      title: payload.title,
+      content: payload.content,
+      ...(payload.teamId != null ? { teamId: payload.teamId } : {}),
+    };
     const res = await apiClient.put<any>(`/api/posts/${postId}`, body);
     const apiRes: any = (res as any)?.data ?? res;
     return 'data' in apiRes ? extractData<any>(apiRes) : apiRes;
@@ -97,7 +101,11 @@ export const postApi = {
     const hasNext = Boolean(raw?.hasNext);
     const nextRaw = raw?.nextCursor;
     const nextCursor =
-      typeof nextRaw === 'number' ? nextRaw : typeof nextRaw === 'string' && nextRaw !== '' ? Number(nextRaw) : undefined;
+      typeof nextRaw === 'number'
+        ? nextRaw
+        : typeof nextRaw === 'string' && nextRaw !== ''
+        ? Number(nextRaw)
+        : undefined;
 
     return { posts, hasNext, nextCursor };
   },
@@ -108,7 +116,9 @@ export const postApi = {
     const seen = new Set<string>();
 
     while (acc.length < limit) {
-      const res = await apiClient.get(`/api/posts/team/${teamId}/popular`, { params: cursor !== undefined ? { cursor } : {} });
+      const res = await apiClient.get(`/api/posts/team/${teamId}/popular`, {
+        params: cursor !== undefined ? { cursor } : {},
+      });
       const api = (res as any).data as any;
       const pageRaw: any[] = Array.isArray(api?.data) ? api.data : api?.data?.posts ?? [];
       const page = pageRaw.map(normalizePost) as unknown as PostListItem[];
@@ -139,7 +149,9 @@ export const postApi = {
     apiClient.delete(`/api/posts/${postId}/images`, { params: { imageUrl } }),
 
   async getTeamSearchPosts(teamId: number, keyword: string, cursor?: number): Promise<CursorPostListResponse> {
-    const res = await apiClient.get(`/api/posts/team/${teamId}/search`, { params: { keyword, ...(cursor !== undefined ? { cursor } : {}) } });
+    const res = await apiClient.get(`/api/posts/team/${teamId}/search`, {
+      params: { keyword, ...(cursor !== undefined ? { cursor } : {}) },
+    });
     const api = (res as any).data as { status?: string; message?: string; data?: any };
     const data = api?.data;
     if (!data) throw new Error(api?.message ?? '검색 실패');
@@ -147,7 +159,11 @@ export const postApi = {
     const posts = Array.isArray(data?.posts) ? data.posts.map(normalizePost) : [];
     const hasNext = Boolean(data?.hasNext);
     const nextCursor =
-      typeof data?.nextCursor === 'number' ? data.nextCursor : typeof data?.nextCursor === 'string' && data.nextCursor !== '' ? Number(data.nextCursor) : undefined;
+      typeof data?.nextCursor === 'number'
+        ? data.nextCursor
+        : typeof data?.nextCursor === 'string' && data.nextCursor !== ''
+        ? Number(data.nextCursor)
+        : undefined;
 
     return { posts, hasNext, nextCursor };
   },
@@ -168,7 +184,11 @@ export const postApi = {
     const hasNext = Boolean(data?.hasNext);
     const nextRaw = data?.nextCursor;
     const nextCursor =
-      typeof nextRaw === 'number' ? nextRaw : typeof nextRaw === 'string' && nextRaw !== '' ? Number(nextRaw) : undefined;
+      typeof nextRaw === 'number'
+        ? nextRaw
+        : typeof nextRaw === 'string' && nextRaw !== ''
+        ? Number(nextRaw)
+        : undefined;
 
     return { posts, hasNext, nextCursor };
   },
@@ -181,13 +201,20 @@ export const postApi = {
     const root: any = (res as any)?.data ?? res;
     const payload = root?.data ?? root;
 
-    const postsRaw =
-      Array.isArray(payload?.posts) ? payload.posts : Array.isArray(payload?.content) ? payload.content : Array.isArray(payload) ? payload : [];
+    const postsRaw = Array.isArray(payload?.posts)
+      ? payload.posts
+      : Array.isArray(payload?.content)
+      ? payload.content
+      : Array.isArray(payload)
+      ? payload
+      : [];
     const posts = postsRaw.map(normalizePost);
 
     const hasNext = Boolean(payload?.hasNext ?? payload?.page?.hasNext ?? false);
-    const rawNext = payload?.nextCursor ?? payload?.page?.nextCursor ?? payload?.next ?? payload?.nextId ?? payload?.next_id;
-    const nextCursor = typeof rawNext === 'string' ? Number(rawNext) : typeof rawNext === 'number' ? rawNext : undefined;
+    const rawNext =
+      payload?.nextCursor ?? payload?.page?.nextCursor ?? payload?.next ?? payload?.nextId ?? payload?.next_id;
+    const nextCursor =
+      typeof rawNext === 'string' ? Number(rawNext) : typeof rawNext === 'number' ? rawNext : undefined;
 
     return { posts, hasNext, nextCursor };
   },

@@ -1,5 +1,5 @@
 // entities/post/ui/PostForm.tsx
-import React, { useEffect, useMemo, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,8 +12,6 @@ import {
   ActivityIndicator,
   Image,
   Alert,
-  PanResponder,
-  Dimensions,
   Animated,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -44,8 +42,8 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
   // 작성 팀
   const teamId = useUserStore((s) => s.currentUser?.teamId) ?? 1;
 
-  // 상세(수정 시)
-  const { data: detail } = usePostDetailQuery(isEdit ? postId! : -1);
+  // 상세(수정 시) - 수정 모드일 때만 조회
+  const { data: detail } = usePostDetailQuery(postId!, { enabled: isEdit });
 
   // mutations
   const createPost = useCreatePost();
@@ -58,23 +56,42 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
   const [error, setError] = useState('');
   const [imageList, setImageList] = useState<ImageItem[]>([]);
   const [cursorPosition, setCursorPosition] = useState(0);
+  
+  // 드래그 오버레이 상태 - ref로 안정화
+  const [dragOverlayInfo, setDragOverlayInfo] = useState<{
+    imageUrl: string;
+    startPosition: { x: number; y: number };
+  } | null>(null);
+  
+  const dragOffsetX = useRef(new Animated.Value(0)).current;
+  const dragOffsetY = useRef(new Animated.Value(0)).current;
+  const dragScale = useRef(new Animated.Value(1)).current;
+  const dragOpacity = useRef(new Animated.Value(1)).current;
+  
+  // 드래그 상태를 ref로 보호
+  const isDraggingRef = useRef(false);
+  const currentDragInfoRef = useRef<{ imageUrl: string; startPosition: { x: number; y: number } } | null>(null);
 
   // 이미지를 마크다운 형식으로 content에 삽입
   const insertImageToContent = (imageUrl: string, imageId: string) => {
     const markdown = `![image](${imageUrl})`;
     const beforeCursor = content.substring(0, cursorPosition);
     const afterCursor = content.substring(cursorPosition);
-    const newContent = beforeCursor + markdown + afterCursor;
     
-    console.log('[PostForm] insertImageToContent');
-    console.log('[PostForm] current content:', content);
-    console.log('[PostForm] cursorPosition:', cursorPosition);
-    console.log('[PostForm] imageUrl:', imageUrl);
-    console.log('[PostForm] markdown:', markdown);
-    console.log('[PostForm] newContent:', newContent);
+    // 현재 포커스된 곳에서 내용이 없을 시 해당 위치에 이미지가 업로드되고 포커스가 이미지 아래로 향하도록 수정
+    let newContent;
+    if (beforeCursor.endsWith('\n') || beforeCursor === '') {
+      // 줄의 시작이거나 빈 상태일 때는 그대로 삽입
+      newContent = beforeCursor + markdown + (afterCursor.startsWith('\n') ? afterCursor : '\n' + afterCursor);
+    } else {
+      // 텍스트 중간일 때는 앞에 줄바꿈 추가
+      newContent = beforeCursor + '\n' + markdown + (afterCursor.startsWith('\n') ? afterCursor : '\n' + afterCursor);
+    }
     
     setContent(newContent);
-    setCursorPosition(cursorPosition + markdown.length);
+    // 포커스를 이미지 아래로 이동
+    const newCursorPosition = beforeCursor.length + (beforeCursor.endsWith('\n') || beforeCursor === '' ? 0 : 1) + markdown.length + 1;
+    setCursorPosition(newCursorPosition);
   };
 
   // content에서 특정 이미지 마크다운 제거
@@ -174,111 +191,75 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
       removeImageFromContent(image.url);
     }
 
-    // 서버에 업로드된 이미지인 경우 삭제 API 호출
-    if (image.url && postId) {
+    // 게시글 수정 중일 때만 S3 삭제 API 호출
+    if (image.url && isEdit && postId) {
       try {
         await postApi.deletePostImage(postId, image.url);
       } catch (error) {
         console.warn('이미지 삭제 API 오류:', error);
+        // 이미지 삭제 실패 시에도 UI에서는 제거 (UX 개선)
       }
     }
 
     setImageList((prev) => prev.filter((img) => img.id !== imageId));
   };
 
-  // 드래그 앤 드롭 상태
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const dragOffsetX = useRef(new Animated.Value(0)).current;
-  const dragOffsetY = useRef(new Animated.Value(0)).current;
-  const dragScale = useRef(new Animated.Value(1)).current;
-
-  const createPanResponder = (index: number) => {
-    return PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      
-      onPanResponderGrant: () => {
-        setDraggedIndex(index);
-        Animated.parallel([
-          Animated.timing(dragScale, {
-            toValue: 1.1,
-            duration: 150,
-            useNativeDriver: false,
-          }),
-        ]).start();
-      },
-      
-      onPanResponderMove: (_, gestureState) => {
-        dragOffsetX.setValue(gestureState.dx);
-        dragOffsetY.setValue(gestureState.dy);
-      },
-      
-      onPanResponderRelease: (_, gestureState) => {
-        const dragDistance = Math.abs(gestureState.dx);
-        const imageWidth = 88; // 80 + 8 margin
-        const targetIndex = Math.round(dragDistance / imageWidth);
-        
-        if (targetIndex > 0 && targetIndex < imageList.length) {
-          const newIndex = Math.min(index + Math.sign(gestureState.dx) * targetIndex, imageList.length - 1);
-          if (newIndex !== index && newIndex >= 0) {
-            handleImageMove(index, newIndex);
-          }
-        }
-        
-        // 애니메이션 리셋
-        Animated.parallel([
-          Animated.timing(dragOffsetX, {
-            toValue: 0,
-            duration: 200,
-            useNativeDriver: false,
-          }),
-          Animated.timing(dragOffsetY, {
-            toValue: 0,
-            duration: 200,
-            useNativeDriver: false,
-          }),
-          Animated.timing(dragScale, {
-            toValue: 1,
-            duration: 200,
-            useNativeDriver: false,
-          }),
-        ]).start(() => {
-          setDraggedIndex(null);
-        });
-      },
+  // 드래그 핸들러들 - 디버깅 버전
+  const handleDragStart = useCallback((dragInfo: { imageUrl: string; startPosition: { x: number; y: number } }) => {
+    console.log('🟢 handleDragStart called:', {
+      isDragging: isDraggingRef.current,
+      startPosition: dragInfo.startPosition,
+      timestamp: Date.now()
     });
-  };
+    
+    // 이미 드래그 중이면 무시 (중복 호출 방지)
+    if (isDraggingRef.current) {
+      console.log('🔴 handleDragStart IGNORED - already dragging');
+      return;
+    }
+    
+    isDraggingRef.current = true;
+    currentDragInfoRef.current = dragInfo;
+    setDragOverlayInfo(dragInfo);
+    
+    // 애니메이션 초기화
+    dragOffsetX.setValue(0);
+    dragOffsetY.setValue(0);
+    dragScale.setValue(0.8);
+    dragOpacity.setValue(0.7);
+    
+    console.log('✅ handleDragStart completed');
+  }, []); // 의존성 없음 - 완전히 격리
 
-  const handleImageMove = (fromIndex: number, toIndex: number) => {
-    setImageList((prev) => {
-      const newList = [...prev];
-      const [draggedItem] = newList.splice(fromIndex, 1);
-      newList.splice(toIndex, 0, draggedItem);
-      updateImageOrderInContent(newList);
-      return newList;
-    });
-  };
+  const handleDragMove = useCallback((dragOffset: { dx: number; dy: number }) => {
+    // console.log('🟡 handleDragMove called:', { dx: dragOffset.dx, dy: dragOffset.dy, isDragging: isDraggingRef.current });
+    
+    // 드래그 중이 아니면 무시
+    if (!isDraggingRef.current) return;
+    
+    dragOffsetX.setValue(dragOffset.dx);
+    dragOffsetY.setValue(dragOffset.dy);
+  }, []); // 의존성 없음 - 완전히 격리
 
-  const updateImageOrderInContent = (orderedImages: ImageItem[]) => {
-    // 현재 content에서 모든 이미지 마크다운 제거
-    let newContent = content;
-    orderedImages.forEach((img) => {
-      if (img.url) {
-        const markdown = `![image](${img.url})`;
-        newContent = newContent.replace(markdown, '');
-      }
-    });
+  const handleDragEnd = useCallback(() => {
+    console.log('🟠 handleDragEnd called');
+    
+    isDraggingRef.current = false;
+    currentDragInfoRef.current = null;
+    setDragOverlayInfo(null);
+    
+    // 애니메이션 리셋
+    dragOffsetX.setValue(0);
+    dragOffsetY.setValue(0);
+    dragScale.setValue(1);
+    dragOpacity.setValue(1);
+    
+    console.log('✅ handleDragEnd completed');
+  }, []); // 의존성 없음 - 완전히 격리
 
-    // 새로운 순서로 이미지들을 content 끝에 추가
-    orderedImages.forEach((img) => {
-      if (img.url) {
-        const markdown = `![image](${img.url})`;
-        newContent += `\n${markdown}`;
-      }
-    });
 
-    setContent(newContent.trim());
-  };
+
+
 
   const handleSubmit = async () => {
     if (hasUploadingImages) {
@@ -330,12 +311,20 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
         <View style={{ width: 24 }} />
       </View>
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.select({ ios: 'padding', android: undefined })}
-        keyboardVerticalOffset={Platform.select({ ios: 12, android: 0 })}
-      >
-        <ScrollView contentContainerStyle={styles.contentWrap} keyboardShouldPersistTaps='handled'>
+      <View style={{ flex: 1 }}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.select({ ios: 'padding', android: 'height' })}
+          keyboardVerticalOffset={Platform.select({ ios: 88, android: 88 })}
+        >
+          <ScrollView 
+            contentContainerStyle={styles.contentWrap} 
+            keyboardShouldPersistTaps='handled'
+            showsVerticalScrollIndicator={false}
+            keyboardDismissMode='interactive'
+            automaticallyAdjustKeyboardInsets={true}
+            style={{ flex: 1 }}
+          >
           {/* 제목 */}
           <Text style={styles.label}>제목</Text>
           <TextInput
@@ -362,46 +351,16 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
                 handleImageDelete(targetImage.id);
               }
             }}
-            onImageMove={(fromImageUrl, toPosition) => {
-              // 이미지 순서 변경 시 content에서 마크다운 순서도 변경
-              const imageMarkdowns = extractImageUrlsFromContent(content).map(url => `![image](${url})`);
-              const fromIndex = imageMarkdowns.findIndex(md => md.includes(fromImageUrl));
-              
-              if (fromIndex >= 0 && toPosition >= 0 && toPosition < imageMarkdowns.length) {
-                // 텍스트에서 모든 이미지 마크다운 제거
-                let newContent = content;
-                imageMarkdowns.forEach(md => {
-                  newContent = newContent.replace(md, '');
-                });
-                
-                // 이미지 순서 변경
-                const reorderedImages = [...imageMarkdowns];
-                const [movedImage] = reorderedImages.splice(fromIndex, 1);
-                reorderedImages.splice(toPosition, 0, movedImage);
-                
-                // 새로운 순서로 이미지들을 content에 추가
-                reorderedImages.forEach(md => {
-                  newContent += `\n${md}`;
-                });
-                
-                setContent(newContent.trim());
-                
-                // imageList도 순서 변경
-                const fromImageIndex = imageList.findIndex(img => img.url === fromImageUrl);
-                if (fromImageIndex >= 0) {
-                  setImageList(prev => {
-                    const newList = [...prev];
-                    const [movedItem] = newList.splice(fromImageIndex, 1);
-                    newList.splice(toPosition, 0, movedItem);
-                    return newList;
-                  });
-                }
-              }
-            }}
+            onDragStart={handleDragStart}
+            onDragMove={handleDragMove}
+            onDragEnd={handleDragEnd}
           />
 
 
-          {/* 하단 툴바: 이미지 버튼 + 토글 */}
+          {!!error && <Text style={styles.errorText}>{error}</Text>}
+          </ScrollView>
+          
+          {/* 하단 툴바: 이미지 버튼 - 키보드 위에 고정 */}
           <View style={styles.toolbar}>
             <TouchableOpacity style={styles.imageBtn} onPress={handleImagePick} disabled={hasUploadingImages}>
               {hasUploadingImages ? (
@@ -410,33 +369,58 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
                 <Text style={{ fontSize: 20 }}>🖼️</Text>
               )}
             </TouchableOpacity>
-
-            {/* <View style={styles.toggleWrap}>
-              <Switch
-                value={onlySameTeamReply}
-                onValueChange={setOnlySameTeamReply}
-                trackColor={{ false: '#E5E7EB', true: '#E5E7EB' }}
-                thumbColor={onlySameTeamReply ? themeColor : '#fff'}
-              />
-              <Text style={styles.toggleLabel}>같은 팀만 댓글 허용</Text>
-            </View> */}
           </View>
+        </KeyboardAvoidingView>
+      </View>
 
-          {!!error && <Text style={styles.errorText}>{error}</Text>}
-        </ScrollView>
-
-        {/* 하단 고정 버튼 */}
-        <View style={[styles.bottomBar, { backgroundColor: themeColor }]}>
-          <TouchableOpacity
-            style={styles.submitBtn}
-            disabled={isSubmitting || hasUploadingImages}
-            onPress={handleSubmit}
-            activeOpacity={0.9}
-          >
-            {isSubmitting ? <ActivityIndicator color='#fff' /> : <Text style={styles.submitText}>등록하기</Text>}
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
+      {/* 하단 고정 버튼 - KeyboardAvoidingView 외부로 이동 */}
+      <View style={[styles.bottomBar, { backgroundColor: themeColor }]}>
+        <TouchableOpacity
+          style={styles.submitBtn}
+          disabled={isSubmitting || hasUploadingImages}
+          onPress={handleSubmit}
+          activeOpacity={0.9}
+        >
+          {isSubmitting ? <ActivityIndicator color='#fff' /> : <Text style={styles.submitText}>등록하기</Text>}
+        </TouchableOpacity>
+      </View>
+      
+      {/* 최상위 드래그 오버레이 - 완전히 격리된 위치 관리 */}
+      {dragOverlayInfo && (
+        <Animated.View
+          style={{
+            position: 'absolute',
+            left: dragOverlayInfo.startPosition.x,
+            top: dragOverlayInfo.startPosition.y,
+            width: 200,
+            height: 200,
+            transform: [
+              { translateX: dragOffsetX },
+              { translateY: dragOffsetY },
+              { scale: dragScale }
+            ],
+            opacity: dragOpacity,
+            zIndex: 99999,
+            elevation: 20,
+            pointerEvents: 'none',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 8 },
+            shadowOpacity: 0.3,
+            shadowRadius: 12,
+          }}
+        >
+          <Image
+            source={{ uri: dragOverlayInfo.imageUrl }}
+            style={{
+              width: '100%',
+              height: '100%',
+              borderRadius: 8,
+              backgroundColor: '#F5F6F7',
+            }}
+            resizeMode="cover"
+          />
+        </Animated.View>
+      )}
     </View>
   );
 };

@@ -1,11 +1,5 @@
 // entities/post/queries/usePostQueries.ts
-import {
-  useMutation,
-  useInfiniteQuery,
-  useQueryClient,
-  useQuery,
-  InfiniteData,
-} from '@tanstack/react-query';
+import { useMutation, useInfiniteQuery, useQueryClient, useQuery, InfiniteData } from '@tanstack/react-query';
 import { useCallback, useRef, useState, useEffect } from 'react';
 import { postApi, TeamNewsItem } from '../api/api';
 import { CreatePostPayload, CursorPostListResponse, PostListItem } from '../api/types';
@@ -20,16 +14,12 @@ export const usePostListQuery = (teamId: number) =>
   useInfiniteQuery<CursorPostListResponse>({
     queryKey: ['posts', teamId],
     queryFn: ({ pageParam }) =>
-      postApi.getPosts(
-        teamId,
-        typeof pageParam === 'string' ? Number(pageParam) : (pageParam as number | undefined),
-      ),
+      postApi.getPosts(teamId, typeof pageParam === 'string' ? Number(pageParam) : (pageParam as number | undefined)),
     initialPageParam: undefined,
     getNextPageParam: (last) =>
       !last?.hasNext
         ? undefined
-        : (last.nextCursor ??
-            (last.posts?.length ? idNum(last.posts[last.posts.length - 1]) : undefined)),
+        : last.nextCursor ?? (last.posts?.length ? idNum(last.posts[last.posts.length - 1]) : undefined),
   });
 
 export const useCreatePost = () => {
@@ -42,8 +32,7 @@ export const useCreatePost = () => {
 
 /* ================= 상세(서버우선 + 스토어 fallback) ================= */
 export const usePostDetailQuery = (postId: number, opts?: { refetchOnFocus?: boolean }) => {
-  const userId =
-    useUserStore((s: any) => s.currentUser?.id ?? s.currentUser?.userId ?? null) ?? null;
+  const userId = useUserStore((s: any) => s.currentUser?.id ?? s.currentUser?.userId ?? null) ?? null;
 
   // 렌더 중 set 금지: userId 바뀔 때만 세션 동기화
   useEffect(() => {
@@ -67,12 +56,7 @@ export const usePostDetailQuery = (postId: number, opts?: { refetchOnFocus?: boo
           ? (p as any).liked
           : undefined;
 
-      const isLiked =
-        typeof local === 'boolean'
-          ? local
-          : typeof serverLikedRaw === 'boolean'
-          ? serverLikedRaw
-          : false;
+      const isLiked = typeof local === 'boolean' ? local : typeof serverLikedRaw === 'boolean' ? serverLikedRaw : false;
 
       return { ...p, isLiked, likes: p.likes ?? (p as any).likeCount ?? 0 } as Post;
     },
@@ -115,15 +99,9 @@ export const useUpdatePost = () => {
 function patchPost(post: any, postId: number, liked?: boolean, likeDelta?: number) {
   if (String(post?.id) !== String(postId)) return post;
 
-  const base =
-    typeof post.likes === 'number'
-      ? post.likes
-      : typeof post.likeCount === 'number'
-      ? post.likeCount
-      : 0;
+  const base = typeof post.likes === 'number' ? post.likes : typeof post.likeCount === 'number' ? post.likeCount : 0;
 
-  const nextLikes =
-    typeof likeDelta === 'number' ? Math.max(0, base + likeDelta) : base;
+  const nextLikes = typeof likeDelta === 'number' ? Math.max(0, base + likeDelta) : base;
 
   const next = { ...post };
   if (typeof liked === 'boolean') {
@@ -151,12 +129,10 @@ export function syncLikeEverywhere(
     teamId?: number;
     userId?: number | null;
     keyword?: string;
-  },
+  }
 ) {
   // 1) 상세
-  qc.setQueryData(['post', postId], (old: any) =>
-    old ? patchPost(old, postId, liked, likeDelta) : old,
-  );
+  qc.setQueryData(['post', postId], (old: any) => (old ? patchPost(old, postId, liked, likeDelta) : old));
 
   // 공통 무한쿼리 패처
   const patchInfinite = (old?: InfiniteData<CursorPostListResponse>) => {
@@ -172,55 +148,43 @@ export function syncLikeEverywhere(
 
   // 2) 팀 목록/인기
   if (typeof teamId === 'number') {
-    qc.setQueriesData<InfiniteData<CursorPostListResponse>>(
-      { queryKey: ['posts', teamId] },
-      patchInfinite,
-    );
+    qc.setQueriesData<InfiniteData<CursorPostListResponse>>({ queryKey: ['posts', teamId] }, patchInfinite);
     qc.setQueriesData<any[]>({ queryKey: ['popularPostsAll', teamId] }, (old) =>
-      old ? (old as any).map((p: any) => patchPost(p, postId, liked, likeDelta)) : old,
+      old ? (old as any).map((p: any) => patchPost(p, postId, liked, likeDelta)) : old
     );
     qc.setQueriesData<any[]>({ queryKey: ['popularPostsPreview', teamId] }, (old) =>
-      old ? (old as any).map((p: any) => patchPost(p, postId, liked, likeDelta)) : old,
+      old ? (old as any).map((p: any) => patchPost(p, postId, liked, likeDelta)) : old
     );
   } else {
     // teamId 없으면 prefix 전체를 스캔
-    qc.setQueriesData<InfiniteData<CursorPostListResponse>>(
-      { queryKey: ['posts'] },
-      patchInfinite,
-    );
+    qc.setQueriesData<InfiniteData<CursorPostListResponse>>({ queryKey: ['posts'] }, patchInfinite);
     qc.setQueriesData<any[]>({ queryKey: ['popularPostsAll'] }, (old) =>
-      old ? (old as any).map((p: any) => patchPost(p, postId, liked, likeDelta)) : old,
+      old ? (old as any).map((p: any) => patchPost(p, postId, liked, likeDelta)) : old
     );
     qc.setQueriesData<any[]>({ queryKey: ['popularPostsPreview'] }, (old) =>
-      old ? (old as any).map((p: any) => patchPost(p, postId, liked, likeDelta)) : old,
+      old ? (old as any).map((p: any) => patchPost(p, postId, liked, likeDelta)) : old
     );
   }
 
   // 3) 내 글
   qc.setQueriesData<InfiniteData<CursorPostListResponse>>(
     typeof userId === 'number' ? { queryKey: ['myPosts', userId] } : { queryKey: ['myPosts'] },
-    patchInfinite,
+    patchInfinite
   );
 
   // 4) 검색
   if (typeof teamId === 'number' && typeof keyword === 'string') {
     qc.setQueriesData<InfiniteData<CursorPostListResponse>>(
       { queryKey: ['searchPosts', teamId, keyword] },
-      patchInfinite,
+      patchInfinite
     );
     qc.setQueriesData<InfiniteData<CursorPostListResponse>>(
       { queryKey: ['teamSearch', teamId, keyword] },
-      patchInfinite,
+      patchInfinite
     );
   } else {
-    qc.setQueriesData<InfiniteData<CursorPostListResponse>>(
-      { queryKey: ['searchPosts'] },
-      patchInfinite,
-    );
-    qc.setQueriesData<InfiniteData<CursorPostListResponse>>(
-      { queryKey: ['teamSearch'] },
-      patchInfinite,
-    );
+    qc.setQueriesData<InfiniteData<CursorPostListResponse>>({ queryKey: ['searchPosts'] }, patchInfinite);
+    qc.setQueriesData<InfiniteData<CursorPostListResponse>>({ queryKey: ['teamSearch'] }, patchInfinite);
   }
 }
 
@@ -233,11 +197,10 @@ export const usePostLikeActions = (
     cooldownMs?: number;
     refetchAfterMs?: number;
     onRequireLogin?: () => void;
-  },
+  }
 ) => {
   const qc = useQueryClient();
-  const userId =
-    useUserStore((s: any) => s.currentUser?.id ?? s.currentUser?.userId ?? null) ?? null;
+  const userId = useUserStore((s: any) => s.currentUser?.id ?? s.currentUser?.userId ?? null) ?? null;
 
   const teamId = options?.teamId;
   const keyword = options?.listKeyword;
@@ -286,9 +249,7 @@ export const usePostLikeActions = (
       setLikedStore(postId, true, userId);
 
       // 2) 상세 + 목록/검색/인기 전파
-      qc.setQueryData<Post>(detailKey, (old) =>
-        old ? ({ ...old, isLiked: true, likes: next } as Post) : old,
-      );
+      qc.setQueryData<Post>(detailKey, (old) => (old ? ({ ...old, isLiked: true, likes: next } as Post) : old));
       syncLikeEverywhere(qc, postId, { liked: true, likeDelta: +1, teamId, userId, keyword });
 
       lastAppliedRef.current = 'like';
@@ -298,7 +259,7 @@ export const usePostLikeActions = (
       if (!ctx) return;
       setLikedStore(postId, (ctx.prev as any)?.isLiked ?? false, userId);
       qc.setQueryData<Post>(detailKey, (old) =>
-        old ? ({ ...old, isLiked: (ctx.prev as any)?.isLiked ?? false, likes: ctx.base } as Post) : (ctx.prev as any),
+        old ? ({ ...old, isLiked: (ctx.prev as any)?.isLiked ?? false, likes: ctx.base } as Post) : (ctx.prev as any)
       );
       syncLikeEverywhere(qc, postId, { liked: (ctx.prev as any)?.isLiked, likeDelta: -1, teamId, userId, keyword });
       lastAppliedRef.current = null;
@@ -331,9 +292,7 @@ export const usePostLikeActions = (
 
       setLikedStore(postId, false, userId);
 
-      qc.setQueryData<Post>(detailKey, (old) =>
-        old ? ({ ...old, isLiked: false, likes: next } as Post) : old,
-      );
+      qc.setQueryData<Post>(detailKey, (old) => (old ? ({ ...old, isLiked: false, likes: next } as Post) : old));
       syncLikeEverywhere(qc, postId, { liked: false, likeDelta: -1, teamId, userId, keyword });
 
       lastAppliedRef.current = 'unlike';
@@ -343,7 +302,7 @@ export const usePostLikeActions = (
       if (!ctx) return;
       setLikedStore(postId, (ctx.prev as any)?.isLiked ?? false, userId);
       qc.setQueryData<Post>(detailKey, (old) =>
-        old ? ({ ...old, isLiked: (ctx.prev as any)?.isLiked ?? false, likes: ctx.base } as Post) : (ctx.prev as any),
+        old ? ({ ...old, isLiked: (ctx.prev as any)?.isLiked ?? false, likes: ctx.base } as Post) : (ctx.prev as any)
       );
       syncLikeEverywhere(qc, postId, { liked: (ctx.prev as any)?.isLiked, likeDelta: +1, teamId, userId, keyword });
       lastAppliedRef.current = null;
@@ -373,8 +332,7 @@ export const usePostLikeActions = (
   const toggle = useCallback(() => {
     const likedFromStore = getLikedStore(postId, userId);
     const likedFromCache = qc.getQueryData<Post>(detailKey)?.isLiked;
-    const likedNow =
-      (typeof likedFromStore === 'boolean' ? likedFromStore : likedFromCache) ?? false;
+    const likedNow = (typeof likedFromStore === 'boolean' ? likedFromStore : likedFromCache) ?? false;
 
     if (!userId) {
       options?.onRequireLogin?.();
@@ -424,8 +382,7 @@ export const useTeamSearchPostsInfinite = (teamId: number, q: string) =>
   useInfiniteQuery<CursorPostListResponse>({
     queryKey: ['searchPosts', teamId, (q ?? '').trim()],
     enabled: (teamId ?? 0) > 0 && !!(q ?? '').trim(),
-    queryFn: ({ pageParam }) =>
-      postApi.searchTeamPosts(teamId, (q ?? '').trim(), pageParam as number | undefined),
+    queryFn: ({ pageParam }) => postApi.searchTeamPosts(teamId, (q ?? '').trim(), pageParam as number | undefined),
     initialPageParam: undefined,
     getNextPageParam: (last) => (last?.hasNext ? last.nextCursor : undefined),
     staleTime: 60_000,
@@ -435,8 +392,7 @@ export const useMyPostsInfinite = (userId?: number) =>
   useInfiniteQuery<CursorPostListResponse>({
     queryKey: ['myPosts', userId],
     enabled: !!userId,
-    queryFn: ({ pageParam = undefined }) =>
-      postApi.getMyPosts(userId as number, pageParam as number | undefined),
+    queryFn: ({ pageParam = undefined }) => postApi.getMyPosts(userId as number, pageParam as number | undefined),
     initialPageParam: undefined,
     getNextPageParam: (last) => (last?.hasNext ? last.nextCursor : undefined),
     staleTime: 60_000,

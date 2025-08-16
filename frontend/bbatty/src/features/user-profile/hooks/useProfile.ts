@@ -70,7 +70,6 @@ export const useUserBadges = (userId?: number, season?: Season) => {
     queryFn: async () => {
       const result = await statsApi.getBadges(userId, season);
       if (isOk(result)) {
-        console.log('🏆 [UserBadges] 뱃지 데이터:', result.data);
         return result.data;
       }
       throw new Error(result.error.message);
@@ -119,6 +118,7 @@ export const useDetailedStats = <T = any>(
       console.log('승률통계 : ', type, userId, season);
       const result = await statsApi.getDetailedStats<T>(type, userId, season);
       if (isOk(result)) {
+        console.log('승률 result : ', result);
         return result.data;
       }
       throw new Error(result.error.message);
