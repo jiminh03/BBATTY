@@ -1,4 +1,3 @@
-// pages/home/HomeScreen.tsx
 import React, { useMemo, useState, useCallback } from 'react';
 import {
   View,
@@ -29,6 +28,7 @@ import { useAttendanceStore } from '../../entities/attendance/model/attendanceSt
 import TeamGearIcon from '../../shared/ui/atoms/Team/TeamGearIcon';
 import { findTeamById, getTeamInfo } from '../../shared/team/teamTypes';
 import { useTeamStanding } from '../../entities/team/queries/useTeamStanding';
+// ✅ 네가 보내준 퍼시스트 스토어
 import { useSearchHistoryStore } from '../../entities/post/model/searchHistoryStore';
 import { chatRoomApi } from '../../entities/chat-room/api/api';
 import { gameApi } from '../../entities/game/api/api';
@@ -40,7 +40,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 
 type Props = HomeStackScreenProps<'Home'>;
 
-// 팀색이 #RRGGBBAA 로 들어오면 #RRGGBB 로 정규화
+// #RRGGBBAA → #RRGGBB
 const normalizeHex = (hex?: string, fallback = '#1D467F') => {
   if (!hex) return fallback;
   if (hex.startsWith('#') && hex.length === 9) return hex.slice(0, 7);
@@ -49,6 +49,7 @@ const normalizeHex = (hex?: string, fallback = '#1D467F') => {
 
 const ACTIONS_TOP = Platform.select({ android: 75, ios: 80 });
 
+/** ====== 검색 헤더(칩 + X 버튼) ====== */
 function SearchHeader({
   keyword,
   onChangeKeyword,
@@ -56,6 +57,7 @@ function SearchHeader({
   onClear,
   history,
   onPressChip,
+  onRemoveChip,
   isSearching,
   accentColor,
 }: {
@@ -65,6 +67,7 @@ function SearchHeader({
   onClear: () => void;
   history: string[];
   onPressChip: (q: string) => void;
+  onRemoveChip: (q: string) => void;
   isSearching: boolean;
   accentColor: string;
 }) {
@@ -84,7 +87,10 @@ function SearchHeader({
             <Text style={styles.clearBtnText}>취소</Text>
           </Pressable>
         ) : (
-          <Pressable style={[styles.searchBtn, { backgroundColor: accentColor }]} onPress={onSubmit}>
+          <Pressable
+            style={[styles.searchBtn, { backgroundColor: accentColor }]}
+            onPress={onSubmit}
+          >
             <Text style={styles.searchBtnText}>검색</Text>
           </Pressable>
         )}
@@ -93,9 +99,26 @@ function SearchHeader({
       {history.length > 0 && !isSearching && (
         <View style={styles.chipWrap}>
           {history.map((q) => (
-            <Pressable key={q} style={styles.chip} onPress={() => onPressChip(q)}>
-              <Text style={styles.chipText}>{q}</Text>
-            </Pressable>
+            <View key={q} style={styles.chip}>
+              <Pressable
+                onPress={() => onPressChip(q)}
+                style={styles.chipLabelBtn}
+                android_ripple={{ color: '#e5e7eb' }}
+              >
+                <Text style={styles.chipText} numberOfLines={1}>
+                  {q}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => onRemoveChip(q)}
+                hitSlop={8}
+                style={styles.chipClose}
+                android_ripple={{ color: '#e5e7eb', borderless: true }}
+                accessibilityLabel={`${q} 제거`}
+              >
+                <Text style={styles.chipCloseText}>×</Text>
+              </Pressable>
+            </View>
           ))}
         </View>
       )}
@@ -103,12 +126,11 @@ function SearchHeader({
   );
 }
 
+/** ====== 메인 ====== */
 export default function HomeScreen({ navigation }: Props) {
   const teamId = useUserStore((s) => s.currentUser?.teamId) ?? 1;
   const { isVerifiedToday } = useAttendanceStore();
   const team = findTeamById(teamId);
-
-  // ✅ 팀 색 정규화(알파값 제거) + 기본값
   const teamColor = normalizeHex(team?.color, '#1D467F');
 
   const { data: standing } = useTeamStanding(teamId);
@@ -119,16 +141,14 @@ export default function HomeScreen({ navigation }: Props) {
 
   const [tab, setTab] = useState<'best' | 'all'>('all');
 
-  // 헤더 안 “팀 최신 뉴스” 펼침 상태
+  // 🚫 탭 바꿔도 자동으로 닫지 않음 — 버튼으로만 토글
   const [newsOpen, setNewsOpen] = useState(false);
   const toggleNews = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setNewsOpen((v) => !v);
   };
-  // ❌ 탭 변경 시 자동으로 닫던 효과 제거했습니다.
-  // useEffect(() => { if (newsOpen) setNewsOpen(false); }, [tab]);
 
-  // 전체/베스트
+  // 데이터
   const { data: popular = [], isLoading: pLoading } = useTeamPopularPostsQuery(teamId, 20);
   const listQ = usePostListQuery(teamId);
   const allPosts = useMemo(
@@ -136,12 +156,17 @@ export default function HomeScreen({ navigation }: Props) {
     [listQ.data]
   );
 
-  // 검색 상태
+  // ===== 검색 =====
   const [keyword, setKeyword] = useState('');
   const [submittedKeyword, setSubmittedKeyword] = useState('');
-  const addHistory = useSearchHistoryStore((s) => s.add);
+
+  // ✅ 네 스토어 API 사용 (persist 포함)
+  const addHistory = useSearchHistoryStore((s) => s.addHistory);
+  const removeHistory = useSearchHistoryStore((s) => s.removeHistory);
   const getHistoryForTeam = useSearchHistoryStore((s) => s.getHistoryForTeam);
-  const history = getHistoryForTeam(teamId);
+
+  const history = useSearchHistoryStore((s) => s.historiesByTeam[teamId] ?? []);
+
   const isSearching = submittedKeyword.length > 0;
 
   const searchQ = useTeamSearchPostsInfinite(teamId, submittedKeyword);
@@ -154,6 +179,7 @@ export default function HomeScreen({ navigation }: Props) {
     (q: string) => {
       const t = q.trim();
       if (!t) return;
+      // 추가하면서 맨 앞으로 당김 + 10개 유지
       addHistory(teamId, t);
       setSubmittedKeyword(t);
     },
@@ -166,9 +192,35 @@ export default function HomeScreen({ navigation }: Props) {
     setKeyword('');
   }, []);
 
+  const handleRemoveChip = (q: string) => {
+    removeHistory(teamId, q);
+  };
+
+  const listData = tab === 'best' ? popular : isSearching ? searchPosts : allPosts;
+
+  const isFetchingNext =
+    tab === 'all'
+      ? isSearching
+        ? searchQ.isFetchingNextPage
+        : listQ.isFetchingNextPage
+      : false;
+
+  const hasNext =
+    tab === 'all'
+      ? isSearching
+        ? (searchQ.hasNextPage ?? false)
+        : (listQ.hasNextPage ?? false)
+      : false;
+
+  const fetchMore = () => {
+    if (!hasNext || isFetchingNext) return;
+    if (tab === 'all') (isSearching ? searchQ.fetchNextPage() : listQ.fetchNextPage());
+  };
+
+  // 직관채팅 버튼
   const handleChatPress = async () => {
-    const isVerified = isVerifiedToday();
-    if (isVerified) {
+    const verified = isVerifiedToday();
+    if (verified) {
       try {
         const currentUser = useUserStore.getState().currentUser;
         if (!currentUser) {
@@ -190,7 +242,6 @@ export default function HomeScreen({ navigation }: Props) {
         };
 
         const response = await chatRoomApi.joinWatchChat(watchRequest);
-
         if (response.data.status === 'SUCCESS') {
           const gameDetails = await gameApi.getGameById(todayGame.gameId.toString());
           if (!gameDetails || gameDetails.status !== 'SUCCESS') {
@@ -222,34 +273,13 @@ export default function HomeScreen({ navigation }: Props) {
         } else {
           Alert.alert('연결 실패', response.data.message || JSON.stringify(response.data) || '직관채팅 연결에 실패했습니다.');
         }
-      } catch (error) {
-        console.error('직관채팅 연결 중 오류:', error);
+      } catch (e) {
+        console.error('직관채팅 연결 오류:', e);
         Alert.alert('오류', '직관채팅 연결 중 문제가 발생했습니다.');
       }
     } else {
       (navigation as any).navigate('AttendanceVerification');
     }
-  };
-
-  const listData = tab === 'best' ? popular : isSearching ? searchPosts : allPosts;
-
-  const isFetchingNext =
-    tab === 'all'
-      ? isSearching
-        ? searchQ.isFetchingNextPage
-        : listQ.isFetchingNextPage
-      : false;
-
-  const hasNext =
-    tab === 'all'
-      ? isSearching
-        ? (searchQ.hasNextPage ?? false)
-        : (listQ.hasNextPage ?? false)
-      : false;
-
-  const fetchMore = () => {
-    if (!hasNext || isFetchingNext) return;
-    if (tab === 'all') (isSearching ? searchQ.fetchNextPage() : listQ.fetchNextPage());
   };
 
   const teamLogoSrc: ImageSourcePropType | undefined = team?.imagePath
@@ -280,7 +310,7 @@ export default function HomeScreen({ navigation }: Props) {
           </TouchableOpacity>
         </View>
 
-        {/* 헤더 아래 뉴스 영역 – 버튼으로만 접고 펼침 */}
+        {/* 헤더 아래 뉴스 – 수동 토글만 */}
         {newsOpen && (
           <View style={{ paddingTop: 8, paddingBottom: 8 }}>
             <TeamNewsSection
@@ -305,7 +335,7 @@ export default function HomeScreen({ navigation }: Props) {
         ) : (
           <FlatList
             key={tab}
-            data={listData}
+            data={popular}
             keyExtractor={(i) => String(i.id)}
             renderItem={({ item }) => (
               <PostItem
@@ -321,7 +351,7 @@ export default function HomeScreen({ navigation }: Props) {
       ) : (
         <FlatList
           key={tab}
-          data={listData}
+          data={isSearching ? searchPosts : allPosts}
           keyExtractor={(i) => String(i.id)}
           renderItem={({ item }) => (
             <PostItem
@@ -338,9 +368,12 @@ export default function HomeScreen({ navigation }: Props) {
                 onClear={handleClearSearch}
                 history={history}
                 onPressChip={(q) => {
+                  // 칩 누르면 맨 앞으로 당기면서 곧바로 검색
+                  addHistory(teamId, q);
                   setKeyword(q);
-                  submitWith(q);
+                  setSubmittedKeyword(q);
                 }}
+                onRemoveChip={handleRemoveChip}
                 isSearching={isSearching}
                 accentColor={teamColor}
               />
@@ -399,12 +432,28 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   clearBtnText: { color: '#111', fontWeight: '700' },
-  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
+
+  chipWrap: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10,
+  },
   chip: {
-    paddingHorizontal: 10, paddingVertical: 6, backgroundColor: '#F1F3F4',
-    borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E3E5E7',
+    flexDirection: 'row', alignItems: 'center',
+    maxWidth: '100%',
+    paddingLeft: 10, paddingRight: 6, paddingVertical: 6,
+    backgroundColor: '#F1F3F4',
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: '#E3E5E7',
+  },
+  chipLabelBtn: {
+    maxWidth: 180,
+    paddingRight: 6,
   },
   chipText: { color: '#5F6368', fontSize: 12 },
+  chipClose: {
+    width: 18, height: 18, borderRadius: 9,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  chipCloseText: { fontSize: 14, color: '#9aa0a6', lineHeight: 14 },
 
   // FAB
   fab: { position: 'absolute', right: 16, bottom: 24 },
