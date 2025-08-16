@@ -1,5 +1,5 @@
 // pages/home/HomeScreen.tsx
-import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import {
   View,
   FlatList,
@@ -39,7 +39,15 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 }
 
 type Props = HomeStackScreenProps<'Home'>;
-const ACTIONS_TOP = Platform.select({ android: 75, ios: 80 }); // 버튼 세로 위치 (위로 조정)
+
+// 팀색이 #RRGGBBAA 로 들어오면 #RRGGBB 로 정규화
+const normalizeHex = (hex?: string, fallback = '#1D467F') => {
+  if (!hex) return fallback;
+  if (hex.startsWith('#') && hex.length === 9) return hex.slice(0, 7);
+  return hex;
+};
+
+const ACTIONS_TOP = Platform.select({ android: 75, ios: 80 });
 
 function SearchHeader({
   keyword,
@@ -49,6 +57,7 @@ function SearchHeader({
   history,
   onPressChip,
   isSearching,
+  accentColor,
 }: {
   keyword: string;
   onChangeKeyword: (v: string) => void;
@@ -57,6 +66,7 @@ function SearchHeader({
   history: string[];
   onPressChip: (q: string) => void;
   isSearching: boolean;
+  accentColor: string;
 }) {
   return (
     <View style={styles.searchSection}>
@@ -74,7 +84,7 @@ function SearchHeader({
             <Text style={styles.clearBtnText}>취소</Text>
           </Pressable>
         ) : (
-          <Pressable style={styles.searchBtn} onPress={onSubmit}>
+          <Pressable style={[styles.searchBtn, { backgroundColor: accentColor }]} onPress={onSubmit}>
             <Text style={styles.searchBtnText}>검색</Text>
           </Pressable>
         )}
@@ -97,7 +107,9 @@ export default function HomeScreen({ navigation }: Props) {
   const teamId = useUserStore((s) => s.currentUser?.teamId) ?? 1;
   const { isVerifiedToday } = useAttendanceStore();
   const team = findTeamById(teamId);
-  const teamColor = team?.color ?? '#1D467F';
+
+  // ✅ 팀 색 정규화(알파값 제거) + 기본값
+  const teamColor = normalizeHex(team?.color, '#1D467F');
 
   const { data: standing } = useTeamStanding(teamId);
   const rankText = standing ? `${standing.rank}위` : '순위 준비중';
@@ -107,17 +119,14 @@ export default function HomeScreen({ navigation }: Props) {
 
   const [tab, setTab] = useState<'best' | 'all'>('all');
 
-  // 헤더 안에서 펼칠 팀 최신 뉴스 상태 (부모가 제어)
+  // 헤더 안 “팀 최신 뉴스” 펼침 상태
   const [newsOpen, setNewsOpen] = useState(false);
   const toggleNews = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setNewsOpen((v) => !v);
   };
-  // 탭 바뀌면 접기 (안드릭 addView index 에러 예방)
-  useEffect(() => {
-    if (newsOpen) setNewsOpen(false);
-  }, [tab]);
-
+  // ❌ 탭 변경 시 자동으로 닫던 효과 제거했습니다.
+  // useEffect(() => { if (newsOpen) setNewsOpen(false); }, [tab]);
 
   // 전체/베스트
   const { data: popular = [], isLoading: pLoading } = useTeamPopularPostsQuery(teamId, 20);
@@ -167,7 +176,6 @@ export default function HomeScreen({ navigation }: Props) {
           return;
         }
 
-        // 오늘의 게임 정보 가져오기
         const todayGameResponse = await gameApi.getTodayGame();
         if (todayGameResponse.status !== 'SUCCESS' || !todayGameResponse.data) {
           Alert.alert('오류', '오늘의 경기 정보를 가져올 수 없습니다.');
@@ -184,7 +192,6 @@ export default function HomeScreen({ navigation }: Props) {
         const response = await chatRoomApi.joinWatchChat(watchRequest);
 
         if (response.data.status === 'SUCCESS') {
-          // 게임 정보 로드
           const gameDetails = await gameApi.getGameById(todayGame.gameId.toString());
           if (!gameDetails || gameDetails.status !== 'SUCCESS') {
             Alert.alert('오류', '게임 정보를 불러올 수 없습니다.');
@@ -236,8 +243,8 @@ export default function HomeScreen({ navigation }: Props) {
   const hasNext =
     tab === 'all'
       ? isSearching
-        ? searchQ.hasNextPage ?? false
-        : listQ.hasNextPage ?? false
+        ? (searchQ.hasNextPage ?? false)
+        : (listQ.hasNextPage ?? false)
       : false;
 
   const fetchMore = () => {
@@ -246,16 +253,13 @@ export default function HomeScreen({ navigation }: Props) {
   };
 
   const teamLogoSrc: ImageSourcePropType | undefined = team?.imagePath
-  ? (typeof team.imagePath === 'string'
-      ? { uri: team.imagePath }           // CDN/URL
-      : (team.imagePath as any))          // require('...') 모듈
-  : undefined;
+    ? (typeof team.imagePath === 'string' ? { uri: team.imagePath } : (team.imagePath as any))
+    : undefined;
 
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
       {/* 헤더(팀색 배경) */}
       <View style={[styles.headerWrap, { backgroundColor: teamColor }]}>
-        {/* 팀 카드 – 살짝 아래 여백 주기 */}
         <View style={{ paddingTop: 8 }}>
           <TeamHeaderCard
             teamLogo={teamLogoSrc}
@@ -267,7 +271,7 @@ export default function HomeScreen({ navigation }: Props) {
           />
         </View>
 
-        {/* 오른쪽에 나란히 떠 있는 알약 버튼 */}
+        {/* 오른쪽 알약 버튼 */}
         <View style={[styles.actionRow, { top: ACTIONS_TOP }]}>
           <TouchableOpacity onPress={toggleNews} activeOpacity={0.9} style={styles.pill}>
             <Text style={[styles.pillText, { color: 'black' }]}>
@@ -276,7 +280,7 @@ export default function HomeScreen({ navigation }: Props) {
           </TouchableOpacity>
         </View>
 
-        {/* 헤더 아래에 즉시 펼쳐지는 뉴스 영역 */}
+        {/* 헤더 아래 뉴스 영역 – 버튼으로만 접고 펼침 */}
         {newsOpen && (
           <View style={{ paddingTop: 8, paddingBottom: 8 }}>
             <TeamNewsSection
@@ -284,7 +288,7 @@ export default function HomeScreen({ navigation }: Props) {
               titleColor="#fff"
               accentColor={teamColor}
               expanded={true}
-              showHeader={false}               // 헤더 버튼을 사용 중이므로 내부 타이틀 숨김
+              showHeader={false}
               style={{ backgroundColor: 'transparent' }}
             />
           </View>
@@ -292,7 +296,7 @@ export default function HomeScreen({ navigation }: Props) {
       </View>
 
       {/* 탭 */}
-      <SegmentTabs value={tab} onChange={setTab} />
+      <SegmentTabs value={tab} onChange={setTab} accentColor={teamColor} />
 
       {/* 리스트 */}
       {tab === 'best' ? (
@@ -309,7 +313,7 @@ export default function HomeScreen({ navigation }: Props) {
                 onPress={() => navigation.navigate('PostDetail', { postId: item.id })}
               />
             )}
-            ListHeaderComponent={<View />}      // 항상 단일 View
+            ListHeaderComponent={<View />}
             removeClippedSubviews={false}
             contentContainerStyle={styles.listPad}
           />
@@ -338,6 +342,7 @@ export default function HomeScreen({ navigation }: Props) {
                   submitWith(q);
                 }}
                 isSearching={isSearching}
+                accentColor={teamColor}
               />
             </View>
           }
@@ -369,27 +374,11 @@ export default function HomeScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   listPad: { paddingBottom: 16 },
 
-  headerWrap: {
-    position: 'relative',
-    paddingBottom: 12,
-  },
-  actionRow: {
-    position: 'absolute',
-    right: 16,
-    top: 100,
-    flexDirection: 'row',
-  },
+  headerWrap: { position: 'relative', paddingBottom: 12 },
+  actionRow: { position: 'absolute', right: 16, top: 100, flexDirection: 'row' },
   pill: {
-    height: 30,
-    width: 81,
-    paddingHorizontal: 10,
-    borderRadius: 10,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
-    marginRight: 4.5,
-    marginTop:30,
+    height: 30, width: 81, paddingHorizontal: 10, borderRadius: 10, backgroundColor: '#fff',
+    alignItems: 'center', justifyContent: 'center', marginLeft: 8, marginRight: 4.5, marginTop: 30,
   },
   pillText: { fontSize: 10.5, fontWeight: '600' },
 
@@ -397,56 +386,31 @@ const styles = StyleSheet.create({
   searchSection: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8, backgroundColor: '#fff' },
   searchRow: { flexDirection: 'row', gap: 8 },
   searchInput: {
-    flex: 1,
-    height: 44,
-    borderRadius: 10,
-    backgroundColor: '#F5F6F7',
-    paddingHorizontal: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#E3E5E7',
+    flex: 1, height: 44, borderRadius: 10, backgroundColor: '#F5F6F7',
+    paddingHorizontal: 12, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E3E5E7',
   },
   searchBtn: {
-    height: 44,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    backgroundColor: '#E95F2E',
-    alignItems: 'center',
-    justifyContent: 'center',
+    height: 44, paddingHorizontal: 14, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
   },
   searchBtnText: { color: '#fff', fontWeight: '700' },
   clearBtn: {
-    height: 44,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    backgroundColor: '#D1D5DB',
-    alignItems: 'center',
-    justifyContent: 'center',
+    height: 44, paddingHorizontal: 14, borderRadius: 10, backgroundColor: '#D1D5DB',
+    alignItems: 'center', justifyContent: 'center',
   },
   clearBtnText: { color: '#111', fontWeight: '700' },
   chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
   chip: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: '#F1F3F4',
-    borderRadius: 16,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#E3E5E7',
+    paddingHorizontal: 10, paddingVertical: 6, backgroundColor: '#F1F3F4',
+    borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: '#E3E5E7',
   },
   chipText: { color: '#5F6368', fontSize: 12 },
 
   // FAB
   fab: { position: 'absolute', right: 16, bottom: 24 },
   fabCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 8,
-    elevation: 6,
+    width: 64, height: 64, borderRadius: 32, backgroundColor: '#FFFFFF',
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOpacity: 0.15, shadowOffset: { width: 0, height: 4 }, shadowRadius: 8, elevation: 6,
   },
 });
