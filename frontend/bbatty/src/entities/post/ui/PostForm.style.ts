@@ -17,7 +17,8 @@ export const styles = StyleSheet.create({
   contentWrap: {
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 24,
+    paddingBottom: 16, // 기본 패딩만 유지
+    minHeight: '100%', // 전체 높이까지 확장
   },
   label: { fontSize: 16, color: '#111', fontWeight: '700', marginBottom: 8 },
   titleInput: {
@@ -31,13 +32,12 @@ export const styles = StyleSheet.create({
     color: '#111',
   },
   bodyInput: {
-    minHeight: 280,
+    // minHeight 제거 - 자연스럽게 확장
     borderRadius: 8,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#E3E5E7',
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    // padding은 RichTextEditor 내부에서 처리
     fontSize: 15,
     color: '#111',
   },
@@ -71,11 +71,15 @@ export const styles = StyleSheet.create({
 
   // TOOLBAR
   toolbar: {
-    marginTop: 10,
-    marginBottom: 8,
+    paddingTop: 10,
+    paddingBottom: 10,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
+    backgroundColor: '#fff',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#E3E5E7',
   },
   imageBtn: {
     width: 36,
@@ -94,9 +98,16 @@ export const styles = StyleSheet.create({
 
   // BOTTOM BUTTON
   bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     paddingHorizontal: 16,
     paddingTop: 10,
-    paddingBottom: Platform.select({ ios: 24, android: 16 }),
+    paddingBottom: Platform.select({ ios: 34, android: 16 }), // iOS Safe Area 고려
+    backgroundColor: 'white', // 배경색 추가
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#E3E5E7',
   },
   submitBtn: {
     height: 48,

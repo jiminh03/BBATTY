@@ -11,19 +11,19 @@ import axios, { AxiosHeaders, AxiosResponse } from 'axios';
 import { Post } from '../model/types';
 import { CursorPostListResponse } from './types';
 export type TeamNewsItem = {
-    id?: number;
-    postId?: number;          // 내부 포스트로 연결 가능하면 사용
-    title: string;
-    summary?: string;
-    thumbnailUrl?: string;
-    publishedAt?: string;
-    source?: string;
-    link?: string;            // 외부 기사 원문
-  };
+  id?: number;
+  postId?: number; // 내부 포스트로 연결 가능하면 사용
+  title: string;
+  summary?: string;
+  thumbnailUrl?: string;
+  publishedAt?: string;
+  source?: string;
+  link?: string; // 외부 기사 원문
+};
 
 export const postApi = {
-    // ai 기사
-   async getTeamNews(teamId: number, limit = 5): Promise<TeamNewsItem[]> {
+  // ai 기사
+  async getTeamNews(teamId: number, limit = 5): Promise<TeamNewsItem[]> {
     const res = await apiClient.get(`/api/posts/team/${teamId}/news`, { params: { limit } });
     const root: any = (res as any)?.data ?? res;
 
@@ -84,46 +84,47 @@ export const postApi = {
       throw e;
     }
   },
-    
+
   // 게시글 삭제
   deletePost: (postId: string) => apiClient.delete(`/api/posts/${postId}`),
 
   // 게시글 상세 조회
   getPostById: async (postId: number): Promise<Post> => {
-  const res = await apiClient.get(`/api/posts/${postId}`);
-  const api = (res as any).data as { status: string; message?: string; data?: Post };
-  if (api?.status !== 'SUCCESS' || !api?.data) {
-    throw new Error(api?.message ?? '게시글 상세 조회 실패');
-  }
-  return api.data;                 // ✅ Post
-},
+    const res = await apiClient.get(`/api/posts/${postId}`);
+    const api = (res as any).data as { status: string; message?: string; data?: Post };
+    if (api?.status !== 'SUCCESS' || !api?.data) {
+      throw new Error(api?.message ?? '게시글 상세 조회 실패');
+    }
+    return api.data; // ✅ Post
+  },
 
   // 게시글 목록 조회 (cursor 기반)
-getPosts: async (teamId: number, cursor?: number): Promise<CursorPostListResponse> => {
-  const params: Record<string, any> = {};
-  if (cursor !== undefined) params.cursor = cursor;
+  getPosts: async (teamId: number, cursor?: number): Promise<CursorPostListResponse> => {
+    const params: Record<string, any> = {};
+    if (cursor !== undefined) params.cursor = cursor;
 
-  const res = await apiClient.get(`/api/posts/team/${teamId}`, { params });
-  const api = (res as any).data as { status: string; message?: string; data?: any };
+    const res = await apiClient.get(`/api/posts/team/${teamId}`, { params });
+    const api = (res as any).data as { status: string; message?: string; data?: any };
 
-  if (api?.status !== 'SUCCESS' || !api?.data) {
-    throw new Error(api?.message ?? '게시글 목록 조회 실패');
-  }
+    if (api?.status !== 'SUCCESS' || !api?.data) {
+      throw new Error(api?.message ?? '게시글 목록 조회 실패');
+    }
 
-  const raw = api.data;
-  // ✅ 서버가 nextCursor를 string으로 주거나 누락해도 대비
-  const normNextCursor =
-    typeof raw?.nextCursor === 'string'
-      ? Number(raw.nextCursor)
-      : (typeof raw?.nextCursor === 'number' ? raw.nextCursor : undefined);
+    const raw = api.data;
+    // ✅ 서버가 nextCursor를 string으로 주거나 누락해도 대비
+    const normNextCursor =
+      typeof raw?.nextCursor === 'string'
+        ? Number(raw.nextCursor)
+        : typeof raw?.nextCursor === 'number'
+        ? raw.nextCursor
+        : undefined;
 
-  return {
-    posts: Array.isArray(raw?.posts) ? raw.posts : [],
-    hasNext: Boolean(raw?.hasNext),
-    nextCursor: normNextCursor,
-  };
-},
-
+    return {
+      posts: Array.isArray(raw?.posts) ? raw.posts : [],
+      hasNext: Boolean(raw?.hasNext),
+      nextCursor: normNextCursor,
+    };
+  },
 
   // 인기 게시글 목록 조회
   async getPopularByTeam(teamId: number, limit = 20) {
@@ -132,14 +133,12 @@ getPosts: async (teamId: number, cursor?: number): Promise<CursorPostListRespons
     const seen = new Set<number>();
 
     while (acc.length < limit) {
-      const res = await apiClient.get(`/api/posts/team/${teamId}/popular`,
-        { params: cursor !== undefined ? { cursor } : {} }
-      );
+      const res = await apiClient.get(`/api/posts/team/${teamId}/popular`, {
+        params: cursor !== undefined ? { cursor } : {},
+      });
       const api = (res as any).data as any;
 
-      const page: PostListItem[] = Array.isArray(api.data)
-        ? api.data
-        : (api.data?.posts ?? []);
+      const page: PostListItem[] = Array.isArray(api.data) ? api.data : api.data?.posts ?? [];
 
       console.log('[popular][page]', {
         got: page.length,
@@ -165,36 +164,32 @@ getPosts: async (teamId: number, cursor?: number): Promise<CursorPostListRespons
     return acc.slice(0, limit);
   },
 
-
   // 게시글 좋아요
-    likePost(postId: number) {
-      return apiClient.post(`/api/posts/${postId}/like`); // 성공 코드만 내려옴
-    },
+  likePost(postId: number) {
+    return apiClient.post(`/api/posts/${postId}/like`); // 성공 코드만 내려옴
+  },
 
   // 게시글 좋아요 취소
   unlikePost: (postId: string) => apiClient.delete(`/api/posts/${postId}/like`),
 
   // 게시글 이미지 삭제
-  deletePostImage: (postId: number, imageUrl: string) => 
-    apiClient.delete(`/api/posts/${postId}/images`, { params: { imageUrl } }),
-
+  deletePostImage: (postId: number, imageUrl: string) =>
+    apiClient.delete(`/api/posts/${postId}/images`, { params: { imageUrl } } as any),
 
   // 팀 별 게시글 검색
-  async getTeamSearchPosts(
-    teamId: number,
-    keyword: string,
-    cursor?: number
-  ): Promise<CursorPostListResponse> {
+  async getTeamSearchPosts(teamId: number, keyword: string, cursor?: number): Promise<CursorPostListResponse> {
     const res = await apiClient.get(`/api/posts/team/${teamId}/search`, {
       params: {
-        keyword,                       // optional이지만 빈문자면 서버에서 전체검색 취급할 수도 있으니 trim 권장
+        keyword, // optional이지만 빈문자면 서버에서 전체검색 취급할 수도 있으니 trim 권장
         ...(cursor !== undefined ? { cursor } : {}),
       },
     });
 
     // 서버 공통 포맷 파싱 (SUCCESS / ERROR)
     const api = (res as any).data as {
-      status: string; message?: string; data?: CursorPostListResponse;
+      status: string;
+      message?: string;
+      data?: CursorPostListResponse;
     };
 
     if (api?.status !== 'SUCCESS' || !api?.data) {
@@ -204,11 +199,7 @@ getPosts: async (teamId: number, cursor?: number): Promise<CursorPostListRespons
   },
 
   // 팀별 검색 (query, cursor)
-async searchTeamPosts(
-    teamId: number,
-    rawQuery: string,
-    cursor?: number
-  ): Promise<CursorPostListResponse> {
+  async searchTeamPosts(teamId: number, rawQuery: string, cursor?: number): Promise<CursorPostListResponse> {
     const query = (rawQuery ?? '').trim();
     if (!teamId || teamId <= 0 || !query) {
       return { posts: [], hasNext: false, nextCursor: undefined };
@@ -246,31 +237,32 @@ async searchTeamPosts(
 
   // 회원별 게시글 조회
   async getMyPosts(userId: number, cursor?: number): Promise<CursorPostListResponse> {
-  const params: Record<string, any> = {};
-  if (cursor !== undefined) params.cursor = cursor;
+    const params: Record<string, any> = {};
+    if (cursor !== undefined) params.cursor = cursor;
 
-  const res = await apiClient.get(`/api/posts/user/${userId}`, { params });
-  const root: any = (res as any)?.data ?? res;
+    const res = await apiClient.get(`/api/posts/user/${userId}`, { params });
+    const root: any = (res as any)?.data ?? res;
 
-  // 공통 래퍼 파싱
-  const payload = root?.data ?? root;
+    // 공통 래퍼 파싱
+    const payload = root?.data ?? root;
 
-  // 다양한 서버 포맷 방어적 파싱
-  const posts =
-    Array.isArray(payload?.posts) ? payload.posts :
-    Array.isArray(payload?.content) ? payload.content :
-    Array.isArray(payload) ? payload : [];
+    // 다양한 서버 포맷 방어적 파싱
+    const posts = Array.isArray(payload?.posts)
+      ? payload.posts
+      : Array.isArray(payload?.content)
+      ? payload.content
+      : Array.isArray(payload)
+      ? payload
+      : [];
 
-  const hasNext = Boolean(payload?.hasNext ?? payload?.page?.hasNext ?? false);
+    const hasNext = Boolean(payload?.hasNext ?? payload?.page?.hasNext ?? false);
 
-  const rawNext =
-    payload?.nextCursor ?? payload?.page?.nextCursor ??
-    payload?.next ?? payload?.nextId ?? payload?.next_id;
+    const rawNext =
+      payload?.nextCursor ?? payload?.page?.nextCursor ?? payload?.next ?? payload?.nextId ?? payload?.next_id;
 
-  const nextCursor =
-    typeof rawNext === 'string' ? Number(rawNext) :
-    (typeof rawNext === 'number' ? rawNext : undefined);
+    const nextCursor =
+      typeof rawNext === 'string' ? Number(rawNext) : typeof rawNext === 'number' ? rawNext : undefined;
 
-  return { posts, hasNext, nextCursor };
-},
-}
+    return { posts, hasNext, nextCursor };
+  },
+};

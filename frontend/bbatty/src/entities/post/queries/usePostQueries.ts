@@ -36,7 +36,7 @@ export const useCreatePost = () => {
 };
 
 /* -------------------- 상세(로컬 liked 병합) -------------------- */
-export const usePostDetailQuery = (postId: number) => {
+export const usePostDetailQuery = (postId: number, options?: { enabled?: boolean }) => {
   const likedLocal = useLikeStore((s) => s.byPostId[postId]);
   const countLocal = useLikeStore((s) => s.byPostCount[postId]);
   const tsLocal = useLikeStore((s) => s.ts[postId]);
@@ -46,6 +46,7 @@ export const usePostDetailQuery = (postId: number) => {
   return useQuery<Post>({
     queryKey: ['post', postId],
     queryFn: () => postApi.getPostById(postId),
+    enabled: options?.enabled !== false && postId > 0, // postId가 0 이하이거나 enabled가 false면 실행 안 함
     select: (p) => ({
       ...p,
       // 서버가 값을 주면 서버 우선, 없으면 로컬 보완

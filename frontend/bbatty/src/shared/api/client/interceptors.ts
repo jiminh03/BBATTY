@@ -31,7 +31,6 @@ export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnaut
         // 최신 토큰을 헤더에 추가
         const token = tokenStore.getAccessToken();
         if (token && config.headers) {
-          console.log(token);
           config.headers.Authorization = `Bearer ${token}`;
 
           // console.log(`Bearer ${token}`);

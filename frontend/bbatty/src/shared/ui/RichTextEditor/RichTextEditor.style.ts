@@ -2,25 +2,32 @@ import { StyleSheet } from 'react-native';
 
 export const styles = StyleSheet.create({
   container: {
-    minHeight: 280,
+    minHeight: 200, // 최소 높이만 유지
+    // maxHeight 제거 - 자연스럽게 확장되도록
     borderRadius: 8,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#E3E5E7',
     backgroundColor: '#FFFFFF',
+    // flex 제거 - 콘텐츠에 따라 크기 조정
   },
 
   editorScroll: {
-    flex: 1,
+    // flex 제거 - ScrollView를 제거할 예정
     paddingHorizontal: 12,
     paddingVertical: 12,
   },
 
   content: {
-    minHeight: 256, // minHeight - padding
+    minHeight: 180,
+    // 자연스럽게 확장되도록
   },
 
   textSegmentContainer: {
-    marginVertical: 2,
+    marginVertical: 1,
+    minHeight: 22, // textInput/textContent와 일치
+    borderRadius: 4,
+    paddingHorizontal: 4,
+    paddingVertical: 1, // 더 일관된 여백
   },
 
   textInput: {
@@ -30,27 +37,40 @@ export const styles = StyleSheet.create({
     padding: 0,
     margin: 0,
     textAlignVertical: 'top',
+    minHeight: 22, // textContent와 동일한 최소 높이
   },
 
   textBlock: {
     minHeight: 22,
     justifyContent: 'center',
+    paddingVertical: 0, // textInput과 동일한 패딩
   },
 
   emptyTextBlock: {
-    minHeight: 30,
-    paddingVertical: 4,
+    minHeight: 22, // textInput과 동일한 최소 높이
+    paddingVertical: 0, // 일관성 유지
+    marginVertical: 1,
   },
 
   textContent: {
     fontSize: 15,
     color: '#111',
     lineHeight: 22,
+    minHeight: 22, // textInput과 동일한 최소 높이
   },
 
   imageBlock: {
     marginVertical: 8,
     position: 'relative',
+    padding: 4, // 터치 영역 확대
+  },
+
+  imageBlockDragging: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
   },
 
   inlineImage: {
@@ -88,5 +108,52 @@ export const styles = StyleSheet.create({
     fontSize: 15,
     color: '#B9BDC1',
     lineHeight: 22,
+  },
+
+  dropZoneLine: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: '#007AFF',
+    borderRadius: 1.5,
+    shadowColor: '#007AFF',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.5,
+    shadowRadius: 2,
+    elevation: 2,
+    zIndex: 100, // 오버레이(99999)보다 훨씬 낮게 설정
+  },
+
+  dropZoneLineInside: {
+    height: 2,
+    backgroundColor: '#007AFF',
+    marginVertical: 2,
+    borderRadius: 1,
+    opacity: 0.8,
+  },
+
+  textBlockHighlight: {
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 122, 255, 0.3)',
+  },
+
+  // 노션 스타일 드래그 오버레이
+  dragOverlay: {
+    width: 200,
+    height: 200,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+  },
+
+  dragImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 8,
+    backgroundColor: '#F5F6F7',
   },
 });

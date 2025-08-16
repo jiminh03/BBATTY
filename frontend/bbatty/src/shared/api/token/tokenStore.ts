@@ -218,7 +218,6 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
 
     // 토큰이 만료 임박하지 않으면 갱신하지 않음
     const isExpiringSoon = isAccessTokenExpiringSoon();
-    console.log('isExpiringSoon : ', isExpiringSoon);
 
     if (!isExpiringSoon) {
       return Ok(true);
