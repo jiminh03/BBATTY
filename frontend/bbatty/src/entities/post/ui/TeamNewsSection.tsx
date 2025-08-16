@@ -136,7 +136,7 @@ function fmt(iso?: string) {
 const s = StyleSheet.create({
   section: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8, backgroundColor: 'transparent' },
   title: { fontSize: 18, fontWeight: '800' },
-  empty: { marginTop: 12, color: '#999' },
+  empty: { marginTop: 12, color: '#ffffffff' },
 
   card: {
     borderRadius: 14,
