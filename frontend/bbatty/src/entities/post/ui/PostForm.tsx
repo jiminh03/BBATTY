@@ -43,7 +43,7 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
   const teamId = useUserStore((s) => s.currentUser?.teamId) ?? 1;
 
   // 상세(수정 시) - 수정 모드일 때만 조회
-  const { data: detail } = usePostDetailQuery(postId!, { enabled: isEdit });
+  const { data: detail } = usePostDetailQuery(isEdit ? postId! : null);
 
   // mutations
   const createPost = useCreatePost();
@@ -62,6 +62,9 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
     imageUrl: string;
     startPosition: { x: number; y: number };
   } | null>(null);
+  
+  // 스크롤 뷰 참조
+  const scrollViewRef = useRef<ScrollView>(null);
   
   const dragOffsetX = useRef(new Animated.Value(0)).current;
   const dragOffsetY = useRef(new Animated.Value(0)).current;
@@ -204,7 +207,7 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
     setImageList((prev) => prev.filter((img) => img.id !== imageId));
   };
 
-  // 드래그 핸들러들 - 디버깅 버전
+  // 드래그 핸들러들 - 스크롤 방지 기능 추가
   const handleDragStart = useCallback((dragInfo: { imageUrl: string; startPosition: { x: number; y: number } }) => {
     console.log('🟢 handleDragStart called:', {
       isDragging: isDraggingRef.current,
@@ -221,6 +224,11 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
     isDraggingRef.current = true;
     currentDragInfoRef.current = dragInfo;
     setDragOverlayInfo(dragInfo);
+    
+    // 스크롤 비활성화
+    if (scrollViewRef.current) {
+      scrollViewRef.current.setNativeProps({ scrollEnabled: false });
+    }
     
     // 애니메이션 초기화
     dragOffsetX.setValue(0);
@@ -247,6 +255,11 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
     isDraggingRef.current = false;
     currentDragInfoRef.current = null;
     setDragOverlayInfo(null);
+    
+    // 스크롤 다시 활성화
+    if (scrollViewRef.current) {
+      scrollViewRef.current.setNativeProps({ scrollEnabled: true });
+    }
     
     // 애니메이션 리셋
     dragOffsetX.setValue(0);
@@ -318,12 +331,14 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
           keyboardVerticalOffset={Platform.select({ ios: 88, android: 88 })}
         >
           <ScrollView 
+            ref={scrollViewRef}
             contentContainerStyle={styles.contentWrap} 
             keyboardShouldPersistTaps='handled'
             showsVerticalScrollIndicator={false}
             keyboardDismissMode='interactive'
             automaticallyAdjustKeyboardInsets={true}
             style={{ flex: 1 }}
+            scrollEnabled={!isDraggingRef.current}
           >
           {/* 제목 */}
           <Text style={styles.label}>제목</Text>

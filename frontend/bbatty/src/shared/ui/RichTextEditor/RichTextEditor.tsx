@@ -82,50 +82,41 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     let segmentId = 0;
     let currentIndex = 0;
     
-    // 먼저 전체 텍스트를 이미지와 비이미지로 분할
-    const parts = text.split(/(!\[image\]\([^)]+\))/);
+    // 텍스트를 줄 단위로 분할하여 각 줄을 독립적인 블록으로 처리
+    const lines = text.split('\n');
     
-    for (const part of parts) {
-      if (!part) continue;
+    for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+      const line = lines[lineIndex];
       
-      const imageMatch = part.match(/!\[image\]\(([^)]+)\)/);
+      // 이미지 마크다운 체크
+      const imageMatch = line.match(/^!\[image\]\(([^)]+)\)$/);
       if (imageMatch) {
-        // 이미지 세그먼트
+        // 이미지 세그먼트 (한 줄 전체가 이미지)
         segments.push({
           id: `image_${segmentId++}`,
           type: 'image',
-          content: part,
+          content: line,
           imageUrl: imageMatch[1],
           startIndex: currentIndex,
-          endIndex: currentIndex + part.length,
+          endIndex: currentIndex + line.length,
         });
       } else {
-        // 텍스트 부분을 줄별로 나누어 세그먼트 생성 (드래그앤드롭을 위해)
-        const lines = part.split('\n');
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i];
-          
-          // 모든 라인을 세그먼트로 생성 (드롭존 표시를 위해)
-          // 연속된 빈 줄 필터링은 실제 content 재구성 시에만 적용
-          segments.push({
-            id: `text_${segmentId++}`,
-            type: 'text',
-            content: line,
-            startIndex: currentIndex,
-            endIndex: currentIndex + line.length,
-          });
-          
-          currentIndex += line.length;
-          
-          // 마지막 줄이 아니면 줄바꿈 문자 길이 추가
-          if (i < lines.length - 1) {
-            currentIndex += 1; // \n
-          }
-        }
-        continue; // currentIndex는 위에서 처리했으므로 아래 증가 건너뛰기
+        // 텍스트 세그먼트 (각 줄이 독립적인 블록)
+        segments.push({
+          id: `text_${segmentId++}`,
+          type: 'text',
+          content: line,
+          startIndex: currentIndex,
+          endIndex: currentIndex + line.length,
+        });
       }
       
-      currentIndex += part.length;
+      currentIndex += line.length;
+      
+      // 마지막 줄이 아니면 줄바꿈 문자 길이 추가
+      if (lineIndex < lines.length - 1) {
+        currentIndex += 1; // \n
+      }
     }
     
     // 빈 세그먼트가 없으면 기본 빈 텍스트 세그먼트 추가
@@ -158,87 +149,40 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     const segment = segments[segmentIndex];
     if (!segment || segment.type !== 'text') return;
     
-
-    // 안전한 세그먼트 기반 교체: 전체 세그먼트 배열을 재구성
     const newSegments = [...segments];
     
     if (newText.includes('\n')) {
-      // Enter 키로 줄바꿈이 발생한 경우: 더 자연스러운 처리
+      // Enter 키로 새 블록 생성
       const lines = newText.split('\n');
-      const currentContent = segment.content;
+      const firstLine = lines[0];
+      const remainingLines = lines.slice(1);
       
-      // 현재 세그먼트의 내용과 비교해서 실제로 줄바꿈이 추가되었는지 확인
-      if (lines.length > 1 && !currentContent.includes('\n')) {
-        // 새로운 줄바꿈이 추가된 경우에만 분할 처리
-        const firstLine = lines[0];
-        const remainingLines = lines.slice(1);
-        
-        // 현재 세그먼트는 첫 번째 줄로 업데이트
-        newSegments[segmentIndex] = { ...segment, content: firstLine };
-        
-        // 나머지 줄들을 새로운 세그먼트로 생성
-        const newTextSegments = remainingLines.map((line, index) => ({
-          id: `text_${Date.now()}_${index}`,
-          type: 'text' as const,
-          content: line,
-          startIndex: 0,
-          endIndex: 0,
-        }));
-        
-        // 새 세그먼트들을 현재 위치 다음에 삽입
-        newSegments.splice(segmentIndex + 1, 0, ...newTextSegments);
-        
-        const updatedContent = newSegments.map(s => s.content).join('\n');
-        
-        // 자연스러운 업데이트를 위해 즉시 처리
-        onChangeText(updatedContent);
-        
-        // 포커스를 새로 생성된 다음 줄로 이동
-        setTimeout(() => {
-          setCurrentEditingSegment(segmentIndex + 1);
-        }, 10); // 더 빠른 포커스 이동
-      } else {
-        // 기존 줄바꿈이 있는 텍스트의 수정인 경우 일반 처리
-        newSegments[segmentIndex] = { ...segment, content: newText };
-        const updatedContent = newSegments.map(s => s.content).join('\n');
-        onChangeText(updatedContent);
-      }
+      // 현재 블록은 첫 번째 줄로 업데이트
+      newSegments[segmentIndex] = { ...segment, content: firstLine };
+      
+      // 나머지 줄들을 새로운 블록으로 생성
+      const newTextSegments = remainingLines.map((line, index) => ({
+        id: `text_${Date.now()}_${index}`,
+        type: 'text' as const,
+        content: line,
+        startIndex: 0,
+        endIndex: 0,
+      }));
+      
+      // 새 블록들을 현재 위치 다음에 삽입
+      newSegments.splice(segmentIndex + 1, 0, ...newTextSegments);
+      
+      const updatedContent = newSegments.map(s => s.content).join('\n');
+      onChangeText(updatedContent);
+      
+      // 포커스를 새로 생성된 다음 블록으로 이동
+      setTimeout(() => {
+        setCurrentEditingSegment(segmentIndex + 1);
+      }, 50);
     } else {
-      // 일반적인 텍스트 교체
+      // 일반적인 텍스트 변경
       newSegments[segmentIndex] = { ...segment, content: newText };
-      
-      // 빈 세그먼트 정리: 연속된 빈 텍스트 세그먼트 제거
-      const cleanedSegments = newSegments.filter((seg, index) => {
-        if (seg.type === 'image') return true;
-        if (seg.type === 'text' && seg.content === '') {
-          const nextSeg = newSegments[index + 1];
-          const prevSeg = newSegments[index - 1];
-          
-          // 첫 번째 세그먼트거나 마지막 세그먼트인 경우 유지
-          if (index === 0 || index === newSegments.length - 1) return true;
-          
-          // 앞뒤가 모두 텍스트이고 비어있지 않은 경우에만 빈 세그먼트 유지 (드롭존용)
-          // 연속된 빈 세그먼트는 제거
-          if (nextSeg && nextSeg.type === 'text' && nextSeg.content === '') return false;
-          if (prevSeg && prevSeg.type === 'text' && prevSeg.content === '') return false;
-          
-          return true;
-        }
-        return true;
-      });
-      
-      // 빈 상태면 기본 빈 텍스트 세그먼트 하나만 유지
-      if (cleanedSegments.length === 0 || cleanedSegments.every(s => s.type === 'image')) {
-        cleanedSegments.push({
-          id: `text_${Date.now()}`,
-          type: 'text',
-          content: '',
-          startIndex: 0,
-          endIndex: 0,
-        });
-      }
-      
-      const updatedContent = cleanedSegments.map(s => s.content).join('\n');
+      const updatedContent = newSegments.map(s => s.content).join('\n');
       onChangeText(updatedContent);
     }
   }, [segments, onChangeText]);
@@ -255,92 +199,83 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   };
 
   const findDropZone = useCallback((touchY: number, useFocusPosition = false) => {
-    // 포커스 위치 기반 드롭존 계산 옵션 추가
+    // 포커스 위치 기반 드롭존 계산
     if (useFocusPosition && currentEditingSegment !== null) {
-      // 현재 편집 중인 세그먼트 위치에 드롭존 표시
       const targetIndex = currentEditingSegment;
-      const dropPosition: 'before' | 'after' = 'before'; // 항상 텍스트 위에 표시
+      const dropPosition: 'before' | 'after' = 'before';
       
-      if (dropZoneIndex !== targetIndex || dropZonePosition !== dropPosition) {
-        if (dropZoneUpdateTimeout.current) {
-          clearTimeout(dropZoneUpdateTimeout.current);
-        }
-        
-        dropZoneUpdateTimeout.current = setTimeout(() => {
-          setDropZonePosition(dropPosition);
-          setDropZoneIndex(targetIndex);
-        }, 50);
-      }
+      setDropZonePosition(dropPosition);
+      setDropZoneIndex(targetIndex);
       
       return targetIndex;
     }
     
-    // 누적 높이 기반 드롭존 계산
+    // 일관성 있는 드롭존 계산
     let bestMatch = { index: 0, position: 'before' as 'before' | 'after', distance: Infinity };
-    let accumulatedY = 0;
+    let cumulativeY = 0;
     
+    console.log('🔍 findDropZone touchY:', touchY, 'segments:', segments.length);
     
+    // 각 세그먼트 경계에서의 거리 계산
     for (let i = 0; i < segments.length; i++) {
       const segment = segments[i];
       const layout = segmentLayouts.current[segment.id];
       
-      let segmentHeight: number;
-      if (layout) {
-        segmentHeight = layout.height;
-      } else {
-        // 레이아웃 정보가 없는 경우 예상 높이 사용
-        segmentHeight = segment.type === 'image' ? 210 : 30;
+      // 정확한 높이 계산 (여백 포함)
+      const baseHeight = segment.type === 'image' ? 216 : 32;
+      const margin = segment.type === 'image' ? 16 : 2; // marginVertical
+      const segmentHeight = layout ? layout.height : baseHeight;
+      
+      const segmentTop = cumulativeY;
+      const segmentBottom = cumulativeY + segmentHeight;
+      
+      // 세그먼트 위쪽 경계 (before)
+      const distanceToBefore = Math.abs(touchY - segmentTop);
+      if (distanceToBefore < bestMatch.distance) {
+        bestMatch = { index: i, position: 'before', distance: distanceToBefore };
       }
       
-      const segmentTop = accumulatedY;
-      const segmentBottom = accumulatedY + segmentHeight;
-      const segmentCenter = accumulatedY + segmentHeight / 2;
-      
-      // 터치 위치와 세그먼트의 거리 계산
-      let distance: number;
-      let position: 'before' | 'after';
-      
-      if (touchY < segmentTop) {
-        distance = segmentTop - touchY;
-        position = 'before';
-      } else if (touchY > segmentBottom) {
-        distance = touchY - segmentBottom;
-        position = 'after';
-      } else {
-        distance = 0; // 세그먼트 내부
-        position = touchY < segmentCenter ? 'before' : 'after';
+      // 세그먼트 아래쪽 경계 (after)
+      const distanceToAfter = Math.abs(touchY - segmentBottom);
+      if (distanceToAfter < bestMatch.distance) {
+        bestMatch = { index: i, position: 'after', distance: distanceToAfter };
       }
       
+      cumulativeY += segmentHeight;
       
-      // 가장 가까운 세그먼트 찾기
-      if (distance < bestMatch.distance) {
-        bestMatch = { index: i, position, distance };
-      }
-      
-      // 다음 세그먼트를 위한 누적 높이 업데이트
-      accumulatedY += segmentHeight;
+      console.log(`📏 Segment ${i}:`, {
+        type: segment.type,
+        top: segmentTop,
+        bottom: segmentBottom,
+        height: segmentHeight,
+        distanceToBefore,
+        distanceToAfter
+      });
     }
     
-    // 빈 상태일 때 처리
+    // 첫 번째 세그먼트 위에 드롭하는 경우
+    if (touchY < 0) {
+      bestMatch = { index: 0, position: 'before', distance: Math.abs(touchY) };
+    }
+    
+    // 마지막 세그먼트 아래에 드롭하는 경우
+    if (touchY > cumulativeY) {
+      bestMatch = { index: segments.length - 1, position: 'after', distance: touchY - cumulativeY };
+    }
+    
+    // 빈 상태 처리
     if (segments.length === 0) {
       bestMatch = { index: 0, position: 'before', distance: 0 };
     }
     
+    console.log('🎯 Final bestMatch:', bestMatch, 'touchY:', touchY, 'totalHeight:', cumulativeY);
     
-    // 드롭존 상태가 실제로 변경된 경우에만 업데이트
-    if (dropZoneIndex !== bestMatch.index || dropZonePosition !== bestMatch.position) {
-      if (dropZoneUpdateTimeout.current) {
-        clearTimeout(dropZoneUpdateTimeout.current);
-      }
-      
-      dropZoneUpdateTimeout.current = setTimeout(() => {
-        setDropZonePosition(bestMatch.position);
-        setDropZoneIndex(bestMatch.index);
-      }, 30); // 더 빠른 응답성을 위해 30ms로 감소
-    }
+    // 드롭존 업데이트
+    setDropZonePosition(bestMatch.position);
+    setDropZoneIndex(bestMatch.index);
     
     return bestMatch.index;
-  }, [segments, currentEditingSegment, dropZoneIndex, dropZonePosition]);
+  }, [segments, currentEditingSegment]);
 
   const createImagePanResponder = useCallback((segment: ContentSegment, segmentIndex: number) => {
     // 세그먼트 배열 변경 시 캐시 무효화
@@ -351,12 +286,19 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     
     const panResponder = PanResponder.create({
       onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponderCapture: () => true,
       onMoveShouldSetPanResponder: (_, gestureState) => {
-        return Math.abs(gestureState.dx) > 5 || Math.abs(gestureState.dy) > 5;
+        return Math.abs(gestureState.dx) > 3 || Math.abs(gestureState.dy) > 3;
       },
+      onMoveShouldSetPanResponderCapture: (_, gestureState) => {
+        return Math.abs(gestureState.dx) > 3 || Math.abs(gestureState.dy) > 3;
+      },
+      onShouldBlockNativeResponder: () => true,
 
       onPanResponderGrant: (evt) => {
         evt.persist(); // SyntheticEvent 재사용 오류 방지
+        
+        console.log('🟢 PanResponder Grant - Setting dragging ID:', segment.id);
         setDraggingSegmentId(segment.id);
         
         // 터치 위치 계산: 화면 좌표 기준
@@ -392,52 +334,105 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         // 부모 컴포넌트에 드래그 이동 알림
         dragCallbacksRef.current.onDragMove?.({ dx: gestureState.dx, dy: gestureState.dy });
         
-        // 드롭 존 계산 (throttle)
+        // 드롭 존 계산 - 더 정확한 좌표 사용
         const now = Date.now();
-        if (now - lastDropZoneUpdate.current > 100) {
-          const relativeY = evt.nativeEvent.locationY; // scrollPosition 제거
+        if (now - lastDropZoneUpdate.current > 50) {
+          // locationY 사용하여 컴포넌트 내 상대 위치 계산
+          const relativeY = evt.nativeEvent.locationY;
+          
+          console.log('🟡 Drag move coordinates:', {
+            locationY: evt.nativeEvent.locationY,
+            pageY: evt.nativeEvent.pageY,
+            gestureY: gestureState.dy,
+            calculatedY: relativeY
+          });
+          
           findDropZone(relativeY);
           lastDropZoneUpdate.current = now;
         }
       },
 
-      onPanResponderRelease: (_, gestureState) => {
-        if (dropZoneIndex !== null && dropZoneIndex !== segmentIndex && draggingSegmentId) {
-          // 드래그된 이미지 정보 찾기
-          const draggedSegment = segments.find(s => s.id === draggingSegmentId);
-          if (draggedSegment && draggedSegment.imageUrl) {
-            const imageMarkdown = `![image](${draggedSegment.imageUrl})`;
+      onPanResponderRelease: (evt, gestureState) => {
+        console.log('🔴 onPanResponderRelease:', {
+          dropZoneIndex,
+          segmentIndex,
+          draggingSegmentId,
+          dropZonePosition,
+          segmentsLength: segments.length,
+          currentSegmentId: segment.id
+        });
+        
+        // 현재 드래그 중인 세그먼트 ID 보존 (상태 리셋 전에)
+        const currentDraggedId = draggingSegmentId || segment.id;
+        const currentDropIndex = dropZoneIndex;
+        const currentDropPosition = dropZonePosition;
+        
+        console.log('📊 Using values:', {
+          currentDraggedId,
+          currentDropIndex,
+          currentDropPosition
+        });
+        
+        // 유효한 드롭 조건 확인
+        if (currentDropIndex !== null && currentDraggedId) {
+          console.log('🟢 Executing drop logic');
+          
+          const draggedSegmentIndex = segments.findIndex(s => s.id === currentDraggedId);
+          
+          console.log('📊 Drop details:', {
+            draggedSegmentIndex,
+            currentDropIndex,
+            currentDropPosition,
+            segmentIndex,
+            isDifferentPosition: currentDropIndex !== draggedSegmentIndex
+          });
+          
+          if (draggedSegmentIndex !== -1 && (currentDropIndex !== draggedSegmentIndex || currentDropPosition !== 'before')) {
+            // 현재 segments 배열을 직접 조작
+            const reorderedSegments = [...segments];
             
-            // 1. 기존 이미지 제거
-            const newContent = value.replace(imageMarkdown, '').replace(/\n\n+/g, '\n').trim();
+            // 1. 드래그된 요소 제거
+            const [draggedSegment] = reorderedSegments.splice(draggedSegmentIndex, 1);
             
-            // 2. 새 위치에 이미지 삽입
-            const newSegments = parseContent(newContent);
-            let insertIndex = dropZoneIndex;
-            if (dropZonePosition === 'after') {
-              insertIndex = Math.min(dropZoneIndex + 1, newSegments.length);
+            // 2. 삽입 위치 계산
+            let insertIndex = currentDropIndex;
+            
+            // 드래그된 요소가 제거되었으므로 인덱스 조정
+            if (currentDropIndex > draggedSegmentIndex) {
+              insertIndex = currentDropIndex - 1;
             }
             
-            const beforeSegments = newSegments.slice(0, insertIndex);
-            const afterSegments = newSegments.slice(insertIndex);
+            // before/after 처리
+            if (currentDropPosition === 'after') {
+              insertIndex = Math.min(insertIndex + 1, reorderedSegments.length);
+            }
             
-            const newImageSegment: ContentSegment = {
-              id: `image_${Date.now()}`,
-              type: 'image',
-              content: imageMarkdown,
-              imageUrl: draggedSegment.imageUrl,
-              startIndex: 0,
-              endIndex: 0,
-            };
+            // 3. 새 위치에 삽입
+            reorderedSegments.splice(insertIndex, 0, draggedSegment);
             
-            const finalSegments = [...beforeSegments, newImageSegment, ...afterSegments];
-            const finalContent = finalSegments
-              .map(seg => seg.content)
-              .filter(content => content.length > 0)
-              .join('\n');
+            // 4. 새로운 content 생성
+            const newContent = reorderedSegments.map(seg => seg.content).join('\n');
             
-            onChangeText(finalContent);
+            console.log('📝 Content update:', {
+              originalLength: segments.length,
+              newLength: reorderedSegments.length,
+              newContent: newContent.substring(0, 100) + '...',
+              draggedContent: draggedSegment.content.substring(0, 50)
+            });
+            
+            // 5. 상태 업데이트
+            onChangeText(newContent);
+            
+            // 햅틱 피드백
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          } else {
+            console.log('🟠 Same position or invalid drop');
           }
+        } else {
+          console.log('❌ Drop conditions not met:', {
+            hasDropIndex: currentDropIndex !== null,
+            hasDraggedId: !!currentDraggedId
+          });
         }
         
         // 부모 컴포넌트에 드래그 종료 알림
@@ -513,7 +508,13 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         <View key={segment.id} style={{ position: 'relative' }}>
           {/* 드롭 존 표시 선 - before */}
           {isDropZone && draggingSegmentId && draggingSegmentId !== segment.id && dropZonePosition === 'before' && (
-            <View style={[styles.dropZoneLine, { top: -2 }]} />
+            <View style={[
+              styles.dropZoneLine,
+              {
+                top: -2,
+                zIndex: 1000
+              }
+            ]} />
           )}
           
           <View 
@@ -554,7 +555,13 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           
           {/* 드롭 존 표시 선 - after */}
           {isDropZone && draggingSegmentId && draggingSegmentId !== segment.id && dropZonePosition === 'after' && (
-            <View style={[styles.dropZoneLine, { bottom: -2 }]} />
+            <View style={[
+              styles.dropZoneLine,
+              {
+                bottom: -2,
+                zIndex: 1000
+              }
+            ]} />
           )}
         </View>
       );
@@ -567,7 +574,13 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       <View key={segment.id} style={{ position: 'relative' }}>
         {/* before 드롭 존 표시 선 */}
         {isDropZone && draggingSegmentId && dropZonePosition === 'before' && (
-          <View style={[styles.dropZoneLine, { top: -2 }]} />
+          <View style={[
+            styles.dropZoneLine,
+            {
+              top: -2,
+              zIndex: 1000
+            }
+          ]} />
         )}
         
         <View 
@@ -585,23 +598,23 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
               onChangeText={(text) => handleSegmentTextChange(index, text)}
               onBlur={() => setCurrentEditingSegment(null)}
               onKeyPress={(e) => {
-                // 빈 텍스트 블록에서만 백스페이스로 병합 처리
+                // 빈 텍스트 블록에서 Backspace: 블록 삭제 및 이전 블록으로 포커스 이동
                 if (e.nativeEvent.key === 'Backspace' && segment.content === '' && index > 0) {
-                  // 현재 빈 세그먼트 삭제
+                  e.preventDefault();
+                  
+                  // 현재 빈 블록 삭제
                   const newSegments = segments.filter((_, i) => i !== index);
                   const newContent = newSegments.map(seg => seg.content).join('\n');
                   onChangeText(newContent);
                   
                   // 이전 텍스트 블록으로 포커스 이동
-                  const prevTextSegmentIndex = index - 1;
-                  if (prevTextSegmentIndex >= 0 && segments[prevTextSegmentIndex].type === 'text') {
-                    setTimeout(() => {
-                      setCurrentEditingSegment(prevTextSegmentIndex);
-                    }, 50);
-                  }
+                  setTimeout(() => {
+                    const prevIndex = index - 1;
+                    if (prevIndex >= 0 && newSegments[prevIndex] && newSegments[prevIndex].type === 'text') {
+                      setCurrentEditingSegment(prevIndex);
+                    }
+                  }, 50);
                 }
-                // 한 글자 상태에서 백스페이스는 빈 블록으로 만들기 (병합하지 않음)
-                // 이는 onChangeText에서 처리됨 - 여기서는 특별한 처리 안함
               }}
               onSelectionChange={(e) => {
                 const position = segment.startIndex + e.nativeEvent.selection.start;
@@ -621,7 +634,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
               {segment.content ? (
                 <Text style={styles.textContent}>{segment.content}</Text>
               ) : (
-                <Text style={styles.textContent}> </Text> // 빈 공간으로 클릭 영역 확보
+                <Text style={[styles.textContent, { color: '#B9BDC1' }]}>내용을 입력해주세요.</Text>
               )}
             </TouchableOpacity>
           )}
@@ -629,7 +642,13 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         
         {/* after 드롭 존 표시 선 */}
         {isDropZone && draggingSegmentId && dropZonePosition === 'after' && (
-          <View style={[styles.dropZoneLine, { bottom: -2 }]} />
+          <View style={[
+            styles.dropZoneLine,
+            {
+              bottom: -2,
+              zIndex: 1000
+            }
+          ]} />
         )}
       </View>
     );

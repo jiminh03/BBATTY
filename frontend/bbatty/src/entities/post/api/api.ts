@@ -146,7 +146,7 @@ export const postApi = {
   },
 
   deletePostImage: (postId: number, imageUrl: string) =>
-    apiClient.delete(`/api/posts/${postId}/images`, { params: { imageUrl } }),
+    apiClient.delete(`/api/posts/${postId}/images`, { params: { imageUrl } } as any),
 
   async getTeamSearchPosts(teamId: number, keyword: string, cursor?: number): Promise<CursorPostListResponse> {
     const res = await apiClient.get(`/api/posts/team/${teamId}/search`, {

@@ -116,7 +116,7 @@ export const useDetailedStats = <T = any>(
     queryKey: QueryKeys.stats(PROFILE_ENTITY, type, params),
     queryFn: async () => {
       console.log('승률통계 : ', type, userId, season);
-      const result = await statsApi.getDetailedStats<T>(type, userId, season);
+      const result = await statsApi.getDetailedStats<T>(type, userId, '2525');
       if (isOk(result)) {
         console.log('승률 result : ', result);
         return result.data;
