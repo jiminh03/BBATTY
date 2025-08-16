@@ -1,14 +1,41 @@
 // pages/post/PostDetailScreen.tsx
-// teamId는 route.params에 없으므로 전달 제거. post?.teamId만 내부적으로 쓰도록.
+// 상세 응답의 teamId를 우선 사용하고, 로딩 중엔 사용자 팀컬러로 안전하게 fallback.
 
-import React, { useLayoutEffect, useMemo, useCallback, useRef, useState, useEffect } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet, Pressable, Alert, KeyboardAvoidingView, Platform, FlatList, Image, ScrollView } from 'react-native';
+import React, {
+  useLayoutEffect,
+  useMemo,
+  useCallback,
+  useRef,
+  useState,
+  useEffect,
+} from 'react';
+import {
+  View,
+  Text,
+  ActivityIndicator,
+  StyleSheet,
+  Pressable,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  FlatList,
+  Image,
+  ScrollView,
+  StatusBar,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HomeStackScreenProps } from '../../navigation/types';
-import { usePostDetailQuery, useDeletePostMutation, usePostLikeActions } from '../../entities/post/queries/usePostQueries';
+import {
+  usePostDetailQuery,
+  useDeletePostMutation,
+  usePostLikeActions,
+} from '../../entities/post/queries/usePostQueries';
 import { CommentForm } from '../../entities/comment/ui/CommentForm';
 import { useUserStore } from '../../entities/user/model/userStore';
-import { useCommentListQuery, useDeleteComment } from '../../entities/comment/queries/useCommentQueries';
+import {
+  useCommentListQuery,
+  useDeleteComment,
+} from '../../entities/comment/queries/useCommentQueries';
 import { useCommentStore } from '../../entities/comment/model/store';
 import { CommentEditForm } from '../../entities/comment/ui/commentEditForm';
 import { findTeamById } from '../../shared/team/teamTypes';
@@ -39,7 +66,9 @@ function expandNested(list: any[], depth = 0, parentId: number | null = null): U
       id,
       depth: c.depth ?? depth,
       parentId,
-      isDeleted: Number((c as any)?.is_deleted ?? (c as any)?.isDeleted ?? 0) === 1 || !!(c as any)?.isDeleted,
+      isDeleted:
+        Number((c as any)?.is_deleted ?? (c as any)?.isDeleted ?? 0) === 1 ||
+        !!(c as any)?.isDeleted,
       nickname: (c as any).nickname,
     };
     const children = expandNested((c as any).replies ?? [], (node.depth ?? depth) + 1, id);
@@ -49,22 +78,36 @@ function expandNested(list: any[], depth = 0, parentId: number | null = null): U
 
 export default function PostDetailScreen({ route, navigation }: Props) {
   const postId = route.params.postId;
-
   const insets = useSafeAreaInsets();
-  const { data: post, isLoading, isError, error } = usePostDetailQuery(postId, { refetchOnFocus: true });
+
+  const { data: post, isLoading, isError, error } = usePostDetailQuery(postId, {
+    refetchOnFocus: true,
+  });
 
   const myNickname = useUserStore((s) => s.currentUser?.nickname);
+  const userTeamId = useUserStore((s) => s.currentUser?.teamId) ?? 0;
 
   const delPost = useDeletePostMutation();
-   const teamIdForSync =
-   Number((post as any)?.teamId ?? route.params?.teamId ?? 0) || undefined;
-   const { toggle, isBusy } = usePostLikeActions(postId, {
-   teamId: teamIdForSync,     // ✅ 목록/인기/검색 캐시로 즉시 동기화
-   refetchAfterMs: 0,         // (원하면 400~600으로)
- });
 
-  const { data: cmtPages, isLoading: cLoading, isError: cError, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useCommentListQuery(postId, 10);
+  // ✅ 팀ID: 상세 응답(teamId) 우선, 없으면 사용자 팀으로 fallback
+  const rawTeamId = (post as any)?.teamId ?? userTeamId ?? 0;
+  const teamId = Number(rawTeamId) || 0;
+  const teamColor = findTeamById(teamId)?.color ?? '#222222'; // 너무 새까만 검정 대신 살짝 회색
+
+  // ✅ 좋아요 액션도 teamId로 캐시 전파
+  const { toggle, isBusy } = usePostLikeActions(postId, {
+    teamId: teamId || undefined,
+    refetchAfterMs: 0,
+  });
+
+  const {
+    data: cmtPages,
+    isLoading: cLoading,
+    isError: cError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useCommentListQuery(postId, 10);
 
   const delComment = useDeleteComment(postId);
   const { editingCommentId, setEditingCommentId, setReplyTarget } = useCommentStore();
@@ -75,22 +118,24 @@ export default function PostDetailScreen({ route, navigation }: Props) {
   const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
 
-  const rawParents = useMemo(() => (cmtPages?.pages ?? []).flatMap((p: any) => p?.comments ?? []), [cmtPages]);
+  const rawParents = useMemo(
+    () => (cmtPages?.pages ?? []).flatMap((p: any) => p?.comments ?? []),
+    [cmtPages]
+  );
   const flatComments = useMemo(() => expandNested(rawParents, 0, null), [rawParents]);
 
   const onEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const teamColor = findTeamById(Number((post as any)?.teamId ?? 0))?.color ?? '#EE6B2F';
   const headerTitle = post?.title ?? '게시글';
   const isMinePost = !!post && !!myNickname && post.authorNickname === myNickname;
 
   const handleGoBack = useCallback(() => {
-    // 기본 뒤로가기 동작
     navigation.goBack();
   }, [navigation]);
 
+  // ✅ 네비 헤더를 팀색으로 (post/teamColor 바뀔 때마다 갱신)
   useLayoutEffect(() => {
     navigation.setOptions({
       headerStyle: { backgroundColor: teamColor },
@@ -102,7 +147,11 @@ export default function PostDetailScreen({ route, navigation }: Props) {
         </Pressable>
       ),
       headerTitle: () => (
-        <Text numberOfLines={1} ellipsizeMode="tail" style={{ color: '#fff', fontWeight: '700', fontSize: 16, textAlign: 'center' }}>
+        <Text
+          numberOfLines={1}
+          ellipsizeMode="tail"
+          style={{ color: '#fff', fontWeight: '700', fontSize: 16, textAlign: 'center' }}
+        >
           {headerTitle}
         </Text>
       ),
@@ -114,6 +163,14 @@ export default function PostDetailScreen({ route, navigation }: Props) {
         ) : null,
     });
   }, [navigation, teamColor, headerTitle, isMinePost, handleGoBack]);
+
+  // ✅ 상태바 색(안드로이드): 팀색으로 맞추기
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      StatusBar.setBackgroundColor(teamColor);
+    }
+    StatusBar.setBarStyle('light-content');
+  }, [teamColor]);
 
   useEffect(() => {
     if (!editingCommentId) return;
@@ -145,7 +202,7 @@ export default function PostDetailScreen({ route, navigation }: Props) {
             return n;
           });
         },
-      },
+      }
     );
   };
 
@@ -168,7 +225,10 @@ export default function PostDetailScreen({ route, navigation }: Props) {
     ) : (
       <View style={{ flex: 1, overflow: 'visible' }}>
         {headerMenuOpen && (
-          <View pointerEvents="box-none" style={{ position: 'absolute', top: insets.top + 6, right: 8, zIndex: 9999 }}>
+          <View
+            pointerEvents="box-none"
+            style={{ position: 'absolute', top: insets.top + 6, right: 8, zIndex: 9999 }}
+          >
             <View style={s.headerMenu}>
               {isMinePost ? (
                 <>
@@ -187,7 +247,14 @@ export default function PostDetailScreen({ route, navigation }: Props) {
                       setHeaderMenuOpen(false);
                       Alert.alert('삭제', '정말 삭제할까요?', [
                         { text: '취소', style: 'cancel' },
-                        { text: '삭제', style: 'destructive', onPress: () => delPost.mutate(postId, { onSuccess: () => navigation.goBack() }) },
+                        {
+                          text: '삭제',
+                          style: 'destructive',
+                          onPress: () =>
+                            delPost.mutate(postId, {
+                              onSuccess: () => navigation.goBack(),
+                            }),
+                        },
                       ]);
                     }}
                     style={s.headerMenuItem}
@@ -215,17 +282,21 @@ export default function PostDetailScreen({ route, navigation }: Props) {
 
             const gone = !!item.isDeleted || locallyDeleted.has(Number(item.id));
             const isEditing = !gone && String(editingCommentId ?? '') === String(item.id);
-            const isMineCmt = !!myNickname && (item.authorNickname === myNickname || item.nickname === myNickname);
+            const isMineCmt =
+              !!myNickname && (item.authorNickname === myNickname || item.nickname === myNickname);
             const isMenuOpen = isMineCmt && !gone && menuOpenId === item.id;
 
             const baseDate = item.updatedAt ?? item.createdAt;
 
             if (gone) {
-              const displayWhen = preDeleteUpdatedAt.get(Number(item.id)) ?? item.updatedAt ?? item.createdAt;
+              const displayWhen =
+                preDeleteUpdatedAt.get(Number(item.id)) ?? item.updatedAt ?? item.createdAt;
               return (
                 <View style={{ paddingHorizontal: 16, paddingVertical: 12, paddingLeft: 16 + indent }}>
                   <Text style={{ fontWeight: '700', fontSize: 13 }}>{nickname ?? '알 수 없음'}</Text>
-                  <Text style={{ color: '#9AA0A6', fontSize: 11 }}>{displayWhen ? new Date(displayWhen).toLocaleString() : ''}</Text>
+                  <Text style={{ color: '#9AA0A6', fontSize: 11 }}>
+                    {displayWhen ? new Date(displayWhen).toLocaleString() : ''}
+                  </Text>
                   <View style={{ marginTop: 6 }}>
                     <Text style={{ color: '#999' }}>(삭제된 댓글입니다)</Text>
                   </View>
@@ -245,22 +316,40 @@ export default function PostDetailScreen({ route, navigation }: Props) {
             const onDelete = () => handleDeleteComment(Number(item.id));
 
             return (
-              <View style={{ paddingHorizontal: 16, paddingVertical: 12, paddingLeft: 16 + indent, overflow: 'visible' }} collapsable={false}>
+              <View
+                style={{
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  paddingLeft: 16 + indent,
+                  overflow: 'visible',
+                }}
+                collapsable={false}
+              >
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontWeight: '700', fontSize: 13 }}>{nickname}</Text>
-                    <Text style={{ color: '#9AA0A6', fontSize: 11 }}>{baseDate ? new Date(baseDate).toLocaleString() : ''}</Text>
+                    <Text style={{ color: '#9AA0A6', fontSize: 11 }}>
+                      {baseDate ? new Date(baseDate).toLocaleString() : ''}
+                    </Text>
                   </View>
 
                   {isMineCmt && (
-                    <Pressable onPress={() => setMenuOpenId((prev) => (prev === item.id ? null : item.id))} hitSlop={10} style={{ paddingHorizontal: 8, paddingVertical: 4 }}>
+                    <Pressable
+                      onPress={() => setMenuOpenId((prev) => (prev === item.id ? null : item.id))}
+                      hitSlop={10}
+                      style={{ paddingHorizontal: 8, paddingVertical: 4 }}
+                    >
                       <Text style={{ fontSize: 20, lineHeight: 20 }}>⋯</Text>
                     </Pressable>
                   )}
                 </View>
 
                 {isEditing ? (
-                  <CommentEditForm postId={postId} commentId={Number(item.id)} initialContent={item.content ?? ''} />
+                  <CommentEditForm
+                    postId={postId}
+                    commentId={Number(item.id)}
+                    initialContent={item.content ?? ''}
+                  />
                 ) : (
                   <>
                     <View style={{ marginTop: 6 }}>
@@ -269,8 +358,19 @@ export default function PostDetailScreen({ route, navigation }: Props) {
 
                     <View style={{ marginTop: 8 }}>
                       {isTopLevel && (
-                        <Pressable onPress={onReply} style={{ alignSelf: 'flex-start', paddingVertical: 6, paddingHorizontal: 10, borderRadius: 10, backgroundColor: '#F5F6F7' }}>
-                          <Text style={{ color: '#0A84FF', fontWeight: '600', fontSize: 12 }}>답글 달기</Text>
+                        <Pressable
+                          onPress={onReply}
+                          style={{
+                            alignSelf: 'flex-start',
+                            paddingVertical: 6,
+                            paddingHorizontal: 10,
+                            borderRadius: 10,
+                            backgroundColor: '#F5F6F7',
+                          }}
+                        >
+                          <Text style={{ color: teamColor, fontWeight: '600', fontSize: 12 }}>
+                            답글 달기
+                          </Text>
                         </Pressable>
                       )}
 
@@ -297,7 +397,9 @@ export default function PostDetailScreen({ route, navigation }: Props) {
                 <View style={s.avatar} />
                 <View style={{ flex: 1 }}>
                   <Text style={s.authorName}>{post!.authorNickname}</Text>
-                  <Text style={s.authorMeta}>{new Date(post!.createdAt).toLocaleString()} · 👁 {viewCount}</Text>
+                  <Text style={s.authorMeta}>
+                    {new Date(post!.createdAt).toLocaleString()} · 👁 {viewCount}
+                  </Text>
                 </View>
               </View>
 
@@ -315,7 +417,11 @@ export default function PostDetailScreen({ route, navigation }: Props) {
               </View>
 
               {images.length > 0 && (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingTop: 12 }}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ gap: 10, paddingTop: 12 }}
+                >
                   {images.map((uri, i) => (
                     <Image key={i} source={{ uri }} style={s.imageCard} resizeMode="cover" />
                   ))}
@@ -335,11 +441,19 @@ export default function PostDetailScreen({ route, navigation }: Props) {
             </View>
           }
           ListEmptyComponent={
-            cLoading ? <ActivityIndicator style={{ margin: 16 }} /> : cError ? <Text style={{ margin: 16 }}>댓글을 불러오는 데 실패했습니다.</Text> : <Text style={{ margin: 16, color: '#777' }}>첫 댓글을 남겨보세요.</Text>
+            cLoading ? (
+              <ActivityIndicator style={{ margin: 16 }} />
+            ) : cError ? (
+              <Text style={{ margin: 16 }}>댓글을 불러오는 데 실패했습니다.</Text>
+            ) : (
+              <Text style={{ margin: 16, color: '#777' }}>첫 댓글을 남겨보세요.</Text>
+            )
           }
           onEndReachedThreshold={0.4}
           onEndReached={onEndReached}
-          ListFooterComponent={isFetchingNextPage ? <ActivityIndicator style={{ marginVertical: 12 }} /> : <View />}
+          ListFooterComponent={
+            isFetchingNextPage ? <ActivityIndicator style={{ marginVertical: 12 }} /> : <View />
+          }
           contentContainerStyle={{ paddingBottom: FORM_HEIGHT + insets.bottom + 12 }}
           removeClippedSubviews={false}
           keyboardShouldPersistTaps="handled"
@@ -359,7 +473,13 @@ export default function PostDetailScreen({ route, navigation }: Props) {
     );
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: '#fff' }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}>
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: '#fff' }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
+    >
+      {/* 상태바 색상 제어 */}
+      <StatusBar backgroundColor={teamColor} barStyle="light-content" />
       <SafeAreaView style={{ flex: 1 }}>{Body}</SafeAreaView>
     </KeyboardAvoidingView>
   );

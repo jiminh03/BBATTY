@@ -15,14 +15,27 @@ export type TeamNewsItem = {
   link?: string;
 };
 
-const toNum = (v: unknown): number => (typeof v === 'number' ? v : Number(v ?? 0) || 0);
-const idNum = (x: any) => (typeof x?.id === 'number' ? x.id : Number(x?.id ?? 0) || 0);
+const toNum = (v: unknown): number =>
+  typeof v === 'number' ? v : Number(v ?? 0) || 0;
+const idNum = (x: any) =>
+  typeof x?.id === 'number' ? x.id : Number(x?.id ?? 0) || 0;
 
 /** 서버 응답을 우리 Post 타입에 맞게 정규화 */
 function normalizePost(raw: any): Post {
   const likes = toNum(raw?.likes ?? raw?.likeCount ?? raw?.likesCount);
   const views = toNum(raw?.views ?? raw?.viewCount);
   const commentCount = toNum(raw?.commentCount ?? raw?.commentsCount);
+
+  // ✅ teamId를 가능한 모든 키에서 추출해서 숫자로 통일
+  const teamId = toNum(
+    raw?.teamId ??
+      raw?.team_id ??
+      raw?.teamID ??
+      raw?.team?.id ??
+      raw?.team?.teamId ??
+      raw?.team?.team_id
+  );
+
   const isLiked =
     raw?.isLiked === true ||
     raw?.liked === true ||
@@ -31,7 +44,7 @@ function normalizePost(raw: any): Post {
 
   return {
     ...(raw as object),
-    // id는 string일 수도 있으니 그대로 유지(비교 시 숫자화)
+    teamId: teamId || undefined, // ← 반드시 포함
     likes,
     views,
     commentCount,
