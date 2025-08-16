@@ -171,31 +171,6 @@ export const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
   },
-  participantContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 12,
-  },
-  participantButton: {
-    backgroundColor: '#007AFF',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  participantButtonText: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  participantCount: {
-    marginHorizontal: 20,
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-  },
   // 경기 선택 관련 스타일
   gameSelectButton: {
     borderWidth: 1,

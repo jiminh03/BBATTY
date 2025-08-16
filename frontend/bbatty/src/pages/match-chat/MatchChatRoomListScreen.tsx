@@ -137,11 +137,18 @@ export const MatchChatRoomListScreen = () => {
         roomList = [];
       }
       
-      // 방 목록 업데이트 및 최신순 정렬
+      // 방 목록 업데이트 및 최신순 정렬 (중복 제거)
       if (isRefresh || (!cursor && rooms.length === 0)) {
         setRooms(roomList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
       } else {
-        setRooms(prev => [...prev, ...roomList].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+        setRooms(prev => {
+          // 기존 방 ID들을 Set으로 만들어 중복 체크
+          const existingIds = new Set(prev.map(room => room.matchId));
+          // 새로운 방들 중 중복되지 않는 것만 필터링
+          const newRooms = roomList.filter(room => !existingIds.has(room.matchId));
+          // 합치고 정렬
+          return [...prev, ...newRooms].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        });
       }
       
       setHasMore(responseHasMore);
@@ -227,12 +234,7 @@ export const MatchChatRoomListScreen = () => {
         activeOpacity={0.9}
       >
         <View style={styles.topSection}>
-          <LinearGradient
-            colors={['#049fbb', '#50f6ff']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.gradientBackground}
-          />
+          <View style={styles.whiteBackground} />
           
           
           {/* 헤더 영역 - 팀 배지만 */}
@@ -325,6 +327,7 @@ export const MatchChatRoomListScreen = () => {
       <FlatList
         data={rooms}
         renderItem={renderRoomItem}
+        keyExtractor={(item) => item.matchId}
         contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />

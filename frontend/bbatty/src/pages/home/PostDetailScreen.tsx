@@ -87,11 +87,21 @@ export default function PostDetailScreen({ route, navigation }: Props) {
   const headerTitle = post?.title ?? '게시글';
   const isMinePost = !!post && !!myNickname && post.authorNickname === myNickname;
 
+  const handleGoBack = useCallback(() => {
+    // 기본 뒤로가기 동작
+    navigation.goBack();
+  }, [navigation]);
+
   useLayoutEffect(() => {
     navigation.setOptions({
       headerStyle: { backgroundColor: teamColor },
       headerTintColor: '#fff',
       headerTitleAlign: 'center',
+      headerLeft: () => (
+        <Pressable onPress={handleGoBack} hitSlop={10} style={{ padding: 8, marginLeft: 8 }}>
+          <Text style={{ color: '#fff', fontSize: 18, fontWeight: '600' }}>←</Text>
+        </Pressable>
+      ),
       headerTitle: () => (
         <Text numberOfLines={1} ellipsizeMode="tail" style={{ color: '#fff', fontWeight: '700', fontSize: 16, textAlign: 'center' }}>
           {headerTitle}
@@ -104,7 +114,7 @@ export default function PostDetailScreen({ route, navigation }: Props) {
           </Pressable>
         ) : null,
     });
-  }, [navigation, teamColor, headerTitle, isMinePost]);
+  }, [navigation, teamColor, headerTitle, isMinePost, handleGoBack]);
 
   useEffect(() => {
     if (!editingCommentId) return;
