@@ -184,12 +184,7 @@ export const MatchChatRoomDetailScreen = () => {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.roomCard}>
           <View style={styles.cardGradient}>
-            <LinearGradient
-              colors={['#049fbb', '#50f6ff']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.gradientBackground}
-            />
+            <View style={styles.gradientBackground} />
             
             
             {/* 헤더 영역 - 팀 배지만 */}
@@ -221,34 +216,55 @@ export const MatchChatRoomDetailScreen = () => {
           </View>
         </View>
 
-        <View style={styles.infoSection}>
-          <Text style={styles.sectionTitle}>방 정보</Text>
-          
-          <View style={styles.infoGrid}>
-            <View style={styles.infoCard}>
-              <Text style={styles.infoCardLabel}>연령대</Text>
-              <Text style={styles.infoCardValue}>{room.minAge}-{room.maxAge}세</Text>
+        {/* 참여 조건 */}
+        <View style={styles.conditionsSection}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.headerIcon}>
+              <Text style={styles.headerIconText}>👥</Text>
             </View>
-            
-            <View style={styles.infoCard}>
-              <Text style={styles.infoCardLabel}>성별 조건</Text>
-              <Text style={styles.infoCardValue}>{getGenderText(room.genderCondition)}</Text>
-            </View>
+            <Text style={styles.sectionTitle}>참여 조건</Text>
           </View>
-
-          <View style={styles.infoGrid}>
-            <View style={styles.infoCard}>
-              <Text style={styles.infoCardLabel}>개설일</Text>
-              <Text style={styles.infoCardValue}>
-                {new Date(room.createdAt).toLocaleDateString('ko-KR')}
-              </Text>
-            </View>
+          
+          <View style={styles.conditionItem}>
+            <Text style={styles.conditionLabel}>연령대</Text>
+            <Text style={styles.conditionValue}>{room.minAge}-{room.maxAge}세</Text>
+          </View>
+          
+          <View style={styles.conditionItem}>
+            <Text style={styles.conditionLabel}>성별</Text>
+            <Text style={styles.conditionValue}>{getGenderText(room.genderCondition)}</Text>
           </View>
         </View>
 
+        {/* 추가 정보 */}
+        {gameInfo && (
+          <View style={styles.gameSection}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.headerIcon}>
+                <Text style={styles.headerIconText}>⚾</Text>
+              </View>
+              <Text style={styles.sectionTitle}>경기 정보</Text>
+            </View>
+            
+            <View style={styles.gameContent}>
+              <Text style={styles.gameTeams}>
+                {gameInfo.awayTeamName} vs {gameInfo.homeTeamName}
+              </Text>
+              <Text style={styles.gameDetails}>
+                {new Date(gameInfo.dateTime).toLocaleDateString('ko-KR', {
+                  month: 'long',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })} • {gameInfo.stadium}
+              </Text>
+            </View>
+          </View>
+        )}
+
         <View style={styles.actionSection}>
           <TouchableOpacity
-            style={[styles.joinButton, { backgroundColor: '#FF6B35' }]}
+            style={[styles.joinButton, { backgroundColor: themeColor }]}
             onPress={handleJoinRoom}
             disabled={joining}
             activeOpacity={0.8}

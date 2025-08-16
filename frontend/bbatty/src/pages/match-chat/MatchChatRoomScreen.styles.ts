@@ -320,6 +320,15 @@ export const styles = StyleSheet.create({
     borderTopColor: '#eee',
     alignItems: 'center',
   },
+  messageInputWithSafeArea: {
+    flexDirection: 'row',
+    paddingTop: 16,
+    paddingHorizontal: 16,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    alignItems: 'center',
+  },
   
   // 새로운 말풍선 레이아웃 스타일
   messageRow: {

@@ -160,12 +160,7 @@ export default function ChatRoomSearchScreen() {
         activeOpacity={0.9}
       >
         <View style={styles.topSection}>
-          <LinearGradient
-            colors={['#049fbb', '#50f6ff']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.gradientBackground}
-          />
+          <View style={styles.whiteBackground} />
           
           
           {/* 헤더 영역 - 팀 배지만 */}

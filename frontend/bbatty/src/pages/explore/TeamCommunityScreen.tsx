@@ -97,10 +97,7 @@ export default function TeamCommunityScreen({ navigation, route }: Props) {
             <PostItem
               post={item}
               onPress={() =>
-                navigation.navigate('HomeStack', {
-                  screen: 'PostDetail',
-                  params: { postId: item.id },
-                })
+                navigation.navigate('PostDetail', { postId: item.id })
               }
             />
           )}

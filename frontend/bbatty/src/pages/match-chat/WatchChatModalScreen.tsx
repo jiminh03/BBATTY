@@ -17,7 +17,7 @@ export const WatchChatModalScreen = () => {
   const { room, websocketUrl, sessionToken } = route.params;
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={styles.container}>
       {/* 채팅방 화면 (헤더 포함) */}
       <MatchChatRoomScreen 
         route={{
@@ -32,6 +32,6 @@ export const WatchChatModalScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f5f6fa', // MatchChatRoomScreen과 동일한 배경색
   },
 });
