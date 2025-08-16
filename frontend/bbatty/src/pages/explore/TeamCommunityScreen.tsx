@@ -1,9 +1,10 @@
 // pages/explore/TeamCommunityScreen.tsx
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import {
   View, FlatList, ActivityIndicator, StyleSheet,
   ScrollView, TouchableOpacity, Image, Text,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ExploreStackScreenProps } from '../../navigation/types';
 import { usePostListQuery } from '../../entities/post/queries/usePostQueries';
 import { PostItem } from '../../entities/post/ui/PostItem';
@@ -12,8 +13,12 @@ import { TEAMS } from '../../shared/team/teamTypes';
 
 type Props = ExploreStackScreenProps<'TeamCommunity'>;
 
+const STORAGE_KEY = 'teamCommunity_selectedTeam';
+
 export default function TeamCommunityScreen({ navigation, route }: Props) {
   const myTeamId = useUserStore(s => s.currentUser?.teamId);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollPositionRef = useRef(0);
 
   // 내 팀은 숨기기
   const teamOptions = useMemo(
@@ -29,16 +34,44 @@ export default function TeamCommunityScreen({ navigation, route }: Props) {
 
   const [selectedTeamId, setSelectedTeamId] = useState<number>(initialTeamId);
 
-  // 라우트나 옵션 변경 시 selectedTeamId 보정
+  // 선택된 팀 상태를 로컬 스토리지에서 불러오기
   useEffect(() => {
-    if (route.params?.teamId && teamOptions.some(t => t.id === route.params!.teamId)) {
-      setSelectedTeamId(route.params!.teamId);
-    } else if (!teamOptions.some(t => t.id === selectedTeamId)) {
-      // 현재 선택이 옵션에서 사라졌다면 첫 번째로 보정
-      if (teamOptions[0]?.id) setSelectedTeamId(teamOptions[0].id);
+    const loadSelectedTeam = async () => {
+      try {
+        const savedTeamId = await AsyncStorage.getItem(STORAGE_KEY);
+        if (savedTeamId) {
+          const teamId = parseInt(savedTeamId);
+          setSelectedTeamId(teamId);
+        }
+      } catch (error) {
+        console.error('선택된 팀 로드 실패:', error);
+      }
+    };
+    loadSelectedTeam();
+  }, []); // 빈 의존성 배열로 변경
+
+  // 라우트 변경 시 selectedTeamId 보정
+  useEffect(() => {
+    if (route.params?.teamId) {
+      setSelectedTeamId(route.params.teamId);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [route.params?.teamId, teamOptions]);
+  }, [route.params?.teamId]); // teamOptions 의존성 제거
+
+  // 팀 변경 시 로컬 스토리지에 저장 (스크롤 위치 건드리지 않음)
+  const handleTeamChange = async (teamId: number) => {
+    try {
+      setSelectedTeamId(teamId);
+      await AsyncStorage.setItem(STORAGE_KEY, teamId.toString());
+      
+      // 스크롤 위치 복원
+      setTimeout(() => {
+        scrollViewRef.current?.scrollTo({ x: scrollPositionRef.current, animated: false });
+      }, 100);
+    } catch (error) {
+      console.error('선택된 팀 저장 실패:', error);
+    }
+  };
+
 
   // 팀별 무한 스크롤
   const listQ = usePostListQuery(selectedTeamId);
@@ -50,9 +83,14 @@ export default function TeamCommunityScreen({ navigation, route }: Props) {
   const TeamPicker = () => (
     <View style={styles.teamPickerWrap}>
       <ScrollView
+        ref={scrollViewRef}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.teamPickerContent}
+        onScroll={(event) => {
+          scrollPositionRef.current = event.nativeEvent.contentOffset.x;
+        }}
+        scrollEventThrottle={16}
       >
         {teamOptions.map(t => {
           const active = t.id === selectedTeamId;
@@ -60,7 +98,7 @@ export default function TeamCommunityScreen({ navigation, route }: Props) {
             <TouchableOpacity
               key={t.id}
               style={[styles.teamChip, active && styles.teamChipActive]}
-              onPress={() => setSelectedTeamId(t.id)}
+              onPress={() => handleTeamChange(t.id)}
               activeOpacity={0.85}
             >
               <Image
@@ -90,7 +128,6 @@ export default function TeamCommunityScreen({ navigation, route }: Props) {
         </View>
       ) : (
         <FlatList
-          key={selectedTeamId}  // 팀 변경 시 깔끔 리마운트
           data={posts}
           keyExtractor={i => String(i.id)}
           renderItem={({ item }) => (
@@ -129,7 +166,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#eee',
     backgroundColor: '#fff',
   },
-  teamPickerContent: { paddingHorizontal: 12, paddingVertical: 10, gap: 10 },
+  teamPickerContent: { paddingHorizontal: 12, paddingVertical: 10, gap: 10, justifyContent: 'center' },
   teamChip: {
     height: CHIP_H, minWidth: 86, paddingHorizontal: 10, paddingVertical: 8,
     backgroundColor: '#F6F7F8', borderRadius: 12,

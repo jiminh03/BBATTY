@@ -1,111 +1,72 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert, ActivityIndicator } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ExploreStackScreenProps } from '../../navigation/types';
 import { TEAMS, findTeamById } from '../../shared/team/teamTypes';
 import { useThemeColor } from '../../shared/team/ThemeContext';
 import { useUserStore } from '../../entities/user/model/userStore';
-import { apiClient } from '../../shared/api/client/apiClient';
+import { useGlobalRanking, useAllTeamRankings, UserRanking } from '../../entities/ranking/queries/useRankingQueries';
 
-interface UserRanking {
-  userId: number;
-  nickname: string;
-  winRate: number;
-  rank: number;
-  percentile: number | null;
-  isCurrentUser: boolean;
-  userTeamId?: number;
-}
-
-interface RankingResponse {
-  season: string;
-  rankings: UserRanking[];
-  myRanking: UserRanking | null;
-}
-
-interface TeamRankingResponse {
-  teamId: number;
-  teamName: string;
-  season: string;
-  rankings: UserRanking[];
-  myRanking: UserRanking | null;
-}
+// 타입들은 useRankingQueries에서 import
 
 type Props = ExploreStackScreenProps<'UserRanking'>;
 
+const STORAGE_KEY = 'userRanking_selectedTeam';
+
 export default function UserRankingScreen({ navigation, route }: Props) {
-  const [allRankings, setAllRankings] = useState<UserRanking[]>([]);
-  const [teamRankingsData, setTeamRankingsData] = useState<{[key: string]: UserRanking[]}>({});
-  const [myGlobalRanking, setMyGlobalRanking] = useState<UserRanking | null>(null);
-  const [myTeamRankings, setMyTeamRankings] = useState<{[key: string]: UserRanking | null}>({});
   const [selectedTeamFilter, setSelectedTeamFilter] = useState<string>('ALL');
-  const [loading, setLoading] = useState(false);
-  const [initialDataLoaded, setInitialDataLoaded] = useState(false);
   const themeColor = useThemeColor();
   const getCurrentUser = useUserStore((state) => state.getCurrentUser);
   const currentUser = getCurrentUser();
   const scrollViewRef = useRef<ScrollView>(null);
   const rankingScrollViewRef = useRef<ScrollView>(null);
 
-  const fetchAllRankingsData = async () => {
-    if (!currentUser?.userId) {
-      Alert.alert('오류', '사용자 정보를 찾을 수 없습니다.');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // 전체 랭킹 조회
-      const globalResponse = await apiClient.get<{ status: string; message: string; data: RankingResponse }>(
-        `/api/ranking/global`
-      );
-      
-      if (globalResponse.data.status === 'SUCCESS') {
-        setAllRankings(globalResponse.data.data.rankings);
-        setMyGlobalRanking(globalResponse.data.data.myRanking);
+  // 선택된 팀 필터 상태를 로컬 스토리지에서 불러오기
+  useEffect(() => {
+    const loadSelectedTeam = async () => {
+      try {
+        const savedTeam = await AsyncStorage.getItem(STORAGE_KEY);
+        if (savedTeam) {
+          setSelectedTeamFilter(savedTeam);
+        }
+      } catch (error) {
+        console.error('선택된 팀 필터 로드 실패:', error);
       }
+    };
+    loadSelectedTeam();
+  }, []);
 
-      // 모든 팀별 랭킹 조회
-      const teamRankingsPromises = TEAMS.map(async (team) => {
-        try {
-          const teamResponse = await apiClient.get<{ status: string; message: string; data: TeamRankingResponse }>(
-            `/api/ranking/team/${team.id}`
-          );
-          
-          if (teamResponse.data.status === 'SUCCESS') {
-            return {
-              teamName: team.name,
-              rankings: teamResponse.data.data.rankings,
-              myRanking: teamResponse.data.data.myRanking
-            };
-          }
-        } catch (error) {
-          console.error(`팀 ${team.name} 랭킹 조회 실패:`, error);
-        }
-        return null;
-      });
-
-      const teamResults = await Promise.all(teamRankingsPromises);
-      const newTeamRankingsData: {[key: string]: UserRanking[]} = {};
-      const newMyTeamRankings: {[key: string]: UserRanking | null} = {};
-
-      teamResults.forEach((result) => {
-        if (result) {
-          newTeamRankingsData[result.teamName] = result.rankings;
-          newMyTeamRankings[result.teamName] = result.myRanking;
-        }
-      });
-
-      setTeamRankingsData(newTeamRankingsData);
-      setMyTeamRankings(newMyTeamRankings);
-      setInitialDataLoaded(true);
-
+  // 팀 필터 변경 시 로컬 스토리지에 저장
+  const handleTeamFilterChange = async (teamId: string) => {
+    try {
+      setSelectedTeamFilter(teamId);
+      await AsyncStorage.setItem(STORAGE_KEY, teamId);
     } catch (error) {
-      console.error('랭킹 조회 실패:', error);
-      Alert.alert('오류', '랭킹 정보를 불러오는데 실패했습니다.');
-    } finally {
-      setLoading(false);
+      console.error('선택된 팀 필터 저장 실패:', error);
     }
   };
+
+  // TanStack Query 훅 사용
+  const { 
+    data: globalRankingData, 
+    isLoading: globalLoading, 
+    error: globalError 
+  } = useGlobalRanking();
+
+  const teamIds = TEAMS.map(team => team.id);
+  const { 
+    data: allTeamRankingsData, 
+    isLoading: teamRankingsLoading, 
+    error: teamRankingsError 
+  } = useAllTeamRankings(teamIds);
+
+  // 로딩 상태 통합
+  const loading = globalLoading || teamRankingsLoading;
+
+  // 에러 처리
+  if (globalError || teamRankingsError) {
+    console.error('랭킹 조회 실패:', globalError || teamRankingsError);
+  }
 
   const getTeamNameByUserId = (userId: number) => {
     // 팀명 표시 안함 (임시)
@@ -116,7 +77,7 @@ export default function UserRankingScreen({ navigation, route }: Props) {
     { id: 'ALL', name: 'ALL', logo: null },
     ...TEAMS.map(team => ({ 
       id: team.name, 
-      name: team.name.split(' ')[0], 
+      name: team.name.split(' ')[0],
       logo: team.imagePath 
     }))
   ];
@@ -125,10 +86,13 @@ export default function UserRankingScreen({ navigation, route }: Props) {
   const getCurrentRankingData = () => {
     if (selectedTeamFilter === 'ALL') {
       return {
-        rankings: allRankings,
-        myRanking: myGlobalRanking
+        rankings: globalRankingData?.rankings || [],
+        myRanking: globalRankingData?.myRanking || null
       };
     } else {
+      const teamRankingsData = allTeamRankingsData?.teamRankingsData || {};
+      const myTeamRankings = allTeamRankingsData?.myTeamRankings || {};
+      
       return {
         rankings: teamRankingsData[selectedTeamFilter] || [],
         myRanking: myTeamRankings[selectedTeamFilter] || null
@@ -136,16 +100,31 @@ export default function UserRankingScreen({ navigation, route }: Props) {
     }
   };
 
-  useEffect(() => {
-    if (!initialDataLoaded) {
-      fetchAllRankingsData();
-    }
-  }, []);
+  // 에러 상태 처리
+  if ((globalError || teamRankingsError) && !globalRankingData && !allTeamRankingsData) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorIcon}>⚠️</Text>
+        <Text style={styles.errorText}>랭킹 정보를 불러올 수 없습니다</Text>
+        <Text style={styles.errorSubText}>네트워크 연결을 확인해주세요</Text>
+        <TouchableOpacity 
+          style={[styles.retryButton, { backgroundColor: themeColor }]}
+          onPress={() => {
+            // 쿼리 재시작은 자동으로 처리됨
+          }}
+        >
+          <Text style={styles.retryButtonText}>다시 시도</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>로딩 중...</Text>
+        <ActivityIndicator size="large" color={themeColor} />
+        <Text style={styles.loadingText}>랭킹 정보를 불러오는 중...</Text>
+        <Text style={styles.loadingSubText}>잠시만 기다려주세요</Text>
       </View>
     );
   }
@@ -187,63 +166,42 @@ export default function UserRankingScreen({ navigation, route }: Props) {
           contentContainerStyle={styles.scrollContent}
           stickyHeaderIndices={[0]}
         >
-          {/* 팀 필터 - 스크롤뷰 내부 상단에 고정 */}
-          <View style={styles.teamFilterContainer}>
-            <ScrollView 
+          {/* 팀 필터 - 타팀 커뮤니티와 완전히 동일한 탭 디자인 */}
+          <View style={styles.teamPickerWrap}>
+            <ScrollView
               ref={scrollViewRef}
-              horizontal 
-              showsHorizontalScrollIndicator={false} 
-              style={styles.teamFilterScroll}
-              maintainVisibleContentPosition={{
-                minIndexForVisible: 0,
-                autoscrollToTopThreshold: 0,
-              }}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.teamPickerContent}
             >
-              {teamFilters.map((filter, index) => (
-                <TouchableOpacity
-                  key={filter.id}
-                  style={[
-                    styles.teamFilterItem,
-                    selectedTeamFilter === filter.id && {
-                      ...styles.selectedTeamFilter,
-                      backgroundColor: themeColor,
-                    }
-                  ]}
-                  onPress={() => {
-                    setSelectedTeamFilter(filter.id);
-                    // 순위표를 맨 위로 스크롤
-                    setTimeout(() => {
-                      rankingScrollViewRef.current?.scrollTo({ y: 0, animated: true });
-                    }, 100);
-                  }}
-                >
-                  {filter.logo ? (
-                    <View style={styles.teamLogoContainer}>
-                      <Image 
-                        source={typeof filter.logo === 'string' ? { uri: filter.logo } : filter.logo} 
-                        style={[
-                          styles.teamFilterLogo,
-                          selectedTeamFilter === filter.id && styles.selectedTeamLogo
-                        ]} 
-                        resizeMode="contain" 
-                      />
-                      <Text style={[
-                        styles.teamFilterName,
-                        selectedTeamFilter === filter.id && styles.selectedTeamFilterName
-                      ]}>
+              {teamFilters.map((filter) => {
+                const isActive = selectedTeamFilter === filter.id;
+                return (
+                  <TouchableOpacity
+                    key={filter.id}
+                    style={[styles.teamChip, isActive && styles.teamChipActive]}
+                    onPress={() => handleTeamFilterChange(filter.id)}
+                    activeOpacity={0.85}
+                  >
+                    {filter.logo ? (
+                      <>
+                        <Image
+                          source={typeof filter.logo === 'string' ? { uri: filter.logo } : filter.logo}
+                          style={styles.teamLogo}
+                          resizeMode="contain"
+                        />
+                        <Text style={[styles.teamChipLabel, isActive && { color: themeColor }]}>
+                          {filter.name}
+                        </Text>
+                      </>
+                    ) : (
+                      <Text style={[styles.teamChipLabel, isActive && { color: themeColor }]}>
                         {filter.name}
                       </Text>
-                    </View>
-                  ) : (
-                    <View style={styles.allFilterContainer}>
-                      <Text style={[
-                        styles.allFilterText,
-                        selectedTeamFilter === filter.id && styles.selectedAllFilterText
-                      ]}>ALL</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              ))}
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
           </View>
           
@@ -450,97 +408,76 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 40,
+    backgroundColor: '#ffffff',
   },
   loadingText: {
     fontSize: 16,
+    color: '#333333',
+    fontWeight: '600',
+    marginTop: 16,
+  },
+  loadingSubText: {
+    fontSize: 14,
     color: '#666666',
+    marginTop: 8,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 40,
+    backgroundColor: '#ffffff',
+  },
+  errorIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  errorText: {
+    fontSize: 18,
+    color: '#333333',
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  errorSubText: {
+    fontSize: 14,
+    color: '#666666',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  retryButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   userRankingContainer: {
     flex: 1,
     backgroundColor: '#ffffff',
   },
-  teamFilterContainer: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#ffffff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 5,
-    zIndex: 10,
+  teamPickerWrap: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#eee',
+    backgroundColor: '#fff',
   },
-  teamFilterScroll: {
-    flexDirection: 'row',
+  teamPickerContent: { paddingHorizontal: 12, paddingVertical: 10, gap: 10, justifyContent: 'center' },
+  teamChip: {
+    height: 64, minWidth: 86, paddingHorizontal: 10, paddingVertical: 8,
+    backgroundColor: '#F6F7F8', borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: '#E3E5E7',
+    alignItems: 'center', justifyContent: 'center',
   },
-  teamFilterItem: {
-    alignItems: 'center',
-    marginRight: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 25,
-    backgroundColor: '#f8f9fa',
-    borderWidth: 2,
-    borderColor: 'transparent',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    minWidth: 80,
+  teamChipActive: {
+    backgroundColor: '#fff', borderColor: '#cfd3d7',
+    shadowColor: '#000', shadowOpacity: 0.08, shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4, elevation: 3,
   },
-  selectedTeamFilter: {
-    borderColor: 'transparent',
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 6,
-    transform: [{ scale: 1.05 }],
-  },
-  teamLogoContainer: {
-    alignItems: 'center',
-  },
-  teamFilterLogo: {
-    width: 40,
-    height: 40,
-    marginBottom: 4,
-  },
-  selectedTeamLogo: {
-    width: 44,
-    height: 44,
-  },
-  allFilterContainer: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 12,
-    height: 60,
-  },
-  allFilterText: {
-    fontSize: 16,
-    color: '#666666',
-    fontWeight: '600',
-  },
-  selectedAllFilterText: {
-    color: '#ffffff',
-    fontWeight: 'bold',
-  },
-  teamFilterName: {
-    fontSize: 12,
-    color: '#666666',
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  selectedTeamFilterName: {
-    color: '#ffffff',
-    fontWeight: 'bold',
-  },
+  teamChipLabel: { fontSize: 12, color: '#666', fontWeight: '600' },
   userRankingList: {
     flex: 1,
     paddingHorizontal: 0,
@@ -780,4 +717,5 @@ const styles = StyleSheet.create({
   spacer: {
     height: 80,
   },
+  teamLogo: { width: 36, height: 36, marginBottom: 4 },
 });

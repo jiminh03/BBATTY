@@ -12,6 +12,7 @@ import {
   AppState,
   Image,
   ActivityIndicator,
+  Keyboard,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -106,6 +107,9 @@ export const MatchChatRoomScreen = () => {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [oldestMessageTimestamp, setOldestMessageTimestamp] = useState<number | null>(null);
+  
+  // 키보드 높이 상태 추가
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   
   // 사용자 친화적 기능들
   const {
@@ -619,7 +623,8 @@ export const MatchChatRoomScreen = () => {
     clearReconnectTimer();
     
     state.reconnectAttempts++;
-    const backoffDelay = Math.min(Math.pow(2, state.reconnectAttempts - 1) * 1000, 10000);
+    // 더 안정적인 재연결 딜레이 (최소 3초, 최대 30초)
+    const backoffDelay = Math.min(Math.max(Math.pow(2, state.reconnectAttempts - 1) * 2000, 3000), 30000);
     
     console.log(`🔄 재연결 예약: ${state.reconnectAttempts}/${state.maxReconnectAttempts} (${backoffDelay}ms 후)`);
     
@@ -821,6 +826,25 @@ export const MatchChatRoomScreen = () => {
     loadGameInfo();
   }, [room.gameId]);
 
+  // 키보드 이벤트 리스너
+  useEffect(() => {
+    const keyboardDidShow = (event: any) => {
+      setKeyboardHeight(event.endCoordinates.height);
+    };
+
+    const keyboardDidHide = () => {
+      setKeyboardHeight(0);
+    };
+
+    const showSubscription = Keyboard.addListener('keyboardDidShow', keyboardDidShow);
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', keyboardDidHide);
+
+    return () => {
+      showSubscription?.remove();
+      hideSubscription?.remove();
+    };
+  }, []);
+
   // 컴포넌트 언마운트 시 정리
   useEffect(() => {
     return () => {
@@ -857,7 +881,7 @@ export const MatchChatRoomScreen = () => {
 
       <KeyboardAvoidingView 
         style={styles.keyboardContainer}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 56 : 0}
       >
         {/* 알림 관리자 */}
@@ -1000,7 +1024,10 @@ export const MatchChatRoomScreen = () => {
         {/* 메시지 입력 */}
         <View style={[
           styles.messageInputWithSafeArea, 
-          { paddingBottom: Math.max(insets.bottom, 16) }
+          { 
+            paddingBottom: Math.max(insets.bottom, 16),
+            marginBottom: Platform.OS === 'android' ? keyboardHeight : 0
+          }
         ]}>
           <TextInput
             key={inputKey}
