@@ -48,11 +48,13 @@ export const MatchChatRoomScreen = () => {
   const isWatchChat = websocketUrl.includes('/ws/watch-chat/') || (websocketUrl.includes('gameId=') && websocketUrl.includes('teamId='));
   
   const [currentMessage, setCurrentMessage] = useState('');
+  const [inputKey, setInputKey] = useState(0); // TextInput 강제 리렌더링용
   const getCurrentUser = useUserStore((state) => state.getCurrentUser);
   const currentUser = getCurrentUser();
   const currentUserId = currentUser?.userId || 45;
   
   const flatListRef = useRef<FlatList>(null);
+  const textInputRef = useRef<TextInput>(null);
 
   // 메시지 고유 ID 생성 함수
   const generateMessageId = useCallback((message: any, index?: number) => {
@@ -668,8 +670,15 @@ export const MatchChatRoomScreen = () => {
 
     const messageContent = currentMessage.trim();
     
-    // 즉시 입력 필드 클리어 (사용자 경험 개선)
+    // 강력한 입력 필드 초기화
     setCurrentMessage('');
+    setInputKey(prev => prev + 1); // TextInput 강제 리마운트
+    
+    // 추가적인 초기화 (비동기)
+    setTimeout(() => {
+      textInputRef.current?.clear();
+      setCurrentMessage('');
+    }, 0);
     
     try {
       // 메시지 큐에 추가 (자동으로 전송 시도)
@@ -703,8 +712,7 @@ export const MatchChatRoomScreen = () => {
       logChatError(chatError, { content: messageContent });
       showErrorNotification(chatError);
       
-      // 실패 시 입력 필드 복원
-      setCurrentMessage(messageContent);
+      // 에러 발생 시에도 입력창은 이미 클리어됨 (사용자가 새 메시지 입력 가능)
     }
   }, [currentMessage, addMessageToQueue, addMessage, room, currentUser, currentUserId, showErrorNotification]);
 
@@ -849,8 +857,8 @@ export const MatchChatRoomScreen = () => {
 
       <KeyboardAvoidingView 
         style={styles.keyboardContainer}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 56 : 0}
       >
         {/* 알림 관리자 */}
         <ChatNotificationManager
@@ -990,8 +998,13 @@ export const MatchChatRoomScreen = () => {
         />
 
         {/* 메시지 입력 */}
-        <View style={styles.messageInput}>
+        <View style={[
+          styles.messageInputWithSafeArea, 
+          { paddingBottom: Math.max(insets.bottom, 16) }
+        ]}>
           <TextInput
+            key={inputKey}
+            ref={textInputRef}
             style={styles.textInput}
             value={currentMessage}
             onChangeText={setCurrentMessage}
