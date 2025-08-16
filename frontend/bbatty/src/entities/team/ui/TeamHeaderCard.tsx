@@ -99,7 +99,7 @@ export default function TeamHeaderCard({
       <View style={{ marginLeft: 12 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <Text style={s.team}>{teamName}</Text>
-          <View style={s.badge} />
+          {/* <View style={s.badge} /> */}
         </View>
         <Text style={s.rank}>{rankText}</Text>
         <Text style={s.record}>{recordText}</Text>
