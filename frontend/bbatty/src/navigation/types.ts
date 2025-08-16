@@ -53,7 +53,7 @@ export type HomeStackParamList = {
   Home: undefined;
   PostForm: { teamId?: number; postId?: number } | undefined; // ← teamId 추가
   PostList: { teamId?: number } | undefined;
-  PostDetail: { postId: number };
+  PostDetail: { postId: number; teamId?: number };
   PopularPosts: { teamId: number };
   PostCreate: { category?: string };
   TeamPostSearch: { teamId: number; initialKeyword?: string };

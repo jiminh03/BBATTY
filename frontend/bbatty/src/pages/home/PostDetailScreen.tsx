@@ -56,13 +56,12 @@ export default function PostDetailScreen({ route, navigation }: Props) {
   const myNickname = useUserStore((s) => s.currentUser?.nickname);
 
   const delPost = useDeletePostMutation();
-  const { toggle, isBusy } = usePostLikeActions(postId, {
-    // teamId는 post 로드 후 내부 전파에만 사용(없으면 undefined)
-    teamId: typeof (post as any)?.teamId === 'number' ? (post as any).teamId : undefined,
-    refetchAfterMs: 500,
-    cooldownMs: 300,
-    onRequireLogin: () => Alert.alert('로그인이 필요합니다', '좋아요 기능을 사용하려면 로그인 해주세요.'),
-  });
+   const teamIdForSync =
+   Number((post as any)?.teamId ?? route.params?.teamId ?? 0) || undefined;
+   const { toggle, isBusy } = usePostLikeActions(postId, {
+   teamId: teamIdForSync,     // ✅ 목록/인기/검색 캐시로 즉시 동기화
+   refetchAfterMs: 0,         // (원하면 400~600으로)
+ });
 
   const { data: cmtPages, isLoading: cLoading, isError: cError, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useCommentListQuery(postId, 10);
