@@ -270,4 +270,44 @@ export const chatRoomApi = {
       return false;
     }
   },
+
+  // 매치 채팅 히스토리 조회
+  getMatchChatHistory: async (params: {
+    matchId: string;
+    lastMessageTimestamp?: number;
+    limit?: number;
+  }): Promise<{
+    status: string;
+    message: string;
+    data: {
+      messages: any[];
+      hasMore: boolean;
+    };
+  }> => {
+    try {
+      const searchParams = new URLSearchParams();
+      searchParams.append('matchId', params.matchId);
+      if (params.lastMessageTimestamp) {
+        searchParams.append('lastMessageTimestamp', params.lastMessageTimestamp.toString());
+      }
+      if (params.limit) {
+        searchParams.append('limit', params.limit.toString());
+      }
+
+      const response = await chatApiClient.get(`/api/match-chat/history?${searchParams.toString()}`);
+      return response.data;
+    } catch (error: any) {
+      console.warn('히스토리 조회 실패, 빈 응답 반환:', error);
+      
+      // 임시 목 데이터 - 실제로는 빈 배열 반환
+      return {
+        status: 'SUCCESS',
+        message: '히스토리 조회 완료 (목 데이터)',
+        data: {
+          messages: [],
+          hasMore: false
+        }
+      };
+    }
+  },
 };

@@ -39,7 +39,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 }
 
 type Props = HomeStackScreenProps<'Home'>;
-const ACTIONS_TOP = Platform.select({ android: 96, ios: 102 }); // 버튼 세로 위치
+const ACTIONS_TOP = Platform.select({ android: 75, ios: 80 }); // 버튼 세로 위치 (위로 조정)
 
 function SearchHeader({
   keyword,
@@ -117,6 +117,7 @@ export default function HomeScreen({ navigation }: Props) {
   useEffect(() => {
     if (newsOpen) setNewsOpen(false);
   }, [tab]);
+
 
   // 전체/베스트
   const { data: popular = [], isLoading: pLoading } = useTeamPopularPostsQuery(teamId, 20);
@@ -266,12 +267,8 @@ export default function HomeScreen({ navigation }: Props) {
           />
         </View>
 
-        {/* 오른쪽에 나란히 떠 있는 알약 버튼 두 개 */}
+        {/* 오른쪽에 나란히 떠 있는 알약 버튼 */}
         <View style={[styles.actionRow, { top: ACTIONS_TOP }]}>
-          {/* <TouchableOpacity onPress={handleChatPress} activeOpacity={0.9} style={styles.pill}>
-            <Text style={[styles.pillText, { color: teamColor }]}>직관인증하기</Text>
-          </TouchableOpacity> */}
-
           <TouchableOpacity onPress={toggleNews} activeOpacity={0.9} style={styles.pill}>
             <Text style={[styles.pillText, { color: 'black' }]}>
               팀 최신 뉴스 {newsOpen ? '▴' : '▾'}

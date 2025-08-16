@@ -8,6 +8,16 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f6fa',
   },
+  headerGradient: {
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -63,7 +73,7 @@ export const styles = StyleSheet.create({
     elevation: 8,
   },
   cardGradient: {
-    height: 200,
+    height: 140,
     borderRadius: 15,
     position: 'relative',
     marginBottom: 15,
@@ -74,7 +84,7 @@ export const styles = StyleSheet.create({
     left: 0,
     right: 0,
     top: 0,
-    height: 200,
+    height: 140,
   },
   roomHeader: {
     position: 'absolute',
@@ -89,7 +99,7 @@ export const styles = StyleSheet.create({
   },
   titleContainer: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 15,
     left: 15,
     right: 15,
   },

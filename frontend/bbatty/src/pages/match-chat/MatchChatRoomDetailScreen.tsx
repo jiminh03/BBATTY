@@ -82,9 +82,9 @@ export const MatchChatRoomDetailScreen = () => {
       const joinRequest = {
         matchId: room.matchId,
         nickname: currentUser.nickname,
-        winRate: 75, // TODO: 실제 승률 데이터 연결
-        profileImgUrl: currentUser.profileImageURL || 'https://example.com/profile.jpg',
-        isWinFairy: false, // TODO: 실제 승부요정 여부 연결
+        winRate: currentUser.winRate || 0,
+        profileImgUrl: currentUser.profileImg || '',
+        isWinFairy: (currentUser.winRate || 0) >= 70,
       };
 
       const response = await chatRoomApi.joinMatchChat(joinRequest);
@@ -156,25 +156,30 @@ export const MatchChatRoomDetailScreen = () => {
   }, [room.gameId]);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <View style={[styles.header, { backgroundColor: themeColor }]}>
-        <TouchableOpacity onPress={() => {
-          if (navigation.canGoBack()) {
-            navigation.goBack();
-          }
-        }}>
-          <Text style={[styles.backButton, { color: '#ffffff' }]}>← 뒤로</Text>
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Text style={[styles.headerTitle, { color: '#ffffff' }]}>매치룸 정보</Text>
-          {gameInfo && (
-            <Text style={[styles.headerSubtitle, { color: '#ffffff' }]}>
-              {gameInfo.awayTeamName} vs {gameInfo.homeTeamName}
-            </Text>
-          )}
+    <View style={styles.container}>
+      <LinearGradient
+        colors={[themeColor, themeColor]}
+        style={[styles.headerGradient, { paddingTop: insets.top }]}
+      >
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => {
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            }
+          }}>
+            <Text style={[styles.backButton, { color: '#ffffff' }]}>← 뒤로</Text>
+          </TouchableOpacity>
+          <View style={styles.headerCenter}>
+            <Text style={[styles.headerTitle, { color: '#ffffff' }]}>매치룸 정보</Text>
+            {gameInfo && (
+              <Text style={[styles.headerSubtitle, { color: '#ffffff' }]}>
+                {gameInfo.awayTeamName} vs {gameInfo.homeTeamName}
+              </Text>
+            )}
+          </View>
+          <View style={styles.placeholder} />
         </View>
-        <View style={styles.placeholder} />
-      </View>
+      </LinearGradient>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.roomCard}>

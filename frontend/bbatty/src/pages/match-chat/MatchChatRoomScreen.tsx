@@ -13,6 +13,7 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import NetInfo from '@react-native-community/netinfo';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -31,6 +32,7 @@ import { useUserStore } from '../../entities/user/model/userStore';
 import { useThemeColor } from '../../shared/team/ThemeContext';
 import { styles } from './MatchChatRoomScreen.styles';
 import { gameApi } from '../../entities/game/api/api';
+import { chatRoomApi } from '../../entities/chat-room/api/api';
 
 type NavigationProp = StackNavigationProp<ChatStackParamList>;
 type RoutePropType = RouteProp<ChatStackParamList, 'MatchChatRoom'>;
@@ -52,6 +54,18 @@ export const MatchChatRoomScreen = () => {
   
   const flatListRef = useRef<FlatList>(null);
 
+  // 메시지 고유 ID 생성 함수
+  const generateMessageId = useCallback((message: any, index?: number) => {
+    if (message.id) return message.id;
+    
+    const timestamp = message.timestamp ? new Date(message.timestamp).getTime() : Date.now();
+    const userId = message.userId || 'unknown';
+    const content = message.content ? message.content.substring(0, 10) : 'no-content';
+    const indexSuffix = index !== undefined ? `_${index}` : '';
+    
+    return `msg_${timestamp}_${userId}_${content}${indexSuffix}`;
+  }, []);
+
   // 🔧 FIX 1: ref로 상태 관리하여 무한 루프 방지
   const connectionStateRef = useRef({
     isConnecting: false,
@@ -65,6 +79,19 @@ export const MatchChatRoomScreen = () => {
   });
 
   const [messages, setMessages] = useState<MessageWithStatus[]>([]);
+
+  // messages 상태 변경 추적
+  React.useEffect(() => {
+    console.log('🎯 📊 Messages 상태 업데이트:', {
+      count: messages.length,
+      firstMessage: messages[0]?.timestamp,
+      lastMessage: messages[messages.length - 1]?.timestamp,
+      sampleMessages: messages.slice(0, 5).map(m => ({
+        timestamp: m.timestamp,
+        content: m.content?.substring(0, 20)
+      }))
+    });
+  }, [messages]);
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<ExtendedConnectionStatus>('DISCONNECTED');
   const [sentMessages, setSentMessages] = useState<Set<string>>(new Set());
@@ -72,8 +99,11 @@ export const MatchChatRoomScreen = () => {
   const [networkConnected, setNetworkConnected] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [gameInfo, setGameInfo] = useState<any>(null);
-  const [isLoadingOlderMessages, setIsLoadingOlderMessages] = useState(false);
-  const [hasOlderMessages, setHasOlderMessages] = useState(true); // 나중에 백엔드 API 연동시 사용
+  
+  // 추가 메시지 로딩 관련 상태
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [oldestMessageTimestamp, setOldestMessageTimestamp] = useState<number | null>(null);
   
   // 사용자 친화적 기능들
   const {
@@ -120,33 +150,13 @@ export const MatchChatRoomScreen = () => {
     }
   }, [messages.length]);
 
-  // 이전 메시지 로드 (백엔드 API 준비시 구현)
-  const loadOlderMessages = useCallback(async () => {
-    if (isLoadingOlderMessages || !hasOlderMessages) return;
-    
-    setIsLoadingOlderMessages(true);
-    
-    try {
-      // TODO: 백엔드 API 연동시 구현
-      // const oldestMessage = messages[0];
-      // const olderMessages = await chatApi.getMessageHistory(room.matchId, oldestMessage?.timestamp);
-      
-      // 임시로 2초 후 완료 처리
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      console.log('이전 메시지 로드 기능 - 백엔드 API 준비 중');
-      
-    } catch (error) {
-      console.error('이전 메시지 로드 실패:', error);
-    } finally {
-      setIsLoadingOlderMessages(false);
-    }
-  }, [isLoadingOlderMessages, hasOlderMessages, messages, room.matchId]);
 
   const addMessage = useCallback((message: ChatMessage, isMyMessage: boolean = false) => {
     setMessages(prev => {
       const isDuplicate = prev.some(m => 
         m.timestamp === message.timestamp && 
-        m.content === message.content
+        m.content === message.content &&
+        m.userId === message.userId
       );
       
       if (isDuplicate) return prev;
@@ -161,6 +171,96 @@ export const MatchChatRoomScreen = () => {
       
       return newMessages;
     });
+  }, []);
+
+  // 추가 메시지 로드 함수
+  const loadMoreMessages = useCallback(async () => {
+    if (isLoadingMore || !hasMoreMessages || !oldestMessageTimestamp) {
+      return;
+    }
+
+    setIsLoadingMore(true);
+    
+    try {
+      // API 호출로 이전 메시지 조회
+      const response = await chatRoomApi.getMatchChatHistory({
+        matchId: room.matchId,
+        lastMessageTimestamp: oldestMessageTimestamp,
+        limit: 100
+      });
+      
+      if (response.status === 'SUCCESS' && response.data.messages) {
+        const moreMessages = response.data.messages;
+        
+        console.log('📚 API로 조회된 추가 메시지 수:', moreMessages.length);
+        
+        const processedMessages = moreMessages.map((msg: any) => ({
+          ...msg,
+          timestamp: typeof msg.timestamp === 'number' ? new Date(msg.timestamp).toISOString() : msg.timestamp,
+          _isMyMessage: msg.userId && (
+            msg.userId.toString() === currentUserId.toString() ||
+            msg.userId.toString() === currentUser?.userId?.toString()
+          )
+        }));
+        
+        addMessagesFromHistory(processedMessages);
+        
+        // 서버에서 hasMore 정보가 없으면 메시지 개수로 판단
+        if (!response.data.hasMore || moreMessages.length < 100) {
+          setHasMoreMessages(false);
+        }
+      } else {
+        setHasMoreMessages(false);
+      }
+      
+    } catch (error) {
+      console.error('추가 메시지 로드 실패:', error);
+      setHasMoreMessages(false);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [isLoadingMore, hasMoreMessages, oldestMessageTimestamp, room.matchId, currentUserId, currentUser, addMessagesFromHistory]);
+
+  // 메시지 목록에 새 메시지들 추가 (중복 제거 및 타임스탬프 업데이트)
+  const addMessagesFromHistory = useCallback((newMessages: ChatMessage[]) => {
+    if (newMessages.length === 0) {
+      setHasMoreMessages(false);
+      setIsLoadingMore(false);
+      return;
+    }
+
+    setMessages(prev => {
+      // 기존 메시지들의 고유 키를 생성
+      const existingKeys = new Set(prev.map(m => `${m.timestamp}_${m.content}_${m.userId}`));
+      const uniqueNewMessages = newMessages.filter(msg => {
+        const msgKey = `${msg.timestamp}_${msg.content}_${msg.userId}`;
+        return !existingKeys.has(msgKey);
+      });
+      
+      if (uniqueNewMessages.length === 0) {
+        setHasMoreMessages(false);
+        setIsLoadingMore(false);
+        return prev;
+      }
+
+      const combined = [...prev, ...uniqueNewMessages];
+      combined.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      
+      // 가장 오래된 메시지의 타임스탬프 업데이트
+      if (combined.length > 0) {
+        const oldestTimestamp = new Date(combined[0].timestamp).getTime();
+        setOldestMessageTimestamp(oldestTimestamp);
+      }
+
+      return combined;
+    });
+
+    // 새로 로드된 메시지가 100개 미만이면 더 이상 없다고 판단
+    if (newMessages.length < 100) {
+      setHasMoreMessages(false);
+    }
+
+    setIsLoadingMore(false);
   }, []);
 
   // 🔧 FIX 2: 재연결 쿨다운 및 중복 방지 로직 추가
@@ -279,6 +379,12 @@ export const MatchChatRoomScreen = () => {
         setConnectionStatus('CONNECTED');
         console.log('📡 WebSocket 연결 성공');
         
+        // 초기 히스토리 로딩 완료 타이머 (3초 후 초기 로딩 완료로 간주)
+        setTimeout(() => {
+          setIsInitialLoad(false);
+          console.log('🏁 초기 로딩 완료, 일반 모드로 전환');
+        }, 3000);
+        
         // 사용자에게 연결 성공 알림
         showConnectionNotification('CONNECTED');
         
@@ -303,9 +409,9 @@ export const MatchChatRoomScreen = () => {
             type: 'AUTH',
             matchId: room.matchId,
             nickname: currentUser?.nickname || 'Anonymous',
-            winRate: 75,
-            profileImgUrl: currentUser?.profileImageURL || '',
-            isWinFairy: false
+            winRate: currentUser?.winRate || 0,
+            profileImgUrl: currentUser?.profileImg || '',
+            isWinFairy: (currentUser?.winRate || 0) >= 70
           };
         }
         
@@ -316,6 +422,70 @@ export const MatchChatRoomScreen = () => {
         // 메시지 처리 로직 (기존과 동일)
         try {
           const messageData = JSON.parse(event.data);
+          
+          // 히스토리 응답 처리 - 서버에서 받은 모든 메시지 표시
+          if (messageData.type === 'HISTORY_RESPONSE' || messageData.type === 'INITIAL_HISTORY') {
+            console.log('📥 히스토리 응답 수신:', {
+              type: messageData.type,
+              messagesCount: messageData.messages?.length || 0
+            });
+            
+            const historyMessages = messageData.messages || [];
+            
+            if (historyMessages.length > 0) {
+              console.log('📚 🔍 히스토리 원본 데이터 분석:', {
+                totalMessages: historyMessages.length,
+                firstMessage: historyMessages[0],
+                lastMessage: historyMessages[historyMessages.length - 1],
+                sampleMessages: historyMessages.slice(0, 3).map(m => ({
+                  timestamp: m.timestamp,
+                  userId: m.userId,
+                  content: m.content?.substring(0, 30)
+                }))
+              });
+              
+              // 모든 메시지를 한번에 설정
+              const processedMessages = historyMessages.map((msg: any, index: number) => ({
+                ...msg,
+                timestamp: typeof msg.timestamp === 'number' ? new Date(msg.timestamp).toISOString() : msg.timestamp,
+                _isMyMessage: msg.userId && (
+                  msg.userId.toString() === currentUserId.toString() ||
+                  msg.userId.toString() === currentUser?.userId?.toString()
+                )
+              }));
+              
+              console.log('📚 🔄 메시지 전처리 완료:', {
+                processedCount: processedMessages.length,
+                sampleProcessed: processedMessages.slice(0, 3).map(m => ({
+                  timestamp: m.timestamp,
+                  userId: m.userId,
+                  content: m.content?.substring(0, 30),
+                  _isMyMessage: m._isMyMessage
+                }))
+              });
+              
+              // timestamp로 정렬
+              processedMessages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+              
+              console.log('📚 📅 정렬 후 메시지:', {
+                sortedCount: processedMessages.length,
+                oldestMessage: processedMessages[0]?.timestamp,
+                newestMessage: processedMessages[processedMessages.length - 1]?.timestamp
+              });
+              
+              setMessages(processedMessages);
+              
+              // 가장 오래된 메시지의 타임스탬프 설정
+              if (processedMessages.length > 0) {
+                const oldestTimestamp = new Date(processedMessages[0].timestamp).getTime();
+                setOldestMessageTimestamp(oldestTimestamp);
+              }
+              
+              console.log('✅ 🎯 전체 메시지 로드 최종 완료:', processedMessages.length, '개');
+            }
+            return;
+          }
+
           
           if (typeof messageData.timestamp === 'number') {
             messageData.timestamp = new Date(messageData.timestamp).toISOString();
@@ -364,6 +534,12 @@ export const MatchChatRoomScreen = () => {
                   });
                 } else {
                   // 다른 사용자 메시지는 그대로 추가
+                  console.log('🔄 개별 메시지 추가 시도:', {
+                    timestamp: messageData.timestamp,
+                    content: messageData.content?.substring(0, 30),
+                    currentMessageCount: messages.length,
+                    isInitialLoad: isInitialLoad
+                  });
                   addMessage(messageData, isMyMessage);
                 }
               }
@@ -646,9 +822,33 @@ export const MatchChatRoomScreen = () => {
   }, []); // disconnect를 dependency에서 제거
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={styles.container}>
+      <LinearGradient
+        colors={[themeColor, themeColor]}
+        style={[styles.headerGradient, { paddingTop: insets.top }]}
+      >
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          >
+            <Text style={[styles.backButtonText, { color: '#ffffff' }]}>←</Text>
+          </TouchableOpacity>
+          <View style={styles.headerContent}>
+            <Text style={[styles.headerTitle, { color: '#ffffff' }]}>
+              {isWatchChat ? '직관채팅' : room.matchTitle || '매치채팅'}
+            </Text>
+            {gameInfo && (
+              <Text style={[styles.headerSubtitle, { color: '#ffffff' }]}>
+                {gameInfo.awayTeamName} vs {gameInfo.homeTeamName}
+              </Text>
+            )}
+          </View>
+        </View>
+      </LinearGradient>
+
       <KeyboardAvoidingView 
-        style={styles.container}
+        style={styles.keyboardContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
@@ -658,48 +858,27 @@ export const MatchChatRoomScreen = () => {
           onDismiss={dismissNotification}
         />
 
-        {/* 헤더 */}
-        <View style={[styles.header, { backgroundColor: themeColor }]}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
-          >
-            <Text style={styles.backButtonText}>←</Text>
-          </TouchableOpacity>
-          <View style={styles.headerContent}>
-            <View style={styles.headerTitleRow}>
-              <Text style={styles.headerTitle}>
-                {isWatchChat ? '직관채팅' : room.matchTitle || '매치채팅'}
-              </Text>
-              <SimpleConnectionStatus status={connectionStatus} />
-            </View>
-            {gameInfo && (
-              <Text style={styles.headerSubtitle}>
-                {gameInfo.awayTeamName} vs {gameInfo.homeTeamName}
-              </Text>
-            )}
-            <ConnectionStatusIndicator 
-              status={connectionStatus}
-              reconnectAttempts={connectionStateRef.current.reconnectAttempts}
-              maxReconnectAttempts={connectionStateRef.current.maxReconnectAttempts}
-            />
-          </View>
-        </View>
-
         {/* 메시지 목록 */}
         <FlatList
           ref={flatListRef}
           style={styles.messagesList}
           contentContainerStyle={styles.messagesContent}
           data={[...messages, ...pendingMessages.map(p => ({ ...p, _isPending: true }))].reverse()}
-          keyExtractor={(item, index) => item.id || index.toString()}
-          onEndReached={loadOlderMessages}
-          onEndReachedThreshold={0.1}
+          keyExtractor={(item, index) => {
+            const baseKey = generateMessageId(item, index);
+            
+            // pending 메시지는 별도 prefix 추가
+            return (item as any)._isPending ? `pending_${baseKey}` : baseKey;
+          }}
+          onEndReached={loadMoreMessages}
+          onEndReachedThreshold={0.5}
           ListFooterComponent={
-            isLoadingOlderMessages ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator color="#666" />
-                <Text style={styles.loadingText}>이전 메시지 로드 중...</Text>
+            isLoadingMore ? (
+              <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                <ActivityIndicator size="small" color="#007AFF" />
+                <Text style={{ marginTop: 8, color: '#666', fontSize: 12 }}>
+                  이전 메시지를 불러오는 중...
+                </Text>
               </View>
             ) : null
           }
@@ -712,12 +891,40 @@ export const MatchChatRoomScreen = () => {
                 ]}>
                   {/* 프로필 사진 (내 메시지가 아닌 경우만) */}
                   {!((item as any)._isMyMessage || (item as any)._isPending) && (
-                    <Image 
-                      source={{ 
-                        uri: (item as MatchChatMessage).profileImgUrl || 'https://via.placeholder.com/40x40/cccccc/666666?text=?' 
-                      }}
-                      style={styles.profileImage}
-                    />
+                    <View style={styles.profileImageContainer}>
+                      {(() => {
+                        const message = item as MatchChatMessage;
+                        
+                        // 더미 URL이거나 유효하지 않은 URL인 경우 기본 아바타 표시
+                        const isValidUrl = message.profileImgUrl && 
+                                         !message.profileImgUrl.includes('example.com') && 
+                                         message.profileImgUrl.startsWith('http');
+                        
+                        if (isValidUrl) {
+                          return (
+                            <Image 
+                              source={{ uri: message.profileImgUrl }}
+                              style={styles.profileImage}
+                              onError={() => {}}
+                              onLoad={() => {}}
+                            />
+                          );
+                        } else {
+                          // 더미 URL 또는 유효하지 않은 URL, 기본 아바타 사용
+                          return (
+                            <View style={[styles.profileImage, { backgroundColor: '#E0E0E0', justifyContent: 'center', alignItems: 'center' }]}>
+                              <Text style={{ fontSize: 20, color: '#666' }}>👤</Text>
+                            </View>
+                          );
+                        }
+                      })()}
+                      {/* 승리요정인 경우 왕관 아이콘 */}
+                      {(item as MatchChatMessage).isWinFairy && (
+                        <View style={styles.crownIcon}>
+                          <Text style={styles.crownEmoji}>👑</Text>
+                        </View>
+                      )}
+                    </View>
                   )}
                   
                   {/* 메시지 영역 */}

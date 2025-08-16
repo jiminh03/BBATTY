@@ -1,5 +1,6 @@
-import { profileApi } from '../api/profileApi';
-import { Ok, Err, type Result } from '../../../shared/utils/result';
+import { apiClient } from '../api';
+import { wrapApiCall } from '../api/utils/apiWrapper';
+import { Ok, Err, type Result } from './result';
 
 interface ImageUploadError {
   type: 'PRESIGNED_URL_ERROR' | 'UPLOAD_ERROR' | 'FILE_ERROR';
@@ -7,6 +8,16 @@ interface ImageUploadError {
 }
 
 interface ImageUploadResult {
+  fileUrl: string;
+  filePath: string;
+}
+
+interface PresignedUrlRequest {
+  filename: string;
+}
+
+interface PresignedUrlResponse {
+  uploadUrl: string;
   fileUrl: string;
   filePath: string;
 }
@@ -19,11 +30,11 @@ const extractFileExtension = (fileName: string): string => {
   return extension;
 };
 
-const generateUniqueFileName = (originalFileName: string): string => {
+const generateUniqueFileName = (originalFileName: string, prefix: string = 'image'): string => {
   const extension = extractFileExtension(originalFileName);
   const timestamp = Date.now();
   const randomString = Math.random().toString(36).substring(2, 15);
-  return `profile_${timestamp}_${randomString}.${extension}`;
+  return `${prefix}_${timestamp}_${randomString}.${extension}`;
 };
 
 const getMimeType = (fileName: string): string => {
@@ -43,15 +54,20 @@ const getMimeType = (fileName: string): string => {
   }
 };
 
+const getPresignedUrl = (filename: string) =>
+  wrapApiCall<PresignedUrlResponse>(() =>
+    apiClient.post('/api/posts/images/presigned-url', null, { params: { filename } } as any)
+  );
+
 export const uploadImageToS3 = async (
   fileUri: string,
-  originalFileName: string
+  originalFileName: string,
+  prefix: string = 'image'
 ): Promise<Result<ImageUploadResult, ImageUploadError>> => {
   try {
-    const uniqueFileName = generateUniqueFileName(originalFileName);
+    const uniqueFileName = generateUniqueFileName(originalFileName, prefix);
 
-    const presignedResult = await profileApi.getPresignedUrl({ filename: uniqueFileName });
-    console.log('presignedResult : ', presignedResult);
+    const presignedResult = await getPresignedUrl(uniqueFileName);
     if (!presignedResult.success) {
       return Err({
         type: 'PRESIGNED_URL_ERROR',

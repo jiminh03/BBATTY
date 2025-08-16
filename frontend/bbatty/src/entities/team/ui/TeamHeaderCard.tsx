@@ -23,6 +23,7 @@ export default function TeamHeaderCard({
   const { isVerifiedToday, todayGameInfo } = useAttendanceStore();
   const [gameInfo, setGameInfo] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showButton, setShowButton] = useState(false);
 
   const isVerified = isVerifiedToday();
 
@@ -30,6 +31,7 @@ export default function TeamHeaderCard({
     const loadTodayGame = async () => {
       if (isVerified && todayGameInfo) {
         setGameInfo(todayGameInfo);
+        setShowButton(true);
         return;
       }
 
@@ -41,6 +43,7 @@ export default function TeamHeaderCard({
         }
       } catch (error) {
         console.error('오늘의 게임 정보 로드 실패:', error);
+        setShowButton(false);
       } finally {
         setIsLoading(false);
       }
@@ -48,6 +51,26 @@ export default function TeamHeaderCard({
 
     loadTodayGame();
   }, [isVerified, todayGameInfo]);
+
+  // 별도 useEffect로 시간 체크
+  useEffect(() => {
+    if (!gameInfo || isVerified) return;
+
+    const checkTimeAndUpdate = () => {
+      const gameDateTime = new Date(gameInfo.dateTime);
+      const now = new Date();
+      const twoHoursBeforeGame = new Date(gameDateTime.getTime() - 2 * 60 * 60 * 1000);
+      setShowButton(now >= twoHoursBeforeGame);
+    };
+
+    // 즉시 한 번 실행
+    checkTimeAndUpdate();
+
+    // 1분마다 시간 체크
+    const interval = setInterval(checkTimeAndUpdate, 60000);
+    
+    return () => clearInterval(interval);
+  }, [gameInfo, isVerified]);
 
   const getChatButtonText = () => {
     if (isLoading) {
@@ -90,13 +113,26 @@ export default function TeamHeaderCard({
 }
 
 const s = StyleSheet.create({
-  wrap: { padding: 30, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  left: { flexDirection: 'row', alignItems: 'center' },
+  wrap: { padding: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  left: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   logo: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#fff' },
   team: { color: '#fff', fontSize: 18, fontWeight: '800' },
   badge: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#4CD964', marginLeft: 6 },
   rank: { color: '#fff', marginTop: 2, fontWeight: '700' },
   record: { color: 'rgba(255,255,255,0.85)', marginTop: 2, fontSize: 12 },
-  chat: { backgroundColor: '#fff', paddingVertical: 8, paddingHorizontal: 10, borderRadius: 10 },
-  chatTxt: { color: '#222', fontSize: 12, fontWeight: '700', textAlign: 'center' },
+  chat: { 
+    backgroundColor: '#fff', 
+    paddingVertical: 6, 
+    paddingHorizontal: 8, 
+    borderRadius: 8,
+    maxWidth: 120,
+    marginTop: 4,
+  },
+  chatTxt: { 
+    color: '#222', 
+    fontSize: 11, 
+    fontWeight: '600', 
+    textAlign: 'center',
+    lineHeight: 14,
+  },
 });

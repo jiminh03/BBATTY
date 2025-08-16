@@ -80,6 +80,7 @@ local.properties
 # Testing - 테스트 관련
 test-results/
 __tests__/coverage/
+.CLAUDE
 
 # Temporary files - 임시 파일
 tmp/
