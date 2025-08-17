@@ -210,22 +210,43 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       return targetIndex;
     }
     
-    // 일관성 있는 드롭존 계산
+    // 드래그 영역 밖으로 나갔을 때 고정 드롭존 처리
+    if (touchY < 0) {
+      // 맨 위로 나갔을 때
+      setDropZonePosition('before');
+      setDropZoneIndex(0);
+      console.log('🔼 Above bounds - fixed to top');
+      return 0;
+    }
+    
+    // 전체 높이 계산
+    let totalHeight = 0;
+    for (let i = 0; i < segments.length; i++) {
+      const segment = segments[i];
+      const layout = segmentLayouts.current[segment.id];
+      const segmentHeight = layout ? layout.height : (segment.type === 'image' ? 216 : 32);
+      totalHeight += segmentHeight;
+    }
+    
+    if (touchY > totalHeight) {
+      // 맨 아래로 나갔을 때
+      setDropZonePosition('after');
+      setDropZoneIndex(segments.length - 1);
+      console.log('🔽 Below bounds - fixed to bottom');
+      return segments.length - 1;
+    }
+    
+    // 일반적인 드롭존 계산
     let bestMatch = { index: 0, position: 'before' as 'before' | 'after', distance: Infinity };
     let cumulativeY = 0;
     
     console.log('🔍 findDropZone touchY:', touchY, 'segments:', segments.length);
     
-    // 각 세그먼트 경계에서의 거리 계산
     for (let i = 0; i < segments.length; i++) {
       const segment = segments[i];
       const layout = segmentLayouts.current[segment.id];
       
-      // 정확한 높이 계산 (여백 포함)
-      const baseHeight = segment.type === 'image' ? 216 : 32;
-      const margin = segment.type === 'image' ? 16 : 2; // marginVertical
-      const segmentHeight = layout ? layout.height : baseHeight;
-      
+      const segmentHeight = layout ? layout.height : (segment.type === 'image' ? 216 : 32);
       const segmentTop = cumulativeY;
       const segmentBottom = cumulativeY + segmentHeight;
       
@@ -242,25 +263,6 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       }
       
       cumulativeY += segmentHeight;
-      
-      console.log(`📏 Segment ${i}:`, {
-        type: segment.type,
-        top: segmentTop,
-        bottom: segmentBottom,
-        height: segmentHeight,
-        distanceToBefore,
-        distanceToAfter
-      });
-    }
-    
-    // 첫 번째 세그먼트 위에 드롭하는 경우
-    if (touchY < 0) {
-      bestMatch = { index: 0, position: 'before', distance: Math.abs(touchY) };
-    }
-    
-    // 마지막 세그먼트 아래에 드롭하는 경우
-    if (touchY > cumulativeY) {
-      bestMatch = { index: segments.length - 1, position: 'after', distance: touchY - cumulativeY };
     }
     
     // 빈 상태 처리
@@ -268,7 +270,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       bestMatch = { index: 0, position: 'before', distance: 0 };
     }
     
-    console.log('🎯 Final bestMatch:', bestMatch, 'touchY:', touchY, 'totalHeight:', cumulativeY);
+    console.log('🎯 Final bestMatch:', bestMatch, 'touchY:', touchY, 'totalHeight:', totalHeight);
     
     // 드롭존 업데이트
     setDropZonePosition(bestMatch.position);
@@ -306,7 +308,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         const touchY = evt.nativeEvent.pageY;
         
         // 오버레이 시작 위치 계산
-        const overlaySize = 200;
+        const overlaySize = 150;
         const startX = touchX - overlaySize / 2;
         const startY = touchY - overlaySize / 2;
         
@@ -327,7 +329,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         setCurrentEditingSegment(null);
         
         // 햅틱 피드백
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        // Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       },
 
       onPanResponderMove: (evt, gestureState) => {
@@ -424,7 +426,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             onChangeText(newContent);
             
             // 햅틱 피드백
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            // Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
           } else {
             console.log('🟠 Same position or invalid drop');
           }

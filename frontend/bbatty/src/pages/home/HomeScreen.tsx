@@ -49,6 +49,16 @@ const normalizeHex = (hex?: string, fallback = '#1D467F') => {
 
 const ACTIONS_TOP = Platform.select({ android: 75, ios: 80 });
 
+// Zustand selector 함수들을 컴포넌트 외부에 정의하여 캐시
+const selectTeamId = (state: any) => state.currentUser?.teamId ?? 1;
+const selectIsVerifiedToday = (state: any) => state.isVerifiedToday;
+const selectAddHistory = (state: any) => state.addHistory;
+const selectRemoveHistory = (state: any) => state.removeHistory;
+const selectGetHistoryForTeam = (state: any) => state.getHistoryForTeam;
+
+// 더 안정적인 selector 방식
+const selectHistoriesByTeam = (state: any) => state.historiesByTeam;
+
 /** ====== 검색 헤더(칩 + X 버튼) ====== */
 function SearchHeader({
   keyword,
@@ -127,9 +137,10 @@ function SearchHeader({
 }
 
 /** ====== 메인 ====== */
-export default function HomeScreen({ navigation }: Props) {
-  const teamId = useUserStore((s) => s.currentUser?.teamId) ?? 1;
-  const { isVerifiedToday } = useAttendanceStore();
+function HomeScreen({ navigation }: Props) {
+  console.log('🔄 HomeScreen 리렌더링됨');
+  const teamId = useUserStore(selectTeamId);
+  const isVerifiedToday = useAttendanceStore(selectIsVerifiedToday);
   const team = findTeamById(teamId);
   const teamColor = normalizeHex(team?.color, '#1D467F');
 
@@ -143,6 +154,7 @@ export default function HomeScreen({ navigation }: Props) {
 
   // 🚫 탭 바꿔도 자동으로 닫지 않음 — 버튼으로만 토글
   const [newsOpen, setNewsOpen] = useState(false);
+  console.log('📊 HomeScreen 상태 - tab:', tab, 'newsOpen:', newsOpen, 'teamId:', teamId);
   const toggleNews = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setNewsOpen((v) => !v);
@@ -161,11 +173,12 @@ export default function HomeScreen({ navigation }: Props) {
   const [submittedKeyword, setSubmittedKeyword] = useState('');
 
   // ✅ 네 스토어 API 사용 (persist 포함)
-  const addHistory = useSearchHistoryStore((s) => s.addHistory);
-  const removeHistory = useSearchHistoryStore((s) => s.removeHistory);
-  const getHistoryForTeam = useSearchHistoryStore((s) => s.getHistoryForTeam);
+  const addHistory = useSearchHistoryStore(selectAddHistory);
+  const removeHistory = useSearchHistoryStore(selectRemoveHistory);
+  const getHistoryForTeam = useSearchHistoryStore(selectGetHistoryForTeam);
 
-  const history = useSearchHistoryStore((s) => s.historiesByTeam[teamId] ?? []);
+  const historiesByTeam = useSearchHistoryStore(selectHistoriesByTeam);
+  const history = historiesByTeam[teamId] ?? [];
 
   const isSearching = submittedKeyword.length > 0;
 
@@ -192,9 +205,9 @@ export default function HomeScreen({ navigation }: Props) {
     setKeyword('');
   }, []);
 
-  const handleRemoveChip = (q: string) => {
+  const handleRemoveChip = useCallback((q: string) => {
     removeHistory(teamId, q);
-  };
+  }, [removeHistory, teamId]);
 
   const listData = tab === 'best' ? popular : isSearching ? searchPosts : allPosts;
 
@@ -218,7 +231,7 @@ export default function HomeScreen({ navigation }: Props) {
   };
 
   // 직관채팅 버튼
-  const handleChatPress = async () => {
+  const handleChatPress = useCallback(async () => {
     const verified = isVerifiedToday();
     if (verified) {
       try {
@@ -280,11 +293,11 @@ export default function HomeScreen({ navigation }: Props) {
     } else {
       (navigation as any).navigate('AttendanceVerification');
     }
-  };
+  }, [isVerifiedToday, navigation]);
 
-  const teamLogoSrc: ImageSourcePropType | undefined = team?.imagePath
+  const teamLogoSrc: ImageSourcePropType | undefined = useMemo(() => team?.imagePath
     ? (typeof team.imagePath === 'string' ? { uri: team.imagePath } : (team.imagePath as any))
-    : undefined;
+    : undefined, [team?.imagePath]);
 
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
@@ -463,3 +476,5 @@ const styles = StyleSheet.create({
     shadowColor: '#000', shadowOpacity: 0.15, shadowOffset: { width: 0, height: 4 }, shadowRadius: 8, elevation: 6,
   },
 });
+
+export default React.memo(HomeScreen);

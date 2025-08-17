@@ -1,5 +1,5 @@
 // TeamHeaderCard.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -22,10 +22,14 @@ type Props = {
   onPressChat?: () => void;
   accentColor?: string;       // 팀 색상
   withSafeAreaTop?: boolean;  // 상단 안전영역 패딩 적용 여부
-  topExtra?: number;          // ⬅️ “더 아래로” 내리고 싶을 때 추가 여백(px)
+  topExtra?: number;          // ⬅️ "더 아래로" 내리고 싶을 때 추가 여백(px)
 };
 
-export default function TeamHeaderCard({
+// Zustand selector 함수들을 컴포넌트 외부에 정의
+const selectIsVerifiedToday = (state: any) => state.isVerifiedToday;
+const selectTodayGameInfo = (state: any) => state.todayGameInfo;
+
+function TeamHeaderCard({
   teamLogo,
   teamName,
   rankText,
@@ -35,18 +39,20 @@ export default function TeamHeaderCard({
   withSafeAreaTop = true,
   topExtra = 30,              // 기본 추가 여백(원하면 더 키워도 됨)
 }: Props) {
+  console.log('🏠 TeamHeaderCard 리렌더링됨 - teamName:', teamName);
   const insets = useSafeAreaInsets();
   const topInset =
     withSafeAreaTop
       ? Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0)
       : 0;
 
-  const { isVerifiedToday, todayGameInfo } = useAttendanceStore();
+  const isVerifiedToday = useAttendanceStore(selectIsVerifiedToday);
+  const todayGameInfo = useAttendanceStore(selectTodayGameInfo);
   const [gameInfo, setGameInfo] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showButton, setShowButton] = useState(false);
 
-  const isVerified = isVerifiedToday();
+  const isVerified = useMemo(() => isVerifiedToday(), [isVerifiedToday]);
 
   // 오늘 경기 로드
   useEffect(() => {
@@ -74,20 +80,16 @@ export default function TeamHeaderCard({
     loadTodayGame();
   }, [isVerified, todayGameInfo]);
 
-  // 경기 2시간 전부터 버튼 활성화
+  // 경기 2시간 전부터 버튼 활성화 (초기 한 번만 체크)
   useEffect(() => {
     if (!gameInfo || isVerified) return;
 
-    const checkTimeAndUpdate = () => {
-      const gameDateTime = new Date(gameInfo.dateTime);
-      const now = new Date();
-      const twoHoursBeforeGame = new Date(gameDateTime.getTime() - 2 * 60 * 60 * 1000);
-      setShowButton(now >= twoHoursBeforeGame);
-    };
-
-    checkTimeAndUpdate();
-    const interval = setInterval(checkTimeAndUpdate, 60_000);
-    return () => clearInterval(interval);
+    const gameDateTime = new Date(gameInfo.dateTime);
+    const now = new Date();
+    const twoHoursBeforeGame = new Date(gameDateTime.getTime() - 2 * 60 * 60 * 1000);
+    const shouldShow = now >= twoHoursBeforeGame;
+    
+    setShowButton(shouldShow);
   }, [gameInfo, isVerified]);
 
   const getChatButtonText = () => {
@@ -175,3 +177,5 @@ const s = StyleSheet.create({
     lineHeight: 14,
   },
 });
+
+export default React.memo(TeamHeaderCard);

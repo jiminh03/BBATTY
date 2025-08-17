@@ -26,7 +26,7 @@ const queryClient = new QueryClient({
 });
 
 export default function App() {
-  const teamId = useUserStore.getState().currentUser?.teamId ?? null;
+  const teamId = useUserStore((state) => state.currentUser?.teamId) ?? null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

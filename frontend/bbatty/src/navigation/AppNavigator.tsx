@@ -163,8 +163,8 @@ export default function AppNavigator() {
         {isAuthenticated ? (
           <>
             <Stack.Screen name='MainTabs' component={MainNavigator} />
-            <Stack.Screen 
-              name='AttendanceVerification' 
+            <Stack.Screen
+              name='AttendanceVerification'
               component={AttendanceVerificationScreen}
               options={{
                 presentation: 'modal',
@@ -172,8 +172,8 @@ export default function AppNavigator() {
                 headerTitle: '직관 인증',
               }}
             />
-            <Stack.Screen 
-              name='WatchChatModal' 
+            <Stack.Screen
+              name='WatchChatModal'
               component={WatchChatModalScreen}
               options={{
                 presentation: 'modal',

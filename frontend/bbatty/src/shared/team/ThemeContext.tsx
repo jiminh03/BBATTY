@@ -99,14 +99,6 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
     initialTeam ?? (initialTeamId ? findTeamById(initialTeamId) ?? null : null)
   );
 
-  // initialTeamId가 바뀌면 동기화(선택적)
-  useEffect(() => {
-    if (initialTeamId != null) {
-      const t = findTeamById(initialTeamId) ?? null;
-      setCurrentTeam(t);
-    }
-  }, [initialTeamId]);
-
   const palette = useMemo(() => buildPalette(currentTeam), [currentTeam]);
 
   const value = useMemo<ThemeContextValue>(
