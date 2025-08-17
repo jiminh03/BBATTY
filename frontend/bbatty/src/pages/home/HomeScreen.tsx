@@ -217,70 +217,10 @@ function HomeScreen({ navigation }: Props) {
     if (tab === 'all') (isSearching ? searchQ.fetchNextPage() : listQ.fetchNextPage());
   };
 
-  // 직관채팅 버튼
+  // 직관채팅 버튼 - 강제로 인증 화면으로 이동
   const handleChatPress = useCallback(async () => {
-    const verified = isVerifiedToday();
-    if (verified) {
-      try {
-        const currentUser = useUserStore.getState().currentUser;
-        if (!currentUser) {
-          Alert.alert('오류', '사용자 정보를 찾을 수 없습니다.');
-          return;
-        }
-
-        const todayGameResponse = await gameApi.getTodayGame();
-        if (todayGameResponse.status !== 'SUCCESS' || !todayGameResponse.data) {
-          Alert.alert('오류', '오늘의 경기 정보를 가져올 수 없습니다.');
-          return;
-        }
-        const todayGame = todayGameResponse.data;
-
-        const watchRequest = {
-          gameId: todayGame.gameId,
-          teamId: currentUser.teamId,
-          isAttendanceVerified: true,
-        };
-
-        const response = await chatRoomApi.joinWatchChat(watchRequest);
-        if (response.data.status === 'SUCCESS') {
-          const gameDetails = await gameApi.getGameById(todayGame.gameId.toString());
-          if (!gameDetails || gameDetails.status !== 'SUCCESS') {
-            Alert.alert('오류', '게임 정보를 불러올 수 없습니다.');
-            return;
-          }
-
-          const watchChatRoom = {
-            matchId: `watch_chat_${todayGame.gameId}_${currentUser.teamId}`,
-            gameId: todayGame.gameId.toString(),
-            matchTitle: `직관채팅 - ${gameDetails.data.awayTeamName} vs ${gameDetails.data.homeTeamName}`,
-            matchDescription: `${gameDetails.data.stadium}에서 열리는 경기를 함께 시청하며 채팅하는 공간`,
-            teamId: getTeamInfo(currentUser.teamId).name,
-            minAge: 0,
-            maxAge: 100,
-            genderCondition: 'ALL',
-            maxParticipants: 999,
-            currentParticipants: 0,
-            createdAt: new Date().toISOString(),
-            status: 'ACTIVE',
-            websocketUrl: response.data.data.websocketUrl,
-          };
-
-          (navigation as any).navigate('WatchChatModal', {
-            room: watchChatRoom,
-            websocketUrl: response.data.data.websocketUrl,
-            sessionToken: response.data.data.sessionToken,
-          });
-        } else {
-          Alert.alert('연결 실패', response.data.message || JSON.stringify(response.data) || '직관채팅 연결에 실패했습니다.');
-        }
-      } catch (e) {
-        console.error('직관채팅 연결 오류:', e);
-        Alert.alert('오류', '직관채팅 연결 중 문제가 발생했습니다.');
-      }
-    } else {
-      (navigation as any).navigate('AttendanceVerification');
-    }
-  }, [isVerifiedToday, navigation]);
+    (navigation as any).navigate('AttendanceVerification');
+  }, [navigation]);
 
   const teamLogoSrc: ImageSourcePropType | undefined = useMemo(
     () =>
