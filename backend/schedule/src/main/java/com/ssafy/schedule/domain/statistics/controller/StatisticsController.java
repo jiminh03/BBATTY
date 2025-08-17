@@ -61,17 +61,27 @@ public class StatisticsController {
                         continue;
                     }
                     
-                    // 기본 통계 계산
+                    // 기본 통계 계산 (시즌별)
                     UserBasicStatsResponse basicStats = statisticsService.calculateUserBasicStats(
                             userId, season, teamId);
                     
-                    // 상세 통계 계산
+                    // 상세 통계 계산 (시즌별)
                     UserDetailedStatsResponse detailedStats = statisticsService.calculateUserDetailedStats(
                             userId, season, teamId);
                     
-                    // 연승 통계 계산
+                    // 연승 통계 계산 (시즌별)
                     UserStreakStatsResponse streakStats = statisticsService.calculateUserStreakStats(
                             userId, season, teamId);
+                    
+                    // 통산 통계도 함께 계산 (total)
+                    UserBasicStatsResponse totalBasicStats = statisticsService.calculateUserBasicStats(
+                            userId, "total", teamId);
+                    
+                    UserDetailedStatsResponse totalDetailedStats = statisticsService.calculateUserDetailedStats(
+                            userId, "total", teamId);
+                    
+                    UserStreakStatsResponse totalStreakStats = statisticsService.calculateUserStreakStats(
+                            userId, "total", teamId);
                     
                     Map<String, Object> userResult = new HashMap<>();
                     userResult.put("userId", userId);
