@@ -81,15 +81,21 @@ function PostItemBase({ post, teamId, onPress }: Props) {
       : 0;
 
   const timeText = useMemo(() => {
-    try {
-      const d = new Date(post.createdAt ?? 0);
-      const hh = String(d.getHours()).padStart(2, '0');
-      const mm = String(d.getMinutes()).padStart(2, '0');
-      return `${hh}:${mm}`;
-    } catch {
-      return '';
-    }
-  }, [post.createdAt]);
+  try {
+    if (!post.createdAt) return '';
+    const d = new Date(post.createdAt);
+    const formatter = new Intl.DateTimeFormat('ko-KR', {
+      timeZone: 'Asia/Seoul',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false, // 24시간제
+    });
+    return formatter.format(d); // "13:05" 같은 형식
+  } catch {
+    return '';
+  }
+}, [post.createdAt]);
+
 
   return (
     <TouchableOpacity onPress={handlePress} activeOpacity={0.8}>

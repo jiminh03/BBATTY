@@ -137,7 +137,23 @@ function HomeScreen({ navigation }: Props) {
   const isVerifiedToday = useAttendanceStore(selectIsVerifiedToday);
   const team = findTeamById(teamId);
   const teamColor = normalizeHex(team?.color, '#1D467F');
-
+  const [refreshing, setRefreshing] = useState(false);
+   const handleRefresh = async () => {
+    try {
+      setRefreshing(true);
+      if (tab === 'best') {
+        await listQ.refetch();
+      } else {
+        if (isSearching) {
+          await searchQ.refetch();
+        } else {
+          await listQ.refetch();
+        }
+      }
+    } finally {
+      setRefreshing(false);
+    }
+  };
   const { data: standing } = useTeamStanding(teamId);
   const rankText = standing ? `${standing.rank}위` : '순위 준비중';
   const recordText = standing
@@ -360,6 +376,8 @@ function HomeScreen({ navigation }: Props) {
             ListHeaderComponent={<View />}
             removeClippedSubviews={false}
             contentContainerStyle={styles.listPad}
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
           />
         )
       ) : (
@@ -399,6 +417,8 @@ function HomeScreen({ navigation }: Props) {
             isFetchingNext ? <ActivityIndicator style={{ marginVertical: 12 }} /> : <View />
           }
           contentContainerStyle={styles.listPad}
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
         />
       )}
 
