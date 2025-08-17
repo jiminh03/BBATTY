@@ -37,7 +37,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
   const isDataUnchanged = () => {
     const nicknameUnchanged = originalNickname ? isNicknameSameAsOriginal() : formData.nickname === (initialData?.nickname || '');
     const introductionUnchanged = isIntroductionSameAsOriginal();
-    const imageUnchanged = formData.profileImage === (initialData?.profileImage || '');
+    const imageUnchanged = formData.profileImage === (initialData?.profileImage || null);
     
     return nicknameUnchanged && introductionUnchanged && imageUnchanged;
   };
@@ -143,7 +143,11 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
 
   return (
     <>
-      <ProfileImagePicker imageUri={formData.profileImage} onImageSelect={(uri) => updateField('profileImage', uri)} />
+      <ProfileImagePicker 
+        imageUri={formData.profileImage} 
+        onImageSelect={(uri) => updateField('profileImage', uri)}
+        onImageRemove={() => updateField('profileImage', null)}
+      />
 
       {showNicknameField && (
         <View style={styles.inputSection}>

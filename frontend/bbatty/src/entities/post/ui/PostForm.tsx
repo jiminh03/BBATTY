@@ -57,23 +57,14 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
   const [imageList, setImageList] = useState<ImageItem[]>([]);
   const [cursorPosition, setCursorPosition] = useState(0);
   
-  // 드래그 오버레이 상태 - ref로 안정화
-  const [dragOverlayInfo, setDragOverlayInfo] = useState<{
-    imageUrl: string;
-    startPosition: { x: number; y: number };
-  } | null>(null);
+  // 오버레이 제거 - 드래그 상태만 관리
+  const [isDragging, setIsDragging] = useState(false);
   
   // 스크롤 뷰 참조
   const scrollViewRef = useRef<ScrollView>(null);
   
-  const dragOffsetX = useRef(new Animated.Value(0)).current;
-  const dragOffsetY = useRef(new Animated.Value(0)).current;
-  const dragScale = useRef(new Animated.Value(1)).current;
-  const dragOpacity = useRef(new Animated.Value(1)).current;
-  
-  // 드래그 상태를 ref로 보호
+  // 드래그 상태 관리 단순화
   const isDraggingRef = useRef(false);
-  const currentDragInfoRef = useRef<{ imageUrl: string; startPosition: { x: number; y: number } } | null>(null);
 
   // 이미지를 마크다운 형식으로 content에 삽입
   const insertImageToContent = (imageUrl: string, imageId: string) => {
@@ -207,68 +198,44 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
     setImageList((prev) => prev.filter((img) => img.id !== imageId));
   };
 
-  // 드래그 핸들러들 - 스크롤 방지 기능 추가
-  const handleDragStart = useCallback((dragInfo: { imageUrl: string; startPosition: { x: number; y: number } }) => {
-    console.log('🟢 handleDragStart called:', {
-      isDragging: isDraggingRef.current,
-      startPosition: dragInfo.startPosition,
-      timestamp: Date.now()
-    });
+  // 드래그 핸들러들 - 스크롤 제어 최적화
+  const handleDragStart = useCallback(() => {
+    console.log('🟢 handleDragStart called - simple mode');
     
-    // 이미 드래그 중이면 무시 (중복 호출 방지)
     if (isDraggingRef.current) {
       console.log('🔴 handleDragStart IGNORED - already dragging');
       return;
     }
     
     isDraggingRef.current = true;
-    currentDragInfoRef.current = dragInfo;
-    setDragOverlayInfo(dragInfo);
+    setIsDragging(true);
     
     // 스크롤 비활성화
     if (scrollViewRef.current) {
       scrollViewRef.current.setNativeProps({ scrollEnabled: false });
     }
     
-    // 애니메이션 초기화
-    dragOffsetX.setValue(0);
-    dragOffsetY.setValue(0);
-    dragScale.setValue(0.8);
-    dragOpacity.setValue(0.7);
-    
-    console.log('✅ handleDragStart completed');
-  }, []); // 의존성 없음 - 완전히 격리
+    console.log('✅ handleDragStart completed - no overlay');
+  }, []);
 
-  const handleDragMove = useCallback((dragOffset: { dx: number; dy: number }) => {
-    // console.log('🟡 handleDragMove called:', { dx: dragOffset.dx, dy: dragOffset.dy, isDragging: isDraggingRef.current });
-    
-    // 드래그 중이 아니면 무시
-    if (!isDraggingRef.current) return;
-    
-    dragOffsetX.setValue(dragOffset.dx);
-    dragOffsetY.setValue(dragOffset.dy);
-  }, []); // 의존성 없음 - 완전히 격리
+  const handleDragMove = useCallback(() => {
+    // 오버레이 제거로 이동 처리 불필요
+    // 드롭존은 RichTextEditor에서 직접 처리
+  }, []);
 
   const handleDragEnd = useCallback(() => {
-    console.log('🟠 handleDragEnd called');
+    console.log('🟠 handleDragEnd called - simple mode');
     
     isDraggingRef.current = false;
-    currentDragInfoRef.current = null;
-    setDragOverlayInfo(null);
+    setIsDragging(false);
     
     // 스크롤 다시 활성화
     if (scrollViewRef.current) {
       scrollViewRef.current.setNativeProps({ scrollEnabled: true });
     }
     
-    // 애니메이션 리셋
-    dragOffsetX.setValue(0);
-    dragOffsetY.setValue(0);
-    dragScale.setValue(1);
-    dragOpacity.setValue(1);
-    
-    console.log('✅ handleDragEnd completed');
-  }, []); // 의존성 없음 - 완전히 격리
+    console.log('✅ handleDragEnd completed - simple mode');
+  }, []);
 
 
 
@@ -338,7 +305,7 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
             keyboardDismissMode='interactive'
             automaticallyAdjustKeyboardInsets={true}
             style={{ flex: 1 }}
-            scrollEnabled={!isDraggingRef.current}
+            scrollEnabled={true}
           >
           {/* 제목 */}
           <Text style={styles.label}>제목</Text>
@@ -400,42 +367,7 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
         </TouchableOpacity>
       </View>
       
-      {/* 최상위 드래그 오버레이 - 완전히 격리된 위치 관리 */}
-      {dragOverlayInfo && (
-        <Animated.View
-          style={{
-            position: 'absolute',
-            left: dragOverlayInfo.startPosition.x,
-            top: dragOverlayInfo.startPosition.y,
-            width: 150,
-            height: 150,
-            transform: [
-              { translateX: dragOffsetX },
-              { translateY: dragOffsetY },
-              { scale: dragScale }
-            ],
-            opacity: dragOpacity,
-            zIndex: 99999,
-            elevation: 20,
-            pointerEvents: 'none',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 8 },
-            shadowOpacity: 0.3,
-            shadowRadius: 12,
-          }}
-        >
-          <Image
-            source={{ uri: dragOverlayInfo.imageUrl }}
-            style={{
-              width: 150,
-              height: 150,
-              borderRadius: 8,
-              backgroundColor: '#F5F6F7',
-            }}
-            resizeMode="cover"
-          />
-        </Animated.View>
-      )}
+      {/* 오버레이 제거 - 파란선만 사용 */}
     </View>
   );
 };

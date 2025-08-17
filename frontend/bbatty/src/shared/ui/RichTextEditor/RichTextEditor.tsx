@@ -54,6 +54,11 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const [draggingSegmentId, setDraggingSegmentId] = useState<string | null>(null);
   const [dropZoneIndex, setDropZoneIndex] = useState<number | null>(null);
   const [dropZonePosition, setDropZonePosition] = useState<'before' | 'after'>('before');
+  
+  // 드래그 상태를 ref로도 보존
+  const draggingSegmentIdRef = useRef<string | null>(null);
+  const dropZoneIndexRef = useRef<number | null>(null);
+  const dropZonePositionRef = useRef<'before' | 'after'>('before');
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
   const lastDropZoneUpdate = useRef(0);
   const dropZoneUpdateTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -134,6 +139,25 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   }, []);
 
   const segments = useMemo(() => parseContent(value), [parseContent, value]);
+  
+  // content 변경 시 드래그 상태 정리 및 캐시 무효화
+  useEffect(() => {
+    // PanResponder 캐시 무효화 (세그먼트 배열이 변경되었으므로)
+    panResponderRefs.current = {};
+    
+    // content가 변경되었을 때 현재 드래그 중인 세그먼트가 여전히 존재하는지 확인
+    if (draggingSegmentIdRef.current) {
+      const currentDraggedSegment = segments.find(s => s.id === draggingSegmentIdRef.current);
+      if (!currentDraggedSegment) {
+        console.log('CONTENT CHANGED - CLEARING DRAG STATE');
+        setDropZoneIndex(null);
+        setDraggingSegmentId(null);
+        draggingSegmentIdRef.current = null;
+        dropZoneIndexRef.current = null;
+        dropZonePositionRef.current = 'before';
+      }
+    }
+  }, [segments]);
 
   // 컴포넌트 언마운트 시 timeout 정리
   useEffect(() => {
@@ -198,86 +222,122 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     }
   };
 
-  const findDropZone = useCallback((touchY: number, useFocusPosition = false) => {
-    // 포커스 위치 기반 드롭존 계산
-    if (useFocusPosition && currentEditingSegment !== null) {
-      const targetIndex = currentEditingSegment;
-      const dropPosition: 'before' | 'after' = 'before';
-      
-      setDropZonePosition(dropPosition);
-      setDropZoneIndex(targetIndex);
-      
-      return targetIndex;
-    }
+  // 경계 고정 상태 관리
+  const [isFixedBounds, setIsFixedBounds] = useState(false);
+  const isFixedBoundsRef = useRef(false);
+  
+  // 컨테이너 참조 및 스크롤 위치
+  const containerRef = useRef<View>(null);
+  const scrollOffsetRef = useRef(0);
+
+  const findDropZone = useCallback((touchY: number) => {
+    console.log('TOUCH Y:', touchY, 'DRAGGING:', draggingSegmentIdRef.current);
     
-    // 드래그 영역 밖으로 나갔을 때 고정 드롭존 처리
-    if (touchY < 0) {
-      // 맨 위로 나갔을 때
-      setDropZonePosition('before');
-      setDropZoneIndex(0);
-      console.log('🔼 Above bounds - fixed to top');
-      return 0;
-    }
+    // 드래그 중인 세그먼트 찾기
+    const draggedSegmentIndex = draggingSegmentIdRef.current 
+      ? segments.findIndex(s => s.id === draggingSegmentIdRef.current)
+      : -1;
     
-    // 전체 높이 계산
-    let totalHeight = 0;
-    for (let i = 0; i < segments.length; i++) {
-      const segment = segments[i];
-      const layout = segmentLayouts.current[segment.id];
-      const segmentHeight = layout ? layout.height : (segment.type === 'image' ? 216 : 32);
-      totalHeight += segmentHeight;
-    }
+    console.log('DRAGGED SEGMENT INDEX:', draggedSegmentIndex);
     
-    if (touchY > totalHeight) {
-      // 맨 아래로 나갔을 때
-      setDropZonePosition('after');
-      setDropZoneIndex(segments.length - 1);
-      console.log('🔽 Below bounds - fixed to bottom');
-      return segments.length - 1;
-    }
-    
-    // 일반적인 드롭존 계산
-    let bestMatch = { index: 0, position: 'before' as 'before' | 'after', distance: Infinity };
-    let cumulativeY = 0;
-    
-    console.log('🔍 findDropZone touchY:', touchY, 'segments:', segments.length);
+    // 드래그 중인 세그먼트를 제외하고 위치 계산
+    const segmentPositions = [];
+    let currentY = 0;
     
     for (let i = 0; i < segments.length; i++) {
+      // 드래그 중인 세그먼트는 위치 계산에서 제외
+      if (i === draggedSegmentIndex) {
+        console.log(`SKIP DRAGGED SEGMENT ${i}`);
+        continue;
+      }
+      
       const segment = segments[i];
       const layout = segmentLayouts.current[segment.id];
+      let height = 40; // 기본 텍스트 높이
       
-      const segmentHeight = layout ? layout.height : (segment.type === 'image' ? 216 : 32);
-      const segmentTop = cumulativeY;
-      const segmentBottom = cumulativeY + segmentHeight;
-      
-      // 세그먼트 위쪽 경계 (before)
-      const distanceToBefore = Math.abs(touchY - segmentTop);
-      if (distanceToBefore < bestMatch.distance) {
-        bestMatch = { index: i, position: 'before', distance: distanceToBefore };
+      if (layout && layout.height > 0) {
+        height = layout.height;
+      } else if (segment.type === 'image') {
+        height = 200; // 기본 이미지 높이
       }
       
-      // 세그먼트 아래쪽 경계 (after)
-      const distanceToAfter = Math.abs(touchY - segmentBottom);
-      if (distanceToAfter < bestMatch.distance) {
-        bestMatch = { index: i, position: 'after', distance: distanceToAfter };
-      }
+      segmentPositions.push({
+        index: i,
+        originalIndex: i, // 원래 인덱스 보존
+        top: currentY,
+        bottom: currentY + height,
+        height: height
+      });
       
-      cumulativeY += segmentHeight;
+      currentY += height;
     }
     
-    // 빈 상태 처리
-    if (segments.length === 0) {
-      bestMatch = { index: 0, position: 'before', distance: 0 };
+    console.log('SEGMENTS (excluding dragged):', segmentPositions.map(s => `${s.index}:${s.top}-${s.bottom}`).join(' | '));
+    
+    // 터치 위치가 어느 세그먼트에 속하는지 확인
+    for (const pos of segmentPositions) {
+      if (touchY >= pos.top && touchY <= pos.bottom) {
+        const mid = (pos.top + pos.bottom) / 2;
+        if (touchY <= mid) {
+          const newPosition = 'before';
+          const newIndex = pos.originalIndex;
+          console.log(`→ BEFORE ${newIndex} (touchY: ${touchY}, mid: ${mid}, range: ${pos.top}-${pos.bottom})`);
+          
+          // 상태가 변경된 경우에만 업데이트 (깜빡임 방지)
+          if (dropZonePositionRef.current !== newPosition || dropZoneIndexRef.current !== newIndex) {
+            setDropZonePosition(newPosition);
+            setDropZoneIndex(newIndex);
+            dropZonePositionRef.current = newPosition;
+            dropZoneIndexRef.current = newIndex;
+          }
+          return newIndex;
+        } else {
+          const newPosition = 'after';
+          const newIndex = pos.originalIndex;
+          console.log(`→ AFTER ${newIndex} (touchY: ${touchY}, mid: ${mid}, range: ${pos.top}-${pos.bottom})`);
+          
+          // 상태가 변경된 경우에만 업데이트 (깜빡임 방지)
+          if (dropZonePositionRef.current !== newPosition || dropZoneIndexRef.current !== newIndex) {
+            setDropZonePosition(newPosition);
+            setDropZoneIndex(newIndex);
+            dropZonePositionRef.current = newPosition;
+            dropZoneIndexRef.current = newIndex;
+          }
+          return newIndex;
+        }
+      }
     }
     
-    console.log('🎯 Final bestMatch:', bestMatch, 'touchY:', touchY, 'totalHeight:', totalHeight);
-    
-    // 드롭존 업데이트
-    setDropZonePosition(bestMatch.position);
-    setDropZoneIndex(bestMatch.index);
-    
-    return bestMatch.index;
-  }, [segments, currentEditingSegment]);
+    // 범위를 벗어난 경우
+    if (touchY < 0 || segmentPositions.length === 0) {
+      // 첫 번째 세그먼트 앞
+      const newPosition = 'before';
+      const newIndex = segmentPositions.length > 0 ? segmentPositions[0].originalIndex : 0;
+      console.log(`→ BEFORE ${newIndex} (TOP)`);
+      
+      if (dropZonePositionRef.current !== newPosition || dropZoneIndexRef.current !== newIndex) {
+        setDropZonePosition(newPosition);
+        setDropZoneIndex(newIndex);
+        dropZonePositionRef.current = newPosition;
+        dropZoneIndexRef.current = newIndex;
+      }
+      return newIndex;
+    } else {
+      // 마지막 세그먼트 뒤
+      const lastPos = segmentPositions[segmentPositions.length - 1];
+      const newPosition = 'after';
+      const newIndex = lastPos ? lastPos.originalIndex : segments.length - 1;
+      console.log(`→ AFTER ${newIndex} (BOTTOM)`);
+      
+      if (dropZonePositionRef.current !== newPosition || dropZoneIndexRef.current !== newIndex) {
+        setDropZonePosition(newPosition);
+        setDropZoneIndex(newIndex);
+        dropZonePositionRef.current = newPosition;
+        dropZoneIndexRef.current = newIndex;
+      }
+      return newIndex;
+    }
+  }, [segments]);
 
   const createImagePanResponder = useCallback((segment: ContentSegment, segmentIndex: number) => {
     // 세그먼트 배열 변경 시 캐시 무효화
@@ -287,162 +347,76 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     }
     
     const panResponder = PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onStartShouldSetPanResponderCapture: () => true,
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        return Math.abs(gestureState.dx) > 3 || Math.abs(gestureState.dy) > 3;
-      },
-      onMoveShouldSetPanResponderCapture: (_, gestureState) => {
-        return Math.abs(gestureState.dx) > 3 || Math.abs(gestureState.dy) > 3;
-      },
+      onStartShouldSetPanResponder: () => true, // 드래그 모드에서만 실행되므로 true
+      onStartShouldSetPanResponderCapture: () => false,
+      onMoveShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponderCapture: () => false,
       onShouldBlockNativeResponder: () => true,
+      onPanResponderTerminationRequest: () => false,
 
-      onPanResponderGrant: (evt) => {
-        evt.persist(); // SyntheticEvent 재사용 오류 방지
-        
-        console.log('🟢 PanResponder Grant - Setting dragging ID:', segment.id);
-        setDraggingSegmentId(segment.id);
-        
-        // 터치 위치 계산: 화면 좌표 기준
-        const touchX = evt.nativeEvent.pageX;
-        const touchY = evt.nativeEvent.pageY;
-        
-        // 오버레이 시작 위치 계산
-        const overlaySize = 150;
-        const startX = touchX - overlaySize / 2;
-        const startY = touchY - overlaySize / 2;
-        
-        // 부모 컴포넌트에 드래그 시작 알림
-        const dragStartInfo = {
-          imageUrl: segment.imageUrl!,
-          startPosition: { x: startX, y: startY },
-        };
-        dragCallbacksRef.current.onDragStart?.(dragStartInfo);
-        
-        // 드래그 시작 시 포커스 위치 기반으로 초기 드롭존 설정 (키보드 해제 전에)
-        if (currentEditingSegment !== null) {
-          findDropZone(0, true); // 포커스 위치 사용
-        }
-        
-        // 키보드 비활성화
-        Keyboard.dismiss();
-        setCurrentEditingSegment(null);
-        
-        // 햅틱 피드백
-        // Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      onPanResponderGrant: () => {
+        // Long Press에서만 호출됨
       },
 
       onPanResponderMove: (evt, gestureState) => {
-        // 부모 컴포넌트에 드래그 이동 알림
-        dragCallbacksRef.current.onDragMove?.({ dx: gestureState.dx, dy: gestureState.dy });
+        if (!draggingSegmentIdRef.current) return;
         
-        // 드롭 존 계산 - 더 정확한 좌표 사용
-        const now = Date.now();
-        if (now - lastDropZoneUpdate.current > 50) {
-          // locationY 사용하여 컴포넌트 내 상대 위치 계산
-          const relativeY = evt.nativeEvent.locationY;
-          
-          console.log('🟡 Drag move coordinates:', {
-            locationY: evt.nativeEvent.locationY,
-            pageY: evt.nativeEvent.pageY,
-            gestureY: gestureState.dy,
-            calculatedY: relativeY
-          });
-          
-          findDropZone(relativeY);
-          lastDropZoneUpdate.current = now;
-        }
+        const relativeY = evt.nativeEvent.locationY;
+        findDropZone(relativeY);
       },
 
-      onPanResponderRelease: (evt, gestureState) => {
-        console.log('🔴 onPanResponderRelease:', {
-          dropZoneIndex,
-          segmentIndex,
-          draggingSegmentId,
-          dropZonePosition,
-          segmentsLength: segments.length,
-          currentSegmentId: segment.id
-        });
+      onPanResponderRelease: () => {
+        if (!draggingSegmentIdRef.current) return;
         
-        // 현재 드래그 중인 세그먼트 ID 보존 (상태 리셋 전에)
-        const currentDraggedId = draggingSegmentId || segment.id;
-        const currentDropIndex = dropZoneIndex;
-        const currentDropPosition = dropZonePosition;
+        const draggedId = draggingSegmentIdRef.current;
+        const dropIndex = dropZoneIndexRef.current;
+        const dropPosition = dropZonePositionRef.current || 'after';
         
-        console.log('📊 Using values:', {
-          currentDraggedId,
-          currentDropIndex,
-          currentDropPosition
-        });
-        
-        // 유효한 드롭 조건 확인
-        if (currentDropIndex !== null && currentDraggedId) {
-          console.log('🟢 Executing drop logic');
+        // 드롭 실행
+        if (dropIndex !== null) {
+          const draggedIndex = segments.findIndex(s => s.id === draggedId);
           
-          const draggedSegmentIndex = segments.findIndex(s => s.id === currentDraggedId);
-          
-          console.log('📊 Drop details:', {
-            draggedSegmentIndex,
-            currentDropIndex,
-            currentDropPosition,
-            segmentIndex,
-            isDifferentPosition: currentDropIndex !== draggedSegmentIndex
-          });
-          
-          if (draggedSegmentIndex !== -1 && (currentDropIndex !== draggedSegmentIndex || currentDropPosition !== 'before')) {
-            // 현재 segments 배열을 직접 조작
-            const reorderedSegments = [...segments];
-            
-            // 1. 드래그된 요소 제거
-            const [draggedSegment] = reorderedSegments.splice(draggedSegmentIndex, 1);
-            
-            // 2. 삽입 위치 계산
-            let insertIndex = currentDropIndex;
-            
-            // 드래그된 요소가 제거되었으므로 인덱스 조정
-            if (currentDropIndex > draggedSegmentIndex) {
-              insertIndex = currentDropIndex - 1;
+          if (draggedIndex !== -1) {
+            const currentPosition = draggedIndex;
+            let targetPosition = dropIndex;
+            if (dropPosition === 'after') {
+              targetPosition = dropIndex + 1;
             }
             
-            // before/after 처리
-            if (currentDropPosition === 'after') {
-              insertIndex = Math.min(insertIndex + 1, reorderedSegments.length);
+            if (targetPosition > draggedIndex) {
+              targetPosition = targetPosition - 1;
             }
             
-            // 3. 새 위치에 삽입
-            reorderedSegments.splice(insertIndex, 0, draggedSegment);
-            
-            // 4. 새로운 content 생성
-            const newContent = reorderedSegments.map(seg => seg.content).join('\n');
-            
-            console.log('📝 Content update:', {
-              originalLength: segments.length,
-              newLength: reorderedSegments.length,
-              newContent: newContent.substring(0, 100) + '...',
-              draggedContent: draggedSegment.content.substring(0, 50)
-            });
-            
-            // 5. 상태 업데이트
-            onChangeText(newContent);
-            
-            // 햅틱 피드백
-            // Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          } else {
-            console.log('🟠 Same position or invalid drop');
+            if (currentPosition !== targetPosition) {
+              console.log(`DROP: ${currentPosition} -> ${targetPosition}`);
+              
+              const newSegments = [...segments];
+              const [movedSegment] = newSegments.splice(draggedIndex, 1);
+              newSegments.splice(targetPosition, 0, movedSegment);
+              const newContent = newSegments.map(s => s.content).join('\n');
+              
+              // 상태 초기화 후 content 변경
+              setDropZoneIndex(null);
+              setDraggingSegmentId(null);
+              draggingSegmentIdRef.current = null;
+              dropZoneIndexRef.current = null;
+              dropZonePositionRef.current = 'before';
+              
+              onChangeText(newContent);
+            }
           }
-        } else {
-          console.log('❌ Drop conditions not met:', {
-            hasDropIndex: currentDropIndex !== null,
-            hasDraggedId: !!currentDraggedId
-          });
         }
         
-        // 부모 컴포넌트에 드래그 종료 알림
-        dragCallbacksRef.current.onDragEnd?.();
+        // 상태 정리
+        if (draggingSegmentIdRef.current) {
+          setDropZoneIndex(null);
+          setDraggingSegmentId(null);
+          draggingSegmentIdRef.current = null;
+          dropZoneIndexRef.current = null;
+          dropZonePositionRef.current = 'before';
+        }
         
-        // 상태 리셋
-        setDropZoneIndex(null);
-        setDraggingSegmentId(null);
+        dragCallbacksRef.current.onDragEnd?.();
       },
     });
     
@@ -495,11 +469,13 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
   };
 
   const renderSegment = useCallback((segment: ContentSegment, index: number) => {
-    const isDropZone = dropZoneIndex === index;
+    const isDropZoneBefore = dropZoneIndex === index && dropZonePosition === 'before';
+    const isDropZoneAfter = dropZoneIndex === index && dropZonePosition === 'after';
     const isDragging = draggingSegmentId === segment.id;
     
-    // 드롭존 렌더링 디버그
-    if (draggingSegmentId) {
+    // 드롭존 렌더링 상세 로그
+    if (draggingSegmentId && (isDropZoneBefore || isDropZoneAfter)) {
+      console.log(`RENDER DROP ZONE: Seg${index} ${isDropZoneBefore ? 'BEFORE' : 'AFTER'} (dropZoneIndex: ${dropZoneIndex}, dropZonePosition: ${dropZonePosition})`);
     }
     
     
@@ -509,12 +485,13 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       return (
         <View key={segment.id} style={{ position: 'relative' }}>
           {/* 드롭 존 표시 선 - before */}
-          {isDropZone && draggingSegmentId && draggingSegmentId !== segment.id && dropZonePosition === 'before' && (
+          {isDropZoneBefore && draggingSegmentId && (
             <View style={[
               styles.dropZoneLine,
               {
                 top: -2,
-                zIndex: 1000
+                zIndex: 1000,
+                backgroundColor: '#007AFF' // 하늘파랑
               }
             ]} />
           )}
@@ -523,25 +500,84 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             ref={(ref: View | null) => { segmentRefs.current[segment.id] = ref; }}
             style={[
               styles.imageBlock,
-              // 노션 스타일: 기존 이미지는 그대로 유지 (애니메이션 제거)
             ]}
             onLayout={(event) => {
               const layout = event.nativeEvent.layout;
               segmentLayouts.current[segment.id] = layout;
             }}
-            {...panResponder.panHandlers}
+            {...(draggingSegmentIdRef.current === segment.id ? panResponder.panHandlers : {})}
           >
             <TouchableOpacity
               onPress={() => handleImagePress(segment)}
-              activeOpacity={0.8}
+              onLongPress={() => {
+                if (draggingSegmentIdRef.current) return;
+                
+                console.log(`DRAG START: ${segment.id}`);
+                
+                setDraggingSegmentId(segment.id);
+                draggingSegmentIdRef.current = segment.id;
+                
+                Keyboard.dismiss();
+                setCurrentEditingSegment(null);
+                
+                dragCallbacksRef.current.onDragStart?.({ 
+                  imageUrl: segment.imageUrl!, 
+                  startPosition: { x: 0, y: 0 }
+                });
+                
+                setDropZonePosition('before');
+                setDropZoneIndex(index);
+                dropZonePositionRef.current = 'before';
+                dropZoneIndexRef.current = index;
+              }}
+              delayLongPress={400} // 0.4초로 단축
+              activeOpacity={0.6} // 더 명확한 시각적 피드백
               disabled={isDragging}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Image
                 source={{ uri: segment.imageUrl }}
-                style={styles.inlineImage}
+                style={[
+                  styles.inlineImage, 
+                  isDragging && { 
+                    opacity: 0.3, // 더 투명하게
+                    transform: [{ scale: 0.95 }] // 살짝 작게
+                  }
+                ]}
                 resizeMode="cover"
               />
+              
+              {/* 드래그 중일 때 오버레이 표시 */}
+              {isDragging && (
+                <View style={[
+                  styles.inlineImage,
+                  {
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                    borderWidth: 2,
+                    borderColor: '#007AFF',
+                    borderStyle: 'dashed',
+                    borderRadius: 8,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }
+                ]}>
+                  <Text style={{ 
+                    color: '#007AFF', 
+                    fontSize: 16, 
+                    fontWeight: '600',
+                    backgroundColor: 'white',
+                    paddingHorizontal: 8,
+                    paddingVertical: 4,
+                    borderRadius: 4,
+                    overflow: 'hidden'
+                  }}>
+                    드래그 중...
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
             
             {/* 이미지 삭제 버튼 */}
@@ -556,12 +592,13 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           </View>
           
           {/* 드롭 존 표시 선 - after */}
-          {isDropZone && draggingSegmentId && draggingSegmentId !== segment.id && dropZonePosition === 'after' && (
+          {isDropZoneAfter && draggingSegmentId && (
             <View style={[
               styles.dropZoneLine,
               {
                 bottom: -2,
-                zIndex: 1000
+                zIndex: 1000,
+                backgroundColor: '#007AFF' // 하늘파랑
               }
             ]} />
           )}
@@ -575,12 +612,13 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     return (
       <View key={segment.id} style={{ position: 'relative' }}>
         {/* before 드롭 존 표시 선 */}
-        {isDropZone && draggingSegmentId && dropZonePosition === 'before' && (
+        {isDropZoneBefore && draggingSegmentId && (
           <View style={[
             styles.dropZoneLine,
             {
               top: -2,
-              zIndex: 1000
+              zIndex: 1000,
+              backgroundColor: '#007AFF' // 하늘파랑
             }
           ]} />
         )}
@@ -643,12 +681,13 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         </View>
         
         {/* after 드롭 존 표시 선 */}
-        {isDropZone && draggingSegmentId && dropZonePosition === 'after' && (
+        {isDropZoneAfter && draggingSegmentId && (
           <View style={[
             styles.dropZoneLine,
             {
               bottom: -2,
-              zIndex: 1000
+              zIndex: 1000,
+              backgroundColor: '#007AFF' // 하늘파랑
             }
           ]} />
         )}
@@ -668,11 +707,32 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     placeholder,
   ]);
 
+  // 전체 에디터 영역에서 드롭존 처리
+  const globalPanResponder = PanResponder.create({
+    onStartShouldSetPanResponder: () => false,
+    onMoveShouldSetPanResponder: () => !!draggingSegmentIdRef.current, // 드래그 중일 때만 반응
+    onPanResponderMove: (evt) => {
+      if (!draggingSegmentIdRef.current) return;
+      
+      const relativeY = evt.nativeEvent.locationY;
+      findDropZone(relativeY);
+    },
+    onPanResponderRelease: () => {
+      // 드롭 로직은 개별 PanResponder에서 처리
+    },
+  });
+
   return (
-    <View style={[styles.container, style]}>
+    <View 
+      ref={containerRef}
+      style={[styles.container, style]}
+      {...globalPanResponder.panHandlers} // 전체 영역에서 드롭존 감지
+    >
       <View style={styles.editorScroll}>
         <View style={styles.content}>
           {segments.map((segment, index) => renderSegment(segment, index))}
+          
+          {/* 맨 마지막 드롭존 표시 - 이제 개별 세그먼트에서 처리됨 */}
         </View>
       </View>
       

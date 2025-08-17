@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, TouchableOpacity, Text } from 'react-native';
 import { useThemeColor } from '../../../shared/team/ThemeContext';
 import { SeasonSelector } from './SeasonSelector';
@@ -11,6 +11,7 @@ interface StatsTabHeaderProps {
   onTabChange: (tab: TabType) => void;
   selectedSeason: Season;
   onSeasonChange: (season: Season) => void;
+  userId?: number;
 }
 
 const statsTabs: { key: TabType; label: string }[] = [
@@ -23,14 +24,28 @@ export const StatsTabHeader: React.FC<StatsTabHeaderProps> = ({
   onTabChange,
   selectedSeason,
   onSeasonChange,
+  userId,
 }) => {
   const themeColor = useThemeColor();
+  const [isChanging, setIsChanging] = useState(false);
+
+  const handleTabChange = useCallback((tab: TabType) => {
+    if (isChanging || activeTab === tab) return;
+    
+    setIsChanging(true);
+    onTabChange(tab);
+    
+    // 디바운싱을 위한 짧은 지연
+    setTimeout(() => {
+      setIsChanging(false);
+    }, 150);
+  }, [activeTab, onTabChange, isChanging]);
 
   return (
     <View style={styles.container}>
       {/* Season Dropdown on the left */}
       <View style={styles.seasonContainer}>
-        <SeasonSelector selectedSeason={selectedSeason} onSeasonChange={onSeasonChange} />
+        <SeasonSelector selectedSeason={selectedSeason} onSeasonChange={onSeasonChange} userId={userId} />
       </View>
 
       {/* Stats Tabs on the right */}
@@ -49,7 +64,11 @@ export const StatsTabHeader: React.FC<StatsTabHeaderProps> = ({
                 elevation: 2,
               }
             ]}
-            onPress={() => onTabChange(tab.key)}
+            onPress={() => handleTabChange(tab.key)}
+            disabled={isChanging}
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 5, right: 5 }}
+            delayPressIn={0}
           >
             <Text
               style={[
