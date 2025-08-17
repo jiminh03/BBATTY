@@ -32,7 +32,8 @@ export const useCreatePost = () => {
 
 /* ================= 상세(서버우선 + 스토어 fallback) ================= */
 export const usePostDetailQuery = (postId: number | null, opts?: { refetchOnFocus?: boolean }) => {
-  const userId = useUserStore((s: any) => s.currentUser?.id ?? s.currentUser?.userId ?? null) ?? null;
+  const userId =
+    useUserStore((s: any) => s.currentUser?.id ?? s.currentUser?.userId ?? null) ?? null;
 
   // 렌더 중 set 금지: userId 바뀔 때만 세션 동기화
   useEffect(() => {
@@ -46,8 +47,8 @@ export const usePostDetailQuery = (postId: number | null, opts?: { refetchOnFocu
     queryFn: () => postApi.getPostById(postId!),
     enabled: postId !== null,
     select: (p) => {
+      // 좋아요 로컬/서버 합산
       const local = getLiked(postId!, userId);
-
       const serverLikedRaw =
         typeof (p as any).isLiked === 'boolean'
           ? (p as any).isLiked
@@ -56,10 +57,21 @@ export const usePostDetailQuery = (postId: number | null, opts?: { refetchOnFocu
           : typeof (p as any).liked === 'boolean'
           ? (p as any).liked
           : undefined;
+      const isLiked =
+        typeof local === 'boolean' ? local : typeof serverLikedRaw === 'boolean' ? serverLikedRaw : false;
 
-      const isLiked = typeof local === 'boolean' ? local : typeof serverLikedRaw === 'boolean' ? serverLikedRaw : false;
+      // 작성자 닉네임 안전 폴백(탈퇴 사용자 대응)
+      const safeAuthor =
+        p.authorNickname ??
+        (p as any).nickname ??
+        '탈퇴한 사용자';
 
-      return { ...p, isLiked, likes: p.likes ?? (p as any).likeCount ?? 0 } as Post;
+      return {
+        ...p,
+        authorNickname: safeAuthor,
+        isLiked,
+        likes: p.likes ?? (p as any).likeCount ?? 0,
+      } as Post;
     },
     refetchOnWindowFocus: opts?.refetchOnFocus ?? true,
     staleTime: 3000,
@@ -100,7 +112,9 @@ export const useUpdatePost = () => {
 function patchPost(post: any, postId: number, liked?: boolean, likeDelta?: number) {
   if (String(post?.id) !== String(postId)) return post;
 
-  const base = typeof post.likes === 'number' ? post.likes : typeof post.likeCount === 'number' ? post.likeCount : 0;
+  const base =
+    typeof post.likes === 'number' ? post.likes :
+    typeof post.likeCount === 'number' ? post.likeCount : 0;
 
   const nextLikes = typeof likeDelta === 'number' ? Math.max(0, base + likeDelta) : base;
 
@@ -201,7 +215,8 @@ export const usePostLikeActions = (
   }
 ) => {
   const qc = useQueryClient();
-  const userId = useUserStore((s: any) => s.currentUser?.id ?? s.currentUser?.userId ?? null) ?? null;
+  const userId =
+    useUserStore((s: any) => s.currentUser?.id ?? s.currentUser?.userId ?? null) ?? null;
 
   const teamId = options?.teamId;
   const keyword = options?.listKeyword;
@@ -407,7 +422,7 @@ export const useTeamNewsQuery = (teamId?: number, limit = 5) =>
     queryFn: () => postApi.getTeamNews(teamId!, limit),
   });
 
-  // ▼ 이미 있는 patchPost를 참고해서 댓글용 패처 추가
+/* ===== 댓글수 전파 ===== */
 function patchPostComments(post: any, postId: number, delta: number) {
   if (String(post?.id) !== String(postId)) return post;
 
@@ -428,7 +443,6 @@ function patchPostComments(post: any, postId: number, delta: number) {
   };
 }
 
-// ▼ 상세/목록/검색/내글 전체에 댓글수 반영
 export function syncCommentCountEverywhere(
   qc: ReturnType<typeof useQueryClient>,
   postId: number,
