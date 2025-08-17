@@ -221,9 +221,12 @@ export const postApi = {
     return acc.slice(0, limit);
   },
 
-  likePost(postId: number) {
-    return apiClient.post(`/api/posts/${postId}/like`);
+  // api.ts
+  async likePost(postId: number) {
+    const res = await apiClient.post(`/api/posts/${postId}/like`);
+    return res.data; // ✅ 여기서 data만 반환
   },
+
   unlikePost(postId: number) {
     return apiClient.delete(`/api/posts/${postId}/like`);
   },
