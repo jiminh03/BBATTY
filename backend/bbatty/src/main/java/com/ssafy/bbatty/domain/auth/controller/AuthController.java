@@ -135,6 +135,7 @@ public class AuthController {
      * - filename 파라미터로 업로드할 파일명 전송
      * - 응답으로 받은 uploadUrl로 PUT 요청하여 이미지 업로드
      * - fileUrl을 SignupRequest의 profileImageUrl에 포함하여 회원가입 요청
+     * - 해당 메서드는 토큰 필요 없음
      */
     @PostMapping("/profile/presigned-url")
     public ResponseEntity<ApiResponse<S3Service.PresignedUrlResponse>> generateProfilePresignedUrl(
