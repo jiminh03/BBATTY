@@ -410,6 +410,60 @@ public class UserServiceImpl implements UserService {
         return result;
     }
 
+
+    @Override
+    public Object getUserAttendanceYears(Long targetUserId, Long currentUserId) {
+        // 본인이 아니면 attendanceRecordsPublic 검증
+        if (!targetUserId.equals(currentUserId)) {
+            User user = findUserById(targetUserId);
+            if (!user.getAttendanceRecordsPublic()) {
+                throw new ApiException(ErrorCode.PRIVATE_CONTENT_ACCESS_DENIED);
+            }
+        }
+
+        // Redis에서 사용자 직관 년도 목록 조회
+        return getUserAttendanceYearsFromRedis(targetUserId);
+    }
+
+    /**
+     * Redis에서 사용자 직관 년도 목록 조회
+     */
+    private Object getUserAttendanceYearsFromRedis(Long userId) {
+        List<String> availableYears = new ArrayList<>();
+        int totalRecordsCount = 0;
+
+        // 2020년부터 현재 년도까지 Redis 키 존재 여부 확인
+        int currentYear = LocalDate.now().getYear();
+        for (int year = 2020; year <= currentYear; year++) {
+            String seasonKey = RedisKey.USER_ATTENDANCE_RECORDS + userId + ":" + year;
+
+            // Sorted Set에 데이터가 있는지 확인 (1개만 조회해서 존재 여부 확인)
+            Set<String> testRecords = redisUtil.reverseRange(seasonKey, 0, 0);
+            if (testRecords != null && !testRecords.isEmpty()) {
+                availableYears.add(String.valueOf(year));
+            }
+        }
+
+        // total 키 확인
+        String totalKey = RedisKey.USER_ATTENDANCE_RECORDS + userId + ":total";
+        Set<String> totalRecords = redisUtil.reverseRange(totalKey, 0, 0);
+        boolean hasTotal = totalRecords != null && !totalRecords.isEmpty();
+
+        // total 키가 있으면 전체 레코드 수 조회 (처음 100개만 확인)
+        if (hasTotal) {
+            Set<String> sampleRecords = redisUtil.reverseRange(totalKey, 0, 99);
+            totalRecordsCount = sampleRecords != null ? sampleRecords.size() : 0;
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("userId", userId);
+        result.put("availableYears", availableYears);
+        result.put("hasTotal", hasTotal);
+        result.put("sampleTotalRecords", totalRecordsCount);
+
+        return result;
+    }
+
     @Override
     public UserBadgeResponse getUserBadges(Long targetUserId, String season) {
         // 시즌 기본값 설정 (현재 연도)
