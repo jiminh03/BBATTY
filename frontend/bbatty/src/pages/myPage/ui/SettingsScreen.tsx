@@ -90,28 +90,6 @@ export default function SettingsScreen() {
     });
   };
 
-  const handleLogout = () => {
-    Alert.alert('로그아웃', '정말 로그아웃하시겠습니다?', [
-      { text: '취소', style: 'cancel' },
-      {
-        text: '로그아웃',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            // 토큰 및 사용자 데이터 삭제
-            await clearTokens();
-            await resetUser();
-            
-            console.log('로그아웃 완료 - 앱이 자동으로 로그인 화면으로 전환됩니다');
-          } catch (error) {
-            console.error('로그아웃 실패:', error);
-            Alert.alert('오류', '로그아웃 중 오류가 발생했습니다.');
-          }
-        },
-      },
-    ]);
-  };
-
   const handleDeleteAccount = () => {
     Alert.alert('회원탈퇴', '정말 탈퇴하시겠습니까? 이 작업은 되돌릴 수 없습니다.', [
       { text: '취소', style: 'cancel' },
@@ -124,12 +102,12 @@ export default function SettingsScreen() {
             if (isOk(result)) {
               await clearTokens();
               await resetUser();
-              
+
               console.log('회원탈퇴 완료 - 앱을 종료합니다');
-              
+
               // 탈퇴 성공 알림 후 앱 종료
               Alert.alert(
-                '회원탈퇴 완료', 
+                '회원탈퇴 완료',
                 '회원탈퇴가 완료되었습니다. 앱을 종료합니다.',
                 [
                   {
@@ -231,11 +209,6 @@ export default function SettingsScreen() {
       {/* 계정 관리 */}
       <View style={styles.sectionContainer}>
         <Text style={styles.sectionTitle}>계정 관리</Text>
-
-        <TouchableOpacity style={styles.dangerMenuItem} onPress={handleLogout}>
-          <Text style={styles.dangerMenuLabel}>로그아웃</Text>
-          <Ionicons name='log-out-outline' size={20} color='#F44336' />
-        </TouchableOpacity>
 
         <TouchableOpacity style={styles.dangerMenuItem} onPress={handleDeleteAccount}>
           <Text style={styles.dangerMenuLabel}>회원탈퇴</Text>

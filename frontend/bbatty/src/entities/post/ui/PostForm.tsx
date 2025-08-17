@@ -407,8 +407,8 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
             position: 'absolute',
             left: dragOverlayInfo.startPosition.x,
             top: dragOverlayInfo.startPosition.y,
-            width: 200,
-            height: 200,
+            width: 150,
+            height: 150,
             transform: [
               { translateX: dragOffsetX },
               { translateY: dragOffsetY },
@@ -427,8 +427,8 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
           <Image
             source={{ uri: dragOverlayInfo.imageUrl }}
             style={{
-              width: '100%',
-              height: '100%',
+              width: 150,
+              height: 150,
               borderRadius: 8,
               backgroundColor: '#F5F6F7',
             }}
