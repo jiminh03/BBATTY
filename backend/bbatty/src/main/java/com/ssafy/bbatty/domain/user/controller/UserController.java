@@ -104,6 +104,19 @@ public class UserController {
     }
 
     /**
+     * 사용자 직관 기록이 있는 년도 목록 조회
+     * userId가 없으면 본인 프로필, 있으면 해당 사용자 프로필 조회
+     */
+    @GetMapping("/attendance-years")
+    public ResponseEntity<ApiResponse<Object>> getUserAttendanceYears(
+            @RequestParam(required = false) Long userId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        Long targetUserId = (userId != null) ? userId : userPrincipal.getUserId();
+        Object response = userService.getUserAttendanceYears(targetUserId, userPrincipal.getUserId());
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+    
+    /**
      * 닉네임 중복 체크 (프로필 수정용)
      */
     @GetMapping("/check-nickname")

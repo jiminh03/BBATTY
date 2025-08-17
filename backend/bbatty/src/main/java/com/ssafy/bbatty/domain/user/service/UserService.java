@@ -27,6 +27,11 @@ public interface UserService {
     Object getUserAttendanceRecords(Long targetUserId, Long currentUserId, String season, Long cursor);
 
     /**
+     * 사용자 직관 기록이 있는 년도 목록 조회
+     */
+    Object getUserAttendanceYears(Long targetUserId, Long currentUserId);
+    
+    /**
      * 프로필 수정 (닉네임, 프로필 이미지, 자기소개)
      */
     UserResponseDto updateProfile(Long currentUserId, UserUpdateRequestDto request);
