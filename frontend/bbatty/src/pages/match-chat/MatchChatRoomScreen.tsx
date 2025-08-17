@@ -874,7 +874,7 @@ export const MatchChatRoomScreen = () => {
           </TouchableOpacity>
           <View style={styles.headerContent}>
             <Text style={[styles.headerTitle, { color: '#ffffff' }]}>
-              {isWatchChat ? '직관채팅' : room.matchTitle || '매치채팅'}
+              직관채팅
             </Text>
             {gameInfo && (
               <Text style={[styles.headerSubtitle, { color: '#ffffff' }]}>
@@ -922,55 +922,14 @@ export const MatchChatRoomScreen = () => {
                   styles.messageRow,
                   ((item as any)._isMyMessage || (item as any)._isPending) ? styles.myMessageRow : styles.otherMessageRow
                 ]}>
-                  {/* 프로필 사진 (내 메시지가 아닌 경우만) */}
-                  {!((item as any)._isMyMessage || (item as any)._isPending) && (
-                    <View style={styles.profileImageContainer}>
-                      {(() => {
-                        const message = item as MatchChatMessage;
-                        
-                        // 더미 URL이거나 유효하지 않은 URL인 경우 기본 아바타 표시
-                        const isValidUrl = message.profileImgUrl && 
-                                         !message.profileImgUrl.includes('example.com') && 
-                                         message.profileImgUrl.startsWith('http');
-                        
-                        if (isValidUrl) {
-                          return (
-                            <Image 
-                              source={{ uri: message.profileImgUrl }}
-                              style={styles.profileImage}
-                              onError={() => {}}
-                              onLoad={() => {}}
-                            />
-                          );
-                        } else {
-                          // 더미 URL 또는 유효하지 않은 URL, 기본 아바타 사용
-                          return (
-                            <View style={[styles.profileImage, { backgroundColor: '#E0E0E0', justifyContent: 'center', alignItems: 'center' }]}>
-                              <Text style={{ fontSize: 20, color: '#666' }}>👤</Text>
-                            </View>
-                          );
-                        }
-                      })()}
-                      {/* 승리요정인 경우 왕관 아이콘 */}
-                      {(item as MatchChatMessage).isWinFairy && (
-                        <View style={styles.crownIcon}>
-                          <Text style={styles.crownEmoji}>👑</Text>
-                        </View>
-                      )}
-                    </View>
-                  )}
+                  {/* 프로필 사진 숨김 - 임시 */}
                   
                   {/* 메시지 영역 */}
                   <View style={[
                     styles.messageBubbleContainer,
                     ((item as any)._isMyMessage || (item as any)._isPending) ? styles.myMessageBubbleContainer : styles.otherMessageBubbleContainer
                   ]}>
-                    {/* 닉네임 (내 메시지가 아닌 경우만) */}
-                    {!((item as any)._isMyMessage || (item as any)._isPending) && (
-                      <Text style={styles.messageNickname}>
-                        {(item as MatchChatMessage).nickname}
-                      </Text>
-                    )}
+                    {/* 닉네임 숨김 - 임시 */}
                     
                     {/* 말풍선과 시간을 담는 컨테이너 */}
                     <View style={[
