@@ -1,5 +1,5 @@
 // entities/comment/ui/CommentForm.tsx
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   TextInput,
@@ -7,66 +7,37 @@ import {
   Text,
   ViewStyle,
   TouchableOpacity,
-  Keyboard,
-  Platform,
-  Animated,
 } from 'react-native';
 import type { StyleProp } from 'react-native';
 import { useCreateComment, useCreateReply } from '../queries/useCommentQueries';
 import { useCommentStore } from '../model/store';
 
-export const FORM_MIN_HEIGHT = 56; // ↓ 낮춤
+export const FORM_MIN_HEIGHT = 56;
 
 type Props = {
   postId: number;
   style?: StyleProp<ViewStyle>;
-  teamColor?: string; // 팀 색상 prop
-  enabled?: boolean;  // ← 추가: 타팀이면 false로 내려 UI/동작 차단
+  teamColor?: string; 
+  enabled?: boolean;  
 };
 
 export const CommentForm: React.FC<Props> = ({
   postId,
   style,
   teamColor = '#000000ff',
-  enabled = true,            // ← 기본 true
+  enabled = true,
 }) => {
   const [content, setContent] = useState('');
   const [err, setErr] = useState('');
-  const [inputHeight, setInputHeight] = useState(40); // ↓ 기본 더 낮게
+  const [inputHeight, setInputHeight] = useState(40);
 
   const create = useCreateComment(postId);
   const { replyTarget, clearReplyTarget } = useCommentStore();
   const createReply = useCreateReply(postId, replyTarget?.id ?? 0);
 
-  // 안드로이드: 키보드 뜨면 폼도 같이 위로
-  const translateY = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    if (Platform.OS !== 'android') return;
-    const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
-      const h = e.endCoordinates?.height ?? 0;
-      Animated.timing(translateY, {
-        toValue: -h,
-        duration: 180,
-        useNativeDriver: true,
-      }).start();
-    });
-    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
-      Animated.timing(translateY, {
-        toValue: 0,
-        duration: 160,
-        useNativeDriver: true,
-      }).start();
-    });
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, [translateY]);
-
   const isSubmitting = create.isPending || createReply.isPending;
 
   const submit = () => {
-    // ← 호출 가드(혹시라도 버튼이 눌렸을 때)
     if (!enabled) return;
 
     const msg = content.trim();
@@ -77,7 +48,6 @@ export const CommentForm: React.FC<Props> = ({
       setContent('');
       setInputHeight(40);
       clearReplyTarget();
-      Keyboard.dismiss();
     };
 
     if (replyTarget?.id) {
@@ -93,11 +63,10 @@ export const CommentForm: React.FC<Props> = ({
     }
   };
 
-  // 🔒 타팀이면 폼 자체 비노출
   if (!enabled) return null;
 
   return (
-    <Animated.View style={[s.wrap, style, { transform: [{ translateY }] }]}>
+    <View style={[s.wrap, style]}>
       {replyTarget && (
         <View style={s.badgeRow}>
           <Text style={[s.badgeText, { color: teamColor }]}>
@@ -117,7 +86,7 @@ export const CommentForm: React.FC<Props> = ({
           style={[
             s.input,
             {
-              height: Math.min(120, Math.max(36, inputHeight)), // 36~120 사이로 자동
+              height: Math.min(120, Math.max(36, inputHeight)),
             },
           ]}
           placeholder={replyTarget ? '답글을 입력하세요' : '댓글을 입력하세요'}
@@ -146,7 +115,7 @@ export const CommentForm: React.FC<Props> = ({
       </View>
 
       {!!err && <Text style={s.error}>{err}</Text>}
-    </Animated.View>
+    </View>
   );
 };
 
