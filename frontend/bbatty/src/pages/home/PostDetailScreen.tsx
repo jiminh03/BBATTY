@@ -1,7 +1,3 @@
-// pages/post/PostDetailScreen.tsx
-// 상세 응답의 teamId를 우선 사용하고, 로딩 중엔 사용자 팀컬러로 안전하게 fallback.
-// ✅ 대댓글까지 createdAt 오름차순(최신이 맨 아래) 정렬 + 새로 달리면 자동 스크롤
-// ✅ 타팀 게시글: 헤더는 항상 보이고, 댓글 입력/답글 버튼/좋아요 완전 차단
 import React, {
   useLayoutEffect,
   useMemo,
@@ -40,6 +36,7 @@ import {
 import { useCommentStore } from '../../entities/comment/model/store';
 import { CommentEditForm } from '../../entities/comment/ui/commentEditForm';
 import { findTeamById } from '../../shared/team/teamTypes';
+import { useRem, useMinTouch } from '../../shared/ui/atoms/button/responsive';
 
 type Props = HomeStackScreenProps<'PostDetail'>;
 
@@ -57,7 +54,6 @@ type UComment = {
   replies?: any[];
 };
 
-/* ====== 정렬 유틸: createdAt(→updatedAt) 기준 오름차순, 없으면 id ====== */
 function timeOf(n: any): number {
   const t = n?.createdAt ?? n?.updatedAt ?? n?.created_at ?? n?.updated_at;
   const ts = t ? new Date(t).getTime() : NaN;
@@ -66,7 +62,6 @@ function timeOf(n: any): number {
   return Number.isFinite(idNum) ? idNum : 0;
 }
 
-/** 원본 데이터를 변이하지 않는 불변 정렬 */
 function sortTreeAsc(list: any[] | undefined | null): any[] {
   const arr = Array.isArray(list) ? [...list] : [];
   arr.sort((a, b) => timeOf(a) - timeOf(b));
@@ -78,12 +73,7 @@ function sortTreeAsc(list: any[] | undefined | null): any[] {
   });
 }
 
-/** ====== 트리 → 평탄화 (정렬된 트리를 depth 보존하며 아래로 확장) ====== */
-function expandNested(
-  list: any[],
-  depth = 0,
-  parentId: number | null = null
-): UComment[] {
+function expandNested(list: any[], depth = 0, parentId: number | null = null): UComment[] {
   if (!Array.isArray(list)) return [];
   return list.flatMap((c) => {
     const id = Number(c.id ?? c.commentId);
@@ -103,36 +93,29 @@ function expandNested(
 }
 
 export default function PostDetailScreen({ route, navigation }: Props) {
+  const rem = useRem();
+  const minTouch = useMinTouch();
   const postId = route.params.postId;
   const insets = useSafeAreaInsets();
 
-  const {
-    data: post,
-    isLoading,
-    isError,
-    error,
-  } = usePostDetailQuery(postId, { refetchOnFocus: true });
+  const { data: post, isLoading, isError, error } = usePostDetailQuery(postId, { refetchOnFocus: true });
 
-  // ✅ Zustand selector로 각각 구독 (getSnapshot 경고 방지)
   const myNickname = useUserStore((s) => s.currentUser?.nickname);
   const userTeamId = useUserStore((s) => s.currentUser?.teamId) ?? 0;
 
   const delPost = useDeletePostMutation();
 
-  // 팀ID: 상세 응답(teamId) → 라우트 파라미터(teamId) → 사용자 팀
   const rawTeamId = (post as any)?.teamId ?? route.params?.teamId ?? userTeamId ?? 0;
   const teamId = Number(rawTeamId) || 0;
   const teamColor = findTeamById(teamId)?.color ?? '#222222';
 
-  // 내 팀만 댓글/좋아요 가능 (상세가 로드되어 실제 teamId가 확정된 뒤에만 true)
   const canComment = !!post && teamId === userTeamId;
   const canLike = canComment;
 
-  // 좋아요 액션도 teamId로 캐시 전파
   const { toggle, isBusy } = usePostLikeActions(postId, {
-    teamId: teamId || undefined,
-    refetchAfterMs: 0,
-  });
+     teamId: teamId || undefined,
+     // refetchAfterMs: 0,
+   });
 
   const {
     data: cmtPages,
@@ -144,7 +127,6 @@ export default function PostDetailScreen({ route, navigation }: Props) {
   } = useCommentListQuery(postId, 10);
 
   const delComment = useDeleteComment(postId);
-  // ✅ selector 사용
   const editingCommentId    = useCommentStore((s) => s.editingCommentId);
   const setEditingCommentId = useCommentStore((s) => s.setEditingCommentId);
   const setReplyTarget      = useCommentStore((s) => s.setReplyTarget);
@@ -156,27 +138,19 @@ export default function PostDetailScreen({ route, navigation }: Props) {
   const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
 
-  // 원본 부모 목록
   const rawParents = useMemo(
     () => (cmtPages?.pages ?? []).flatMap((p: any) => p?.comments ?? []),
     [cmtPages]
   );
 
-  // ✅ 트리를 시간 오름차순으로 정렬(최신 아래) → 평탄화
   const sortedParents = useMemo(() => sortTreeAsc(rawParents), [rawParents]);
-  const flatComments = useMemo(
-    () => expandNested(sortedParents, 0, null),
-    [sortedParents]
-  );
+  const flatComments = useMemo(() => expandNested(sortedParents, 0, null), [sortedParents]);
 
-  // ✅ 새 댓글/대댓글이 추가되어 총 개수가 늘면 자동으로 맨 아래로 스크롤
   const prevCountRef = useRef<number>(0);
   useEffect(() => {
     const count = flatComments.length;
     if (count > prevCountRef.current) {
-      requestAnimationFrame(() =>
-        listRef.current?.scrollToEnd({ animated: true })
-      );
+      requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
     }
     prevCountRef.current = count;
   }, [flatComments.length]);
@@ -186,14 +160,21 @@ export default function PostDetailScreen({ route, navigation }: Props) {
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const headerTitle = post?.title ?? '게시글';
-  const isMinePost =
-    !!post && !!myNickname && post.authorNickname === myNickname;
+  const isMinePost = !!post && !!myNickname && post.authorNickname === myNickname;
+
+  const authorAvatarUrl =
+    (post as any)?.authorProfileUrl ??
+    (isMinePost
+      ? ((useUserStore.getState().currentUser as any)?.profileImageUrl ??
+        (useUserStore.getState().currentUser as any)?.profileUrl ??
+        (useUserStore.getState().currentUser as any)?.avatarUrl ??
+        undefined)
+      : undefined);
 
   const handleGoBack = useCallback(() => {
     navigation.goBack();
   }, [navigation]);
 
-  // 네비 헤더: 항상 노출 + 팀색 적용
   useLayoutEffect(() => {
     navigation.setOptions({
       headerShown: true,
@@ -201,29 +182,36 @@ export default function PostDetailScreen({ route, navigation }: Props) {
       headerTintColor: '#fff',
       headerTitleAlign: 'center',
       headerLeft: () => (
-        <Pressable onPress={handleGoBack} hitSlop={10} style={{ padding: 8, marginLeft: 8 }}>
-          <Text style={{ color: '#fff', fontSize: 18, fontWeight: '600' }}>←</Text>
+        <Pressable
+          onPress={handleGoBack}
+          hitSlop={8}
+          style={{ padding: Math.max(8, (minTouch - 32) / 2), marginLeft: 8 }}
+        >
+          <Text style={{ color: '#fff', fontSize: rem(1.125), fontWeight: '600' }}>←</Text>
         </Pressable>
       ),
       headerTitle: () => (
         <Text
           numberOfLines={1}
           ellipsizeMode="tail"
-          style={{ color: '#fff', fontWeight: '700', fontSize: 16, textAlign: 'center' }}
+          style={{ color: '#fff', fontWeight: '700', fontSize: rem(1), textAlign: 'center' }}
         >
           {headerTitle}
         </Text>
       ),
       headerRight: () =>
         isMinePost ? (
-          <Pressable onPress={() => setHeaderMenuOpen((v) => !v)} hitSlop={10} style={{ padding: 8 }}>
-            <Text style={{ color: '#fff', fontSize: 30 }}>☰</Text>
+          <Pressable
+            onPress={() => setHeaderMenuOpen((v) => !v)}
+            hitSlop={8}
+            style={{ padding: Math.max(8, (minTouch - 30) / 2), marginRight: 6 }}
+          >
+            <Text style={{ color: '#fff', fontSize: rem(1.5), lineHeight: rem(1.5) }}>☰</Text>
           </Pressable>
         ) : null,
     });
-  }, [navigation, teamColor, headerTitle, isMinePost, handleGoBack]);
+  }, [navigation, teamColor, headerTitle, isMinePost, handleGoBack, rem, minTouch]);
 
-  // 상태바 색상/스타일
   useEffect(() => {
     if (Platform.OS === 'android') {
       StatusBar.setBackgroundColor(teamColor);
@@ -231,7 +219,6 @@ export default function PostDetailScreen({ route, navigation }: Props) {
     StatusBar.setBarStyle('light-content');
   }, [teamColor]);
 
-  // 편집 대상이 삭제되면 편집 종료
   useEffect(() => {
     if (!editingCommentId) return;
     const t = flatComments.find((c) => String(c.id) === String(editingCommentId));
@@ -268,14 +255,13 @@ export default function PostDetailScreen({ route, navigation }: Props) {
   };
 
   const viewCount = post?.views ?? 0;
-  const likeCount = post?.likes ?? 0;
-  // ✅ 화면에서 보이는 댓글 개수 = 평탄화된 리스트 길이
+  const likeCount = (typeof post?.likes === 'number'
+    ? post?.likes
+    : (post as any)?.likeCount) ?? 0;
   const cmtCount = flatComments.length;
   const liked = !!post?.isLiked;
 
-  const images: string[] = Array.isArray(post?.images)
-    ? (post!.images as string[])
-    : [];
+  const images: string[] = Array.isArray(post?.images) ? (post!.images as string[]) : [];
 
   const Body =
     isLoading ? (
@@ -289,10 +275,7 @@ export default function PostDetailScreen({ route, navigation }: Props) {
     ) : (
       <View style={{ flex: 1, overflow: 'visible' }}>
         {headerMenuOpen && (
-          <View
-            pointerEvents="box-none"
-            style={{ position: 'absolute', top: -20, right: 8, zIndex: 9999 }}
-          >
+          <View pointerEvents="box-none" style={{ position: 'absolute', top: -20, right: 8, zIndex: 9999 }}>
             <View style={s.headerMenu}>
               {isMinePost ? (
                 <>
@@ -458,7 +441,11 @@ export default function PostDetailScreen({ route, navigation }: Props) {
           ListHeaderComponent={
             <View style={s.headerCard}>
               <View style={s.authorRow}>
-                <View style={s.avatar} />
+                {authorAvatarUrl ? (
+                  <Image source={{ uri: authorAvatarUrl }} style={s.avatar} />
+                ) : (
+                  <View style={s.avatar} />
+                )}
                 <View style={{ flex: 1 }}>
                   <Text style={s.authorName}>{post!.authorNickname}</Text>
                   <Text style={s.authorMeta}>
@@ -526,7 +513,6 @@ export default function PostDetailScreen({ route, navigation }: Props) {
             isFetchingNextPage ? <ActivityIndicator style={{ marginVertical: 12 }} /> : <View />
           }
           contentContainerStyle={{
-            // ✅ 타팀이면 폼 높이 제외
             paddingBottom: (canComment ? FORM_MIN_HEIGHT : 0) + insets.bottom + 12,
           }}
           removeClippedSubviews={false}
@@ -545,7 +531,6 @@ export default function PostDetailScreen({ route, navigation }: Props) {
           }}
         />
 
-        {/* ✅ 타팀이면 입력 폼 비노출 */}
         <CommentForm
           postId={postId}
           teamColor={teamColor}
