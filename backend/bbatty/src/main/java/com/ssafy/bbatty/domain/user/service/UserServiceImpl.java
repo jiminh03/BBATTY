@@ -430,7 +430,6 @@ public class UserServiceImpl implements UserService {
      */
     private Object getUserAttendanceYearsFromRedis(Long userId) {
         List<String> availableYears = new ArrayList<>();
-        int totalRecordsCount = 0;
 
         // 2020년부터 현재 년도까지 Redis 키 존재 여부 확인
         int currentYear = LocalDate.now().getYear();
@@ -444,24 +443,7 @@ public class UserServiceImpl implements UserService {
             }
         }
 
-        // total 키 확인
-        String totalKey = RedisKey.USER_ATTENDANCE_RECORDS + userId + ":total";
-        Set<String> totalRecords = redisUtil.reverseRange(totalKey, 0, 0);
-        boolean hasTotal = totalRecords != null && !totalRecords.isEmpty();
-
-        // total 키가 있으면 전체 레코드 수 조회 (처음 100개만 확인)
-        if (hasTotal) {
-            Set<String> sampleRecords = redisUtil.reverseRange(totalKey, 0, 99);
-            totalRecordsCount = sampleRecords != null ? sampleRecords.size() : 0;
-        }
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("userId", userId);
-        result.put("availableYears", availableYears);
-        result.put("hasTotal", hasTotal);
-        result.put("sampleTotalRecords", totalRecordsCount);
-
-        return result;
+        return availableYears;
     }
 
     @Override
