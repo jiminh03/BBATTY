@@ -530,26 +530,31 @@ export default function PostDetailScreen({ route, navigation }: Props) {
             );
           }}
         />
-
-        <CommentForm
-          postId={postId}
-          teamColor={teamColor}
-          enabled={canComment}
-          style={[s.footer, { paddingBottom: Math.max(12, insets.bottom) }]}
-        />
       </View>
     );
 
   return (
+  <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+    <StatusBar backgroundColor={teamColor} barStyle="light-content" />
+
     <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: '#fff' }}
+      style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
+      keyboardVerticalOffset={insets.top} // 헤더 높이 고려
     >
-      <StatusBar backgroundColor={teamColor} barStyle="light-content" />
-      <SafeAreaView style={{ flex: 1 }}>{Body}</SafeAreaView>
+      {/* 댓글 리스트 영역 */}
+      {Body}
+
+      {/* 댓글 입력창을 Footer가 아닌 화면 맨 아래 고정 */}
+      <CommentForm
+        postId={postId}
+        teamColor={teamColor}
+        enabled={canComment}
+        style={{ paddingBottom: insets.bottom }}
+      />
     </KeyboardAvoidingView>
-  );
+  </SafeAreaView>
+);
 }
 
 const s = StyleSheet.create({
@@ -568,11 +573,6 @@ const s = StyleSheet.create({
   likeCount: { fontSize: 13, color: '#222' },
   stats: { fontSize: 12, color: '#888' },
   section: { fontSize: 16, fontWeight: '700', marginTop: 12 },
-  footer: {
-    position: 'absolute',
-    left: 0, right: 0, bottom: 0,
-    borderTopWidth: 1, borderColor: '#eee', backgroundColor: '#fff',
-  },
   menu: {
     position: 'absolute', top: -40, right: 8,
     backgroundColor: '#fff', borderRadius: 10,

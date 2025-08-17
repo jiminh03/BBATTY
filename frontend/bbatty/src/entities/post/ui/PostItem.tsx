@@ -1,4 +1,3 @@
-// entities/post/ui/PostItem.tsx
 import React, { memo, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -9,16 +8,20 @@ type AnyPost = {
   title?: string;
   nickname?: string;
   createdAt?: string;
+
   // 정규화 필드
   likes?: number;
   likeCount?: number;
   isLiked?: boolean;
   likedByMe?: boolean;
   liked?: boolean;
+
   commentCount?: number;
   commentsCount?: number;
+
   viewCount?: number;
   views?: number;
+
   teamId?: number;
 };
 
@@ -35,12 +38,20 @@ function PostItemBase({ post, teamId, onPress }: Props) {
     if (onPress) onPress();
     else {
       const teamIdParam =
-        typeof post.teamId === 'number' ? post.teamId : (typeof teamId === 'number' ? teamId : undefined);
-      navigation.navigate('PostDetail', { postId: Number(post.id), teamId: teamIdParam });
+        typeof post.teamId === 'number'
+          ? post.teamId
+          : typeof teamId === 'number'
+          ? teamId
+          : undefined;
+
+      navigation.navigate('PostDetail', {
+        postId: Number(post.id),
+        teamId: teamIdParam,
+      });
     }
   };
 
-  // ✅ 표시는 항상 아이템의 정규화 필드를 신뢰 (스토어/다른 캐시 직접 접근 금지)
+  // ✅ 정규화 필드 사용
   const liked =
     typeof post.isLiked === 'boolean'
       ? post.isLiked
@@ -57,10 +68,10 @@ function PostItemBase({ post, teamId, onPress }: Props) {
 
   const commentCount =
     typeof post.commentCount === 'number'
-    ? post.commentCount
-    : typeof post.commentsCount === 'number'
-    ? post.commentsCount
-    : (post as any).commentCnt ?? 0;   // ← 추가
+      ? post.commentCount
+      : typeof post.commentsCount === 'number'
+      ? post.commentsCount
+      : (post as any).commentCnt ?? 0;
 
   const views =
     typeof post.views === 'number'
@@ -87,7 +98,6 @@ function PostItemBase({ post, teamId, onPress }: Props) {
           <Text style={s.title} numberOfLines={1}>
             {post.title ?? `#${post.id}`}
           </Text>
-
           <View style={s.metaRow}>
             {!!post.nickname && <Text style={s.meta}>{post.nickname}</Text>}
             {!!post.nickname && <Text style={s.dot}>·</Text>}
@@ -110,13 +120,15 @@ export const PostItem = memo(
   PostItemBase,
   (prev, next) =>
     String(prev.post.id) === String(next.post.id) &&
-    (prev.post.likes ?? prev.post.likeCount) === (next.post.likes ?? next.post.likeCount) &&
+    (prev.post.likes ?? prev.post.likeCount) ===
+      (next.post.likes ?? next.post.likeCount) &&
     (prev.post.isLiked ?? prev.post.likedByMe ?? prev.post.liked) ===
       (next.post.isLiked ?? next.post.likedByMe ?? next.post.liked) &&
-    (prev.post.viewCount ?? prev.post.views) === (next.post.viewCount ?? next.post.views) &&
+    (prev.post.viewCount ?? prev.post.views) ===
+      (next.post.viewCount ?? next.post.views) &&
     (prev.post.commentCount ?? prev.post.commentsCount) ===
       (next.post.commentCount ?? next.post.commentsCount) &&
-    prev.teamId === next.teamId
+    prev.teamId === next.teamId,
 );
 
 const s = StyleSheet.create({
