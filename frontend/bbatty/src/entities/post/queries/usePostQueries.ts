@@ -258,16 +258,19 @@ export const usePostLikeActions = (
   }, [qc, postId]);
 
   /** 공통 낙관 반영 */
-  const applyOptimistic = (liked: boolean, likeDelta: number) => {
+  const applyOptimistic = (liked: boolean) => {
     setLikedStore(postId, liked, userId);
     qc.setQueryData<Post>(detailKey, (old) => {
       if (!old) return old as any;
-      const base =
-        typeof old.likes === 'number' ? old.likes : ((old as any).likeCount as number) ?? 0;
-      const next = Math.max(0, base + likeDelta);
-      return { ...(old as any), isLiked: liked, likes: next } as Post;
+      return {
+        ...(old as any),
+        isLiked: liked,
+        likedByMe: liked,
+        liked,
+      } as Post;
     });
-    syncLikeEverywhere(qc, postId, { liked, likeDelta, teamId, userId, keyword });
+    // 리스트에도 liked 플래그만 반영(카운트는 서버 결과로만)
+    syncLikeEverywhere(qc, postId, { liked, likeDelta: undefined, teamId, userId, keyword });
   };
 
   /** 현재 캐시 liked/likes 읽기 */
@@ -311,15 +314,11 @@ export const usePostLikeActions = (
         inFlightRef.current = false;
 
         // 사용자가 여전히 서버와 다른 상태를 원하면, 다시 "조용해질 때" 보내도록 디바운스 재시작
-        if (timerRef.current) clearTimeout(timerRef.current);
-        timerRef.current = setTimeout(() => {
-          timerRef.current = null;
-          flush();
-        }, DEBOUNCE_MS);
-
-        // 최종 상태가 맞춰졌다면 짧게 재검증해 카운트 드리프트 제거
-        if (REFETCH_AFTER > 0) {
-          setTimeout(() => qc.invalidateQueries({ queryKey: detailKey }), REFETCH_AFTER);
+        qc.invalidateQueries({ queryKey: detailKey });
+        if (typeof teamId === 'number') {
+          qc.invalidateQueries({ queryKey: ['posts', teamId] });
+          qc.invalidateQueries({ queryKey: ['popularPostsAll', teamId] });
+          qc.invalidateQueries({ queryKey: ['popularPostsPreview', teamId] });
         }
       });
   }, [postId, qc, DEBOUNCE_MS, REFETCH_AFTER]);
@@ -345,10 +344,9 @@ export const usePostLikeActions = (
     const currLiked = (typeof storeLiked === 'boolean' ? storeLiked : cacheLiked) ?? false;
 
     const nextLiked = !currLiked;
-    const likeDelta = nextLiked ? +1 : -1;
 
     // 1) 즉시 UI 업데이트
-    applyOptimistic(nextLiked, likeDelta);
+    applyOptimistic(nextLiked);
 
     // 2) 목표값 업데이트
     desiredLikedRef.current = nextLiked;
