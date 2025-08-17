@@ -1,8 +1,7 @@
 // pages/post/PostDetailScreen.tsx
 // 상세 응답의 teamId를 우선 사용하고, 로딩 중엔 사용자 팀컬러로 안전하게 fallback.
 // ✅ 대댓글까지 createdAt 오름차순(최신이 맨 아래) 정렬 + 새로 달리면 자동 스크롤
-// ✅ 타팀 게시글: 헤더는 항상 보이고, 댓글 입력/답글 버튼 완전 차단
-
+// ✅ 타팀 게시글: 헤더는 항상 보이고, 댓글 입력/답글 버튼/좋아요 완전 차단
 import React, {
   useLayoutEffect,
   useMemo,
@@ -114,6 +113,7 @@ export default function PostDetailScreen({ route, navigation }: Props) {
     error,
   } = usePostDetailQuery(postId, { refetchOnFocus: true });
 
+  // ✅ Zustand selector로 각각 구독 (getSnapshot 경고 방지)
   const myNickname = useUserStore((s) => s.currentUser?.nickname);
   const userTeamId = useUserStore((s) => s.currentUser?.teamId) ?? 0;
 
@@ -124,10 +124,9 @@ export default function PostDetailScreen({ route, navigation }: Props) {
   const teamId = Number(rawTeamId) || 0;
   const teamColor = findTeamById(teamId)?.color ?? '#222222';
 
-  // 내 팀만 댓글 가능 (상세가 로드되어 실제 teamId가 확정된 뒤에만 true)
+  // 내 팀만 댓글/좋아요 가능 (상세가 로드되어 실제 teamId가 확정된 뒤에만 true)
   const canComment = !!post && teamId === userTeamId;
-  const canLike = canComment; // 내 팀일 때만 좋아요 가능
-
+  const canLike = canComment;
 
   // 좋아요 액션도 teamId로 캐시 전파
   const { toggle, isBusy } = usePostLikeActions(postId, {
@@ -145,14 +144,15 @@ export default function PostDetailScreen({ route, navigation }: Props) {
   } = useCommentListQuery(postId, 10);
 
   const delComment = useDeleteComment(postId);
-  const { editingCommentId, setEditingCommentId, setReplyTarget } =
-    useCommentStore();
+  // ✅ selector 사용
+  const editingCommentId    = useCommentStore((s) => s.editingCommentId);
+  const setEditingCommentId = useCommentStore((s) => s.setEditingCommentId);
+  const setReplyTarget      = useCommentStore((s) => s.setReplyTarget);
+
   const listRef = useRef<FlatList<UComment>>(null);
 
   const [locallyDeleted, setLocallyDeleted] = useState<Set<number>>(new Set());
-  const [preDeleteUpdatedAt, setPreDeleteUpdatedAt] = useState<
-    Map<number, string>
-  >(new Map());
+  const [preDeleteUpdatedAt, setPreDeleteUpdatedAt] = useState<Map<number, string>>(new Map());
   const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
 
@@ -269,7 +269,8 @@ export default function PostDetailScreen({ route, navigation }: Props) {
 
   const viewCount = post?.views ?? 0;
   const likeCount = post?.likes ?? 0;
-  const cmtCount = post?.commentCount ?? 0;
+  // ✅ 화면에서 보이는 댓글 개수 = 평탄화된 리스트 길이
+  const cmtCount = flatComments.length;
   const liked = !!post?.isLiked;
 
   const images: string[] = Array.isArray(post?.images)
@@ -290,7 +291,7 @@ export default function PostDetailScreen({ route, navigation }: Props) {
         {headerMenuOpen && (
           <View
             pointerEvents="box-none"
-            style={{ position: 'absolute', top:-20, right: 8, zIndex: 9999 }}
+            style={{ position: 'absolute', top: -20, right: 8, zIndex: 9999 }}
           >
             <View style={s.headerMenu}>
               {isMinePost ? (
@@ -491,29 +492,29 @@ export default function PostDetailScreen({ route, navigation }: Props) {
                 </ScrollView>
               )}
 
-               <View style={s.statsRow}>
-               {canLike ? (
-                 <Pressable
-                   onPress={() => { if (isBusy) return; toggle(); }}  // 클릭 가드
-                   disabled={isBusy}
-                   hitSlop={10}
-                   style={s.likeBtn}
-                 >
-                   <Text style={s.likeIcon}>{liked ? '❤️' : '🤍'}</Text>
-                   <Text style={s.likeCount}>{likeCount}</Text>
-                 </Pressable>
-               ) : (
-                 // 🔒 타팀: 비활성 표시(회색/투명도) + 클릭 안됨
-                 <View style={[s.likeBtn, { opacity: 0.4 }]}>
-                   <Text style={s.likeIcon}>🤍</Text>
-                   <Text style={s.likeCount}>{likeCount}</Text>
-                 </View>
-               )}
-               <View style={{ width: 12 }} />
-               <Text style={s.stats}>💬 {cmtCount}</Text>
-             </View>
-
-              {/* <Text style={s.section}>댓글</Text> */}
+              <View style={s.statsRow}>
+                {canLike ? (
+                  <Pressable
+                    onPress={() => {
+                      if (isBusy) return;
+                      toggle();
+                    }}
+                    disabled={isBusy}
+                    hitSlop={10}
+                    style={s.likeBtn}
+                  >
+                    <Text style={s.likeIcon}>{liked ? '❤️' : '🤍'}</Text>
+                    <Text style={s.likeCount}>{likeCount}</Text>
+                  </Pressable>
+                ) : (
+                  <View style={[s.likeBtn, { opacity: 0.4 }]}>
+                    <Text style={s.likeIcon}>🤍</Text>
+                    <Text style={s.likeCount}>{likeCount}</Text>
+                  </View>
+                )}
+                <View style={{ width: 12 }} />
+                <Text style={s.stats}>💬 {cmtCount}</Text>
+              </View>
             </View>
           }
           ListEmptyComponent={
