@@ -130,9 +130,9 @@ export default function TeamHeaderCard({
       </View>
 
       <Pressable
-        style={s.chat}                            // 🔥 투명도(Opacity) 제거 — 항상 진한 흰색
-        onPress={onPressChat}
-        disabled={isLoading || !enabledNow}       // 비활성 조건만 걸어줌(모양은 동일)
+        style={[s.chat, !enabledNow && { opacity: 0.6 }]}
+  onPress={onPressChat}
+  disabled={isLoading || !enabledNow}     // 비활성 조건만 걸어줌(모양은 동일)
       >
         <Text style={s.chatTxt}>{getChatButtonText()}</Text>
       </Pressable>

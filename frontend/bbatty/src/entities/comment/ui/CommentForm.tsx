@@ -21,12 +21,14 @@ type Props = {
   postId: number;
   style?: StyleProp<ViewStyle>;
   teamColor?: string; // 팀 색상 prop
+  enabled?: boolean;  // ← 추가: 타팀이면 false로 내려 UI/동작 차단
 };
 
 export const CommentForm: React.FC<Props> = ({
   postId,
   style,
   teamColor = '#000000ff',
+  enabled = true,            // ← 기본 true
 }) => {
   const [content, setContent] = useState('');
   const [err, setErr] = useState('');
@@ -64,6 +66,9 @@ export const CommentForm: React.FC<Props> = ({
   const isSubmitting = create.isPending || createReply.isPending;
 
   const submit = () => {
+    // ← 호출 가드(혹시라도 버튼이 눌렸을 때)
+    if (!enabled) return;
+
     const msg = content.trim();
     if (!msg) return setErr('내용을 입력해주세요.');
     setErr('');
@@ -87,6 +92,9 @@ export const CommentForm: React.FC<Props> = ({
       });
     }
   };
+
+  // 🔒 타팀이면 폼 자체 비노출
+  if (!enabled) return null;
 
   return (
     <Animated.View style={[s.wrap, style, { transform: [{ translateY }] }]}>

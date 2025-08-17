@@ -133,9 +133,7 @@ export default function TeamCommunityScreen({ navigation, route }: Props) {
           renderItem={({ item }) => (
             <PostItem
               post={item}
-              onPress={() =>
-                navigation.navigate('PostDetail', { postId: item.id })
-              }
+              teamId={selectedTeamId}
             />
           )}
           onEndReachedThreshold={0.35}

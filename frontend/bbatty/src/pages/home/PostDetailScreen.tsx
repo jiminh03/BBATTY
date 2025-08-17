@@ -1,6 +1,7 @@
 // pages/post/PostDetailScreen.tsx
 // 상세 응답의 teamId를 우선 사용하고, 로딩 중엔 사용자 팀컬러로 안전하게 fallback.
 // ✅ 대댓글까지 createdAt 오름차순(최신이 맨 아래) 정렬 + 새로 달리면 자동 스크롤
+// ✅ 타팀 게시글: 헤더는 항상 보이고, 댓글 입력/답글 버튼 완전 차단
 
 import React, {
   useLayoutEffect,
@@ -70,7 +71,6 @@ function timeOf(n: any): number {
 function sortTreeAsc(list: any[] | undefined | null): any[] {
   const arr = Array.isArray(list) ? [...list] : [];
   arr.sort((a, b) => timeOf(a) - timeOf(b));
-  // 각 노드를 얕은 복제로 만들고, 자식도 재귀적으로 정렬한 복제로 교체
   return arr.map((node) => {
     const replies = Array.isArray((node as any).replies)
       ? sortTreeAsc((node as any).replies)
@@ -119,10 +119,15 @@ export default function PostDetailScreen({ route, navigation }: Props) {
 
   const delPost = useDeletePostMutation();
 
-  // 팀ID: 상세 응답(teamId) 우선, 없으면 사용자 팀으로 fallback
-  const rawTeamId = (post as any)?.teamId ?? userTeamId ?? 0;
+  // 팀ID: 상세 응답(teamId) → 라우트 파라미터(teamId) → 사용자 팀
+  const rawTeamId = (post as any)?.teamId ?? route.params?.teamId ?? userTeamId ?? 0;
   const teamId = Number(rawTeamId) || 0;
   const teamColor = findTeamById(teamId)?.color ?? '#222222';
+
+  // 내 팀만 댓글 가능 (상세가 로드되어 실제 teamId가 확정된 뒤에만 true)
+  const canComment = !!post && teamId === userTeamId;
+  const canLike = canComment; // 내 팀일 때만 좋아요 가능
+
 
   // 좋아요 액션도 teamId로 캐시 전파
   const { toggle, isBusy } = usePostLikeActions(postId, {
@@ -188,9 +193,10 @@ export default function PostDetailScreen({ route, navigation }: Props) {
     navigation.goBack();
   }, [navigation]);
 
-  // 네비 헤더 팀색
+  // 네비 헤더: 항상 노출 + 팀색 적용
   useLayoutEffect(() => {
     navigation.setOptions({
+      headerShown: true,
       headerStyle: { backgroundColor: teamColor },
       headerTintColor: '#fff',
       headerTitleAlign: 'center',
@@ -414,7 +420,7 @@ export default function PostDetailScreen({ route, navigation }: Props) {
                     </View>
 
                     <View style={{ marginTop: 8 }}>
-                      {isTopLevel && (
+                      {isTopLevel && canComment && (
                         <Pressable
                           onPress={onReply}
                           style={{
@@ -485,16 +491,29 @@ export default function PostDetailScreen({ route, navigation }: Props) {
                 </ScrollView>
               )}
 
-              <View style={s.statsRow}>
-                <Pressable onPress={toggle} disabled={isBusy} hitSlop={10} style={s.likeBtn}>
-                  <Text style={s.likeIcon}>{liked ? '❤️' : '🤍'}</Text>
-                  <Text style={s.likeCount}>{likeCount}</Text>
-                </Pressable>
-                <View style={{ width: 12 }} />
-                <Text style={s.stats}>💬 {cmtCount}</Text>
-              </View>
+               <View style={s.statsRow}>
+               {canLike ? (
+                 <Pressable
+                   onPress={() => { if (isBusy) return; toggle(); }}  // 클릭 가드
+                   disabled={isBusy}
+                   hitSlop={10}
+                   style={s.likeBtn}
+                 >
+                   <Text style={s.likeIcon}>{liked ? '❤️' : '🤍'}</Text>
+                   <Text style={s.likeCount}>{likeCount}</Text>
+                 </Pressable>
+               ) : (
+                 // 🔒 타팀: 비활성 표시(회색/투명도) + 클릭 안됨
+                 <View style={[s.likeBtn, { opacity: 0.4 }]}>
+                   <Text style={s.likeIcon}>🤍</Text>
+                   <Text style={s.likeCount}>{likeCount}</Text>
+                 </View>
+               )}
+               <View style={{ width: 12 }} />
+               <Text style={s.stats}>💬 {cmtCount}</Text>
+             </View>
 
-              <Text style={s.section}>댓글</Text>
+              {/* <Text style={s.section}>댓글</Text> */}
             </View>
           }
           ListEmptyComponent={
@@ -503,7 +522,9 @@ export default function PostDetailScreen({ route, navigation }: Props) {
             ) : cError ? (
               <Text style={{ margin: 16 }}>댓글을 불러오는 데 실패했습니다.</Text>
             ) : (
-              <Text style={{ margin: 16, color: '#777' }}>첫 댓글을 남겨보세요.</Text>
+              <Text style={{ margin: 16, color: '#777' }}>
+                {canComment ? '첫 댓글을 남겨보세요.' : '댓글이 없습니다.'}
+              </Text>
             )
           }
           onEndReachedThreshold={0.4}
@@ -512,7 +533,8 @@ export default function PostDetailScreen({ route, navigation }: Props) {
             isFetchingNextPage ? <ActivityIndicator style={{ marginVertical: 12 }} /> : <View />
           }
           contentContainerStyle={{
-            paddingBottom: FORM_MIN_HEIGHT + insets.bottom + 12, // ✅ 폼 높이와 동기화
+            // ✅ 타팀이면 폼 높이 제외
+            paddingBottom: (canComment ? FORM_MIN_HEIGHT : 0) + insets.bottom + 12,
           }}
           removeClippedSubviews={false}
           keyboardShouldPersistTaps="handled"
@@ -530,9 +552,11 @@ export default function PostDetailScreen({ route, navigation }: Props) {
           }}
         />
 
+        {/* ✅ 타팀이면 입력 폼 비노출 */}
         <CommentForm
           postId={postId}
-          teamColor={teamColor} // ✅ 버튼/뱃지 팀색
+          teamColor={teamColor}
+          enabled={canComment}
           style={[s.footer, { paddingBottom: Math.max(12, insets.bottom) }]}
         />
       </View>
