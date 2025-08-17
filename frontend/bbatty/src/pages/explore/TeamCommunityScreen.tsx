@@ -80,6 +80,16 @@ export default function TeamCommunityScreen({ navigation, route }: Props) {
     [listQ.data]
   );
 
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    try {
+      setRefreshing(true);
+      await listQ.refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const TeamPicker = () => (
     <View style={styles.teamPickerWrap}>
       <ScrollView
@@ -116,7 +126,7 @@ export default function TeamCommunityScreen({ navigation, route }: Props) {
     </View>
   );
 
-  return (
+   return (
     <View style={styles.container}>
       <TeamPicker />
 
@@ -149,6 +159,8 @@ export default function TeamCommunityScreen({ navigation, route }: Props) {
               : null
           }
           contentContainerStyle={{ paddingBottom: 16 }}
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
         />
       )}
     </View>
