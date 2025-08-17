@@ -100,9 +100,6 @@ export default function SettingsScreen() {
           try {
             const result = await authApi.deleteAccount();
             if (isOk(result)) {
-              await clearTokens();
-              await resetUser();
-
               console.log('회원탈퇴 완료 - 앱을 종료합니다');
 
               // 탈퇴 성공 알림 후 앱 종료
@@ -112,7 +109,10 @@ export default function SettingsScreen() {
                 [
                   {
                     text: '확인',
-                    onPress: () => {
+                    onPress: async () => {
+                      // 앱 종료 전에 토큰과 사용자 정보 초기화
+                      await clearTokens();
+                      await resetUser();
                       // 앱 종료
                       BackHandler.exitApp();
                     },

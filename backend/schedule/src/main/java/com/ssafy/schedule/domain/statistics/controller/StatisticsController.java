@@ -38,9 +38,9 @@ public class StatisticsController {
         List<Map<String, Object>> results = new ArrayList<>();
         
         try {
-            // 더미데이터에 있는 모든 사용자 ID들 (1번부터 137번까지)
+            // 더미데이터에 있는 모든 사용자 ID들 (1번부터 144번까지)
             List<Long> userIds = new ArrayList<>();
-            for (long i = 1L; i <= 139L; i++) {
+            for (long i = 1L; i <= 144L; i++) {
                 userIds.add(i);
             }
             
@@ -61,17 +61,27 @@ public class StatisticsController {
                         continue;
                     }
                     
-                    // 기본 통계 계산
+                    // 기본 통계 계산 (시즌별)
                     UserBasicStatsResponse basicStats = statisticsService.calculateUserBasicStats(
                             userId, season, teamId);
                     
-                    // 상세 통계 계산
+                    // 상세 통계 계산 (시즌별)
                     UserDetailedStatsResponse detailedStats = statisticsService.calculateUserDetailedStats(
                             userId, season, teamId);
                     
-                    // 연승 통계 계산
+                    // 연승 통계 계산 (시즌별)
                     UserStreakStatsResponse streakStats = statisticsService.calculateUserStreakStats(
                             userId, season, teamId);
+                    
+                    // 통산 통계도 함께 계산 (total)
+                    UserBasicStatsResponse totalBasicStats = statisticsService.calculateUserBasicStats(
+                            userId, "total", teamId);
+                    
+                    UserDetailedStatsResponse totalDetailedStats = statisticsService.calculateUserDetailedStats(
+                            userId, "total", teamId);
+                    
+                    UserStreakStatsResponse totalStreakStats = statisticsService.calculateUserStreakStats(
+                            userId, "total", teamId);
                     
                     Map<String, Object> userResult = new HashMap<>();
                     userResult.put("userId", userId);
@@ -150,7 +160,7 @@ public class StatisticsController {
                                 .winRate(basicStats.getWinRate())
                                 .build();
                     })
-                    .filter(ranking -> ranking.getTotalGames() >= 10) // 최소 5경기 이상만 랭킹 포함
+                    .filter(ranking -> ranking.getTotalGames() >= 10) // 최소 10경기 이상만 랭킹 포함
                     .sorted((r1, r2) -> {
                         // 승률로 내림차순 정렬, 동일하면 총 경기수로 내림차순
                         double winRate1 = Double.parseDouble(r1.getWinRate());

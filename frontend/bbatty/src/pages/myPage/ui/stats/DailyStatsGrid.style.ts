@@ -2,60 +2,67 @@ import { StyleSheet } from 'react-native';
 
 export const styles = StyleSheet.create({
   container: {
-    position: 'relative',
+    flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 20,
     marginBottom: 12,
   },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333333',
-    marginBottom: 4,
+  calendarGrid: {
+    marginTop: 16,
+    paddingBottom: 0,
   },
-  subtitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333333',
-    marginBottom: 2,
-  },
-  description: {
-    fontSize: 12,
-    color: '#666666',
-    marginBottom: 20,
-  },
-  grid: {
-    gap: 16,
-  },
-  row: {
+  calendarRow: {
     flexDirection: 'row',
-    gap: 16,
+    marginBottom: 12,
   },
-  statCard: {
+  lastRow: {
+    marginBottom: 0,
+  },
+  calendarCell: {
     flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 100,
+    marginHorizontal: 6,
+    minHeight: 120,
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    borderWidth: 1,
-    borderColor: '#F0F0F0',
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    overflow: 'hidden',
   },
-  statValue: {
-    fontSize: 32,
+  calendarHeader: {
+    paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  calendarBody: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+  },
+  dayLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  winRate: {
+    fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 8,
+    marginBottom: 6,
   },
-  statLabel: {
+  matches: {
     fontSize: 12,
     color: '#666666',
-    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  recordText: {
+    fontSize: 10,
+    color: '#888888',
+    textAlign: 'center',
   },
 });

@@ -24,10 +24,10 @@ public class RedisKey {
     // STATS 도메인 - 모든 통계 데이터 통합
     // ===========================================
     
-    /** 사용자 기본 승률 캐시: stats:user:winrate:{user_id} */
+    /** 사용자 기본 승률 캐시: stats:user:winrate:{user_id}:{season} */
     public static final String STATS_USER_WINRATE = "stats:user:winrate:";
     
-    /** 사용자 연승 통계 (현재/최장/시즌별): stats:user:streak:{user_id} */
+    /** 사용자 연승 통계 (현재/최장/시즌별): stats:user:streak:{user_id}:{season} */
     public static final String STATS_USER_STREAK = "stats:user:streak:";
     
     /** 사용자 상세 통계: stats:user:detailed:{user_id}:{season} (Hash) */

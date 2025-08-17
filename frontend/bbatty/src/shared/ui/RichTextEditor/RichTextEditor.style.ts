@@ -115,15 +115,17 @@ export const styles = StyleSheet.create({
     position: 'absolute',
     left: -12,
     right: -12,
-    height: 3,
+    height: 4, // 조금 더 두껍게
     backgroundColor: '#007AFF',
-    borderRadius: 1.5,
+    borderRadius: 2,
     shadowColor: '#007AFF',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.4,
-    shadowRadius: 3,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.6, // 그림자 더 진하게
+    shadowRadius: 4,
+    elevation: 8, // 안드로이드 그림자 더 진하게
     zIndex: 1000,
+    // 애니메이션 효과
+    opacity: 0.9,
   },
 
   dropZoneLineInside: {

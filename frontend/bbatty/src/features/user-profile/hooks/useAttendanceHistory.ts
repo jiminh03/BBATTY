@@ -38,6 +38,8 @@ export const useAttendanceHistory = (userId?: number, season: Season = 'total') 
               gameId: response.records[0].gameId,
               teams: `${response.records[0].homeTeam} vs ${response.records[0].awayTeam}`,
               date: response.records[0].dateTime,
+              homeScore: response.records[0].homeScore,
+              awayScore: response.records[0].awayScore,
             }
           : null,
       });

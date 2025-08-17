@@ -386,7 +386,7 @@ public class UserServiceImpl implements UserService {
         List<Object> parsedRecords = records.stream()
             .map(recordJson -> {
                 try {
-                    return objectMapper.readValue(recordJson, Object.class);
+                    return objectMapper.readValue(recordJson, Map.class);
                 } catch (Exception e) {
                     log.warn("직관 기록 JSON 파싱 실패: {}", recordJson);
                     return recordJson; // 파싱 실패 시 원본 문자열 반환
@@ -408,6 +408,42 @@ public class UserServiceImpl implements UserService {
         }
 
         return result;
+    }
+
+
+    @Override
+    public Object getUserAttendanceYears(Long targetUserId, Long currentUserId) {
+        // 본인이 아니면 attendanceRecordsPublic 검증
+        if (!targetUserId.equals(currentUserId)) {
+            User user = findUserById(targetUserId);
+            if (!user.getAttendanceRecordsPublic()) {
+                throw new ApiException(ErrorCode.PRIVATE_CONTENT_ACCESS_DENIED);
+            }
+        }
+
+        // Redis에서 사용자 직관 년도 목록 조회
+        return getUserAttendanceYearsFromRedis(targetUserId);
+    }
+
+    /**
+     * Redis에서 사용자 직관 년도 목록 조회
+     */
+    private Object getUserAttendanceYearsFromRedis(Long userId) {
+        List<String> availableYears = new ArrayList<>();
+
+        // 2020년부터 현재 년도까지 Redis 키 존재 여부 확인
+        int currentYear = LocalDate.now().getYear();
+        for (int year = 2020; year <= currentYear; year++) {
+            String seasonKey = RedisKey.USER_ATTENDANCE_RECORDS + userId + ":" + year;
+
+            // Sorted Set에 데이터가 있는지 확인 (1개만 조회해서 존재 여부 확인)
+            Set<String> testRecords = redisUtil.reverseRange(seasonKey, 0, 0);
+            if (testRecords != null && !testRecords.isEmpty()) {
+                availableYears.add(String.valueOf(year));
+            }
+        }
+
+        return availableYears;
     }
 
     @Override

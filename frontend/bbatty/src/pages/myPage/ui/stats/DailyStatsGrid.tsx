@@ -1,20 +1,17 @@
 import React from 'react';
-import { View, Text } from 'react-native';
-import { StreakStats } from '../../../../features/user-profile/model/statsTypes';
+import { View, Text, ScrollView } from 'react-native';
+import { DayOfWeekStatsItem, StreakStats } from '../../../../features/user-profile/model/statsTypes';
 import { useThemeColor } from '../../../../shared/team/ThemeContext';
-import { Format } from '../../../../shared';
 import { WinRateStatsHeader } from './WinRateStatsHeader';
 import { styles } from './DailyStatsGrid.style';
 
-interface DayStats {
-  dayName: string;
-  matches: number;
-  wins: number;
-  winRate: number;
+interface DayStatsWithRecord extends DayOfWeekStatsItem {
+  draws: number;
+  losses: number;
 }
 
-interface DailyStatsGrid {
-  dayStats: DayStats[];
+interface DailyStatsGridProps {
+  dayStats: DayStatsWithRecord[];
   totalGames?: number;
   winRate?: string;
   wins?: number;
@@ -23,40 +20,42 @@ interface DailyStatsGrid {
   streakStats?: StreakStats;
 }
 
-export const DetailedStatsGrid: React.FC<DailyStatsGrid> = ({ 
+export const DetailedStatsGrid: React.FC<DailyStatsGridProps> = ({
   dayStats,
   totalGames = 0,
   winRate = '0',
   wins = 0,
   draws = 0,
   losses = 0,
-  streakStats
+  streakStats,
 }) => {
   const themeColor = useThemeColor();
 
-  // API 응답에서 올 수 있는 영어 요일명을 한국어로 매핑
+  // 영어 요일명을 한글로 매핑
   const dayMapping: Record<string, string> = {
-    'MONDAY': '월',
-    'TUESDAY': '화', 
+    'TUESDAY': '화',
     'WEDNESDAY': '수',
     'THURSDAY': '목',
     'FRIDAY': '금',
     'SATURDAY': '토',
     'SUNDAY': '일',
-    // 한국어도 지원
-    '월': '월', '화': '화', '수': '수', '목': '목', '금': '금', '토': '토', '일': '일'
   };
 
-  const weekdays = ['월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
-  const topRowDays = weekdays.slice(0, 3);
-  const bottomRowDays = weekdays.slice(3);
+  // 요일 순서 정의 (화수목금토일)
+  const weekdays = ['TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
+  const topRowDays = weekdays.slice(0, 3); // 화, 수, 목
+  const bottomRowDays = weekdays.slice(3); // 금, 토, 일
 
-  const getDayStats = (dayLabel: string) => {
-    const dayKey = dayLabel.replace('요일', '');
-    return dayStats.find((d) => {
-      const mappedDay = dayMapping[d.dayName] || d.dayName;
-      return mappedDay === dayKey;
-    });
+  const getDayStats = (dayKey: string) => {
+    const dayData = dayStats.find((stat) => stat.dayName === dayKey);
+    return {
+      dayName: dayMapping[dayKey],
+      matches: dayData?.matches || 0,
+      wins: dayData?.wins || 0,
+      draws: dayData?.draws || 0,
+      losses: dayData?.losses || 0,
+      winRate: dayData?.winRate || 0,
+    };
   };
 
   return (
@@ -69,30 +68,44 @@ export const DetailedStatsGrid: React.FC<DailyStatsGrid> = ({
         streakStats={streakStats}
       />
 
-      <View style={styles.grid}>
-        <View style={styles.row}>
-          {topRowDays.map((dayLabel) => {
-            const stats = getDayStats(dayLabel);
-            const winRate = stats ? Format.percent.basic(stats.wins, stats.matches) : 0;
-
+      <View style={styles.calendarGrid}>
+        {/* 첫 번째 행: 화, 수, 목 */}
+        <View style={styles.calendarRow}>
+          {topRowDays.map((dayKey) => {
+            const stats = getDayStats(dayKey);
+            
             return (
-              <View key={dayLabel} style={styles.statCard}>
-                <Text style={[styles.statValue, { color: themeColor }]}>{winRate}%</Text>
-                <Text style={styles.statLabel}>{dayLabel}</Text>
+              <View key={dayKey} style={styles.calendarCell}>
+                <View style={[styles.calendarHeader, { backgroundColor: themeColor }]}>
+                  <Text style={styles.dayLabel}>{stats.dayName}</Text>
+                </View>
+                <View style={styles.calendarBody}>
+                  <Text style={[styles.winRate, { color: themeColor }]}>{stats.winRate}%</Text>
+                  <Text style={styles.recordText}>
+                    ({stats.wins}/{stats.draws}/{stats.losses})
+                  </Text>
+                </View>
               </View>
             );
           })}
         </View>
 
-        <View style={styles.row}>
-          {bottomRowDays.map((dayLabel) => {
-            const stats = getDayStats(dayLabel);
-            const winRate = stats ? Format.percent.basic(stats.wins, stats.matches) : 0;
-
+        {/* 두 번째 행: 금, 토, 일 */}
+        <View style={[styles.calendarRow, styles.lastRow]}>
+          {bottomRowDays.map((dayKey) => {
+            const stats = getDayStats(dayKey);
+            
             return (
-              <View key={dayLabel} style={styles.statCard}>
-                <Text style={[styles.statValue, { color: themeColor }]}>{winRate}%</Text>
-                <Text style={styles.statLabel}>{dayLabel}</Text>
+              <View key={dayKey} style={styles.calendarCell}>
+                <View style={[styles.calendarHeader, { backgroundColor: themeColor }]}>
+                  <Text style={styles.dayLabel}>{stats.dayName}</Text>
+                </View>
+                <View style={styles.calendarBody}>
+                  <Text style={[styles.winRate, { color: themeColor }]}>{stats.winRate}%</Text>
+                  <Text style={styles.recordText}>
+                    ({stats.wins}/{stats.draws}/{stats.losses})
+                  </Text>
+                </View>
               </View>
             );
           })}

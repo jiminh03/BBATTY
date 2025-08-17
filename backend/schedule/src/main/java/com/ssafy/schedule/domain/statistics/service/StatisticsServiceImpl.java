@@ -125,29 +125,54 @@ public class StatisticsServiceImpl implements StatisticsService {
     private List<AttendanceRecord> getAttendanceRecords(Long userId, String season, Long teamId) {
         List<AttendanceRecord> records = new ArrayList<>();
 
-        // Redis 키 구성 (시즌별 또는 통산)
-        String redisKey = RedisKey.USER_ATTENDANCE_RECORDS + userId + ":" + season;
-
-        // Redis에서 직관 기록 조회 (Sorted Set - 최신순)
-        Set<Object> attendanceRecords = redisTemplate.opsForZSet().reverseRange(redisKey, 0, -1);
-
-        if (attendanceRecords == null || attendanceRecords.isEmpty()) {
-            log.info("Redis에서 직관 기록 없음: userId={}, season={}", userId, season);
-            return records;
-        }
-
-        log.info("Redis에서 직관 기록 조회: userId={}, season={}, count={}", userId, season, attendanceRecords.size());
-
-        // JSON 레코드들을 AttendanceRecord로 변환
-        for (Object recordObj : attendanceRecords) {
-            try {
-                String recordJson = String.valueOf(recordObj);
-                AttendanceRecord record = attendanceRecordParser.parseAttendanceRecord(recordJson, userId, teamId);
-                if (record != null) {
-                    records.add(record);
+        if ("total".equals(season)) {
+            // total인 경우 모든 시즌의 데이터를 합쳐서 조회
+            Set<String> allKeys = redisTemplate.keys(RedisKey.USER_ATTENDANCE_RECORDS + userId + ":*");
+            if (allKeys != null) {
+                for (String key : allKeys) {
+                    // total 키는 제외하고 실제 시즌 키들만 처리
+                    if (!key.endsWith(":total")) {
+                        Set<Object> seasonRecords = redisTemplate.opsForZSet().reverseRange(key, 0, -1);
+                        if (seasonRecords != null) {
+                            for (Object recordObj : seasonRecords) {
+                                try {
+                                    String recordJson = String.valueOf(recordObj);
+                                    AttendanceRecord record = attendanceRecordParser.parseAttendanceRecord(recordJson, userId, teamId);
+                                    if (record != null) {
+                                        records.add(record);
+                                    }
+                                } catch (Exception e) {
+                                    log.warn("직관 기록 파싱 실패: userId={}, record={}", userId, recordObj, e);
+                                }
+                            }
+                        }
+                    }
                 }
-            } catch (Exception e) {
-                log.warn("직관 기록 파싱 실패: userId={}, record={}", userId, recordObj, e);
+            }
+            log.info("Redis에서 통산 직관 기록 조회: userId={}, count={}", userId, records.size());
+        } else {
+            // 특정 시즌인 경우 해당 시즌 키로만 조회
+            String redisKey = RedisKey.USER_ATTENDANCE_RECORDS + userId + ":" + season;
+            Set<Object> attendanceRecords = redisTemplate.opsForZSet().reverseRange(redisKey, 0, -1);
+
+            if (attendanceRecords == null || attendanceRecords.isEmpty()) {
+                log.info("Redis에서 직관 기록 없음: userId={}, season={}", userId, season);
+                return records;
+            }
+
+            log.info("Redis에서 직관 기록 조회: userId={}, season={}, count={}", userId, season, attendanceRecords.size());
+
+            // JSON 레코드들을 AttendanceRecord로 변환
+            for (Object recordObj : attendanceRecords) {
+                try {
+                    String recordJson = String.valueOf(recordObj);
+                    AttendanceRecord record = attendanceRecordParser.parseAttendanceRecord(recordJson, userId, teamId);
+                    if (record != null) {
+                        records.add(record);
+                    }
+                } catch (Exception e) {
+                    log.warn("직관 기록 파싱 실패: userId={}, record={}", userId, recordObj, e);
+                }
             }
         }
 

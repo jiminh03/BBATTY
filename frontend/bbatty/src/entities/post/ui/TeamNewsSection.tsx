@@ -15,6 +15,8 @@ import {
 } from 'react-native';
 import { useTeamNewsQuery } from '../../post/queries/usePostQueries';
 import { useNavigation } from '@react-navigation/native';
+import { useWindowDimensions } from 'react-native';
+import { useRem } from '../../../shared/ui/atoms/button/responsive';
 
 const { width } = Dimensions.get('window');
 const H_GAP = 12;
@@ -41,9 +43,14 @@ export default function TeamNewsSection({
   showHeader = true,
   style,
 }: Props) {
+  const rem = useRem();
+  const { width } = useWindowDimensions();
   const nav = useNavigation<any>();
   const q = useTeamNewsQuery(teamId);
-
+  const ITEM_W = Math.round(
+    Math.min(320, Math.max(260, width * (width < 360 ? 0.78 : width < 420 ? 0.7 : 0.62)))
+  );
+  const H_GAP = Math.round(rem(0.75));
   const openItem = (item: any) => {
     if (item?.postId) {
       nav.navigate('HomeStack', { screen: 'PostDetail', params: { postId: item.postId } });
@@ -79,9 +86,9 @@ export default function TeamNewsSection({
     );
   }
 
-  return (
+   return (
     <View style={[s.section, style, { overflow: 'visible' }]}>
-      {showHeader && <Text style={[s.title, { color: titleColor }]}>팀 최신 뉴스</Text>}
+      {showHeader && <Text style={[s.title, { color: titleColor, fontSize: rem(1.125) }]}>팀 최신 뉴스</Text>}
 
       <FlatList
         data={q.data}
@@ -92,11 +99,7 @@ export default function TeamNewsSection({
         decelerationRate="fast"
         style={{ overflow: 'visible' }}
         removeClippedSubviews={false}
-        contentContainerStyle={{
-          paddingVertical: 8,
-          paddingLeft: 6,
-          paddingRight: 28,
-        }}
+        contentContainerStyle={{ paddingVertical: rem(0.5), paddingLeft: rem(0.375), paddingRight: rem(1.75) }}
         ItemSeparatorComponent={() => <View style={{ width: H_GAP }} />}
         renderItem={({ item }) => (
           <TouchableOpacity
@@ -105,14 +108,24 @@ export default function TeamNewsSection({
             onPress={() => openItem(item)}
           >
             {!!item.thumbnailUrl && (
-              <Image source={{ uri: item.thumbnailUrl }} style={s.thumb} resizeMode="cover" />
+              <Image
+                source={{ uri: item.thumbnailUrl }}
+                style={{ width: '100%', aspectRatio: 16 / 9, backgroundColor: '#E9ECEF' }} // 고정 비율
+                resizeMode="cover"
+              />
             )}
-            <View style={s.meta}>
-              <Text style={s.cardTitle}>{item.title}</Text>
-              {!!item.summary && <Text style={s.summary}>{item.summary}</Text>}
-              <View style={s.row}>
-                {!!item.source && <Text style={s.source}>{item.source}</Text>}
-                {!!item.publishedAt && <Text style={s.time}> · {fmt(item.publishedAt)}</Text>}
+            <View style={{ paddingHorizontal: rem(0.75), paddingVertical: rem(0.625) }}>
+              <Text style={{ fontSize: rem(0.8), fontWeight: '700', color: '#111' }} numberOfLines={2} adjustsFontSizeToFit>
+                {item.title}
+              </Text>
+              {!!item.summary && (
+                <Text style={{ marginTop: rem(0.375), fontSize: rem(0.6), color: '#444', lineHeight: rem(1.05) }} numberOfLines={3}>
+                  {item.summary}
+                </Text>
+              )}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: rem(0.5) }}>
+                {!!item.source && <Text style={{ fontSize: rem(0.75), color: '#888' }}>{item.source}</Text>}
+                {!!item.publishedAt && <Text style={{ fontSize: rem(0.75), color: '#888' }}> · {fmt(item.publishedAt)}</Text>}
               </View>
             </View>
           </TouchableOpacity>

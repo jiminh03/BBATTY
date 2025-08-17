@@ -69,9 +69,17 @@ const showErrorToUser = (processedError: ProcessedError): void => {
   // 사용자에게 보여주지 않을 에러들
   const silentErrors: ErrorCode[] = [
     ErrorCodes.AUTH_TOKEN_EXPIRED, // 자동으로 로그인 페이지로 이동
+    ErrorCodes.USER_NOT_FOUND, // 로그인 시 신규 사용자는 정상 플로우
   ];
 
+  // 로그인 API에서 USER_NOT_FOUND는 신규 사용자를 의미하므로 silent 처리
   if (silentErrors.includes(processedError.code)) {
+    return;
+  }
+
+  // DATA_NOT_FOUND도 로그인 엔드포인트에서는 silent 처리
+  if (processedError.code === ErrorCodes.DATA_NOT_FOUND && 
+      processedError.url?.includes('/api/auth/login')) {
     return;
   }
 
