@@ -386,7 +386,7 @@ public class UserServiceImpl implements UserService {
         List<Object> parsedRecords = records.stream()
             .map(recordJson -> {
                 try {
-                    return objectMapper.readValue(recordJson, Object.class);
+                    return objectMapper.readValue(recordJson, Map.class);
                 } catch (Exception e) {
                     log.warn("직관 기록 JSON 파싱 실패: {}", recordJson);
                     return recordJson; // 파싱 실패 시 원본 문자열 반환
