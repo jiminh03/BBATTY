@@ -206,13 +206,16 @@ public class AttendanceDataMigrationUtil {
      */
     private String createGameRecord(Game game) {
         return String.format(
-                "{\"gameId\":%d,\"homeTeam\":\"%s\",\"awayTeam\":\"%s\",\"dateTime\":\"%s\",\"stadium\":\"%s\",\"status\":\"%s\"}",
+                "{\"gameId\":%d,\"homeTeam\":\"%s\",\"awayTeam\":\"%s\",\"dateTime\":\"%s\",\"stadium\":\"%s\",\"status\":\"%s\",\"homeScore\":%s,\"awayScore\":%s,\"result\":\"%s\"}",
                 game.getId(),
                 game.getHomeTeam().getName(),
                 game.getAwayTeam().getName(),
                 game.getDateTime().toString(),
                 game.getStadium(),
-                game.getStatus().name()
+                game.getStatus().name(),
+                game.getHomeScore() != null ? game.getHomeScore() : "null",
+                game.getAwayScore() != null ? game.getAwayScore() : "null",
+                game.getResult() != null ? game.getResult().name() : "null"
         );
     }
 }
