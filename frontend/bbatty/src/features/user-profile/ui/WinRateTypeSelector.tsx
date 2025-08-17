@@ -13,7 +13,7 @@ interface WinRateTypeSelectorProps {
 }
 
 const winRateTypes = [
-  { key: 'summary' as WinRateType, label: '홈' },
+  { key: 'summary' as WinRateType, label: '홈/원정' },
   { key: 'opponent' as WinRateType, label: '팀별' },
   { key: 'stadium' as WinRateType, label: '구장별' },
   { key: 'dayOfWeek' as WinRateType, label: '요일별' },
@@ -41,10 +41,14 @@ export const WinRateTypeSelector: React.FC<WinRateTypeSelectorProps> = ({ select
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setIsOpen(false)}>
           <View style={styles.modalContent}>
             <ScrollView>
-              {winRateTypes.map((type) => (
+              {winRateTypes.map((type, index) => (
                 <TouchableOpacity
                   key={type.key}
-                  style={[styles.option, selectedType === type.key && { backgroundColor: `${themeColor}15` }]}
+                  style={[
+                    styles.option, 
+                    selectedType === type.key && { backgroundColor: `${themeColor}15` },
+                    index === winRateTypes.length - 1 && styles.lastOption
+                  ]}
                   onPress={() => handleSelect(type.key)}
                 >
                   <Text

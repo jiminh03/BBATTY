@@ -4,6 +4,8 @@ import { AttendanceRecord } from '../../../features/user-profile/model/statsType
 import { useAttendanceHistory } from '../../../features/user-profile/hooks/useAttendanceHistory';
 import { Season } from '../../../shared/utils/date';
 import { useThemeColor } from '../../../shared/team/ThemeContext';
+import { useUserStore } from '../../../entities/user/model/userStore';
+import { nameToServerTeamId } from '../../../shared/team/teamIdMap';
 import { styles } from './AttendanceHistory.style';
 
 interface AttendanceHistoryProps {
@@ -14,6 +16,12 @@ interface AttendanceHistoryProps {
 
 export const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ userId, season = 'total', onRecordPress }) => {
   const themeColor = useThemeColor();
+  const currentUser = useUserStore((s) => s.currentUser);
+  const userTeamId = currentUser?.teamId;
+
+  // season이 유효하지 않으면 'total'로 기본값 설정
+  const validSeason = season || 'total';
+
   const {
     data: records,
     isLoading,
@@ -22,10 +30,15 @@ export const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ userId, se
     fetchNextPage,
     refresh,
     isError,
-  } = useAttendanceHistory(userId, season);
+  } = useAttendanceHistory(userId, validSeason);
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return `${date.getMonth() + 1}.${String(date.getDate()).padStart(2, '0')}`;
+  };
+
+  const getShortTeamName = (fullTeamName: string) => {
+    // 띄어쓰기 앞의 핵심 이름만 추출
+    return fullTeamName.split(' ')[0];
   };
 
   const getStatusText = (status: string) => {
@@ -54,30 +67,102 @@ export const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ userId, se
     }
   };
 
-  const renderRecord = ({ item }: { item: AttendanceRecord }) => (
-    <TouchableOpacity style={styles.recordItem} onPress={() => onRecordPress?.(item)} activeOpacity={0.7}>
-      {/* 중앙 매치 정보 */}
-      <View style={styles.matchInfo}>
-        <Text style={styles.teams}>
-          {item.homeTeam} vs {item.awayTeam}
-        </Text>
-        <Text style={styles.date}>{formatDate(item.dateTime)}</Text>
-        <Text style={styles.stadium}>{item.stadium}</Text>
-      </View>
+  const renderRecord = ({ item }: { item: AttendanceRecord }) => {
+    // 팀 ID 매핑
+    const homeTeamId = nameToServerTeamId(item.homeTeam);
+    const awayTeamId = nameToServerTeamId(item.awayTeam);
 
-      {/* 게임 상태 배지 */}
-      <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-        <Text style={styles.statusText}>{getStatusText(item.status)}</Text>
-      </View>
-    </TouchableOpacity>
-  );
+    // 사용자 팀 확인
+    const isUserHomeTeam = userTeamId === homeTeamId;
+    const isUserAwayTeam = userTeamId === awayTeamId;
+
+    // 게임 결과 확인 (스코어가 있을 때만)
+    const hasScores =
+      item.homeScore !== null &&
+      item.homeScore !== undefined &&
+      item.awayScore !== null &&
+      item.awayScore !== undefined;
+
+    let gameResult: 'win' | 'lose' | 'draw' | 'none' = 'none';
+    if (hasScores && (isUserHomeTeam || isUserAwayTeam)) {
+      if (item.homeScore === item.awayScore) {
+        gameResult = 'draw';
+      } else if (isUserHomeTeam) {
+        gameResult = item.homeScore! > item.awayScore! ? 'win' : 'lose';
+      } else {
+        gameResult = item.awayScore! > item.homeScore! ? 'win' : 'lose';
+      }
+    }
+
+    // 스코어 색상 결정
+    const getScoreColor = (isUserTeamScore: boolean, isOtherTeamScore: boolean) => {
+      if (!hasScores || (!isUserHomeTeam && !isUserAwayTeam)) {
+        // 스코어가 없거나 사용자 팀이 참여하지 않은 경우
+        return isUserTeamScore ? themeColor : '#CCCCCC';
+      }
+
+      switch (gameResult) {
+        case 'win':
+          // 사용자 팀이 이긴 경우
+          return isUserTeamScore ? themeColor : '#CCCCCC';
+        case 'lose':
+          // 사용자 팀이 진 경우
+          return isUserTeamScore ? '#999999' : '#666666';
+        case 'draw':
+          // 비긴 경우 - 둘 다 회색
+          return '#999999';
+        default:
+          return isUserTeamScore ? themeColor : '#CCCCCC';
+      }
+    };
+
+    // 홈팀이 오른쪽에 오도록 배치
+    const leftTeam = item.awayTeam;
+    const rightTeam = item.homeTeam;
+    const leftScore = item.awayScore;
+    const rightScore = item.homeScore;
+
+    const leftScoreColor = getScoreColor(isUserAwayTeam, isUserHomeTeam);
+    const rightScoreColor = getScoreColor(isUserHomeTeam, isUserAwayTeam);
+
+    // 팀명 단축
+    const shortLeftTeam = getShortTeamName(leftTeam);
+    const shortRightTeam = getShortTeamName(rightTeam);
+
+    return (
+      <TouchableOpacity style={styles.recordItem} onPress={() => onRecordPress?.(item)} activeOpacity={0.7}>
+        {/* 왼쪽 스코어 (awayTeam) */}
+        <View style={styles.scoreSection}>
+          <Text style={[styles.scoreNumber, { color: leftScoreColor }]}>
+            {leftScore !== null && leftScore !== undefined ? leftScore : '-'}
+          </Text>
+        </View>
+
+        {/* 중앙 매치 정보 */}
+        <View style={styles.matchInfo}>
+          <Text style={styles.teams}>
+            {shortLeftTeam} vs {shortRightTeam}
+          </Text>
+          <Text style={styles.date}>{formatDate(item.dateTime)}</Text>
+          <Text style={styles.stadium}>{item.stadium}</Text>
+        </View>
+
+        {/* 오른쪽 스코어 (homeTeam) */}
+        <View style={styles.scoreSection}>
+          <Text style={[styles.scoreNumber, { color: rightScoreColor }]}>
+            {rightScore !== null && rightScore !== undefined ? rightScore : '-'}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const renderFooter = () => {
     if (!isFetchingNextPage) return null;
-    
+
     return (
       <View style={styles.footerLoader}>
-        <ActivityIndicator size="small" color={themeColor} />
+        <ActivityIndicator size='small' color={themeColor} />
         <Text style={styles.footerText}>더 불러오는 중...</Text>
       </View>
     );
@@ -92,7 +177,7 @@ export const AttendanceHistory: React.FC<AttendanceHistoryProps> = ({ userId, se
   if (isLoading) {
     return (
       <View style={[styles.container, styles.centerContent]}>
-        <ActivityIndicator size="large" color={themeColor} />
+        <ActivityIndicator size='large' color={themeColor} />
         <Text style={styles.loadingText}>직관 기록을 불러오는 중...</Text>
       </View>
     );

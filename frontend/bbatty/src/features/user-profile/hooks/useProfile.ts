@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { profileApi } from '../api/profileApi';
 import { UserPrivacySettings, UpdateProfileRequest } from '../model/profileTypes';
 import { Season } from '../../../shared';
-import { StatsType } from '../model/statsTypes';
+import { StatsType, StreakStats } from '../model/statsTypes';
 import { QueryKeys, QueryInvalidator } from '../../../shared/api/lib/tanstack/queryKeyTypes';
 import { isOk } from '../../../shared/utils/result';
 import { statsApi } from '../api/statsApi';
@@ -79,17 +79,19 @@ export const useUserBadges = (userId?: number, season?: Season) => {
 };
 
 // 기본 승률 조회
-export const useBasicStats = (userId?: number, season?: Season) => {
+export const useBasicStats = (userId?: number) => {
+  const currentYear = new Date().getFullYear().toString(); // 현재 년도 동적 추출
+
   const params = {
     type: 'basic' as const,
     ...(userId && { userId }),
-    ...(season && { season }),
+    season: currentYear,
   };
 
   return useQuery({
     queryKey: QueryKeys.stats(PROFILE_ENTITY, 'basic', params),
     queryFn: async () => {
-      const result = await statsApi.getBasicStats(userId, season);
+      const result = await statsApi.getBasicStats(userId, currentYear);
       if (isOk(result)) {
         return result.data;
       }
@@ -116,7 +118,7 @@ export const useDetailedStats = <T = any>(
     queryKey: QueryKeys.stats(PROFILE_ENTITY, type, params),
     queryFn: async () => {
       console.log('승률통계 : ', type, userId, season);
-      const result = await statsApi.getDetailedStats<T>(type, userId, '2525');
+      const result = await statsApi.getDetailedStats<T>(type, userId, season);
       if (isOk(result)) {
         console.log('승률 result : ', result);
         return result.data;
@@ -146,24 +148,28 @@ export const useDayOfWeekStats = (userId?: number, season?: Season) => {
 };
 
 export const useStreakStats = (userId?: number, season?: Season) => {
-  return useDetailedStats<{
-    userId: number;
-    season: string;
-    wins: number;
-    draws: number;
-    losses: number;
-    totalGames: number;
-    maxWinStreakCurrentSeason: number;
-    currentSeason: string;
-    maxWinStreakBySeason: Record<string, number>;
-    maxWinStreakAll: number;
-    currentWinStreak: number;
-  }>('streak', userId, season);
+  return useDetailedStats<StreakStats>('streak', userId, season);
+};
+
+// 직관 년도 목록 조회
+export const useAttendanceYears = (userId?: number) => {
+  return useQuery({
+    queryKey: ['attendanceYears', userId],
+    queryFn: async () => {
+      const result = await statsApi.getAttendanceYears(userId);
+      if (isOk(result)) {
+        return result.data;
+      }
+      throw new Error(result.error.message);
+    },
+    staleTime: 10 * 60 * 1000, // 10분
+    enabled: !!userId, // userId가 있을 때만 실행
+  });
 };
 
 // 모든 통계 조합 훅
 export const useAllUserStats = (userId?: number, season?: Season) => {
-  const basicStats = useBasicStats(userId, season);
+  const basicStats = useBasicStats(userId); // season 파라미터 제거
   const homeAwayStats = useHomeAwayStats(userId, season);
   const stadiumStats = useStadiumStats(userId, season);
   const opponentStats = useOpponentStats(userId, season);
@@ -172,6 +178,8 @@ export const useAllUserStats = (userId?: number, season?: Season) => {
   const badges = useUserBadges(userId, season);
 
   const queryClient = useQueryClient();
+
+  console.log(badges.data);
 
   return {
     basicStats,

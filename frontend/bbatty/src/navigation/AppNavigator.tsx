@@ -106,9 +106,17 @@ export default function AppNavigator() {
 
         console.log('Existing user login successful');
       } else {
-        // 신규 사용자 - 회원가입 화면으로
-        setIsExistingUser(false);
-        setShowSplash(false);
+        // 404 에러는 신규 사용자를 의미하므로 정상 플로우로 처리
+        if (loginResult.error?.status === 404 || loginResult.error?.message?.includes('존재하지 않는 사용자')) {
+          console.log('New user detected - proceeding to signup flow');
+          setIsExistingUser(false);
+          setShowSplash(false);
+        } else {
+          // 다른 에러는 실제 에러로 처리
+          console.error('Login failed with unexpected error:', loginResult.error);
+          setIsExistingUser(false);
+          setShowSplash(false);
+        }
       }
     } catch (error) {
       console.error('Login success handling failed:', error);

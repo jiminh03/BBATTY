@@ -46,6 +46,9 @@ export const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
   },
+  lastOption: {
+    borderBottomWidth: 0,
+  },
   optionText: {
     fontSize: 16,
     color: '#333333',

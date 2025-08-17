@@ -70,4 +70,14 @@ export const statsApi = {
         },
       })
     ),
+
+  // 직관 년도 목록 조회 API
+  getAttendanceYears: (userId?: number): AsyncResult<string[], ApiError> =>
+    wrapApiCall(() =>
+      apiClient.get('/api/profile/attendance-years', {
+        params: {
+          ...(userId && { userId }),
+        },
+      })
+    ),
 };
