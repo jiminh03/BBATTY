@@ -406,3 +406,92 @@ export const useTeamNewsQuery = (teamId?: number, limit = 5) =>
     staleTime: 5 * 60_000,
     queryFn: () => postApi.getTeamNews(teamId!, limit),
   });
+
+  // ▼ 이미 있는 patchPost를 참고해서 댓글용 패처 추가
+function patchPostComments(post: any, postId: number, delta: number) {
+  if (String(post?.id) !== String(postId)) return post;
+
+  const base =
+    typeof post.commentCount === 'number'
+      ? post.commentCount
+      : typeof post.commentsCount === 'number'
+      ? post.commentsCount
+      : (post as any).commentCnt ?? 0;
+
+  const next = Math.max(0, base + delta);
+
+  return {
+    ...post,
+    commentCount: next,
+    commentsCount: next,
+    commentCnt: next,
+  };
+}
+
+// ▼ 상세/목록/검색/내글 전체에 댓글수 반영
+export function syncCommentCountEverywhere(
+  qc: ReturnType<typeof useQueryClient>,
+  postId: number,
+  delta: number,
+  {
+    teamId,
+    userId,
+    keyword,
+  }: { teamId?: number; userId?: number | null; keyword?: string } = {}
+) {
+  // 상세
+  qc.setQueryData(['post', postId], (old: any) =>
+    old ? patchPostComments(old, postId, delta) : old
+  );
+
+  // 공통 무한쿼리 패처
+  const patchInfinite = (old?: InfiniteData<CursorPostListResponse>) => {
+    if (!old) return old;
+    return {
+      ...(old as any),
+      pages: old.pages.map((pg) => ({
+        ...(pg as any),
+        posts: (pg.posts ?? []).map((p: any) => patchPostComments(p, postId, delta)),
+      })),
+    } as any;
+  };
+
+  // 팀 목록/인기
+  if (typeof teamId === 'number') {
+    qc.setQueriesData<InfiniteData<CursorPostListResponse>>(
+      { queryKey: ['posts', teamId] },
+      patchInfinite
+    );
+    qc.setQueriesData<any[]>(
+      { queryKey: ['popularPostsAll', teamId] },
+      (old) => (old ? (old as any).map((p: any) => patchPostComments(p, postId, delta)) : old)
+    );
+    qc.setQueriesData<any[]>(
+      { queryKey: ['popularPostsPreview', teamId] },
+      (old) => (old ? (old as any).map((p: any) => patchPostComments(p, postId, delta)) : old)
+    );
+  } else {
+    qc.setQueriesData<InfiniteData<CursorPostListResponse>>(
+      { queryKey: ['posts'] },
+      patchInfinite
+    );
+  }
+
+  // 내 글
+  qc.setQueriesData<InfiniteData<CursorPostListResponse>>(
+    typeof userId === 'number' ? { queryKey: ['myPosts', userId] } : { queryKey: ['myPosts'] },
+    patchInfinite
+  );
+
+  // 검색
+  if (typeof teamId === 'number' && typeof keyword === 'string') {
+    qc.setQueriesData<InfiniteData<CursorPostListResponse>>(
+      { queryKey: ['searchPosts', teamId, keyword] },
+      patchInfinite
+    );
+    qc.setQueriesData<InfiniteData<CursorPostListResponse>>(
+      { queryKey: ['teamSearch', teamId, keyword] },
+      patchInfinite
+    );
+  }
+}

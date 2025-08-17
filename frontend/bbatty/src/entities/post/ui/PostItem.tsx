@@ -57,10 +57,10 @@ function PostItemBase({ post, teamId, onPress }: Props) {
 
   const commentCount =
     typeof post.commentCount === 'number'
-      ? post.commentCount
-      : typeof post.commentsCount === 'number'
-      ? post.commentsCount
-      : 0;
+    ? post.commentCount
+    : typeof post.commentsCount === 'number'
+    ? post.commentsCount
+    : (post as any).commentCnt ?? 0;   // ← 추가
 
   const views =
     typeof post.views === 'number'
