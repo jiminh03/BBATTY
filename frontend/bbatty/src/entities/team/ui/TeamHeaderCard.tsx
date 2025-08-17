@@ -40,7 +40,7 @@ function TeamHeaderCard({
   onPressChat,
   accentColor = '#E85A5A',
   withSafeAreaTop = true,
-  topExtra = 30,
+  topExtra = 25,
   rightExtras,
 }: Props) {
   const rem = useRem();

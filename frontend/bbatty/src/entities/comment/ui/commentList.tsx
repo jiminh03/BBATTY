@@ -147,7 +147,14 @@ const CommentRow: React.FC<RowProps> = ({
           {item.authorNickname ?? (item as any).nickname}
         </Text>
         <Text style={{ color: 'gray', fontSize: 12 }}>
-          {new Date(displayDate).toLocaleString()}
+          {new Date(displayDate).toLocaleString('ko-KR', {
+            timeZone: 'Asia/Seoul',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
         </Text>
         <View style={{ marginTop: 4 }}>
           <Text>(삭제된 댓글입니다)</Text>
@@ -162,7 +169,14 @@ const CommentRow: React.FC<RowProps> = ({
         {item.authorNickname ?? (item as any).nickname}
       </Text>
       <Text style={{ color: 'gray', fontSize: 12 }}>
-        {new Date(displayDate).toLocaleString()}
+        {new Date(displayDate).toLocaleString('ko-KR', {
+          timeZone: 'Asia/Seoul',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+        })}
       </Text>
 
       {isEditing ? (

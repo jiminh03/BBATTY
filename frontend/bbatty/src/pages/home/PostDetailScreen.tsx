@@ -342,7 +342,14 @@ export default function PostDetailScreen({ route, navigation }: Props) {
                 <View style={{ paddingHorizontal: 16, paddingVertical: 12, paddingLeft: 16 + indent }}>
                   <Text style={{ fontWeight: '700', fontSize: 13 }}>{nickname ?? '알 수 없음'}</Text>
                   <Text style={{ color: '#9AA0A6', fontSize: 11 }}>
-                    {displayWhen ? new Date(displayWhen).toLocaleString() : ''}
+                    {displayWhen ? new Date(displayWhen).toLocaleString('ko-KR', {
+                      timeZone: 'Asia/Seoul',
+                      year: 'numeric',
+                      month: '2-digit',
+                      day: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    }) : ''}
                   </Text>
                   <View style={{ marginTop: 6 }}>
                     <Text style={{ color: '#999' }}>(삭제된 댓글입니다)</Text>
@@ -376,7 +383,14 @@ export default function PostDetailScreen({ route, navigation }: Props) {
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontWeight: '700', fontSize: 13 }}>{nickname}</Text>
                     <Text style={{ color: '#9AA0A6', fontSize: 11 }}>
-                      {baseDate ? new Date(baseDate).toLocaleString() : ''}
+                      {baseDate ? new Date(baseDate).toLocaleString('ko-KR', {
+                        timeZone: 'Asia/Seoul',
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      }) : ''}
                     </Text>
                   </View>
 
@@ -449,7 +463,14 @@ export default function PostDetailScreen({ route, navigation }: Props) {
                 <View style={{ flex: 1 }}>
                   <Text style={s.authorName}>{post!.authorNickname}</Text>
                   <Text style={s.authorMeta}>
-                    {new Date(post!.createdAt).toLocaleString()} · 👁 {viewCount}
+                    {new Date(post!.createdAt).toLocaleString('ko-KR', {
+                      timeZone: 'Asia/Seoul',
+                      year: 'numeric',
+                      month: '2-digit',
+                      day: '2-digit',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })} · 👁 {viewCount}
                   </Text>
                 </View>
               </View>
