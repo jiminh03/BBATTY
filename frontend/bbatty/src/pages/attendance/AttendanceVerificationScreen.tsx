@@ -52,11 +52,15 @@ export const AttendanceVerificationScreen = () => {
     setIsLoading(true);
     
     try {
-      // 오늘 경기 정보 가져오기
-      const gameResponse = await gameApi.getTodayGame();
-      if (gameResponse.status === 'SUCCESS' && gameResponse.data) {
-        setTodayGame(gameResponse.data);
-      }
+      // 목 데이터로 오늘 경기 정보 설정
+      const mockTodayGame = {
+        gameId: 1,
+        awayTeamName: 'LG 트윈스',
+        homeTeamName: '두산 베어스',
+        dateTime: new Date().toISOString(),
+        stadium: '잠실야구장'
+      };
+      setTodayGame(mockTodayGame);
 
       // 현재 위치 가져오기
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -91,52 +95,29 @@ export const AttendanceVerificationScreen = () => {
     setIsVerifying(true);
 
     try {
-      const requestData = {
-        latitude: currentLocation.latitude,
-        longitude: currentLocation.longitude,
+      // API 호출하지 않고 무조건 성공 반환
+      const gameInfo = {
+        gameId: 1,
+        awayTeamName: '테스트팀A',
+        homeTeamName: '테스트팀B',
+        dateTime: new Date().toISOString(),
+        stadium: '테스트 야구장',
       };
-      
-      const response = await attendanceApi.verifyAttendance(requestData);
 
-      if (response.status === 'SUCCESS') {
-        const gameInfo = response.data?.gameInfo ? {
-          gameId: response.data.gameInfo.gameId,
-          awayTeamName: response.data.gameInfo.awayTeam,
-          homeTeamName: response.data.gameInfo.homeTeam,
-          dateTime: response.data.gameInfo.gameDateTime,
-          stadium: response.data.stadiumInfo?.stadiumName || '야구장',
-        } : null;
+      setAttendanceVerified(true, gameInfo);
 
-        setAttendanceVerified(true, gameInfo);
-
-        Alert.alert(
-          '직관 인증 성공! 🎉',
-          '직관 인증이 완료되었습니다!',
-          [
-            {
-              text: '확인',
-              onPress: () => {
-                navigation.navigate('MainTabs', { screen: 'HomeStack', params: { screen: 'Home' } });
-              },
+      Alert.alert(
+        '직관 인증 성공! 🎉',
+        '직관 인증이 완료되었습니다!',
+        [
+          {
+            text: '확인',
+            onPress: () => {
+              navigation.navigate('MainTabs', { screen: 'HomeStack', params: { screen: 'Home' } });
             },
-          ]
-        );
-      } else {
-        Alert.alert(
-          '직관 인증 실패',
-          response.message || '인증에 실패했습니다.',
-          [
-            {
-              text: '위치 새로고침',
-              onPress: loadTodayGameAndLocation,
-            },
-            {
-              text: '확인',
-              style: 'cancel',
-            },
-          ]
-        );
-      }
+          },
+        ]
+      );
     } catch (error: any) {
       console.error('직관 인증 중 오류:', error);
       Alert.alert('직관 인증 실패', '서버와 연결할 수 없습니다. 잠시 후 다시 시도해주세요.');
@@ -261,8 +242,8 @@ export const AttendanceVerificationScreen = () => {
         
         {/* 구장 테스트 버튼들 */}
         {showStadiumTest && (
-          <View style={styles.stadiumTestContainer}>
-            <Text style={styles.stadiumTestTitle}>🏟️ 테스트용 구장 위치 설정</Text>
+          <View style={[styles.stadiumTestContainer, { position: 'absolute', top: 100, right: 16, width: 200, zIndex: 2000 }]}>
+            <Text style={styles.stadiumTestTitle}>🏟️ 테스트용 구장 위치</Text>
             {STADIUMS.map((stadium, index) => (
               <TouchableOpacity
                 key={index}
@@ -270,7 +251,7 @@ export const AttendanceVerificationScreen = () => {
                 onPress={() => setTestLocation(stadium)}
               >
                 <Text style={styles.stadiumTestButtonText}>
-                  {stadium.name} ({stadium.teams})
+                  {stadium.name}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -294,11 +275,20 @@ export const AttendanceVerificationScreen = () => {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.testButton}
+          style={[styles.testButton, { 
+            position: 'absolute', 
+            bottom: 150, 
+            right: -30, 
+            zIndex: 1000,
+            width: 60,
+            height: 30,
+            paddingVertical: 2,
+            paddingHorizontal: 4
+          }]}
           onPress={() => setShowStadiumTest(!showStadiumTest)}
         >
-          <Text style={styles.testButtonText}>
-            {showStadiumTest ? '테스트 메뉴 닫기' : '🧪 구장 위치 테스트'}
+          <Text style={[styles.testButtonText, { fontSize: 10 }]}>
+            테스트
           </Text>
         </TouchableOpacity>
         
@@ -310,7 +300,7 @@ export const AttendanceVerificationScreen = () => {
           {isVerifying ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.verifyButtonText}>🎯 직관 인증하기</Text>
+            <Text style={styles.verifyButtonText}>직관 인증하기</Text>
           )}
         </TouchableOpacity>
       </View>

@@ -56,30 +56,24 @@ function TeamHeaderCard({
   const todayGameInfo = useAttendanceStore(selectTodayGameInfo);
   const [gameInfo, setGameInfo] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [showButton, setShowButton] = useState(false);
+  const [showButton, setShowButton] = useState(true);
 
-  const isVerified = useMemo(() => isVerifiedToday(), [isVerifiedToday]);
+  const isVerified = useMemo(() => false, []);
 
-  // 오늘 경기 로드
+  // 오늘 경기 로드 - 목 데이터 사용
   useEffect(() => {
     const loadTodayGame = async () => {
-      if (isVerified && todayGameInfo) {
-        setGameInfo(todayGameInfo);
-        setShowButton(true);
-        return;
-      }
-      setIsLoading(true);
-      try {
-        const response = await gameApi.getTodayGame();
-        if ((response as any)?.status === 'SUCCESS') {
-          setGameInfo((response as any).data);
-        }
-      } catch (error) {
-        console.error('오늘의 게임 정보 로드 실패:', error);
-        setShowButton(false);
-      } finally {
-        setIsLoading(false);
-      }
+      setIsLoading(false);
+      // 목 데이터 설정
+      const mockGameInfo = {
+        gameId: 1,
+        homeTeamName: 'LG 트윈스',
+        awayTeamName: '두산 베어스',
+        dateTime: new Date().toISOString(),
+        stadium: '잠실야구장'
+      };
+      setGameInfo(mockGameInfo);
+      setShowButton(true);
     };
     loadTodayGame();
   }, [isVerified, todayGameInfo]);
@@ -94,17 +88,11 @@ function TeamHeaderCard({
   }, [gameInfo, isVerified]);
 
   const getChatButtonText = () => {
-    if (isLoading) return '로딩중...';
-    if (isVerified && gameInfo) {
-      const home = String(gameInfo.homeTeamName ?? '').split(' ')[0];
-      const away = String(gameInfo.awayTeamName ?? '').split(' ')[0];
-      return `${home} VS ${away}\n실시간 채팅방 가기`;
-      }
     return '직관인증하기';
   };
 
-  // 버튼 활성/비활성(모양 유지)
-  const enabledNow = isVerified || showButton;
+  // 버튼 항상 활성화 (테스트용)
+  const enabledNow = true;
 
   return (
     <View
@@ -146,7 +134,7 @@ function TeamHeaderCard({
             },
           ]}
           onPress={onPressChat}
-          disabled={isLoading || !enabledNow}
+          disabled={false}
           hitSlop={8}
         >
           <Text
