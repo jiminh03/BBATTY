@@ -112,9 +112,10 @@ export default function PostDetailScreen({ route, navigation }: Props) {
   const canComment = !!post && teamId === userTeamId;
   const canLike = canComment;
 
-  const { toggle } = usePostLikeActions(postId, {
-    teamId: teamId || undefined,
-  });
+  const { toggle, isBusy } = usePostLikeActions(postId, {
+     teamId: teamId || undefined,
+     // refetchAfterMs: 0,
+   });
 
   const {
     data: cmtPages,
@@ -262,7 +263,6 @@ export default function PostDetailScreen({ route, navigation }: Props) {
 
   const images: string[] = Array.isArray(post?.images) ? (post!.images as string[]) : [];
 
-  // 🔥 Body 전체를 FlatList로
   const Body =
     isLoading ? (
       <View style={s.center}>
@@ -273,228 +273,285 @@ export default function PostDetailScreen({ route, navigation }: Props) {
         <Text>{isError ? `오류: ${(error as Error).message}` : '게시글을 찾을 수 없어요.'}</Text>
       </View>
     ) : (
-      <FlatList<UComment>
-        ref={listRef}
-        data={flatComments}
-        keyExtractor={(it) => String(it.id)}
-        renderItem={({ item }) => {
-          const indent = Number(item.depth ?? 0) * 12;
-          const isTopLevel = (item.depth ?? 0) === 0;
-          const nickname = item.authorNickname ?? item.nickname;
-
-          const gone = !!item.isDeleted || locallyDeleted.has(Number(item.id));
-          const isEditing = !gone && String(editingCommentId ?? '') === String(item.id);
-          const isMineCmt =
-            !!myNickname && (item.authorNickname === myNickname || item.nickname === myNickname);
-          const isMenuOpen = isMineCmt && !gone && menuOpenId === item.id;
-
-          const baseDate = item.updatedAt ?? item.createdAt;
-
-          if (gone) {
-            const displayWhen =
-              preDeleteUpdatedAt.get(Number(item.id)) ?? item.updatedAt ?? item.createdAt;
-            return (
-              <View style={{ paddingHorizontal: 16, paddingVertical: 12, paddingLeft: 16 + indent }}>
-                <Text style={{ fontWeight: '700', fontSize: 13 }}>{nickname ?? '알 수 없음'}</Text>
-                <Text style={{ color: '#9AA0A6', fontSize: 11 }}>
-                  {displayWhen ? new Date(displayWhen).toLocaleString() : ''}
-                </Text>
-                <View style={{ marginTop: 6 }}>
-                  <Text style={{ color: '#999' }}>(삭제된 댓글입니다)</Text>
-                </View>
-              </View>
-            );
-          }
-
-          const onReply = () => {
-            setMenuOpenId(null);
-            setReplyTarget?.({ id: Number(item.id), nickname: nickname ?? '' });
-            requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
-          };
-          const onEdit = () => {
-            setMenuOpenId(null);
-            setEditingCommentId(String(item.id));
-          };
-          const onDelete = () => handleDeleteComment(Number(item.id));
-
-          return (
-            <View
-              style={{
-                paddingHorizontal: 16,
-                paddingVertical: 12,
-                paddingLeft: 16 + indent,
-                overflow: 'visible',
-              }}
-              collapsable={false}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: '700', fontSize: 13 }}>{nickname}</Text>
-                  <Text style={{ color: '#9AA0A6', fontSize: 11 }}>
-                    {baseDate ? new Date(baseDate).toLocaleString() : ''}
-                  </Text>
-                </View>
-
-                {isMineCmt && (
-                  <Pressable
-                    onPress={() => setMenuOpenId((prev) => (prev === item.id ? null : item.id))}
-                    hitSlop={10}
-                    style={{ paddingHorizontal: 8, paddingVertical: 4 }}
-                  >
-                    <Text style={{ fontSize: 20, lineHeight: 20 }}>⋯</Text>
-                  </Pressable>
-                )}
-              </View>
-
-              {isEditing ? (
-                <CommentEditForm
-                  postId={postId}
-                  commentId={Number(item.id)}
-                  initialContent={item.content ?? ''}
-                />
-              ) : (
+      <View style={{ flex: 1, overflow: 'visible' }}>
+        {headerMenuOpen && (
+          <View pointerEvents="box-none" style={{ position: 'absolute', top: -20, right: 8, zIndex: 9999 }}>
+            <View style={s.headerMenu}>
+              {isMinePost ? (
                 <>
-                  <View style={{ marginTop: 6 }}>
-                    <Text style={{ fontSize: 14, color: '#222' }}>{item.content}</Text>
-                  </View>
-
-                  <View style={{ marginTop: 8 }}>
-                    {isTopLevel && canComment && (
-                      <Pressable
-                        onPress={onReply}
-                        style={{
-                          alignSelf: 'flex-start',
-                          paddingVertical: 6,
-                          paddingHorizontal: 10,
-                          borderRadius: 10,
-                          backgroundColor: '#F5F6F7',
-                        }}
-                      >
-                        <Text style={{ color: teamColor, fontWeight: '600', fontSize: 12 }}>
-                          답글 달기
-                        </Text>
-                      </Pressable>
-                    )}
-
-                    {isMenuOpen && (
-                      <View style={s.menu} pointerEvents="auto">
-                        <Pressable onPress={onEdit} style={s.menuItem}>
-                          <Text style={s.menuText}>수정</Text>
-                        </Pressable>
-                        <View style={s.menuDivider} />
-                        <Pressable onPress={onDelete} style={s.menuItem}>
-                          <Text style={[s.menuText, { color: '#FF3B30' }]}>삭제</Text>
-                        </Pressable>
-                      </View>
-                    )}
-                  </View>
+                  <Pressable
+                    onPress={() => {
+                      setHeaderMenuOpen(false);
+                      navigation.navigate('PostForm', { postId });
+                    }}
+                    style={s.headerMenuItem}
+                  >
+                    <Text style={s.headerMenuText}>수정</Text>
+                  </Pressable>
+                  <View style={s.menuDivider} />
+                  <Pressable
+                    onPress={() => {
+                      setHeaderMenuOpen(false);
+                      Alert.alert('삭제', '정말 삭제할까요?', [
+                        { text: '취소', style: 'cancel' },
+                        {
+                          text: '삭제',
+                          style: 'destructive',
+                          onPress: () =>
+                            delPost.mutate(postId, {
+                              onSuccess: () => navigation.goBack(),
+                            }),
+                        },
+                      ]);
+                    }}
+                    style={s.headerMenuItem}
+                  >
+                    <Text style={[s.headerMenuText, { color: '#FF3B30' }]}>삭제</Text>
+                  </Pressable>
                 </>
-              )}
-            </View>
-          );
-        }}
-        ListHeaderComponent={
-          <View style={s.headerCard}>
-            <View style={s.authorRow}>
-              {authorAvatarUrl ? (
-                <Image source={{ uri: authorAvatarUrl }} style={s.avatar} />
               ) : (
-                <View style={s.avatar} />
-              )}
-              <View style={{ flex: 1 }}>
-                <Text style={s.authorName}>{post!.authorNickname}</Text>
-                <Text style={s.authorMeta}>
-                  {new Date(post!.createdAt).toLocaleString()} · 👁 {viewCount}
-                </Text>
-              </View>
-            </View>
-
-            <Text style={s.title}>{post!.title}</Text>
-
-            <View style={{ marginTop: 8 }}>
-              {(post!.content ?? '')
-                .split(/\n+/)
-                .filter(Boolean)
-                .map((line, idx) => (
-                  <Text key={idx} style={s.paragraph}>
-                    {line}
-                  </Text>
-                ))}
-            </View>
-
-            {images.length > 0 && (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ gap: 10, paddingTop: 12 }}
-              >
-                {images.map((uri, i) => (
-                  <Image key={i} source={{ uri }} style={s.imageCard} resizeMode="cover" />
-                ))}
-              </ScrollView>
-            )}
-
-            <View style={s.statsRow}>
-              {canLike ? (
-                <Pressable onPress={toggle} hitSlop={10} style={s.likeBtn}>
-                  <Text style={s.likeIcon}>{liked ? '❤️' : '🤍'}</Text>
-                  <Text style={s.likeCount}>{likeCount}</Text>
+                <Pressable onPress={() => setHeaderMenuOpen(false)} style={s.headerMenuItem}>
+                  <Text style={s.headerMenuText}>닫기</Text>
                 </Pressable>
-              ) : (
-                <View style={[s.likeBtn, { opacity: 0.4 }]}>
-                  <Text style={s.likeIcon}>🤍</Text>
-                  <Text style={s.likeCount}>{likeCount}</Text>
-                </View>
               )}
-              <View style={{ width: 12 }} />
-              <Text style={s.stats}>💬 {cmtCount}</Text>
             </View>
           </View>
-        }
-        ListEmptyComponent={
-          cLoading ? (
-            <ActivityIndicator style={{ margin: 16 }} />
-          ) : cError ? (
-            <Text style={{ margin: 16 }}>댓글을 불러오는 데 실패했습니다.</Text>
-          ) : (
-            <Text style={{ margin: 16, color: '#777' }}>
-              {canComment ? '첫 댓글을 남겨보세요.' : '댓글이 없습니다.'}
-            </Text>
-          )
-        }
-        onEndReachedThreshold={0.4}
-        onEndReached={onEndReached}
-        // 🔥 Footer에 CommentForm 포함
-        ListFooterComponent={
-          <>
-            {isFetchingNextPage && (
-              <ActivityIndicator style={{ marginVertical: 12 }} />
-            )}
-            <CommentForm
-              postId={postId}
-              teamColor={teamColor}
-              enabled={canComment}
-              style={{ marginTop: 8 }}
-            />
-          </>
-        }
-        contentContainerStyle={{
-          paddingBottom: insets.bottom + 12,
-        }}
-        removeClippedSubviews={false}
-        keyboardShouldPersistTaps="handled"
-      />
+        )}
+
+        <FlatList<UComment>
+          ref={listRef}
+          data={flatComments}
+          keyExtractor={(it) => String(it.id)}
+          renderItem={({ item }) => {
+            const indent = Number(item.depth ?? 0) * 12;
+            const isTopLevel = (item.depth ?? 0) === 0;
+            const nickname = item.authorNickname ?? item.nickname;
+
+            const gone = !!item.isDeleted || locallyDeleted.has(Number(item.id));
+            const isEditing = !gone && String(editingCommentId ?? '') === String(item.id);
+            const isMineCmt =
+              !!myNickname && (item.authorNickname === myNickname || item.nickname === myNickname);
+            const isMenuOpen = isMineCmt && !gone && menuOpenId === item.id;
+
+            const baseDate = item.updatedAt ?? item.createdAt;
+
+            if (gone) {
+              const displayWhen =
+                preDeleteUpdatedAt.get(Number(item.id)) ?? item.updatedAt ?? item.createdAt;
+              return (
+                <View style={{ paddingHorizontal: 16, paddingVertical: 12, paddingLeft: 16 + indent }}>
+                  <Text style={{ fontWeight: '700', fontSize: 13 }}>{nickname ?? '알 수 없음'}</Text>
+                  <Text style={{ color: '#9AA0A6', fontSize: 11 }}>
+                    {displayWhen ? new Date(displayWhen).toLocaleString() : ''}
+                  </Text>
+                  <View style={{ marginTop: 6 }}>
+                    <Text style={{ color: '#999' }}>(삭제된 댓글입니다)</Text>
+                  </View>
+                </View>
+              );
+            }
+
+            const onReply = () => {
+              setMenuOpenId(null);
+              setReplyTarget?.({ id: Number(item.id), nickname: nickname ?? '' });
+              requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
+            };
+            const onEdit = () => {
+              setMenuOpenId(null);
+              setEditingCommentId(String(item.id));
+            };
+            const onDelete = () => handleDeleteComment(Number(item.id));
+
+            return (
+              <View
+                style={{
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  paddingLeft: 16 + indent,
+                  overflow: 'visible',
+                }}
+                collapsable={false}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontWeight: '700', fontSize: 13 }}>{nickname}</Text>
+                    <Text style={{ color: '#9AA0A6', fontSize: 11 }}>
+                      {baseDate ? new Date(baseDate).toLocaleString() : ''}
+                    </Text>
+                  </View>
+
+                  {isMineCmt && (
+                    <Pressable
+                      onPress={() => setMenuOpenId((prev) => (prev === item.id ? null : item.id))}
+                      hitSlop={10}
+                      style={{ paddingHorizontal: 8, paddingVertical: 4 }}
+                    >
+                      <Text style={{ fontSize: 20, lineHeight: 20 }}>⋯</Text>
+                    </Pressable>
+                  )}
+                </View>
+
+                {isEditing ? (
+                  <CommentEditForm
+                    postId={postId}
+                    commentId={Number(item.id)}
+                    initialContent={item.content ?? ''}
+                  />
+                ) : (
+                  <>
+                    <View style={{ marginTop: 6 }}>
+                      <Text style={{ fontSize: 14, color: '#222' }}>{item.content}</Text>
+                    </View>
+
+                    <View style={{ marginTop: 8 }}>
+                      {isTopLevel && canComment && (
+                        <Pressable
+                          onPress={onReply}
+                          style={{
+                            alignSelf: 'flex-start',
+                            paddingVertical: 6,
+                            paddingHorizontal: 10,
+                            borderRadius: 10,
+                            backgroundColor: '#F5F6F7',
+                          }}
+                        >
+                          <Text style={{ color: teamColor, fontWeight: '600', fontSize: 12 }}>
+                            답글 달기
+                          </Text>
+                        </Pressable>
+                      )}
+
+                      {isMenuOpen && (
+                        <View style={s.menu} pointerEvents="auto">
+                          <Pressable onPress={onEdit} style={s.menuItem}>
+                            <Text style={s.menuText}>수정</Text>
+                          </Pressable>
+                          <View style={s.menuDivider} />
+                          <Pressable onPress={onDelete} style={s.menuItem}>
+                            <Text style={[s.menuText, { color: '#FF3B30' }]}>삭제</Text>
+                          </Pressable>
+                        </View>
+                      )}
+                    </View>
+                  </>
+                )}
+              </View>
+            );
+          }}
+          ListHeaderComponent={
+            <View style={s.headerCard}>
+              <View style={s.authorRow}>
+                {authorAvatarUrl ? (
+                  <Image source={{ uri: authorAvatarUrl }} style={s.avatar} />
+                ) : (
+                  <View style={s.avatar} />
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={s.authorName}>{post!.authorNickname}</Text>
+                  <Text style={s.authorMeta}>
+                    {new Date(post!.createdAt).toLocaleString()} · 👁 {viewCount}
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={s.title}>{post!.title}</Text>
+
+              <View style={{ marginTop: 8 }}>
+                {(post!.content ?? '')
+                  .split(/\n+/)
+                  .filter(Boolean)
+                  .map((line, idx) => (
+                    <Text key={idx} style={s.paragraph}>
+                      {line}
+                    </Text>
+                  ))}
+              </View>
+
+              {images.length > 0 && (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ gap: 10, paddingTop: 12 }}
+                >
+                  {images.map((uri, i) => (
+                    <Image key={i} source={{ uri }} style={s.imageCard} resizeMode="cover" />
+                  ))}
+                </ScrollView>
+              )}
+
+              <View style={s.statsRow}>
+                {canLike ? (
+                  <Pressable onPress={toggle} hitSlop={10} style={s.likeBtn}>
+                    <Text style={s.likeIcon}>{liked ? '❤️' : '🤍'}</Text>
+                    <Text style={s.likeCount}>{likeCount}</Text>
+                  </Pressable>
+                ) : (
+                  <View style={[s.likeBtn, { opacity: 0.4 }]}>
+                    <Text style={s.likeIcon}>🤍</Text>
+                    <Text style={s.likeCount}>{likeCount}</Text>
+                  </View>
+                )}
+                <View style={{ width: 12 }} />
+                <Text style={s.stats}>💬 {cmtCount}</Text>
+              </View>
+            </View>
+          }
+          ListEmptyComponent={
+            cLoading ? (
+              <ActivityIndicator style={{ margin: 16 }} />
+            ) : cError ? (
+              <Text style={{ margin: 16 }}>댓글을 불러오는 데 실패했습니다.</Text>
+            ) : (
+              <Text style={{ margin: 16, color: '#777' }}>
+                {canComment ? '첫 댓글을 남겨보세요.' : '댓글이 없습니다.'}
+              </Text>
+            )
+          }
+          onEndReachedThreshold={0.4}
+          onEndReached={onEndReached}
+          ListFooterComponent={
+            isFetchingNextPage ? <ActivityIndicator style={{ marginVertical: 12 }} /> : <View />
+          }
+          contentContainerStyle={{
+            paddingBottom: (canComment ? FORM_MIN_HEIGHT : 0) + insets.bottom + 12,
+          }}
+          removeClippedSubviews={false}
+          keyboardShouldPersistTaps="handled"
+          CellRendererComponent={({ index, children, style, ...props }) => {
+            const id = flatComments[index]?.id;
+            const z = headerMenuOpen || (menuOpenId !== null && id === menuOpenId) ? 9999 : 0;
+            return (
+              <View
+                {...props}
+                style={[style, { zIndex: z, elevation: z ? 20 : 0, overflow: 'visible' }]}
+              >
+                {children}
+              </View>
+            );
+          }}
+        />
+      </View>
     );
 
   return (
   <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
     <StatusBar backgroundColor={teamColor} barStyle="light-content" />
+
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={insets.top}   // 헤더 높이 고려
+      keyboardVerticalOffset={insets.top} // 헤더 높이 고려
     >
+      {/* 댓글 리스트 영역 */}
       {Body}
+
+      {/* 댓글 입력창을 Footer가 아닌 화면 맨 아래 고정 */}
+      <CommentForm
+        postId={postId}
+        teamColor={teamColor}
+        enabled={canComment}
+        style={{ paddingBottom: insets.bottom }}
+      />
     </KeyboardAvoidingView>
   </SafeAreaView>
 );
@@ -515,6 +572,7 @@ const s = StyleSheet.create({
   likeIcon: { fontSize: 20, marginRight: 6 },
   likeCount: { fontSize: 13, color: '#222' },
   stats: { fontSize: 12, color: '#888' },
+  section: { fontSize: 16, fontWeight: '700', marginTop: 12 },
   menu: {
     position: 'absolute', top: -40, right: 8,
     backgroundColor: '#fff', borderRadius: 10,
