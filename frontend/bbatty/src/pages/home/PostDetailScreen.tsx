@@ -481,7 +481,7 @@ export default function PostDetailScreen({ route, navigation }: Props) {
 
               <View style={s.statsRow}>
                 {canLike ? (
-                  <Pressable onPress={isBusy ? undefined : toggle} hitSlop={10} style={[s.likeBtn, isBusy && {opacity: 0.6}]}>
+                  <Pressable onPress={toggle} hitSlop={10} style={s.likeBtn}>
                     <Text style={s.likeIcon}>{liked ? '❤️' : '🤍'}</Text>
                     <Text style={s.likeCount}>{likeCount}</Text>
                   </Pressable>
