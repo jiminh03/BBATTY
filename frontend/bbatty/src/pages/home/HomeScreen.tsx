@@ -28,7 +28,6 @@ import { useAttendanceStore } from '../../entities/attendance/model/attendanceSt
 import TeamGearIcon from '../../shared/ui/atoms/Team/TeamGearIcon';
 import { findTeamById, getTeamInfo } from '../../shared/team/teamTypes';
 import { useTeamStanding } from '../../entities/team/queries/useTeamStanding';
-// ✅ 네가 보내준 퍼시스트 스토어
 import { useSearchHistoryStore } from '../../entities/post/model/searchHistoryStore';
 import { chatRoomApi } from '../../entities/chat-room/api/api';
 import { gameApi } from '../../entities/game/api/api';
@@ -47,19 +46,15 @@ const normalizeHex = (hex?: string, fallback = '#1D467F') => {
   return hex;
 };
 
-const ACTIONS_TOP = Platform.select({ android: 75, ios: 80 });
-
-// Zustand selector 함수들을 컴포넌트 외부에 정의하여 캐시
+// Zustand selectors
 const selectTeamId = (state: any) => state.currentUser?.teamId ?? 1;
 const selectIsVerifiedToday = (state: any) => state.isVerifiedToday;
 const selectAddHistory = (state: any) => state.addHistory;
 const selectRemoveHistory = (state: any) => state.removeHistory;
 const selectGetHistoryForTeam = (state: any) => state.getHistoryForTeam;
-
-// 더 안정적인 selector 방식
 const selectHistoriesByTeam = (state: any) => state.historiesByTeam;
 
-/** ====== 검색 헤더(칩 + X 버튼) ====== */
+/** ====== 검색 헤더 ====== */
 function SearchHeader({
   keyword,
   onChangeKeyword,
@@ -138,7 +133,6 @@ function SearchHeader({
 
 /** ====== 메인 ====== */
 function HomeScreen({ navigation }: Props) {
-  console.log('🔄 HomeScreen 리렌더링됨');
   const teamId = useUserStore(selectTeamId);
   const isVerifiedToday = useAttendanceStore(selectIsVerifiedToday);
   const team = findTeamById(teamId);
@@ -152,9 +146,8 @@ function HomeScreen({ navigation }: Props) {
 
   const [tab, setTab] = useState<'best' | 'all'>('all');
 
-  // 🚫 탭 바꿔도 자동으로 닫지 않음 — 버튼으로만 토글
+  // 뉴스 토글(버튼으로만)
   const [newsOpen, setNewsOpen] = useState(false);
-  console.log('📊 HomeScreen 상태 - tab:', tab, 'newsOpen:', newsOpen, 'teamId:', teamId);
   const toggleNews = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setNewsOpen((v) => !v);
@@ -168,20 +161,16 @@ function HomeScreen({ navigation }: Props) {
     [listQ.data]
   );
 
-  // ===== 검색 =====
+  // 검색
   const [keyword, setKeyword] = useState('');
   const [submittedKeyword, setSubmittedKeyword] = useState('');
-
-  // ✅ 네 스토어 API 사용 (persist 포함)
   const addHistory = useSearchHistoryStore(selectAddHistory);
   const removeHistory = useSearchHistoryStore(selectRemoveHistory);
   const getHistoryForTeam = useSearchHistoryStore(selectGetHistoryForTeam);
-
   const historiesByTeam = useSearchHistoryStore(selectHistoriesByTeam);
   const history = historiesByTeam[teamId] ?? [];
 
   const isSearching = submittedKeyword.length > 0;
-
   const searchQ = useTeamSearchPostsInfinite(teamId, submittedKeyword);
   const searchPosts = useMemo(
     () => (searchQ.data?.pages ?? []).flatMap((p) => p.posts ?? []),
@@ -192,7 +181,6 @@ function HomeScreen({ navigation }: Props) {
     (q: string) => {
       const t = q.trim();
       if (!t) return;
-      // 추가하면서 맨 앞으로 당김 + 10개 유지
       addHistory(teamId, t);
       setSubmittedKeyword(t);
     },
@@ -204,7 +192,6 @@ function HomeScreen({ navigation }: Props) {
     setSubmittedKeyword('');
     setKeyword('');
   }, []);
-
   const handleRemoveChip = useCallback((q: string) => {
     removeHistory(teamId, q);
   }, [removeHistory, teamId]);
@@ -295,9 +282,13 @@ function HomeScreen({ navigation }: Props) {
     }
   }, [isVerifiedToday, navigation]);
 
-  const teamLogoSrc: ImageSourcePropType | undefined = useMemo(() => team?.imagePath
-    ? (typeof team.imagePath === 'string' ? { uri: team.imagePath } : (team.imagePath as any))
-    : undefined, [team?.imagePath]);
+  const teamLogoSrc: ImageSourcePropType | undefined = useMemo(
+    () =>
+      team?.imagePath
+        ? (typeof team.imagePath === 'string' ? { uri: team.imagePath } : (team.imagePath as any))
+        : undefined,
+    [team?.imagePath]
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
@@ -311,19 +302,29 @@ function HomeScreen({ navigation }: Props) {
             recordText={recordText}
             onPressChat={handleChatPress}
             accentColor={teamColor}
+            // ⭐ 우측 고정 영역에 “팀 최신 뉴스” 버튼을 꽂아줌 (하드코딩 top 제거!)
+            rightExtras={
+              <TouchableOpacity
+                onPress={toggleNews}
+                activeOpacity={0.9}
+                style={{
+                  minHeight: 38,
+                  paddingHorizontal: 14,
+                  borderRadius: 10,
+                  backgroundColor: '#fff',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text style={{ fontSize: 14, fontWeight: '600', color: '#000' }}>
+                  팀 최신 뉴스
+                </Text>
+              </TouchableOpacity>
+            }
           />
         </View>
 
-        {/* 오른쪽 알약 버튼 */}
-        <View style={[styles.actionRow, { top: ACTIONS_TOP }]}>
-          <TouchableOpacity onPress={toggleNews} activeOpacity={0.9} style={styles.pill}>
-            <Text style={[styles.pillText, { color: 'black' }]}>
-              팀 최신 뉴스 {newsOpen ? '▴' : '▾'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* 헤더 아래 뉴스 – 수동 토글만 */}
+        {/* 헤더 아래 뉴스(토글형) */}
         {newsOpen && (
           <View style={{ paddingTop: 8, paddingBottom: 8 }}>
             <TeamNewsSection
@@ -381,7 +382,6 @@ function HomeScreen({ navigation }: Props) {
                 onClear={handleClearSearch}
                 history={history}
                 onPressChip={(q) => {
-                  // 칩 누르면 맨 앞으로 당기면서 곧바로 검색
                   addHistory(teamId, q);
                   setKeyword(q);
                   setSubmittedKeyword(q);
@@ -421,12 +421,6 @@ const styles = StyleSheet.create({
   listPad: { paddingBottom: 16 },
 
   headerWrap: { position: 'relative', paddingBottom: 12 },
-  actionRow: { position: 'absolute', right: 16, top: 100, flexDirection: 'row' },
-  pill: {
-    height: 30, width: 81, paddingHorizontal: 10, borderRadius: 10, backgroundColor: '#fff',
-    alignItems: 'center', justifyContent: 'center', marginLeft: 8, marginRight: 4.5, marginTop: 30,
-  },
-  pillText: { fontSize: 10.5, fontWeight: '600' },
 
   // 검색 UI
   searchSection: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8, backgroundColor: '#fff' },
@@ -446,9 +440,7 @@ const styles = StyleSheet.create({
   },
   clearBtnText: { color: '#111', fontWeight: '700' },
 
-  chipWrap: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10,
-  },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
   chip: {
     flexDirection: 'row', alignItems: 'center',
     maxWidth: '100%',
@@ -457,10 +449,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: StyleSheet.hairlineWidth, borderColor: '#E3E5E7',
   },
-  chipLabelBtn: {
-    maxWidth: 180,
-    paddingRight: 6,
-  },
+  chipLabelBtn: { maxWidth: 180, paddingRight: 6 },
   chipText: { color: '#5F6368', fontSize: 12 },
   chipClose: {
     width: 18, height: 18, borderRadius: 9,

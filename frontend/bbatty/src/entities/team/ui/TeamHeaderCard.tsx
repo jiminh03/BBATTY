@@ -1,4 +1,3 @@
-// TeamHeaderCard.tsx
 import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
@@ -13,6 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAttendanceStore } from '../../attendance/model/attendanceStore';
 import { gameApi } from '../../game/api/api';
+import { useRem, useMinTouch } from '../../../shared/ui/atoms/button/responsive';
 
 type Props = {
   teamLogo?: ImageSourcePropType;
@@ -20,12 +20,15 @@ type Props = {
   rankText: string;
   recordText: string;
   onPressChat?: () => void;
-  accentColor?: string;       // 팀 색상
-  withSafeAreaTop?: boolean;  // 상단 안전영역 패딩 적용 여부
-  topExtra?: number;          // ⬅️ "더 아래로" 내리고 싶을 때 추가 여백(px)
+  accentColor?: string;        // 팀 색상
+  withSafeAreaTop?: boolean;   // 상단 안전영역 패딩 적용 여부
+  topExtra?: number;           // 헤더를 더 내리고 싶을 때 추가 여백(px)
+
+  /** 우측 고정 영역(채팅 버튼 아래)에 함께 표시할 외부 액션들(예: 팀 최신 뉴스 버튼) */
+  rightExtras?: React.ReactNode;
 };
 
-// Zustand selector 함수들을 컴포넌트 외부에 정의
+// Zustand selector (컴포넌트 바깥)
 const selectIsVerifiedToday = (state: any) => state.isVerifiedToday;
 const selectTodayGameInfo = (state: any) => state.todayGameInfo;
 
@@ -37,14 +40,17 @@ function TeamHeaderCard({
   onPressChat,
   accentColor = '#E85A5A',
   withSafeAreaTop = true,
-  topExtra = 30,              // 기본 추가 여백(원하면 더 키워도 됨)
+  topExtra = 30,
+  rightExtras,
 }: Props) {
-  console.log('🏠 TeamHeaderCard 리렌더링됨 - teamName:', teamName);
+  const rem = useRem();
+  const minTouch = useMinTouch();
   const insets = useSafeAreaInsets();
-  const topInset =
-    withSafeAreaTop
-      ? Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0)
-      : 0;
+
+  const topInset = withSafeAreaTop
+    ? Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0)
+    : 0;
+  const headerTop = topInset + topExtra;
 
   const isVerifiedToday = useAttendanceStore(selectIsVerifiedToday);
   const todayGameInfo = useAttendanceStore(selectTodayGameInfo);
@@ -62,7 +68,6 @@ function TeamHeaderCard({
         setShowButton(true);
         return;
       }
-
       setIsLoading(true);
       try {
         const response = await gameApi.getTodayGame();
@@ -76,20 +81,16 @@ function TeamHeaderCard({
         setIsLoading(false);
       }
     };
-
     loadTodayGame();
   }, [isVerified, todayGameInfo]);
 
   // 경기 2시간 전부터 버튼 활성화 (초기 한 번만 체크)
   useEffect(() => {
     if (!gameInfo || isVerified) return;
-
     const gameDateTime = new Date(gameInfo.dateTime);
     const now = new Date();
-    const twoHoursBeforeGame = new Date(gameDateTime.getTime() - 2 * 60 * 60 * 1000);
-    const shouldShow = now >= twoHoursBeforeGame;
-    
-    setShowButton(shouldShow);
+    const twoHoursBefore = new Date(gameDateTime.getTime() - 2 * 60 * 60 * 1000);
+    setShowButton(now >= twoHoursBefore);
   }, [gameInfo, isVerified]);
 
   const getChatButtonText = () => {
@@ -98,11 +99,11 @@ function TeamHeaderCard({
       const home = String(gameInfo.homeTeamName ?? '').split(' ')[0];
       const away = String(gameInfo.awayTeamName ?? '').split(' ')[0];
       return `${home} VS ${away}\n실시간 채팅방 가기`;
-    }
+      }
     return '직관인증하기';
   };
 
-  // 버튼 활성화 여부(모양은 그대로 유지, 비활성 시 누르기만 막음)
+  // 버튼 활성/비활성(모양 유지)
   const enabledNow = isVerified || showButton;
 
   return (
@@ -111,70 +112,86 @@ function TeamHeaderCard({
         s.wrap,
         {
           backgroundColor: accentColor,
-          paddingTop: topInset + topExtra, // ⬅️ 여기서 원하는 만큼 더 내릴 수 있음
+          paddingTop: headerTop,
+          paddingHorizontal: Math.round(rem(1.25)), // 20dp 기준
         },
       ]}
     >
       <StatusBar barStyle="light-content" backgroundColor={accentColor} />
+
+      {/* 좌측 팀 정보 */}
       <View style={s.left}>
         <Image
           source={typeof teamLogo === 'string' ? { uri: teamLogo } : teamLogo}
-          style={s.logo}
+          style={{ width: rem(3.25), height: rem(3.25), borderRadius: rem(1.625), backgroundColor: '#fff' }}
           resizeMode="contain"
         />
-        <View style={{ marginLeft: 12 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={s.team}>{teamName}</Text>
-          </View>
-          <Text style={s.rank}>{rankText}</Text>
-          <Text style={s.record}>{recordText}</Text>
+        <View style={{ marginLeft: rem(0.75) }}>
+          <Text style={{ color: '#fff', fontSize: rem(1.125), fontWeight: '800' }}>{teamName}</Text>
+          <Text style={{ color: '#fff', marginTop: 2, fontWeight: '700' }}>{rankText}</Text>
+          <Text style={{ color: 'rgba(255,255,255,0.85)', marginTop: 2, fontSize: rem(0.75) }}>{recordText}</Text>
         </View>
       </View>
 
-      <Pressable
-        style={[s.chat, !enabledNow && { opacity: 0.6 }]}
-  onPress={onPressChat}
-  disabled={isLoading || !enabledNow}     // 비활성 조건만 걸어줌(모양은 동일)
-      >
-        <Text style={s.chatTxt}>{getChatButtonText()}</Text>
-      </Pressable>
+      {/* 우측 고정 영역(헤더 top 계산 공유) */}
+      <View style={[s.rightFixed, { top: headerTop - 12, right: Math.round(rem(1.25)) }]}>
+        <Pressable
+          style={[
+            s.chat,
+            {
+              paddingVertical: Math.max(8, (minTouch - 32) / 2),
+              paddingHorizontal: rem(0.625),
+              maxWidth: Math.min(160, rem(8.25)),
+              opacity: !enabledNow ? 0.6 : 1,
+            },
+          ]}
+          onPress={onPressChat}
+          disabled={isLoading || !enabledNow}
+          hitSlop={8}
+        >
+          <Text
+            style={{
+              color: '#000',
+              fontSize: rem(0.75),
+              fontWeight: '600',
+              textAlign: 'center',
+              lineHeight: rem(0.9),
+            }}
+            numberOfLines={2}
+            adjustsFontSizeToFit
+          >
+            {getChatButtonText()}
+          </Text>
+        </Pressable>
+
+        {/* 외부에서 꽂아 넣는 우측 버튼들 (예: 팀 최신 뉴스) */}
+        {rightExtras ? <View style={{ marginTop: 8 }}>{rightExtras}</View> : null}
+      </View>
     </View>
   );
 }
 
 const s = StyleSheet.create({
   wrap: {
-    paddingHorizontal: 20,
     paddingBottom: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
   },
-  left: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  logo: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#fff' },
-  team: { color: '#fff', fontSize: 18, fontWeight: '800' },
-  rank: { color: '#fff', marginTop: 2, fontWeight: '700' },
-  record: { color: 'rgba(255,255,255,0.85)', marginTop: 2, fontSize: 12 },
+  left: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  rightFixed: {
+    position: 'absolute',
+    alignItems: 'flex-end',
+  },
   chat: {
     backgroundColor: '#fff',
-    paddingVertical: 8,
-    paddingHorizontal: 10,
     borderRadius: 10,
-    maxWidth: 132,
-    marginTop: 4,
-    // 필요하면 약간의 그림자
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
     elevation: 3,
-  },
-  chatTxt: {
-    color: '#000000ff',
-    fontSize: 11,
-    fontWeight: '600',
-    textAlign: 'center',
-    lineHeight: 14,
   },
 });
 
