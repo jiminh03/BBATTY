@@ -3,8 +3,12 @@
     "allow": [
       "Bash(npm run type-check:*)",
       "Bash(timeout 10 npm start)",
-      "Bash(true)"
+      "Bash(true)",
+      "Bash(rm:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run:*)"
     ],
-    "deny": []
+    "deny": [],
+    "defaultMode": "acceptEdits"
   }
 }
