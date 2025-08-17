@@ -2,74 +2,78 @@ import { StyleSheet } from 'react-native';
 
 export const styles = StyleSheet.create({
   container: {
-    position: 'relative',
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 20,
     marginBottom: 12,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333333',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333333',
-    marginBottom: 2,
-  },
-  description: {
-    fontSize: 12,
-    color: '#666666',
-    marginBottom: 20,
-  },
-  mapContainer: {
-    height: 300,
-    marginBottom: 16,
-  },
-  koreaMap: {
     flex: 1,
-    position: 'relative',
-    backgroundColor: '#E3F2FD',
+  },
+
+  // 구장 카드
+  stadiumCard: {
+    backgroundColor: '#FAFAFA',
     borderRadius: 12,
-    overflow: 'hidden',
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
-  mapBackground: {
-    position: 'absolute',
-    top: '10%',
-    left: '25%',
-    width: '50%',
-    height: '80%',
-    backgroundColor: '#BBDEFB',
-    borderRadius: 20,
-    // 한국 모양을 흉내낸 배경
-  },
-  stadiumMarker: {
-    position: 'absolute',
-    alignItems: 'center',
-    transform: [{ translateX: -12 }, { translateY: -12 }],
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
   },
   stadiumInfo: {
-    position: 'absolute',
-    top: 25,
-    left: -40,
-    width: 80,
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    borderRadius: 6,
-    padding: 4,
+    flex: 1,
+  },
+  stadiumName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333333',
+  },
+  winRateContainer: {
+    alignItems: 'flex-end',
+  },
+  winRateText: {
+    fontSize: 20,
+    fontWeight: '800',
+  },
+
+  // 승률 바
+  progressBarContainer: {
+    marginBottom: 16,
+  },
+  progressBarBackground: {
+    height: 8,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 4,
+    minWidth: 2,
+  },
+
+  // 기록 상세
+  recordContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  recordItem: {
     alignItems: 'center',
+    flex: 1,
   },
-  stadiumLabel: {
-    fontSize: 8,
-    color: 'white',
-    fontWeight: 'bold',
-    textAlign: 'center',
+  recordLabel: {
+    fontSize: 11,
+    color: '#999999',
+    marginBottom: 2,
+    fontWeight: '500',
   },
-  stadiumWinRate: {
-    fontSize: 7,
-    color: 'white',
-    textAlign: 'center',
+  recordValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#333333',
   },
 });

@@ -13,25 +13,11 @@ export const styles = StyleSheet.create({
     flexGrow: 1,
     paddingHorizontal: 20,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
   backButton: {
-    padding: 4,
+    marginBottom: 30,
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333333',
-  },
-  headerSpacer: {
-    width: 32,
+  backButtonText: {
+    fontSize: 16,
+    color: '#000000',
   },
 });

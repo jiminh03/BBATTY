@@ -1,6 +1,6 @@
 // pages/mypage/UserProfileScreen.tsx
 import React, { useEffect } from 'react';
-import { View, Text, ScrollView, FlatList, RefreshControl, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, FlatList, RefreshControl, ActivityIndicator, TouchableOpacity, StatusBar } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -158,13 +158,7 @@ export default function UserProfileScreen() {
           <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
             {stadiumStats.data?.stadiumStats && (
               <StadiumMapStats
-                stadiumStats={Object.entries(stadiumStats.data.stadiumStats).map(([stadium, stats]: [string, any]) => ({
-                  stadiumId: Number(stadium),
-                  stadiumName: stadium,
-                  matches: stats.games || 0,
-                  wins: stats.wins || 0,
-                  winRate: Math.round((parseFloat(stats.winRate) || 0) * 100),
-                }))}
+                stadiumStats={stadiumStats.data.stadiumStats}
                 totalGames={basicStats.data?.totalGames || 0}
                 winRate={basicStats.data?.winRate || '0'}
                 wins={basicStats.data?.wins || 0}
@@ -355,14 +349,18 @@ export default function UserProfileScreen() {
   }
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <UserProfileHeader
-        profile={profile}
-        basicStats={basicStats.data}
-        isOwner={isOwner}
-        onBackPress={() => navigation.goBack()}
-        onSettingsPress={() => navigation.navigate('Settings')}
-      />
+    <View style={{ flex: 1, backgroundColor: '#fff' }}>
+      <StatusBar backgroundColor={themeColor} barStyle="light-content" />
+      {/* 헤더 영역만 테마색 배경 */}
+      <View style={{ backgroundColor: themeColor, paddingTop: insets.top }}>
+        <UserProfileHeader
+          profile={profile}
+          basicStats={basicStats.data}
+          isOwner={isOwner}
+          onBackPress={() => navigation.goBack()}
+          onSettingsPress={() => navigation.navigate('Settings')}
+        />
+      </View>
 
       <ProfileTabs activeTab={activeTab} onTabChange={setActiveTab} />
 

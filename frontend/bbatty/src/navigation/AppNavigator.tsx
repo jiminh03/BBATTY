@@ -149,6 +149,16 @@ export default function AppNavigator() {
 
       await handleSetUserAndTeam(userInfo);
       setIsExistingUser(true);
+
+      Alert.alert('회원가입 완료', '환영합니다! 빠팅과 함께 야구를 즐겨보세요.', [
+        {
+          text: '확인',
+          onPress: () => {
+            // 메인 화면으로 전환을 위해 인증 상태 업데이트
+            // isAuthenticated가 true가 되면 자동으로 MainNavigator로 전환됨
+          },
+        },
+      ]);
     } catch (error) {
       console.error('Sign up completion failed:', error);
       Alert.alert('오류', '회원가입 완료 처리 중 오류가 발생했습니다.');
@@ -190,7 +200,11 @@ export default function AppNavigator() {
             />
           </>
         ) : (
-          <Stack.Screen name='AuthStack' component={AuthNavigator} />
+          <Stack.Screen name='AuthStack'>
+            {(props) => (
+              <AuthNavigator {...props} onSignUpComplete={handleSignUpComplete} isExistingUser={isExistingUser} />
+            )}
+          </Stack.Screen>
         )}
       </Stack.Navigator>
     </NavigationContainer>

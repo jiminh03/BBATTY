@@ -104,7 +104,7 @@ export const UserBadgesCard: React.FC<UserBadgesCardProps> = ({ badgeCategories 
                           <View style={styles.smallEmptyBadge} />
                         </View>
                         <Text style={styles.smallBadgeDescription} numberOfLines={1}>
-                          시즌 {10 + index}승 달성
+                          시즌 {20 + index * 5}승 달성
                         </Text>
                       </View>
                     ))}

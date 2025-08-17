@@ -3,7 +3,6 @@ import { View, ScrollView, KeyboardAvoidingView, Platform, Alert, TouchableOpaci
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { Ionicons } from '@expo/vector-icons';
 
 import { MyPageStackParamList } from '../../../navigation/types';
 import { ProfileForm, useProfile, useUpdateProfile } from '../../../features/user-profile';
@@ -75,14 +74,9 @@ export default function EditProfileScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps='handled'
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Ionicons name='chevron-back' size={24} color='#333333' />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>프로필 변경</Text>
-          <View style={styles.headerSpacer} />
-        </View>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Text style={styles.backButtonText}>{'<'} 프로필 변경</Text>
+        </TouchableOpacity>
 
         <ProfileForm
           initialData={initialFormData}

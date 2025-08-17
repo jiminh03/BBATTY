@@ -70,8 +70,6 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
   },
   menuItemLeft: {
     flexDirection: 'row',
@@ -88,8 +86,6 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
   },
   dangerMenuLabel: {
     fontSize: 16,

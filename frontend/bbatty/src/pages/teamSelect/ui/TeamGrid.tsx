@@ -12,22 +12,6 @@ interface TeamGridProps {
 export const TeamGrid: React.FC<TeamGridProps> = ({ teams, onSelectTeam, selectedTeamId }) => {
   const scaleValue = React.useRef(new Animated.Value(1)).current;
 
-  const handlePressIn = () => {
-    Animated.spring(scaleValue, {
-      toValue: 0.95,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    Animated.spring(scaleValue, {
-      toValue: 1,
-      friction: 3,
-      tension: 40,
-      useNativeDriver: true,
-    }).start();
-  };
-
   return (
     <View style={styles.teamGrid}>
       {teams.map((team) => {
@@ -38,15 +22,11 @@ export const TeamGrid: React.FC<TeamGridProps> = ({ teams, onSelectTeam, selecte
             key={team.id}
             style={[styles.teamCard, isSelected && styles.teamCardSelected]}
             onPress={() => onSelectTeam(team.id)}
-            // onPressIn={handlePressIn}
-            // onPressOut={handlePressOut}
             activeOpacity={0.7}
           >
             <Animated.View style={[styles.teamCardContent, { transform: [{ scale: scaleValue }] }]}>
               <View style={[styles.teamLogoContainer, isSelected && styles.teamLogoContainerSelected]}>
-                {/* 실제로는 Image 컴포넌트 사용 */}
-                {/* <Image source={{ uri: team.logoUrl }} style={styles.teamLogo} /> */}
-                <Text style={styles.teamLogoEmoji}>{team.imagePath}</Text>
+                <Image source={team.imagePath as any} style={styles.teamLogo} />
               </View>
               <Text style={[styles.teamName, isSelected && styles.teamNameSelected]}>{team.name}</Text>
             </Animated.View>

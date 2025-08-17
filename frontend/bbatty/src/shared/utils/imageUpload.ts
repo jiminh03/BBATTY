@@ -54,24 +54,25 @@ const getMimeType = (fileName: string): string => {
   }
 };
 
-const getPresignedUrl = (filename: string) =>
+const getPresignedUrl = (filename: string, endpoint: string = '/api/posts/images/presigned-url') =>
   wrapApiCall<PresignedUrlResponse>(() =>
-    apiClient.post('/api/posts/images/presigned-url', null, { params: { filename } } as any)
+    apiClient.post(endpoint, null, { params: { filename } } as any)
   );
 
 export const uploadImageToS3 = async (
   fileUri: string,
   originalFileName: string,
-  prefix: string = 'image'
+  prefix: string = 'image',
+  endpoint?: string
 ): Promise<Result<ImageUploadResult, ImageUploadError>> => {
   try {
     const uniqueFileName = generateUniqueFileName(originalFileName, prefix);
 
-    const presignedResult = await getPresignedUrl(uniqueFileName);
+    const presignedResult = await getPresignedUrl(uniqueFileName, endpoint);
     if (!presignedResult.success) {
       return Err({
         type: 'PRESIGNED_URL_ERROR',
-        message: 'presigned URL 요청 실패: ' + presignedResult.error.message,
+        message: 'presigned URL 요청 실패: ' + (presignedResult.error?.message || '알 수 없는 오류'),
       });
     }
 

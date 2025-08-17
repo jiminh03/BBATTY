@@ -6,11 +6,14 @@ import { StatsType, StreakStats } from '../model/statsTypes';
 import { QueryKeys, QueryInvalidator } from '../../../shared/api/lib/tanstack/queryKeyTypes';
 import { isOk } from '../../../shared/utils/result';
 import { statsApi } from '../api/statsApi';
+import { useTokenStore } from '../../../shared/api/token/tokenStore';
 
 const PROFILE_ENTITY = 'profile';
 
 // 프로필 조회
 export const useProfile = (userId?: number) => {
+  const refreshToken = useTokenStore((state) => state.refreshToken);
+  
   return useQuery({
     queryKey: userId ? QueryKeys.detail(PROFILE_ENTITY, userId) : QueryKeys.detail(PROFILE_ENTITY, 'me'),
     queryFn: async () => {
@@ -22,6 +25,7 @@ export const useProfile = (userId?: number) => {
     },
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
+    enabled: !!refreshToken, // 토큰이 있을 때만 실행
   });
 };
 
@@ -60,6 +64,7 @@ export const useUpdatePrivacySettings = () => {
 
 // 뱃지 조회
 export const useUserBadges = (userId?: number, season?: Season) => {
+  const refreshToken = useTokenStore((state) => state.refreshToken);
   const params = {
     ...(userId && { userId }),
     ...(season && season !== 'total' && { season }),
@@ -75,11 +80,13 @@ export const useUserBadges = (userId?: number, season?: Season) => {
       throw new Error(result.error.message);
     },
     staleTime: 5 * 60 * 1000,
+    enabled: !!refreshToken, // 토큰이 있을 때만 실행
   });
 };
 
 // 기본 승률 조회
 export const useBasicStats = (userId?: number) => {
+  const refreshToken = useTokenStore((state) => state.refreshToken);
   const currentYear = new Date().getFullYear().toString(); // 현재 년도 동적 추출
 
   const params = {
@@ -98,6 +105,7 @@ export const useBasicStats = (userId?: number) => {
       throw new Error(result.error.message);
     },
     staleTime: 3 * 60 * 1000,
+    enabled: !!refreshToken, // 토큰이 있을 때만 실행
   });
 };
 
@@ -108,6 +116,7 @@ export const useDetailedStats = <T = any>(
   season?: Season,
   enabled: boolean = true
 ) => {
+  const refreshToken = useTokenStore((state) => state.refreshToken);
   const params = {
     type,
     ...(userId && { userId }),
@@ -126,7 +135,7 @@ export const useDetailedStats = <T = any>(
       throw new Error(result.error.message);
     },
     staleTime: 3 * 60 * 1000,
-    enabled,
+    enabled: enabled && !!refreshToken, // 토큰이 있고 enabled가 true일 때만 실행
   });
 };
 
@@ -153,6 +162,8 @@ export const useStreakStats = (userId?: number, season?: Season) => {
 
 // 직관 년도 목록 조회
 export const useAttendanceYears = (userId?: number) => {
+  const refreshToken = useTokenStore((state) => state.refreshToken);
+  
   return useQuery({
     queryKey: ['attendanceYears', userId],
     queryFn: async () => {
@@ -163,7 +174,7 @@ export const useAttendanceYears = (userId?: number) => {
       throw new Error(result.error.message);
     },
     staleTime: 10 * 60 * 1000, // 10분
-    enabled: !!userId, // userId가 있을 때만 실행
+    enabled: !!userId && !!refreshToken, // userId가 있고 토큰이 있을 때만 실행
   });
 };
 

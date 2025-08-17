@@ -1,5 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Animated, Dimensions, TouchableOpacity, AppState, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  Animated,
+  Dimensions,
+  TouchableOpacity,
+  AppState,
+  Alert,
+  Image,
+  ImageBackground,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { styles } from './SplashScreen.styles';
 import { screen } from '../../../shared';
@@ -8,6 +18,7 @@ import { useUserStore } from '../../../entities/user/model/userStore';
 import { isErr, isOk } from '../../../shared/utils/result';
 import { useTheme } from '../../../shared/team/ThemeContext';
 import { findTeamById } from '../../../shared/team/teamTypes';
+import { usekakaoStore } from '../../../features/user-auth/model/kakaoStore';
 
 interface SplashScreenProps {
   onAnimationComplete?: () => void;
@@ -24,14 +35,13 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLogi
   // 애니메이션 값들
   const ballPosition = useRef(new Animated.Value(-100)).current;
   const ballRotation = useRef(new Animated.Value(0)).current;
-  const tiOpacity = useRef(new Animated.Value(1)).current;
-  const tingOpacity = useRef(new Animated.Value(0)).current;
   const buttonOpacity = useRef(new Animated.Value(0)).current;
   const buttonTranslateY = useRef(new Animated.Value(20)).current;
 
-  const { refreshTokens, hasRefreshToken, isRefreshTokenExpired } = useTokenStore();
-  const { hasUser, getCurrentUser } = useUserStore();
+  const { refreshTokens, hasRefreshToken, isRefreshTokenExpired, resetToken } = useTokenStore();
+  const { hasUser, getCurrentUser, reset: resetUser } = useUserStore();
   const { setCurrentTeam } = useTheme();
+  const { setKakaoUserInfo, setKakaoAccessToken } = usekakaoStore();
 
   useEffect(() => {
     initializeApp();
@@ -72,9 +82,18 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLogi
       }
 
       // 1. 사용자 정보 및 토큰 확인
+      const hasTokens = hasRefreshToken();
+      
+      // 토큰이 없으면 일찍 종료
+      if (!hasTokens) {
+        console.log('🔴 [SplashScreen] No tokens found, skipping auto login');
+        setShouldShowLogin(true);
+        startAnimationWithLogin();
+        return;
+      }
+      
       const hasUserResult = await hasUser();
       const userExists = isOk(hasUserResult) && hasUserResult.data;
-      const hasTokens = hasRefreshToken();
 
       console.log('🔍 [SplashScreen] 자동로그인 체크:', {
         userExists,
@@ -97,18 +116,42 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLogi
         const refreshResult = await refreshTokens();
 
         if (isOk(refreshResult) && refreshResult.data) {
-          // 자동로그인 성공 - 사용자 정보로 팀 테마 설정
-          const currentUser = getCurrentUser();
-          if (currentUser?.teamId) {
-            const team = findTeamById(currentUser.teamId);
-            if (team) {
-              setCurrentTeam(team);
-            }
-          }
+          // 토큰 갱신 성공 - 이제 실제 사용자 존재 여부 확인
+          console.log('🔄 [SplashScreen] 토큰 갱신 성공, 사용자 존재 여부 확인 중...');
+          
+          try {
+            // 프로필 API 호출로 사용자 존재 여부 확인
+            const { profileApi } = await import('../../../features/user-profile/api/profileApi');
+            const profileResult = await profileApi.getProfile();
+            
+            if (isOk(profileResult)) {
+              // 사용자 존재 확인 - 자동로그인 성공
+              const currentUser = getCurrentUser();
+              if (currentUser?.teamId) {
+                const team = findTeamById(currentUser.teamId);
+                if (team) {
+                  setCurrentTeam(team);
+                }
+              }
 
-          console.log('✅ [SplashScreen] Auto login successful');
-          startAnimationAndComplete();
-          return;
+              console.log('✅ [SplashScreen] Auto login successful');
+              startAnimationAndComplete();
+              return;
+            } else {
+              // 프로필 조회 실패 - 탈퇴된 사용자
+              console.log('🚫 [SplashScreen] User profile not found - user may have been deleted');
+              throw new Error('User profile not found');
+            }
+          } catch (profileError) {
+            console.log('❌ [SplashScreen] Profile check failed:', profileError);
+            
+            // 탈퇴된 사용자로 판단 - 상태 정리
+            console.log('🧹 [SplashScreen] Clearing user state - user may have withdrawn');
+            resetToken();
+            await resetUser();
+            setKakaoUserInfo(null);
+            setKakaoAccessToken(null);
+          }
         } else {
           console.log('❌ [SplashScreen] Token refresh failed:', refreshResult.error);
         }
@@ -131,27 +174,13 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLogi
       // 야구공 애니메이션
       Animated.parallel([
         Animated.timing(ballPosition, {
-          toValue: width / 2 + 20,
-          duration: 1500,
+          toValue: width + 100,
+          duration: 1875,
           useNativeDriver: true,
         }),
         Animated.timing(ballRotation, {
           toValue: 3,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-      ]),
-
-      // 티를 팅으로 교체
-      Animated.sequence([
-        Animated.timing(tiOpacity, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(tingOpacity, {
-          toValue: 1,
-          duration: 200,
+          duration: 1875,
           useNativeDriver: true,
         }),
       ]),
@@ -174,27 +203,13 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLogi
       // 야구공 애니메이션
       Animated.parallel([
         Animated.timing(ballPosition, {
-          toValue: width / 2 + 20,
-          duration: 1500,
+          toValue: width + 100,
+          duration: 1875,
           useNativeDriver: true,
         }),
         Animated.timing(ballRotation, {
           toValue: 3,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-      ]),
-
-      // 티를 팅으로 교체
-      Animated.sequence([
-        Animated.timing(tiOpacity, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(tingOpacity, {
-          toValue: 1,
-          duration: 200,
+          duration: 1875,
           useNativeDriver: true,
         }),
       ]),
@@ -259,42 +274,11 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLogi
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* 배경 야구공 실밥 패턴 */}
-      <View style={styles.backgroundPattern}>
-        {[...Array(6)].map((_, index) => (
-          <View
-            key={index}
-            style={[
-              styles.stitchLine,
-              {
-                top: `${index * 20}%`,
-                transform: [{ rotate: '45deg' }],
-              },
-            ]}
-          />
-        ))}
-      </View>
-
-      {/* 메인 콘텐츠 */}
-      <View style={styles.content}>
-        <View style={styles.titleContainer}>
-          <Text style={styles.titleText}>빠</Text>
-
-          {/* 티/팅 전환 */}
-          <View style={styles.letterContainer}>
-            <Animated.Text style={[styles.titleText, styles.tiText, { opacity: tiOpacity }]}>티</Animated.Text>
-            <Animated.Text style={[styles.titleText, styles.tingText, { opacity: tingOpacity }]}>팅</Animated.Text>
-
-            {/* 팅 아래 밑줄 */}
-            <Animated.View style={[styles.underline, { opacity: tingOpacity }]} />
-          </View>
-        </View>
-
-        {/* 애니메이션 서브타이틀 */}
-        <Text style={styles.subtitle}>애니메이션</Text>
-      </View>
-
+    <ImageBackground
+      source={require('../../../../assets/Splash.jpg')}
+      style={[styles.container, { paddingTop: insets.top }]}
+      resizeMode='cover'
+    >
       {/* 날아오는 야구공 */}
       <Animated.View
         style={[
@@ -304,8 +288,11 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLogi
           },
         ]}
       >
-        <View style={styles.baseballStitch} />
-        <View style={[styles.baseballStitch, styles.baseballStitchVertical]} />
+        <Image
+          source={require('../../../../assets/baseball-ball.png')}
+          style={styles.baseballImage}
+          resizeMode='contain'
+        />
       </Animated.View>
 
       {/* 카카오 로그인 버튼 - 조건부 렌더링 */}
@@ -325,7 +312,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLogi
           </TouchableOpacity>
         </Animated.View>
       )}
-    </View>
+    </ImageBackground>
   );
 };
 

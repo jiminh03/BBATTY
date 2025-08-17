@@ -6,6 +6,12 @@ import { handleApiError } from '../utils/errorHandler';
 import { retryRequest } from '../utils/retry';
 import { isOk } from '../../utils/result';
 
+// 인터셉터 비활성화 상태 체크
+let interceptorsDisabled = false;
+export const setInterceptorsDisabled = (disabled: boolean) => {
+  interceptorsDisabled = disabled;
+};
+
 // 토큰 제거시 호출될 콜백
 type OnUnauthorizedCallback = () => Promise<void>;
 
@@ -14,9 +20,14 @@ export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnaut
   client.interceptors.request.use(
     async (config: InternalAxiosRequestConfig) => {
       //퍼블릭 엔드포인트가 아닌 경우 토큰 추가
-      const isPublicEndpoint = /\/api\/(auth\/(signup|check-nickname|refresh|login))(\/.*)?$/.test(config.url || '');
+      const isPublicEndpoint = /\/api\/(auth\/(signup|check-nickname|refresh|login|profile\/presigned-url))(\/.*)?$/.test(config.url || '');
 
       if (!isPublicEndpoint) {
+        // 인터셉터가 비활성화된 경우 요청 차단
+        if (interceptorsDisabled) {
+          return Promise.reject(new Error('Interceptors disabled - withdrawing'));
+        }
+        
         const tokenStore = useTokenStore.getState();
 
         // 토큰 만료 사전 체크 및 필요시 갱신
