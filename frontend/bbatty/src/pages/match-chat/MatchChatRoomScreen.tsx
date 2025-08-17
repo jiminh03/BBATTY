@@ -855,6 +855,12 @@ export const MatchChatRoomScreen = () => {
 
   return (
     <View style={styles.container}>
+      {/* 알림 관리자 - 최상단에 독립적으로 위치 */}
+      <ChatNotificationManager
+        notifications={notifications}
+        onDismiss={dismissNotification}
+      />
+      
       <LinearGradient
         colors={[themeColor, themeColor]}
         style={[styles.headerGradient, { paddingTop: insets.top }]}
@@ -881,14 +887,9 @@ export const MatchChatRoomScreen = () => {
 
       <KeyboardAvoidingView 
         style={styles.keyboardContainer}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + 56 : 0}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={0}
       >
-        {/* 알림 관리자 */}
-        <ChatNotificationManager
-          notifications={notifications}
-          onDismiss={dismissNotification}
-        />
 
         {/* 메시지 목록 */}
         <FlatList
@@ -1026,7 +1027,6 @@ export const MatchChatRoomScreen = () => {
           styles.messageInputWithSafeArea, 
           { 
             paddingBottom: Math.max(insets.bottom, 16),
-            marginBottom: Platform.OS === 'android' ? keyboardHeight : 0
           }
         ]}>
           <TextInput

@@ -328,6 +328,7 @@ export const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#eee',
     alignItems: 'center',
+    minHeight: 76, // 최소 높이 보장
   },
   
   // 새로운 말풍선 레이아웃 스타일

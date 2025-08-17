@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import type { StackNavigationProp, RouteProp } from '@react-navigation/stack';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import { chatRoomApi } from '../../entities/chat-room/api/api';
@@ -232,6 +232,14 @@ export const MatchChatRoomListScreen = () => {
     
     loadRooms();
   }, []);
+
+  // 화면이 포커스될 때마다 데이터 새로고침
+  useFocusEffect(
+    useCallback(() => {
+      console.log('📱 MatchChatRoomListScreen 포커스됨 - 데이터 새로고침');
+      loadRooms(true); // 새로고침으로 처리
+    }, [])
+  );
 
   
 

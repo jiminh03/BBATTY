@@ -193,6 +193,19 @@ export const CreateMatchChatRoomScreen = () => {
       return;
     }
 
+    // 나이 범위 강제 검증 및 수정 (20-100세)
+    const correctedMinAge = Math.max(20, Math.min(100, formData.minAge || 20));
+    const correctedMaxAge = Math.max(20, Math.min(100, formData.maxAge || 100));
+    
+    // 자동 조정 (사용자에게 알림 없이)
+    if (formData.minAge !== correctedMinAge || formData.maxAge !== correctedMaxAge) {
+      setFormData(prev => ({ 
+        ...prev, 
+        minAge: correctedMinAge, 
+        maxAge: correctedMaxAge 
+      }));
+    }
+
     if (formData.minAge >= formData.maxAge) {
       Alert.alert('알림', '최대 나이는 최소 나이보다 커야 합니다.');
       return;
