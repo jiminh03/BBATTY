@@ -58,7 +58,11 @@ function TeamHeaderCard({
   const [isLoading, setIsLoading] = useState(false);
   const [showButton, setShowButton] = useState(false);
 
-  const isVerified = useMemo(() => isVerifiedToday(), [isVerifiedToday]);
+  const isVerified = useMemo(() => {
+    const verified = false;
+    console.log('TeamHeaderCard - isVerified:', verified);
+    return verified;
+  }, [isVerifiedToday]);
 
   // 오늘 경기 로드
   useEffect(() => {
@@ -84,27 +88,44 @@ function TeamHeaderCard({
     loadTodayGame();
   }, [isVerified, todayGameInfo]);
 
-  // 경기 2시간 전부터 버튼 활성화 (초기 한 번만 체크)
+  // 버튼 활성화 조건 체크
   useEffect(() => {
-    if (!gameInfo || isVerified) return;
+    if (!gameInfo) {
+      setShowButton(false);
+      return;
+    }
+    
     const gameDateTime = new Date(gameInfo.dateTime);
     const now = new Date();
     const twoHoursBefore = new Date(gameDateTime.getTime() - 2 * 60 * 60 * 1000);
-    setShowButton(now >= twoHoursBefore);
+    const gameEndTime = new Date(gameDateTime.getTime() + 4 * 60 * 60 * 1000);
+    
+    if (isVerified) {
+      // 인증된 상태여도 경기 시간 범위 내에서만 활성화
+      setShowButton(now >= twoHoursBefore && now <= gameEndTime);
+      return;
+    }
+    
+    // 인증 안된 상태에서는 경기 2시간 전부터 경기 종료 후 4시간까지만 활성화
+    setShowButton(now >= twoHoursBefore && now <= gameEndTime);
   }, [gameInfo, isVerified]);
 
   const getChatButtonText = () => {
     if (isLoading) return '로딩중...';
+    
+    // 직관인증 완료 상태에서만 채팅방 텍스트 표시
     if (isVerified && gameInfo) {
       const home = String(gameInfo.homeTeamName ?? '').split(' ')[0];
       const away = String(gameInfo.awayTeamName ?? '').split(' ')[0];
       return `${home} VS ${away}\n실시간 채팅방 가기`;
-      }
+    }
+    
+    // 그 외 모든 경우는 직관인증하기
     return '직관인증하기';
   };
 
-  // 버튼 활성/비활성(모양 유지)
-  const enabledNow = isVerified || showButton;
+  // 버튼 활성/비활성: 인증된 상태에서만 활성화, 인증 안된 상태에서는 경기 2시간 전부터만
+  const enabledNow = isVerified ? true : showButton;
 
   return (
     <View
