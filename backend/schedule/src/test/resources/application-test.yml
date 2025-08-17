@@ -16,6 +16,10 @@ spring:
       ddl-auto: create-drop  # 테스트 시마다 스키마 재생성
     show-sql: true
     database-platform: org.hibernate.dialect.H2Dialect
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: Asia/Seoul
 
   # Redis 설정 (테스트용)
   data:

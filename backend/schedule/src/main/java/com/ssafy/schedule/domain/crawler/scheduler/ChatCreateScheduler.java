@@ -183,7 +183,9 @@ public class ChatCreateScheduler {
         log.info("모든 경기 이벤트 스케줄 취소: {}개 작업", scheduledTasks.size());
         
         scheduledTasks.values().forEach(task -> task.cancel(false));
-        scheduledTasks.clear();
+        scheduledTasks.clear(
+
+        );
         scheduledTimes.clear();
     }
 

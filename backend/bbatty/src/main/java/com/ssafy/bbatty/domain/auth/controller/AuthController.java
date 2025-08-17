@@ -10,6 +10,7 @@ import com.ssafy.bbatty.global.constants.ErrorCode;
 import com.ssafy.bbatty.global.constants.SuccessCode;
 import com.ssafy.bbatty.global.exception.ApiException;
 import com.ssafy.bbatty.global.response.ApiResponse;
+import com.ssafy.bbatty.global.s3.S3Service;
 import com.ssafy.bbatty.global.security.JwtProvider;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -28,7 +29,9 @@ import org.springframework.web.bind.annotation.*;
  * 1. POST /api/auth/login - 카카오 로그인 (기존 사용자)
  * 2. POST /api/auth/signup - 회원가입 (신규 사용자)
  * 3. POST /api/auth/refresh - 토큰 갱신
- * 4. DELETE /api/auth/withdraw - 회원 탈퇴
+ * 4. GET /api/auth/check-nickname - 닉네임 중복 확인
+ * 5. POST /api/auth/profile/presigned-url - 프로필 이미지 업로드용 Presigned URL 생성
+ * 6. DELETE /api/auth/withdraw - 회원 탈퇴
  */
 @Slf4j
 @RestController
@@ -38,6 +41,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final JwtProvider jwtProvider;
+    private final S3Service s3Service;
 
     /**
      * 카카오 로그인
@@ -121,6 +125,29 @@ public class AuthController {
         
         authService.withdraw(userId);
         return ResponseEntity.ok(ApiResponse.success());
+    }
+
+    /**
+     * 프로필 이미지 업로드를 위한 Presigned URL 생성
+     * 
+     * 📝 프론트 처리:
+     * - 회원가입 시 프로필 이미지 업로드를 위해 사용
+     * - filename 파라미터로 업로드할 파일명 전송
+     * - 응답으로 받은 uploadUrl로 PUT 요청하여 이미지 업로드
+     * - fileUrl을 SignupRequest의 profileImageUrl에 포함하여 회원가입 요청
+     */
+    @PostMapping("/profile/presigned-url")
+    public ResponseEntity<ApiResponse<S3Service.PresignedUrlResponse>> generateProfilePresignedUrl(
+            @RequestParam String filename) {
+        
+        try {
+            S3Service.PresignedUrlResponse response = s3Service.generatePresignedUploadUrlWithPath("profiles", filename);
+            
+            return ResponseEntity.status(SuccessCode.SUCCESS_DEFAULT.getStatus())
+                    .body(ApiResponse.success(SuccessCode.SUCCESS_DEFAULT, response));
+        } catch (IllegalArgumentException e) {
+            throw new ApiException(ErrorCode.INVALID_FILE_PATH);
+        }
     }
 
     /**
