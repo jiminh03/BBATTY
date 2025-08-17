@@ -1,8 +1,9 @@
 {
   "expo": {
-    "name": "bbatty",
+    "name": "main",
     "slug": "bbatty",
     "version": "1.0.0",
+    "scheme": "bbatty",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -67,9 +68,7 @@
         "expo-build-properties",
         {
           "android": {
-            "extraMavenRepos": [
-              "https://devrepo.kakao.com/nexus/content/groups/public/"
-            ]
+            "extraMavenRepos": ["https://devrepo.kakao.com/nexus/content/groups/public/"]
           }
         }
       ],

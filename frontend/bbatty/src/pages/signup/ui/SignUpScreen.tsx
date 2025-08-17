@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, ScrollView, KeyboardAvoidingView, Platform, Alert, TouchableOpacity, Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { RouteProp, useNavigation } from '@react-navigation/native';
 import { AuthStackParamList, AuthStackScreenProps } from '../../../navigation/types';
 import { authApi } from '../../../features/user-auth';
@@ -123,23 +124,30 @@ export default function SignUpScreen({
   }
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 },
-        ]}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps='handled'
-      >
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>{'<'} 회원가입</Text>
+          <Ionicons name='chevron-back' size={24} color='#333333' />
         </TouchableOpacity>
+        <Text style={styles.headerTitle}>회원가입</Text>
+        <View style={styles.headerSpacer} />
+      </View>
 
-        <ProfileForm onSubmit={handleSignUp} showNicknameField={true} />
-      </ScrollView>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: insets.bottom + 20 },
+          ]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps='handled'
+        >
+          <ProfileForm onSubmit={handleSignUp} showNicknameField={true} />
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       <NicknameConflictModal visible={showConflictModal} onConfirm={() => setShowConflictModal(false)} />
-    </KeyboardAvoidingView>
+    </View>
   );
 }
