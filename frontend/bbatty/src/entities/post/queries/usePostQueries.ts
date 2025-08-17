@@ -209,9 +209,11 @@ export const usePostLikeActions = (
   options?: {
     teamId?: number;
     listKeyword?: string;
-    cooldownMs?: number;
-    refetchAfterMs?: number;
     onRequireLogin?: () => void;
+    /** 사용자 연타를 병합하는 대기 시간(ms). */
+    debounceMs?: number; // 기본 500
+    /** 서버 확인용 재검증 지연(ms). 0이면 즉시 재검증하지 않음. */
+    refetchAfterMs?: number; // 기본 300
   }
 ) => {
   const qc = useQueryClient();
@@ -220,10 +222,10 @@ export const usePostLikeActions = (
 
   const teamId = options?.teamId;
   const keyword = options?.listKeyword;
-  const cooldownMs = options?.cooldownMs ?? 350;
-  const refetchAfterMs = options?.refetchAfterMs ?? 0;
+  const DEBOUNCE_MS = options?.debounceMs ?? 500;
+  const REFETCH_AFTER = options?.refetchAfterMs ?? 300;
 
-  // 렌더 중 set 방지
+  // 세션 유저 전달(렌더 중 set 금지 → effect)
   useEffect(() => {
     useLikeStore.getState().setSessionUser(userId);
   }, [userId]);
@@ -231,140 +233,141 @@ export const usePostLikeActions = (
   const setLikedStore = useLikeStore((s) => s.setLiked);
   const getLikedStore = useLikeStore((s) => s.getLiked);
 
-  const lastAppliedRef = useRef<null | 'like' | 'unlike'>(null);
   const detailKey = ['post', postId] as const;
 
-  const coolingRef = useRef(false);
-  const inFlightRef = useRef<null | 'like' | 'unlike'>(null);
-  const lastIntentRef = useRef<null | 'like' | 'unlike'>(null);
-  const [isCooling, setIsCooling] = useState(false);
+  /** 마지막으로 서버에 동기화된 값 */
+  const serverLikedRef = useRef<boolean | null>(null);
+  /** 사용자가 현재 UI상 원한다고 보는 목표값(연타로 계속 바뀜) */
+  const desiredLikedRef = useRef<boolean | null>(null);
+  /** 서버 요청 진행 중 여부 */
+  const inFlightRef = useRef(false);
+  /** 디바운스 타이머 */
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const startCooldown = () => {
-    coolingRef.current = true;
-    setIsCooling(true);
-    setTimeout(() => {
-      coolingRef.current = false;
-      setIsCooling(false);
-    }, cooldownMs);
+  // 최초 서버 값 주입
+  useEffect(() => {
+    const curr = qc.getQueryData<Post>(detailKey) as Post | undefined;
+    const liked =
+      typeof curr?.isLiked === 'boolean'
+        ? curr.isLiked
+        : typeof (curr as any)?.likedByMe === 'boolean'
+        ? (curr as any).likedByMe
+        : !!(curr as any)?.liked;
+    serverLikedRef.current = !!liked;
+    if (desiredLikedRef.current === null) desiredLikedRef.current = !!liked;
+  }, [qc, postId]);
+
+  /** 공통 낙관 반영 */
+  const applyOptimistic = (liked: boolean, likeDelta: number) => {
+    setLikedStore(postId, liked, userId);
+    qc.setQueryData<Post>(detailKey, (old) => {
+      if (!old) return old as any;
+      const base =
+        typeof old.likes === 'number' ? old.likes : ((old as any).likeCount as number) ?? 0;
+      const next = Math.max(0, base + likeDelta);
+      return { ...(old as any), isLiked: liked, likes: next } as Post;
+    });
+    syncLikeEverywhere(qc, postId, { liked, likeDelta, teamId, userId, keyword });
   };
 
-  const like = useMutation({
-    mutationFn: () => postApi.likePost(postId),
-    onMutate: async () => {
-      if (!userId) {
-        options?.onRequireLogin?.();
-        throw new Error('UNAUTHENTICATED');
-      }
-      await qc.cancelQueries({ queryKey: detailKey });
+  /** 현재 캐시 liked/likes 읽기 */
+  const readCache = () => {
+    const curr = qc.getQueryData<Post>(detailKey) as Post | undefined;
+    const liked =
+      typeof curr?.isLiked === 'boolean'
+        ? curr.isLiked
+        : typeof (curr as any)?.likedByMe === 'boolean'
+        ? (curr as any).likedByMe
+        : !!(curr as any)?.liked;
+    const likes =
+      typeof curr?.likes === 'number'
+        ? curr.likes
+        : typeof (curr as any)?.likeCount === 'number'
+        ? (curr as any).likeCount
+        : 0;
+    return { liked: !!liked, likes };
+  };
 
-      const prev = qc.getQueryData<Post>(detailKey);
-      const base = typeof prev?.likes === 'number' ? prev!.likes : (prev as any)?.likeCount ?? 0;
-      const next = base + 1;
+  /** 서버로 실제 동기화(막타만 전송, 요청 중이면 대기) */
+  const flush = useCallback(() => {
+    if (inFlightRef.current) return;
+    const desired = desiredLikedRef.current;
+    const server = serverLikedRef.current;
+    if (desired === null || server === null || desired === server) return;
 
-      // 1) 스토어 먼저
-      setLikedStore(postId, true, userId);
+    inFlightRef.current = true;
+    const call = desired ? postApi.likePost : postApi.unlikePost;
 
-      // 2) 상세 + 목록/검색/인기 전파
-      qc.setQueryData<Post>(detailKey, (old) => (old ? ({ ...old, isLiked: true, likes: next } as Post) : old));
-      syncLikeEverywhere(qc, postId, { liked: true, likeDelta: +1, teamId, userId, keyword });
+    call(postId)
+      .then(() => {
+        serverLikedRef.current = desired;
+      })
+      .catch(() => {
+        // 실패 시 서버 값 모름 → 안전하게 재검증
+        qc.invalidateQueries({ queryKey: detailKey });
+        serverLikedRef.current = null; // 다음 flush 때 재결정
+      })
+      .finally(() => {
+        inFlightRef.current = false;
 
-      lastAppliedRef.current = 'like';
-      return { prev, base };
-    },
-    onError: (_e, _v, ctx) => {
-      if (!ctx) return;
-      setLikedStore(postId, (ctx.prev as any)?.isLiked ?? false, userId);
-      qc.setQueryData<Post>(detailKey, (old) =>
-        old ? ({ ...old, isLiked: (ctx.prev as any)?.isLiked ?? false, likes: ctx.base } as Post) : (ctx.prev as any)
-      );
-      syncLikeEverywhere(qc, postId, { liked: (ctx.prev as any)?.isLiked, likeDelta: -1, teamId, userId, keyword });
-      lastAppliedRef.current = null;
-    },
-    onSettled: () => {
-      inFlightRef.current = null;
-      if (refetchAfterMs > 0) {
-        setTimeout(() => qc.invalidateQueries({ queryKey: detailKey }), refetchAfterMs);
-      }
-      if (lastIntentRef.current) {
-        const p = lastIntentRef.current;
-        lastIntentRef.current = null;
-        send(p);
-      }
-    },
-  });
+        // 사용자가 여전히 서버와 다른 상태를 원하면, 다시 "조용해질 때" 보내도록 디바운스 재시작
+        if (timerRef.current) clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(() => {
+          timerRef.current = null;
+          flush();
+        }, DEBOUNCE_MS);
 
-  const unlike = useMutation({
-    mutationFn: () => postApi.unlikePost(postId),
-    onMutate: async () => {
-      if (!userId) {
-        options?.onRequireLogin?.();
-        throw new Error('UNAUTHENTICATED');
-      }
-      await qc.cancelQueries({ queryKey: detailKey });
+        // 최종 상태가 맞춰졌다면 짧게 재검증해 카운트 드리프트 제거
+        if (REFETCH_AFTER > 0) {
+          setTimeout(() => qc.invalidateQueries({ queryKey: detailKey }), REFETCH_AFTER);
+        }
+      });
+  }, [postId, qc, DEBOUNCE_MS, REFETCH_AFTER]);
 
-      const prev = qc.getQueryData<Post>(detailKey);
-      const base = typeof prev?.likes === 'number' ? prev!.likes : (prev as any)?.likeCount ?? 0;
-      const next = Math.max(0, base - 1);
+  /** 디바운스 스케줄(트레일링만) */
+  const scheduleFlush = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      flush();
+    }, DEBOUNCE_MS);
+  };
 
-      setLikedStore(postId, false, userId);
-
-      qc.setQueryData<Post>(detailKey, (old) => (old ? ({ ...old, isLiked: false, likes: next } as Post) : old));
-      syncLikeEverywhere(qc, postId, { liked: false, likeDelta: -1, teamId, userId, keyword });
-
-      lastAppliedRef.current = 'unlike';
-      return { prev, base };
-    },
-    onError: (_e, _v, ctx) => {
-      if (!ctx) return;
-      setLikedStore(postId, (ctx.prev as any)?.isLiked ?? false, userId);
-      qc.setQueryData<Post>(detailKey, (old) =>
-        old ? ({ ...old, isLiked: (ctx.prev as any)?.isLiked ?? false, likes: ctx.base } as Post) : (ctx.prev as any)
-      );
-      syncLikeEverywhere(qc, postId, { liked: (ctx.prev as any)?.isLiked, likeDelta: +1, teamId, userId, keyword });
-      lastAppliedRef.current = null;
-    },
-    onSettled: () => {
-      inFlightRef.current = null;
-      if (refetchAfterMs > 0) {
-        setTimeout(() => qc.invalidateQueries({ queryKey: detailKey }), refetchAfterMs);
-      }
-      if (lastIntentRef.current) {
-        const p = lastIntentRef.current;
-        lastIntentRef.current = null;
-        send(p);
-      }
-    },
-  });
-
-  function send(intent: 'like' | 'unlike') {
-    if (inFlightRef.current || lastAppliedRef.current === intent) {
-      lastIntentRef.current = intent;
-      return;
-    }
-    inFlightRef.current = intent;
-    intent === 'like' ? like.mutate() : unlike.mutate();
-  }
-
+  /** 사용자 탭: 즉시 낙관 반영 + 목표값만 업데이트 */
   const toggle = useCallback(() => {
-    const likedFromStore = getLikedStore(postId, userId);
-    const likedFromCache = qc.getQueryData<Post>(detailKey)?.isLiked;
-    const likedNow = (typeof likedFromStore === 'boolean' ? likedFromStore : likedFromCache) ?? false;
-
     if (!userId) {
       options?.onRequireLogin?.();
       return;
     }
-    if (coolingRef.current || inFlightRef.current) {
-      lastIntentRef.current = likedNow ? 'unlike' : 'like';
-      return;
-    }
-    startCooldown();
-    send(likedNow ? 'unlike' : 'like');
+
+    const storeLiked = getLikedStore(postId, userId);
+    const cacheLiked = readCache().liked;
+    const currLiked = (typeof storeLiked === 'boolean' ? storeLiked : cacheLiked) ?? false;
+
+    const nextLiked = !currLiked;
+    const likeDelta = nextLiked ? +1 : -1;
+
+    // 1) 즉시 UI 업데이트
+    applyOptimistic(nextLiked, likeDelta);
+
+    // 2) 목표값 업데이트
+    desiredLikedRef.current = nextLiked;
+
+    // 3) 서버는 조용해진 뒤에 1회만
+    scheduleFlush();
   }, [postId, userId]);
 
-  const isBusy = like.isPending || unlike.isPending || isCooling || inFlightRef.current !== null;
-  return { toggle, isBusy };
+  // 메모리 정리
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  // 연타 가능: isBusy는 항상 false
+  return { toggle, isBusy: false };
 };
+
 
 /* =========== 인기/검색/내 글/뉴스 =========== */
 export const usePopularPostsQuery = (teamId: number) =>
