@@ -38,7 +38,6 @@ export const wrapAsync = async <T, E = Error>(
     const result = await func();
     return Ok(result);
   } catch (error) {
-    console.error('Async function error:', error);
     const processedError = errorHandler ? errorHandler(error) : (error as E);
     return Err(processedError);
   }

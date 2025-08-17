@@ -97,6 +97,8 @@ export interface StadiumStatsItem {
   stadiumName: string;
   matches: number;
   wins: number;
+  draws: number;
+  losses: number;
   winRate: number;
   location?: {
     latitude: number;

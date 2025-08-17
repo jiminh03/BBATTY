@@ -147,6 +147,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
         imageUri={formData.profileImage} 
         onImageSelect={(uri) => updateField('profileImage', uri)}
         onImageRemove={() => updateField('profileImage', null)}
+        isSignup={!originalNickname}
       />
 
       {showNicknameField && (

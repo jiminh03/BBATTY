@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 import { ApiResponse } from '../types/response';
 import { API_CONFIG } from './config';
-import { setupInterceptors } from './interceptors';
+import { setupInterceptors, setInterceptorsDisabled } from './interceptors';
 import { useTokenStore } from '../token/tokenStore';
 import { isErr } from '../../utils/result';
 
@@ -72,8 +72,16 @@ const applyTokenToClients = (token: string | null) => {
 // 로그아웃 처리를 위한 콜백 저장
 let onUnauthorizedCallback: (() => void) | null = null;
 
+// 인터셉터 비활성화 플래그 (회원탈퇴 시 사용)
+let interceptorsDisabled = false;
+
 // 401 에러 시 호출될 콜백
 const handleUnauthorized = async () => {
+  // 인터셉터가 비활성화된 경우 처리하지 않음 (회원탈퇴 진행 중)
+  if (interceptorsDisabled) {
+    return;
+  }
+  
   await useTokenStore.getState().clearTokens();
   applyTokenToClients(null);
   // AppNavigator에서 설정한 콜백 호출 (인증 상태 변경)
@@ -104,6 +112,19 @@ export const initializeApiClient = async (): Promise<void> => {
 // AppNavigator에서 호출할 함수
 export const setUnauthorizedCallback = (callback: () => void) => {
   onUnauthorizedCallback = callback;
+};
+
+// 회원탈퇴 시 인터셉터 비활성화
+export const disableInterceptors = () => {
+  interceptorsDisabled = true;
+  setInterceptorsDisabled(true); // 인터셉터에도 상태 전달
+  applyTokenToClients(null); // 모든 토큰 헤더 제거
+};
+
+// 인터셉터 다시 활성화
+export const enableInterceptors = () => {
+  interceptorsDisabled = false;
+  setInterceptorsDisabled(false); // 인터셉터에도 상태 전달
 };
 
 export { apiClient, chatApiClient, uploadClient };

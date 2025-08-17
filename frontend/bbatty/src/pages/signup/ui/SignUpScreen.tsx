@@ -86,7 +86,7 @@ export default function SignUpScreen({
       email: kakaoUserInfo.kakao_account?.email || '',
       gender: kakaoUserInfo.kakao_account?.gender,
       birthYear: kakaoUserInfo.kakao_account?.birthyear,
-      profileImg: '', //formData.profileImage,
+      profileImg: formData.profileImage,
       introduction: formData.introduction,
       teamId: teamId,
     });

@@ -9,8 +9,6 @@ import { MyPageStackParamList } from '../../../navigation/types';
 import { useThemeColor } from '../../../shared/team/ThemeContext';
 import { useProfile, useUpdatePrivacySettings } from '../../../features/user-profile';
 import { UserPrivacySettings } from '../../../features/user-profile';
-import { useTokenStore } from '../../../shared/api/token/tokenStore';
-import { useUserStore } from '../../../entities/user';
 import { isOk } from '../../../shared/utils/result';
 import { styles } from './SettingsScreen.style';
 import { authApi } from '../../../features/user-auth';
@@ -21,8 +19,6 @@ export default function SettingsScreen() {
   const navigation = useNavigation<SettingsScreenNavigationProp>();
   const insets = useSafeAreaInsets();
   const themeColor = useThemeColor();
-  const { clearTokens } = useTokenStore();
-  const { reset: resetUser } = useUserStore();
 
   // 프로필 및 프라이버시 설정 훅 사용
   const { data: profile, isLoading: isProfileLoading } = useProfile();
@@ -102,24 +98,16 @@ export default function SettingsScreen() {
             if (isOk(result)) {
               console.log('회원탈퇴 완료 - 앱을 종료합니다');
 
-              // 탈퇴 성공 알림 후 앱 종료
-              Alert.alert(
-                '회원탈퇴 완료',
-                '회원탈퇴가 완료되었습니다. 앱을 종료합니다.',
-                [
-                  {
-                    text: '확인',
-                    onPress: async () => {
-                      // 앱 종료 전에 토큰과 사용자 정보 초기화
-                      await clearTokens();
-                      await resetUser();
-                      // 앱 종료
-                      BackHandler.exitApp();
-                    },
+              // 탈퇴 완료 메시지 표시 후 앱 강제 종료 (상태 정리 없음)
+              Alert.alert('탈퇴 완료', '회원탈퇴가 완료되었습니다. 앱을 종료합니다.', [
+                {
+                  text: '확인',
+                  onPress: () => {
+                    // 상태 정리 없이 바로 앱 종료
+                    BackHandler.exitApp();
                   },
-                ],
-                { cancelable: false }
-              );
+                },
+              ]);
             } else {
               Alert.alert('오류', '회원탈퇴에 실패했습니다.');
             }

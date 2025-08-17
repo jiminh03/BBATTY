@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Modal, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { TEAMS } from '../../../shared/team/teamTypes';
 import { styles } from './TeamConfirmModal.style';
 
@@ -20,7 +20,7 @@ export const TeamConfirmModal: React.FC<TeamConfirmModalProps> = ({ visible, tea
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalTeamLogo}>
-            <Text style={styles.modalTeamEmoji}>{selectedTeam.name}</Text>
+            <Image source={selectedTeam.imagePath as any} style={styles.modalTeamImage} resizeMode='contain' />
           </View>
           <Text style={styles.modalTitle}>{selectedTeam.name}</Text>
           <Text style={styles.modalMessage}>

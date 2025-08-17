@@ -12,6 +12,7 @@ interface ProfileImagePickerProps {
   onImageRemove?: () => void;
   onUploadStart?: () => void;
   onUploadComplete?: () => void;
+  isSignup?: boolean;
 }
 
 export const ProfileImagePicker: React.FC<ProfileImagePickerProps> = ({
@@ -20,6 +21,7 @@ export const ProfileImagePicker: React.FC<ProfileImagePickerProps> = ({
   onImageRemove,
   onUploadStart,
   onUploadComplete,
+  isSignup = false,
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [showActionModal, setShowActionModal] = useState(false);
@@ -44,7 +46,11 @@ export const ProfileImagePicker: React.FC<ProfileImagePickerProps> = ({
       setIsUploading(true);
       onUploadStart?.();
 
-      const uploadResult = await uploadImageToS3(asset.uri, fileName, 'profile');
+      const endpoint = isSignup 
+        ? '/api/auth/profile/presigned-url' 
+        : '/api/posts/images/presigned-url';
+      
+      const uploadResult = await uploadImageToS3(asset.uri, fileName, 'profile', endpoint);
 
       if (uploadResult.success) {
         onImageSelect(uploadResult.data.fileUrl);

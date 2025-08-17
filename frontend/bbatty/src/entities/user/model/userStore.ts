@@ -17,6 +17,7 @@ interface UserActions {
   setCurrentUser: (user: User | null) => Promise<Result<void, Error>>;
   logout: () => Promise<Result<void, Error>>;
   reset: () => Promise<void>;
+  withdraw: () => Promise<void>;
 }
 
 type UserStore = UserState & UserActions;
@@ -90,5 +91,17 @@ export const useUserStore = create<UserStore>((set, get) => ({
       currentUser: null,
     });
     await AsyncStorage.removeItem(STORAGE_KEYS.USER);
+  },
+
+  withdraw: async () => {
+    // 사용자 관련 상태 초기화
+    set({
+      currentUser: null,
+      isUserInitialized: false,
+    });
+    await AsyncStorage.removeItem(STORAGE_KEYS.USER);
+    
+    // 전역 상태에 탈퇴 플래그 설정하여 AppNavigator에 알림
+    global.isWithdrawing = true;
   },
 }));
