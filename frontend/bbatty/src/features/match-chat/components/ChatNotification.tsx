@@ -121,8 +121,8 @@ export const ChatNotificationManager: React.FC<ChatNotificationManagerProps> = (
   onDismiss,
 }) => {
   const insets = useSafeAreaInsets();
-  // 헤더 바로 아래에 표시하기 위해 safe area만 고려
-  const notificationTop = insets.top + 8; // safe area + 최소 여백만
+  // 상단에 충분한 여백을 두고 표시
+  const notificationTop = insets.top + 60; // safe area + 충분한 여백
 
   return (
     <View style={[styles.manager, { top: notificationTop }]}>
