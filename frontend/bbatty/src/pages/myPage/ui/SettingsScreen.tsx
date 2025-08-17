@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Switch, Alert, BackHandler } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Switch, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -12,6 +12,7 @@ import { UserPrivacySettings } from '../../../features/user-profile';
 import { isOk } from '../../../shared/utils/result';
 import { styles } from './SettingsScreen.style';
 import { authApi } from '../../../features/user-auth';
+import { exitAppCompletely } from '../../../shared/utils/appExit';
 
 type SettingsScreenNavigationProp = StackNavigationProp<MyPageStackParamList, 'Settings'>;
 
@@ -102,9 +103,9 @@ export default function SettingsScreen() {
               Alert.alert('탈퇴 완료', '회원탈퇴가 완료되었습니다. 앱을 종료합니다.', [
                 {
                   text: '확인',
-                  onPress: () => {
-                    // 상태 정리 없이 바로 앱 종료
-                    BackHandler.exitApp();
+                  onPress: async () => {
+                    // 최근 사용한 앱에서도 제거하며 완전 종료
+                    await exitAppCompletely();
                   },
                 },
               ]);
