@@ -5,13 +5,7 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333333',
-    marginBottom: 16,
-    textAlign: 'center',
+    paddingBottom: 20,
   },
   categoryCard: {
     borderRadius: 16,
@@ -56,10 +50,12 @@ export const styles = StyleSheet.create({
   otherCategories: {
     flexDirection: 'column',
     gap: 16,
+    marginBottom: 20,
   },
   categorySection: {
     borderRadius: 12,
     padding: 12,
+    paddingBottom: 16,
   },
   categoryTitle: {
     fontSize: 14,
@@ -77,7 +73,7 @@ export const styles = StyleSheet.create({
   smallBadgeItem: {
     width: '31%', // 3 badges per row (31% x 3 = 93% with gaps)
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   winsBadgeItem: {
     width: '31%', // 승리 뱃지용 (2줄 x 3개 = 6개) - 약간 더 넓게

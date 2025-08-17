@@ -33,8 +33,8 @@ export const styles = StyleSheet.create({
   },
   barColumn: {
     alignItems: 'center',
-    marginHorizontal: 12,
-    minWidth: 60,
+    marginHorizontal: 6,
+    minWidth: 50,
   },
   winRateLabel: {
     fontSize: 14,
@@ -45,7 +45,7 @@ export const styles = StyleSheet.create({
     height: 120,
     justifyContent: 'flex-end',
     marginBottom: 8,
-    width: 40,
+    width: 32,
   },
   bar: {
     width: '100%',
@@ -65,6 +65,12 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     color: '#333333',
     fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  recordText: {
+    fontSize: 10,
+    color: '#666666',
     textAlign: 'center',
   },
 });

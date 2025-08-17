@@ -1,22 +1,11 @@
 // pages/mypage/UserProfileScreen.tsx
-import React from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  FlatList,
-  RefreshControl,
-  ActivityIndicator,
-  TouchableOpacity,
-} from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, ScrollView, FlatList, RefreshControl, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import {
-  MyPageStackParamList,
-  RootStackParamList,
-} from '../../../navigation/types';
+import { MyPageStackParamList, RootStackParamList } from '../../../navigation/types';
 import { useThemeColor } from '../../../shared/team/ThemeContext';
 
 import { useProfile, useAllUserStats } from '../../../features/user-profile';
@@ -40,10 +29,7 @@ import { useMyPostsInfinite } from '../../../entities/post/queries';
 import { PostItem } from '../../../entities/post/ui/PostItem';
 import { useUserStore } from '../../../entities/user/model/userStore';
 
-type UserProfileScreenNavigationProp = StackNavigationProp<
-  MyPageStackParamList,
-  'Profile'
->;
+type UserProfileScreenNavigationProp = StackNavigationProp<MyPageStackParamList, 'Profile'>;
 type UserProfileScreenRouteProp = RouteProp<MyPageStackParamList, 'Profile'>;
 
 export default function UserProfileScreen() {
@@ -59,14 +45,14 @@ export default function UserProfileScreen() {
   const isOwner = !targetUserId;
 
   // 스토어 상태(탭/시즌/승률보기)
-  const {
-    activeTab,
-    selectedSeason,
-    winRateType,
-    setActiveTab,
-    setSelectedSeason,
-    setWinRateType,
-  } = useProfileStore();
+  const { activeTab, selectedSeason, winRateType, setActiveTab, setSelectedSeason, setWinRateType } = useProfileStore();
+  
+  // userId가 변경될 때 season을 'total'로 리셋
+  useEffect(() => {
+    if (selectedSeason !== 'total') {
+      setSelectedSeason('total');
+    }
+  }, [targetUserId, setSelectedSeason]);
 
   // 프로필/통계 쿼리
   const {
@@ -90,7 +76,7 @@ export default function UserProfileScreen() {
 
   // 내 게시글 (오너일 때만)
   const meId = useUserStore((s) => s.currentUser?.userId);
-  const myUserIdForPosts = isOwner ? (profile?.userId ?? meId) : undefined;
+  const myUserIdForPosts = isOwner ? profile?.userId ?? meId : undefined;
   const myPostsQ = useMyPostsInfinite(myUserIdForPosts);
   const myPosts = (myPostsQ.data?.pages ?? []).flatMap((p) => p?.posts ?? []);
 
@@ -106,9 +92,7 @@ export default function UserProfileScreen() {
     await Promise.all([refetchProfile(), refetchAllStats()]);
   };
 
-  const canViewContent = (
-    type: 'posts' | 'stats' | 'attendanceRecords',
-  ): boolean => {
+  const canViewContent = (type: 'posts' | 'stats' | 'attendanceRecords'): boolean => {
     if (isOwner || !profile) return true;
     switch (type) {
       case 'posts':
@@ -126,7 +110,7 @@ export default function UserProfileScreen() {
     if (statsLoading) {
       return (
         <View style={styles.loadingContent}>
-          <ActivityIndicator size="large" color={themeColor} />
+          <ActivityIndicator size='large' color={themeColor} />
           <Text>통계를 불러오는 중...</Text>
         </View>
       );
@@ -135,10 +119,7 @@ export default function UserProfileScreen() {
     switch (winRateType) {
       case 'summary':
         return (
-          <ScrollView
-            style={styles.tabContent}
-            showsVerticalScrollIndicator={false}
-          >
+          <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
             {basicStats.data && (
               <WinRateSummaryCard
                 basicStats={basicStats.data}
@@ -150,19 +131,16 @@ export default function UserProfileScreen() {
         );
       case 'opponent':
         return (
-          <ScrollView
-            style={styles.tabContent}
-            showsVerticalScrollIndicator={false}
-          >
+          <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
             {opponentStats.data?.opponentStats && (
               <TeamStatsChart
-                teamStats={Object.entries(
-                  opponentStats.data.opponentStats,
-                ).map(([team, stats]: [string, any]) => ({
+                teamStats={Object.entries(opponentStats.data.opponentStats).map(([team, stats]: [string, any]) => ({
                   teamId: Number(team),
                   teamName: team,
                   matches: stats.games || 0,
                   wins: stats.wins || 0,
+                  draws: stats.draws || 0,
+                  losses: stats.losses || 0,
                   winRate: Math.round((parseFloat(stats.winRate) || 0) * 100),
                 }))}
                 totalGames={basicStats.data?.totalGames || 0}
@@ -177,15 +155,10 @@ export default function UserProfileScreen() {
         );
       case 'stadium':
         return (
-          <ScrollView
-            style={styles.tabContent}
-            showsVerticalScrollIndicator={false}
-          >
+          <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
             {stadiumStats.data?.stadiumStats && (
               <StadiumMapStats
-                stadiumStats={Object.entries(
-                  stadiumStats.data.stadiumStats,
-                ).map(([stadium, stats]: [string, any]) => ({
+                stadiumStats={Object.entries(stadiumStats.data.stadiumStats).map(([stadium, stats]: [string, any]) => ({
                   stadiumId: Number(stadium),
                   stadiumName: stadium,
                   matches: stats.games || 0,
@@ -204,18 +177,15 @@ export default function UserProfileScreen() {
         );
       case 'dayOfWeek':
         return (
-          <ScrollView
-            style={styles.tabContent}
-            showsVerticalScrollIndicator={false}
-          >
+          <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
             {dayOfWeekStats.data?.dayOfWeekStats && (
               <DetailedStatsGrid
-                dayStats={Object.entries(
-                  dayOfWeekStats.data.dayOfWeekStats,
-                ).map(([day, stats]: [string, any]) => ({
-                  dayName: day,
+                dayStats={Object.entries(dayOfWeekStats.data.dayOfWeekStats).map(([day, stats]: [string, any]) => ({
+                  dayName: day, // 영어 요일명 그대로 전달 (TUESDAY, WEDNESDAY 등)
                   matches: stats.games || 0,
                   wins: stats.wins || 0,
+                  draws: stats.draws || 0,
+                  losses: stats.losses || 0,
                   winRate: Math.round((parseFloat(stats.winRate) || 0) * 100),
                 }))}
                 totalGames={basicStats.data?.totalGames || 0}
@@ -248,7 +218,7 @@ export default function UserProfileScreen() {
         if (myPostsQ.isLoading) {
           return (
             <View style={styles.loadingContent}>
-              <ActivityIndicator size="large" color={themeColor} />
+              <ActivityIndicator size='large' color={themeColor} />
               <Text>게시글을 불러오는 중...</Text>
             </View>
           );
@@ -270,11 +240,7 @@ export default function UserProfileScreen() {
               }
             }}
             ListFooterComponent={
-              myPostsQ.isFetchingNextPage ? (
-                <ActivityIndicator style={{ marginVertical: 12 }} />
-              ) : (
-                <View />
-              )
+              myPostsQ.isFetchingNextPage ? <ActivityIndicator style={{ marginVertical: 12 }} /> : <View />
             }
             ListEmptyComponent={
               !myPostsQ.isFetching && myPosts.length === 0 ? (
@@ -299,9 +265,7 @@ export default function UserProfileScreen() {
         if (!canViewContent('stats')) {
           return (
             <View style={styles.restrictedContent}>
-              <Text style={styles.restrictedText}>
-                통계 조회가 허용되지 않습니다
-              </Text>
+              <Text style={styles.restrictedText}>통계 조회가 허용되지 않습니다</Text>
             </View>
           );
         }
@@ -309,7 +273,7 @@ export default function UserProfileScreen() {
         if (statsLoading) {
           return (
             <View style={styles.loadingContent}>
-              <ActivityIndicator size="large" color={themeColor} />
+              <ActivityIndicator size='large' color={themeColor} />
               <Text>뱃지를 불러오는 중...</Text>
             </View>
           );
@@ -322,16 +286,10 @@ export default function UserProfileScreen() {
               onTabChange={setActiveTab}
               selectedSeason={selectedSeason}
               onSeasonChange={setSelectedSeason}
+              userId={targetUserId}
             />
-            <ScrollView
-              style={[styles.tabContent, styles.statsTabContent]}
-              showsVerticalScrollIndicator={false}
-            >
-              {badges.data && (
-                <UserBadgesCard
-                  badgeCategories={badges.data.badgeCategories}
-                />
-              )}
+            <ScrollView style={[styles.tabContent, styles.statsTabContent]} showsVerticalScrollIndicator={false}>
+              {badges.data && <UserBadgesCard badgeCategories={badges.data.badgeCategories} />}
             </ScrollView>
           </View>
         );
@@ -341,9 +299,7 @@ export default function UserProfileScreen() {
         if (!canViewContent('stats')) {
           return (
             <View style={styles.restrictedContent}>
-              <Text style={styles.restrictedText}>
-                통계 조회가 허용되지 않습니다
-              </Text>
+              <Text style={styles.restrictedText}>통계 조회가 허용되지 않습니다</Text>
             </View>
           );
         }
@@ -355,12 +311,10 @@ export default function UserProfileScreen() {
               onTabChange={setActiveTab}
               selectedSeason={selectedSeason}
               onSeasonChange={setSelectedSeason}
+              userId={targetUserId}
             />
             <View style={styles.winRateFiltersContainer}>
-              <WinRateTypeSelector
-                selectedType={winRateType}
-                onTypeChange={setWinRateType}
-              />
+              <WinRateTypeSelector selectedType={winRateType} onTypeChange={setWinRateType} />
             </View>
             {renderWinRateBody()}
           </View>
@@ -371,9 +325,7 @@ export default function UserProfileScreen() {
         if (!canViewContent('attendanceRecords')) {
           return (
             <View style={styles.restrictedContent}>
-              <Text style={styles.restrictedText}>
-                직관 기록 조회가 허용되지 않습니다
-              </Text>
+              <Text style={styles.restrictedText}>직관 기록 조회가 허용되지 않습니다</Text>
             </View>
           );
         }
@@ -388,7 +340,7 @@ export default function UserProfileScreen() {
   if (profileLoading) {
     return (
       <View style={[styles.container, styles.centerContent]}>
-        <ActivityIndicator size="large" color={themeColor} />
+        <ActivityIndicator size='large' color={themeColor} />
         <Text>프로필을 불러오는 중...</Text>
       </View>
     );
@@ -417,10 +369,7 @@ export default function UserProfileScreen() {
       {/* 직관기록 탭: 시즌 선택기 */}
       {activeTab === 'history' && canViewContent('attendanceRecords') && (
         <View style={styles.dropdownContainer}>
-          <SeasonSelector
-            selectedSeason={selectedSeason}
-            onSeasonChange={setSelectedSeason}
-          />
+          <SeasonSelector selectedSeason={selectedSeason} onSeasonChange={setSelectedSeason} userId={targetUserId} />
         </View>
       )}
 

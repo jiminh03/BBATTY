@@ -45,11 +45,24 @@ export const useInfiniteCursorScroll = <TData, TParams extends CursorScrollParam
     gcTime,
   });
 
-  // 모든 페이지의 데이터를 하나의 배열로 합치기
+  // 모든 페이지의 데이터를 하나의 배열로 합치기 (중복 제거)
   const allItems: TData[] = [];
+  const seenIds = new Set<string>();
+  
   if (data?.pages) {
     data.pages.forEach((page) => {
-      allItems.push(...page.data);
+      page.data.forEach((item) => {
+        // gameId 또는 id 필드로 중복 체크
+        const id = (item as any).gameId || (item as any).id;
+        const uniqueKey = id ? String(id) : JSON.stringify(item);
+        
+        if (!seenIds.has(uniqueKey)) {
+          seenIds.add(uniqueKey);
+          allItems.push(item);
+        } else {
+          console.log('🔄 [InfiniteScroll] 중복 데이터 제거:', uniqueKey);
+        }
+      });
     });
   }
 

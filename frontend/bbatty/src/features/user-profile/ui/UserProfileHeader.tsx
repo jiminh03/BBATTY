@@ -46,9 +46,14 @@ export const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
 
           <View style={styles.profileInfo}>
             <Text style={styles.nickname}>{profile.nickname}</Text>
-            {basicStats && <Text style={styles.winRate}>{Format.winRate.toPercent(basicStats.winRate)}% 승률</Text>}
+            {basicStats && (
+              <Text style={styles.winRate}>
+                {parseFloat(basicStats.winRate).toFixed(3)} ({basicStats.wins}승 {basicStats.draws}무{' '}
+                {basicStats.losses}패)
+              </Text>
+            )}
             {profile.introduction && (
-              <Text style={styles.introduction} numberOfLines={3} ellipsizeMode="tail">
+              <Text style={styles.introduction} numberOfLines={3} ellipsizeMode='tail'>
                 {profile.introduction}
               </Text>
             )}

@@ -7,8 +7,6 @@ import { StyleSheet } from 'react-native';
 export const styles = StyleSheet.create({
   container: {
     minWidth: 100,
-    zIndex: 9999,
-    position: 'relative',
   },
   dropdownButton: {
     flexDirection: 'row',
@@ -28,41 +26,34 @@ export const styles = StyleSheet.create({
     fontWeight: '500',
     marginRight: 4,
   },
-  dropdownList: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderTopWidth: 0,
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
-    maxHeight: 200,
-    zIndex: 10000,
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
   },
-  scrollView: {
-    maxHeight: 200,
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    maxHeight: 300,
+    width: '100%',
+    maxWidth: 250,
   },
   option: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
   },
+  lastOption: {
+    borderBottomWidth: 0,
+  },
   optionText: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#333333',
-    fontWeight: '500',
   },
 });

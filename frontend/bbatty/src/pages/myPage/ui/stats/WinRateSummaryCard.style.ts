@@ -39,6 +39,12 @@ export const styles = StyleSheet.create({
     marginTop: 12,
     fontWeight: '600',
   },
+  recordText: {
+    fontSize: 12,
+    color: '#666666',
+    marginTop: 4,
+    textAlign: 'center',
+  },
   circleBackground: {
     backgroundColor: 'transparent',
   },

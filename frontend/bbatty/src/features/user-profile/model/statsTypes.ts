@@ -87,6 +87,8 @@ export interface TeamStats {
   teamName: string;
   matches: number;
   wins: number;
+  draws: number;
+  losses: number;
   winRate: number;
 }
 
@@ -133,6 +135,8 @@ export interface AttendanceRecord {
   gameId: number;
   homeTeam: string;
   awayTeam: string;
+  homeScore?: number;
+  awayScore?: number;
   dateTime: string;
   stadium: string;
   status: string;

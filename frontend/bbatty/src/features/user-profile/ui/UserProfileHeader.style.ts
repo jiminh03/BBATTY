@@ -5,7 +5,7 @@ export const styles = StyleSheet.create({
     paddingTop: 20,
     paddingHorizontal: 20,
     paddingBottom: 20,
-    minHeight: 120, // Fixed height to accommodate 3 lines of bio
+    minHeight: 110, // Fixed height to accommodate 3 lines of bio
   },
   headerContent: {
     flexDirection: 'row',
