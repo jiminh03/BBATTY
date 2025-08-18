@@ -12,3 +12,7 @@
 -keep class com.facebook.react.turbomodule.** { *; }
 
 # Add any project specific keep options here:
+
+# Keep React Native Alert class
+-keep class com.facebook.react.modules.dialog.** { *; }
+-keep class com.facebook.react.bridge.** { *; }
