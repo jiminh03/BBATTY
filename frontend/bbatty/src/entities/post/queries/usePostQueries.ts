@@ -104,44 +104,49 @@ export const usePostDetailQuery = (
     queryFn: () => postApi.getPostById(postId!),
     enabled: postId !== null,
     select: (p) => {
-      const local = getLiked(postId!, userId);
+  const local = getLiked(postId!, userId);
 
-      const serverLikedRaw =
-        typeof (p as any).isLiked === 'boolean'
-          ? (p as any).isLiked
-          : typeof (p as any).likedByMe === 'boolean'
-          ? (p as any).likedByMe
-          : typeof (p as any).liked === 'boolean'
-          ? (p as any).liked
-          : undefined;
+  const serverLikedRaw =
+    typeof (p as any).isLiked === 'boolean'
+      ? (p as any).isLiked
+      : typeof (p as any).likedByMe === 'boolean'
+      ? (p as any).likedByMe
+      : typeof (p as any).liked === 'boolean'
+      ? (p as any).liked
+      : false;
 
-      const isLiked =
-        typeof local === 'boolean'
-          ? local
-          : typeof serverLikedRaw === 'boolean'
-          ? serverLikedRaw
-          : false;
+  const isLiked =
+    typeof local === 'boolean'
+      ? local
+      : serverLikedRaw;
 
-      const safeAuthor = p.authorNickname ?? (p as any).nickname ?? '탈퇴한 사용자';
+  const safeAuthor = p.authorNickname ?? (p as any).nickname ?? '탈퇴한 사용자';
 
-      // ✅ 여기서 likes 계산을 보정
-      const rawLikes =
-        typeof (p as any).likes === 'number'
-          ? (p as any).likes
-          : typeof (p as any).likeCount === 'number'
-          ? (p as any).likeCount
-          : 0;
+  const rawLikes =
+    typeof (p as any).likes === 'number'
+      ? (p as any).likes
+      : typeof (p as any).likeCount === 'number'
+      ? (p as any).likeCount
+      : 0;
 
-      const safeLikes = rawLikes + (isLiked ? 0 : 0); // 필요하면 보정 로직 추가
+  // ❌ 잘못된 부분: rawLikes + (isLiked ? 1 : 0)
+  // ✅ 고쳐야 함 → 그냥 rawLikes 그대로 사용
+  const safeLikes =
+  typeof (p as any).likes === 'number'
+    ? (p as any).likes
+    : typeof (p as any).likeCount === 'number'
+    ? (p as any).likeCount
+    : 0;
 
-      return {
-        ...p,
-        authorNickname: safeAuthor,
-        isLiked,
-        likes: safeLikes,
-        likeCount: safeLikes,
-      } as Post;
-    },
+  return {
+    ...p,
+    authorNickname: safeAuthor,
+    isLiked,
+    likes: safeLikes,
+    likeCount: safeLikes,
+  } as Post;
+}
+,
     refetchOnWindowFocus: opts?.refetchOnFocus ?? true,
     staleTime: 3000,
     placeholderData: (prev) => prev,
@@ -361,41 +366,48 @@ export const usePostLikeActions = (
 
   // 최초 서버 liked/likes 값 주입
   useEffect(() => {
-    const curr = qc.getQueryData<Post>(detailKey) as Post | undefined;
-    const liked =
-      typeof curr?.isLiked === 'boolean'
-        ? curr.isLiked
-        : typeof (curr as any)?.likedByMe === 'boolean'
-        ? (curr as any).likedByMe
-        : !!(curr as any)?.liked;
-    const likes =
-      typeof curr?.likes === 'number'
-        ? curr.likes
-        : typeof (curr as any)?.likeCount === 'number'
-        ? (curr as any).likeCount
-        : 0;
-    serverLikedRef.current = liked;
-    desiredLikedRef.current = liked;
-    // ✅ 서버 likes 기준값 = 총 좋아요 - (내가 눌렀으면 1 빼고 저장)
-    serverLikesRef.current = likes - (liked ? 1 : 0);
-  }, [qc, postId]);
+  const curr = qc.getQueryData<Post>(detailKey) as Post | undefined;
+  const liked =
+    typeof curr?.isLiked === 'boolean'
+      ? curr.isLiked
+      : typeof (curr as any)?.likedByMe === 'boolean'
+      ? (curr as any).likedByMe
+      : !!(curr as any)?.liked;
+
+  const likes =
+    typeof curr?.likes === 'number'
+      ? curr.likes
+      : typeof (curr as any)?.likeCount === 'number'
+      ? (curr as any).likeCount
+      : 0;
+
+  serverLikedRef.current = liked;
+  desiredLikedRef.current = liked;
+
+  // ❌ - (liked ? 1 : 0) 빼는 거 없애야 함
+  serverLikesRef.current = likes;
+}, [qc, postId]);
 
   /** 낙관 반영 (누적 X, 항상 서버 기준값 + 내 상태) */
   const applyOptimistic = (liked: boolean) => {
-    setLikedStore(postId, liked, userId);
-    qc.setQueryData<Post>(detailKey, (old) => {
-      if (!old) return old as any;
-      const serverBase = serverLikesRef.current ?? 0;
-      const safeLikes = serverBase + (liked ? 1 : 0);
-      return {
-        ...(old as any),
-        isLiked: liked,
-        likes: safeLikes,
-        likeCount: safeLikes,
-      } as Post;
-    });
-    syncLikeEverywhere(qc, postId, { liked, likeDelta: 0, teamId, userId, keyword });
-  };
+  setLikedStore(postId, liked, userId);
+
+  qc.setQueryData<Post>(detailKey, (old) => {
+    if (!old) return old as any;
+
+    const base = old.likes ?? 0;
+    const delta = liked ? 1 : -1;
+
+    return {
+      ...old,
+      isLiked: liked,
+      likes: base + delta,
+      likeCount: base + delta,
+    } as Post;
+  });
+};
+
+
 
   /** 서버로 실제 동기화 */
   const flush = useCallback(() => {
