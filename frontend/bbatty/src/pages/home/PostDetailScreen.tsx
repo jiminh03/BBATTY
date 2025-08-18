@@ -184,13 +184,16 @@ export default function PostDetailScreen({ route, navigation }: Props) {
   const isMinePost = !!post && !!myNickname && post.authorNickname === myNickname;
 
   const authorAvatarUrl =
-    (post as any)?.authorProfileUrl ??
-    (isMinePost
-      ? ((useUserStore.getState().currentUser as any)?.profileImageUrl ??
-        (useUserStore.getState().currentUser as any)?.profileUrl ??
-        (useUserStore.getState().currentUser as any)?.avatarUrl ??
-        undefined)
-      : undefined);
+  (post as any)?.profileImg ??    // ✅ 여기에 추가
+  (post as any)?.authorProfileUrl ??
+  (isMinePost
+    ? ((useUserStore.getState().currentUser as any)?.profileImg ??   // ✅ 여기도 맞춰줌
+      (useUserStore.getState().currentUser as any)?.profileImageUrl ??
+      (useUserStore.getState().currentUser as any)?.profileUrl ??
+      (useUserStore.getState().currentUser as any)?.avatarUrl ??
+      undefined)
+    : undefined);
+
 
   const handleGoBack = useCallback(() => {
     navigation.goBack();
