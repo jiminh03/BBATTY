@@ -35,7 +35,6 @@ export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnaut
         const refreshResult = await tokenStore.checkAndRefreshIfNeeded();
 
         if (!isOk(refreshResult)) {
-          console.error('❌ [RequestInterceptor] 토큰 갱신 실패, 인증 초기화');
           await onUnauthorized();
           return Promise.reject(new Error('Token refresh failed'));
         }
@@ -44,21 +43,15 @@ export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnaut
         const token = tokenStore.getAccessToken();
         if (token && config.headers) {
           config.headers.Authorization = `Bearer ${token}`;
-
-          // console.log(`Bearer ${token}`);
         } else if (!token) {
-          console.error('❌ [RequestInterceptor] 토큰이 없음, 인증 초기화');
           await onUnauthorized();
           return Promise.reject(new Error('No access token'));
         }
       }
 
-      console.log(API_CONFIG.baseURL, config.url, config.params);
-
       return config;
     },
     (error: AxiosError) => {
-      console.error('❌ [RequestInterceptor] 요청 interceptor error: ', error);
       return Promise.reject(error);
     }
   );
@@ -67,10 +60,8 @@ export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnaut
   client.interceptors.response.use(
     (response: AxiosResponse) => {
       if (response.data && typeof response.data === 'object') {
-        if (!('status' in response.data)) {
-          console.warn(`⚠️ [ResponseInterceptor] 잘못된 api 형식 :`, response.data);
-        }
       }
+      console.log(response);
       return response;
     },
     async (error: AxiosError) => {
@@ -78,20 +69,16 @@ export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnaut
 
       // 토큰 만료 또는 인증 실패 (백업 처리)
       if (error.response?.status === 401 && originalRequest) {
-        console.log('🔴 [ResponseInterceptor] 401 에러 발생 - 백업 처리:', originalRequest?.url);
-
         // refresh API 호출은 별도 처리 (무한 루프 방지)
         const isRefreshRequest = originalRequest.url?.includes('/api/auth/refresh');
 
         if (isRefreshRequest) {
-          console.error('❌ [ResponseInterceptor] Refresh API 자체가 401 에러, 로그아웃 처리');
           await onUnauthorized();
           return Promise.reject(error);
         }
 
         // 요청 인터셉터에서 사전 체크가 이루어지므로, 401은 예외 상황
         // 즉시 로그아웃 처리 (토큰 재발급 시도하지 않음)
-        console.error('❌ [ResponseInterceptor] 요청 인터셉터 사전 체크 후에도 401 발생, 로그아웃 처리');
         await onUnauthorized();
         return Promise.reject(error);
       }

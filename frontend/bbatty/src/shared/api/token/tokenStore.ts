@@ -117,7 +117,6 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
           refreshTokenExpiresAt: tokens.refreshTokenExpiresAt,
         });
 
-        console.log('🔑 [TokenStore] 토큰 저장 성공');
 
         // 토큰 저장 후 선제적 갱신 시작
         get().startProactiveRefresh();
@@ -182,19 +181,9 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
       // 캐시 업데이트
       set({ lastExpiryCheckTime: now, lastExpiryCheckResult: isExpiring });
 
-      // 토큰이 만료 임박할 때만 로그 출력 (과도한 로그 방지)
-      if (isExpiring) {
-        console.log('⚠️ [TokenStore] 토큰 만료 임박 감지:', {
-          now: nowDate.toISOString(),
-          expiryDate: expiryDate.toISOString(),
-          thresholdTime: thresholdTime.toISOString(),
-          minutesBeforeExpiry,
-        });
-      }
 
       return isExpiring;
     } catch (error) {
-      console.error('❌ [TokenStore] 토큰 만료 시간 파싱 실패:', error);
       set({ lastExpiryCheckTime: now, lastExpiryCheckResult: false });
       return false;
     }
@@ -205,14 +194,12 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
 
     // 이미 갱신 중인 Promise가 있다면 재사용
     if (refreshPromise) {
-      console.log('🔄 [TokenStore] 이미 갱신 중 - 기존 Promise 대기');
       return refreshPromise;
     }
 
     // 최근 30초 이내에 갱신했다면 스킵 (무한 갱신 방지)
     const now = Date.now();
     if (lastRefreshTime && now - lastRefreshTime < 30000) {
-      console.log('🚫 [TokenStore] 최근 갱신함, 스킵 (30초 쿨다운)');
       return Ok(true);
     }
 
@@ -223,7 +210,6 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
       return Ok(true);
     }
 
-    console.log('⚠️ [TokenStore] 토큰 만료 임박 (10분 전), 선제 갱신 시작');
     return await refreshTokens();
   },
 
@@ -246,17 +232,15 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
 
       // 토큰 만료 임박 시 갱신
       if (isAccessTokenExpiringSoon()) {
-        console.log('⚠️ [TokenStore] 백그라운드 토큰 갱신 시작');
         try {
           await refreshTokens();
         } catch (error) {
-          console.error('❌ [TokenStore] 백그라운드 토큰 갱신 실패:', error);
+          // Silent fail for background refresh
         }
       }
     }, 5 * 60 * 1000); // 5분마다
 
     set({ proactiveRefreshInterval: interval });
-    console.log('✅ [TokenStore] 선제적 토큰 갱신 시작');
   },
 
   refreshTokens: async (): Promise<Result<boolean, TokenError>> => {
@@ -264,7 +248,6 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
 
     // 이미 갱신 중인 Promise가 있다면 재사용
     if (state.refreshPromise) {
-      console.log('🔄 [TokenStore] 기존 갱신 Promise 재사용');
       return state.refreshPromise;
     }
 
@@ -272,22 +255,17 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
     const refreshPromise = (async (): Promise<Result<boolean, TokenError>> => {
       const { refreshToken, apiClient } = get();
 
-      console.log('🚀 [TokenStore] 토큰 갱신 시작');
-
       if (!refreshToken) {
-        console.error('❌ [TokenStore] Refresh token이 없음');
         return Err(createTokenError('NOT_FOUND', 'No refresh token available'));
       }
 
       if (!apiClient) {
-        console.error('❌ [TokenStore] API client가 초기화되지 않음');
         return Err(createTokenError('REFRESH_FAILED', 'API client not initialized'));
       }
 
       set({ isRefreshing: true });
 
       try {
-        console.log('📡 [TokenStore] refresh API 호출 시작');
         const result = await wrapApiCall<Token>(() => {
           return apiClient.post('/api/auth/refresh', null, {
             headers: { 'X-Refresh-Token': refreshToken } as any,
@@ -295,31 +273,24 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
         });
 
         if (isOk(result)) {
-          console.log('✅ [TokenStore] refresh API 성공, 토큰 저장 시작');
           const setResult = await get().setTokens(result.data);
 
           if (isErr(setResult)) {
-            console.error('❌ [TokenStore] 토큰 저장 실패:', setResult.error);
             return Err(createTokenError('STORAGE_ERROR', 'Failed to save new tokens'));
           }
-
-          console.log('✅ [TokenStore] 토큰 갱신 완전 성공');
 
           // 갱신 완료 시간 기록
           set({ lastRefreshTime: Date.now() });
 
           return Ok(true);
         } else {
-          console.error('❌ [TokenStore] refresh API 실패:', result.error);
           await get().clearTokens();
           return Err(createTokenError('REFRESH_FAILED', result.error.message));
         }
       } catch (error) {
-        console.error('❌ [TokenStore] 토큰 갱신 중 예외 발생:', error);
         await get().clearTokens();
         return Err(createTokenError('REFRESH_FAILED', 'Unexpected error during token refresh'));
       } finally {
-        console.log('🏁 [TokenStore] 토큰 갱신 종료, 상태 초기화');
         set({ isRefreshing: false, refreshPromise: null });
       }
     })();
@@ -373,7 +344,6 @@ export const useTokenStore = create<TokenStore>((set, get) => ({
   },
 
   resetToken: () => {
-    console.log('🔄 [TokenStore] 토큰 리셋');
 
     const { proactiveRefreshInterval } = get();
     if (proactiveRefreshInterval) {

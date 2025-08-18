@@ -21,7 +21,9 @@ import {
   StatusBar,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { HomeStackScreenProps } from '../../navigation/types';
+import { useTabBar } from '../../shared/contexts/TabBarContext';
 import {
   usePostDetailQuery,
   useDeletePostMutation,
@@ -96,7 +98,26 @@ export default function PostDetailScreen({ route, navigation }: Props) {
   const rem = useRem();
   const minTouch = useMinTouch();
   const postId = route.params.postId;
+  const fromProfile = route.params?.fromProfile || false;
   const insets = useSafeAreaInsets();
+  const { setTabBarVisible } = useTabBar();
+
+  // 프로필에서 온 경우 tab bar 숨기기
+  useFocusEffect(
+    React.useCallback(() => {
+      if (fromProfile) {
+        console.log('PostDetail - 프로필에서 접근, 탭바 숨김');
+        setTabBarVisible(false);
+      }
+
+      return () => {
+        if (fromProfile) {
+          console.log('PostDetail - 프로필로 돌아가면서 탭바 복원');
+          setTabBarVisible(true);
+        }
+      };
+    }, [fromProfile, setTabBarVisible])
+  );
 
   const { data: post, isLoading, isError, error } = usePostDetailQuery(postId, { refetchOnFocus: true });
 
@@ -484,11 +505,28 @@ export default function PostDetailScreen({ route, navigation }: Props) {
                 {(post!.content ?? '')
                   .split(/\n+/)
                   .filter(Boolean)
-                  .map((line, idx) => (
-                    <Text key={idx} style={s.paragraph}>
-                      {line}
-                    </Text>
-                  ))}
+                  .map((line, idx) => {
+                    // 마크다운 이미지 패턴 검사: ![image](imageUrl)
+                    const imageMatch = line.match(/^!\[image\]\((.+)\)$/);
+                    
+                    if (imageMatch) {
+                      const imageUrl = imageMatch[1];
+                      return (
+                        <Image 
+                          key={idx} 
+                          source={{ uri: imageUrl }} 
+                          style={s.contentImage} 
+                          resizeMode="cover" 
+                        />
+                      );
+                    }
+                    
+                    return (
+                      <Text key={idx} style={s.paragraph}>
+                        {line}
+                      </Text>
+                    );
+                  })}
               </View>
 
               {images.length > 0 && (
@@ -590,6 +628,7 @@ const s = StyleSheet.create({
   authorMeta: { color: '#9AA0A6', fontSize: 12, marginTop: 2 },
   title: { fontSize: 20, fontWeight: '800', color: '#111', marginTop: 4 },
   paragraph: { fontSize: 15, lineHeight: 22, color: '#222', marginTop: 6 },
+  contentImage: { width: '100%', height: 200, borderRadius: 12, backgroundColor: '#F2F3F4', marginTop: 8 },
   imageCard: { width: 260, height: 160, borderRadius: 12, backgroundColor: '#F2F3F4' },
   statsRow: { flexDirection: 'row', alignItems: 'center', marginTop: 14, marginBottom: 10 },
   likeBtn: { flexDirection: 'row', alignItems: 'center' },

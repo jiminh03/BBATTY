@@ -40,7 +40,7 @@ public class StatisticsController {
         try {
             // 더미데이터에 있는 모든 사용자 ID들 (1번부터 144번까지)
             List<Long> userIds = new ArrayList<>();
-            for (long i = 1L; i <= 144L; i++) {
+            for (long i = 1L; i <= 162L; i++) {
                 userIds.add(i);
             }
             

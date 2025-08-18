@@ -34,7 +34,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
     });
 
     if (!isOk(result)) {
-      console.error('User initialization failed:', result.error);
       set({ currentUser: null, isUserInitialized: true });
     }
 
@@ -53,9 +52,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
       set({ currentUser: user });
     });
 
-    if (!isOk(result)) {
-      console.error('Failed to set user:', result.error);
-    }
 
     return result;
   },
@@ -64,7 +60,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
     const result = await wrapAsync(async () => {
       const data = await AsyncStorage.getItem(STORAGE_KEYS.USER);
 
-      console.log('hasUserResult :', data);
       return data !== null;
     });
 
@@ -79,9 +74,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
       });
     });
 
-    if (!isOk(result)) {
-      console.error('Logout failed:', result.error);
-    }
 
     return result;
   },

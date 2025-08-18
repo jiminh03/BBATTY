@@ -1,16 +1,6 @@
-// pages/mypage/UserProfileScreen.tsx
+// pages/mypage/OtherUserProfileScreen.tsx
 import React, { useEffect } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  FlatList,
-  RefreshControl,
-  ActivityIndicator,
-  TouchableOpacity,
-  StatusBar,
-  BackHandler,
-} from 'react-native';
+import { View, Text, ScrollView, FlatList, RefreshControl, ActivityIndicator, TouchableOpacity, StatusBar, BackHandler } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -40,54 +30,73 @@ import { useMyPostsInfinite } from '../../../entities/post/queries';
 import { PostItem } from '../../../entities/post/ui/PostItem';
 import { useUserStore } from '../../../entities/user/model/userStore';
 
-type UserProfileScreenNavigationProp = StackNavigationProp<MyPageStackParamList, 'Profile' | 'OtherProfile'>;
-type UserProfileScreenRouteProp =
-  | RouteProp<MyPageStackParamList, 'Profile'>
-  | RouteProp<MyPageStackParamList, 'OtherProfile'>;
+type OtherUserProfileScreenNavigationProp = StackNavigationProp<MyPageStackParamList, 'OtherProfile'>;
+type OtherUserProfileScreenRouteProp = RouteProp<MyPageStackParamList, 'OtherProfile'>;
 
-export default function UserProfileScreen() {
+export default function OtherUserProfileScreen() {
   // nav & ui
-  const navigation = useNavigation<UserProfileScreenNavigationProp>();
-  const route = useRoute<UserProfileScreenRouteProp>();
+  const navigation = useNavigation<OtherUserProfileScreenNavigationProp>();
+  const route = useRoute<OtherUserProfileScreenRouteProp>();
   const rootNav = useNavigation<StackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
   const themeColor = useThemeColor();
   const { setTabBarVisible } = useTabBar();
 
-  // Profile 화면은 항상 본인 프로필
-  const targetUserId = undefined; // 본인 프로필이므로 항상 undefined
-  const fromChatRoom = undefined; // 본인 프로필은 채팅방에서 오지 않음
-  const isOwner = true; // 항상 본인
-  const apiUserId = undefined; // 본인 프로필 API 호출
+  // 대상 유저 파라미터 (항상 다른 사람)
+  const targetUserId = route.params.userId; // 필수값
+  const fromChatRoom = route.params?.fromChatRoom;
+  const isOwner = false; // 항상 다른 사람
+  const apiUserId = targetUserId; // 항상 targetUserId 사용
 
-  // 탭바 가시성 제어 (본인 프로필은 항상 표시)
+
+  // 탭바 가시성 제어 (항상 숨김)
   useFocusEffect(
     React.useCallback(() => {
-      setTabBarVisible(true);
+      setTabBarVisible(false);
 
       return () => {
-        // 본인 프로필에서는 탭바를 숨기지 않음
+        setTabBarVisible(true);
       };
     }, [setTabBarVisible])
   );
 
+  // 안드로이드 하드웨어 뒤로가기 처리
+  useFocusEffect(
+    React.useCallback(() => {
+      const onBackPress = () => {
+        if (fromChatRoom) {
+          rootNav.navigate('MainTabs', {
+            screen: 'ChatStack'
+          });
+          return true;
+        }
+        
+        return false;
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [fromChatRoom, rootNav])
+  );
+
   // 스토어 상태(탭/시즌/승률보기)
   const { activeTab, selectedSeason, winRateType, setActiveTab, setSelectedSeason, setWinRateType } = useProfileStore();
-
-  // 본인 프로필 화면에서는 상태 초기화만 (필요시)
+  
+  // 다른 사람 프로필 진입 시 탭 상태 리셋
   useEffect(() => {
-    if (selectedSeason !== 'total') {
-      setSelectedSeason('total');
-    }
-  }, [selectedSeason, setSelectedSeason]);
+    setActiveTab('posts');
+    setSelectedSeason('total');
+    setWinRateType('summary');
+  }, [setSelectedSeason, setActiveTab, setWinRateType]);
 
-  // 프로필/통계 쿼리 - apiUserId 사용 (Profile=undefined, OtherProfile=targetUserId)
+  // 프로필/통계 쿼리
   const {
     data: profile,
     isLoading: profileLoading,
     error: profileError,
     refetch: refetchProfile,
   } = useProfile(apiUserId);
+
 
   const {
     basicStats,
@@ -103,21 +112,30 @@ export default function UserProfileScreen() {
 
   const canViewContent = (type: 'posts' | 'stats' | 'attendanceRecords'): boolean => {
     if (isOwner || !profile) return true;
+    
+    // 공개범위 설정 로그 출력
+    console.log(`[공개범위 확인] 사용자 ${targetUserId}의 공개범위:`, {
+      postsPublic: profile.postsPublic,
+      statsPublic: profile.statsPublic,
+      attendanceRecordsPublic: profile.attendanceRecordsPublic,
+      requestedType: type
+    });
+    
     switch (type) {
       case 'posts':
-        return profile.postsPublic !== false; // null 또는 true일 때 허용
+        return profile.postsPublic !== false; // null/undefined는 기본 공개
       case 'stats':
-        return profile.statsPublic !== false; // null 또는 true일 때 허용
+        return profile.statsPublic !== false; // null/undefined는 기본 공개
       case 'attendanceRecords':
-        return profile.attendanceRecordsPublic !== false; // null 또는 true일 때 허용
+        return profile.attendanceRecordsPublic !== false; // null/undefined는 기본 공개
       default:
         return true;
     }
   };
 
-  // 게시글 (본인 또는 공개된 타인 게시글)
+  // 게시글 (다른 사람의 공개된 게시글)
   const meId = useUserStore((s) => s.currentUser?.userId);
-  const userIdForPosts = isOwner ? profile?.userId ?? meId : canViewContent('posts') ? apiUserId : undefined;
+  const userIdForPosts = canViewContent('posts') ? apiUserId : undefined;
   const myPostsQ = useMyPostsInfinite(userIdForPosts);
   const myPosts = (myPostsQ.data?.pages ?? []).flatMap((p) => p?.posts ?? []);
 
@@ -131,9 +149,16 @@ export default function UserProfileScreen() {
   };
 
   const handleBackPress = () => {
-    navigation.goBack();
+    if (fromChatRoom) {
+      rootNav.navigate('MainTabs', {
+        screen: 'ChatStack'
+      });
+    } else {
+      navigation.goBack();
+    }
   };
 
+  // 나머지는 UserProfileScreen과 동일한 렌더링 로직
   const renderWinRateBody = () => {
     if (statsLoading) {
       return (
@@ -203,7 +228,7 @@ export default function UserProfileScreen() {
             {dayOfWeekStats.data?.dayOfWeekStats && (
               <DetailedStatsGrid
                 dayStats={Object.entries(dayOfWeekStats.data.dayOfWeekStats).map(([day, stats]: [string, any]) => ({
-                  dayName: day, // 영어 요일명 그대로 전달 (TUESDAY, WEDNESDAY 등)
+                  dayName: day,
                   matches: stats.games || 0,
                   wins: stats.wins || 0,
                   draws: stats.draws || 0,
@@ -228,7 +253,6 @@ export default function UserProfileScreen() {
   const renderTabContent = () => {
     switch (activeTab) {
       case 'posts': {
-        // postsPublic 설정에 따른 작성글 조회 제한
         if (!canViewContent('posts')) {
           return (
             <View style={styles.restrictedContent}>
@@ -351,7 +375,7 @@ export default function UserProfileScreen() {
             </View>
           );
         }
-        return null; // AttendanceHistory는 아래에서 별도로 렌더
+        return null;
       }
 
       default:
@@ -378,28 +402,25 @@ export default function UserProfileScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
-      <StatusBar backgroundColor={themeColor} barStyle='light-content' />
-      {/* 헤더 영역만 테마색 배경 */}
+      <StatusBar backgroundColor={themeColor} barStyle="light-content" />
       <View style={{ backgroundColor: themeColor, paddingTop: insets.top }}>
         <UserProfileHeader
           profile={profile}
           basicStats={basicStats.data}
           isOwner={isOwner}
           onBackPress={handleBackPress}
-          onSettingsPress={() => navigation.navigate('Settings')}
+          onSettingsPress={() => {}}
         />
       </View>
 
       <ProfileTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-      {/* 직관기록 탭: 시즌 선택기 */}
       {activeTab === 'history' && canViewContent('attendanceRecords') && (
         <View style={styles.dropdownContainer}>
           <SeasonSelector selectedSeason={selectedSeason} onSeasonChange={setSelectedSeason} userId={apiUserId} />
         </View>
       )}
 
-      {/* history 탭은 리스트 컴포넌트 직접, posts 탭은 FlatList 직접, 그 외는 ScrollView */}
       {activeTab === 'history' && canViewContent('attendanceRecords') ? (
         <AttendanceHistory
           userId={apiUserId}

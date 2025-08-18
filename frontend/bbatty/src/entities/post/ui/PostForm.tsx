@@ -56,13 +56,13 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
   const [error, setError] = useState('');
   const [imageList, setImageList] = useState<ImageItem[]>([]);
   const [cursorPosition, setCursorPosition] = useState(0);
-  
+
   // 오버레이 제거 - 드래그 상태만 관리
   const [isDragging, setIsDragging] = useState(false);
-  
+
   // 스크롤 뷰 참조
   const scrollViewRef = useRef<ScrollView>(null);
-  
+
   // 드래그 상태 관리 단순화
   const isDraggingRef = useRef(false);
 
@@ -71,7 +71,7 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
     const markdown = `![image](${imageUrl})`;
     const beforeCursor = content.substring(0, cursorPosition);
     const afterCursor = content.substring(cursorPosition);
-    
+
     // 현재 포커스된 곳에서 내용이 없을 시 해당 위치에 이미지가 업로드되고 포커스가 이미지 아래로 향하도록 수정
     let newContent;
     if (beforeCursor.endsWith('\n') || beforeCursor === '') {
@@ -81,10 +81,11 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
       // 텍스트 중간일 때는 앞에 줄바꿈 추가
       newContent = beforeCursor + '\n' + markdown + (afterCursor.startsWith('\n') ? afterCursor : '\n' + afterCursor);
     }
-    
+
     setContent(newContent);
     // 포커스를 이미지 아래로 이동
-    const newCursorPosition = beforeCursor.length + (beforeCursor.endsWith('\n') || beforeCursor === '' ? 0 : 1) + markdown.length + 1;
+    const newCursorPosition =
+      beforeCursor.length + (beforeCursor.endsWith('\n') || beforeCursor === '' ? 0 : 1) + markdown.length + 1;
     setCursorPosition(newCursorPosition);
   };
 
@@ -200,22 +201,17 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
 
   // 드래그 핸들러들 - 스크롤 제어 최적화
   const handleDragStart = useCallback(() => {
-    console.log('🟢 handleDragStart called - simple mode');
-    
     if (isDraggingRef.current) {
-      console.log('🔴 handleDragStart IGNORED - already dragging');
       return;
     }
-    
+
     isDraggingRef.current = true;
     setIsDragging(true);
-    
+
     // 스크롤 비활성화
     if (scrollViewRef.current) {
       scrollViewRef.current.setNativeProps({ scrollEnabled: false });
     }
-    
-    console.log('✅ handleDragStart completed - no overlay');
   }, []);
 
   const handleDragMove = useCallback(() => {
@@ -224,22 +220,14 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
   }, []);
 
   const handleDragEnd = useCallback(() => {
-    console.log('🟠 handleDragEnd called - simple mode');
-    
     isDraggingRef.current = false;
     setIsDragging(false);
-    
+
     // 스크롤 다시 활성화
     if (scrollViewRef.current) {
       scrollViewRef.current.setNativeProps({ scrollEnabled: true });
     }
-    
-    console.log('✅ handleDragEnd completed - simple mode');
   }, []);
-
-
-
-
 
   const handleSubmit = async () => {
     if (hasUploadingImages) {
@@ -297,9 +285,9 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
           behavior={Platform.select({ ios: 'padding', android: 'height' })}
           keyboardVerticalOffset={Platform.select({ ios: 88, android: 88 })}
         >
-          <ScrollView 
+          <ScrollView
             ref={scrollViewRef}
-            contentContainerStyle={styles.contentWrap} 
+            contentContainerStyle={styles.contentWrap}
             keyboardShouldPersistTaps='handled'
             showsVerticalScrollIndicator={false}
             keyboardDismissMode='interactive'
@@ -307,41 +295,40 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
             style={{ flex: 1 }}
             scrollEnabled={true}
           >
-          {/* 제목 */}
-          <Text style={styles.label}>제목</Text>
-          <TextInput
-            style={styles.titleInput}
-            placeholder='최대 30글자까지 입력 가능'
-            placeholderTextColor='#B9BDC1'
-            value={title}
-            onChangeText={setTitle}
-            maxLength={30}
-          />
+            {/* 제목 */}
+            <Text style={styles.label}>제목</Text>
+            <TextInput
+              style={styles.titleInput}
+              placeholder='최대 30글자까지 입력 가능'
+              placeholderTextColor='#B9BDC1'
+              value={title}
+              onChangeText={setTitle}
+              maxLength={30}
+            />
 
-          {/* 내용 */}
-          <Text style={[styles.label, { marginTop: 18 }]}>내용</Text>
-          <RichTextEditor
-            style={styles.bodyInput}
-            placeholder='내용을 입력해주세요.'
-            value={content}
-            onChangeText={setContent}
-            onSelectionChange={setCursorPosition}
-            onImageDelete={(imageUrl) => {
-              // imageUrl로 imageList에서 해당 이미지를 찾아서 삭제
-              const targetImage = imageList.find(img => img.url === imageUrl);
-              if (targetImage) {
-                handleImageDelete(targetImage.id);
-              }
-            }}
-            onDragStart={handleDragStart}
-            onDragMove={handleDragMove}
-            onDragEnd={handleDragEnd}
-          />
+            {/* 내용 */}
+            <Text style={[styles.label, { marginTop: 18 }]}>내용</Text>
+            <RichTextEditor
+              style={styles.bodyInput}
+              placeholder='내용을 입력해주세요.'
+              value={content}
+              onChangeText={setContent}
+              onSelectionChange={setCursorPosition}
+              onImageDelete={(imageUrl) => {
+                // imageUrl로 imageList에서 해당 이미지를 찾아서 삭제
+                const targetImage = imageList.find((img) => img.url === imageUrl);
+                if (targetImage) {
+                  handleImageDelete(targetImage.id);
+                }
+              }}
+              onDragStart={handleDragStart}
+              onDragMove={handleDragMove}
+              onDragEnd={handleDragEnd}
+            />
 
-
-          {!!error && <Text style={styles.errorText}>{error}</Text>}
+            {!!error && <Text style={styles.errorText}>{error}</Text>}
           </ScrollView>
-          
+
           {/* 하단 툴바: 이미지 버튼 - 키보드 위에 고정 */}
           <View style={styles.toolbar}>
             <TouchableOpacity style={styles.imageBtn} onPress={handleImagePick} disabled={hasUploadingImages}>
@@ -366,7 +353,7 @@ export const PostForm: React.FC<Props> = ({ route, navigation }) => {
           {isSubmitting ? <ActivityIndicator color='#fff' /> : <Text style={styles.submitText}>등록하기</Text>}
         </TouchableOpacity>
       </View>
-      
+
       {/* 오버레이 제거 - 파란선만 사용 */}
     </View>
   );
