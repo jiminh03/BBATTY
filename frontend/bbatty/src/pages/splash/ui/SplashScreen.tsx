@@ -256,9 +256,16 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLogi
         onAnimationComplete?.();
       }
     } catch (error: any) {
-      Alert.alert('로그인 실패', `카카오 로그인에 실패했습니다.\n${error.message}\n확인 후 다시 시도해 주십시오.`, [
-        { text: '확인' },
-      ]);
+      console.error('카카오 로그인 실패:', error);
+      
+      // 릴리즈 빌드에서도 안전하게 작동하도록 setTimeout으로 래핑
+      setTimeout(() => {
+        Alert.alert(
+          '로그인 실패',
+          `카카오 로그인에 실패했습니다.\n${error.message}\n이를 확인 후 다시 시도해 주십시오.`,
+          [{ text: '확인' }]
+        );
+      }, 100);
     }
   };
 
