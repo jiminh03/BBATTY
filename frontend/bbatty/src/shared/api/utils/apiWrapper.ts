@@ -36,7 +36,6 @@ export const wrapApiCall = <T>(apicall: () => Promise<AxiosResponse<ApiResponse<
       }
     },
     (error: any) => {
-      console.log('wrapApiCall 에러 캐치:', error);
       
       // Axios 에러 또는 기타 에러 처리
       if (error.type === 'API_ERROR') {
@@ -45,7 +44,6 @@ export const wrapApiCall = <T>(apicall: () => Promise<AxiosResponse<ApiResponse<
 
       // Axios 에러인 경우
       if (error.response) {
-        console.log('Axios 응답 에러:', error.response.status, error.response.data);
         return createApiError(
           error.response.data?.message || '서버 오류가 발생했습니다.',
           error.response.data?.error?.code,
@@ -55,7 +53,6 @@ export const wrapApiCall = <T>(apicall: () => Promise<AxiosResponse<ApiResponse<
       }
 
       // 네트워크 에러 등
-      console.log('네트워크 에러:', error.message);
       return createApiError(error.message || '알 수 없는 오류가 발생했습니다.');
     }
   );

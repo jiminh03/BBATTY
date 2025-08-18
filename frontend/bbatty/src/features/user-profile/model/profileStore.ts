@@ -99,7 +99,6 @@ export const useProfileStore = create<ProfileStore>((set, get) => ({
       }
       return false;
     } catch (error) {
-      console.error('프라이버시 설정 업데이트 실패:', error);
       return false;
     }
   },

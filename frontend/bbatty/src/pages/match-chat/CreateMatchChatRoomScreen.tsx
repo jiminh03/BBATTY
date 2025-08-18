@@ -26,23 +26,21 @@ import { styles } from './CreateMatchChatRoomScreen.styles';
 
 type NavigationProp = StackNavigationProp<ChatStackParamList>;
 
-const TEAMS = [
-  'LG', 'KT', 'SSG', 'NC', '두산', '기아', 'KIA', 'SK', '삼성', '롯데', '한화'
-];
+const TEAMS = ['LG', 'KT', 'SSG', 'NC', '두산', '기아', 'KIA', 'SK', '삼성', '롯데', '한화'];
 
 // 팀 이름을 ID로 매핑 (실제 teamTypes.ts와 일치)
 const TEAM_ID_MAP: { [key: string]: number } = {
-  'LG': 2,
-  'KT': 4, 
-  'SSG': 7,
-  'NC': 8,
-  '두산': 9,
-  '기아': 6,
-  'KIA': 6,
-  'SK': 7,
-  '삼성': 5,
-  '롯데': 3,
-  '한화': 1
+  LG: 2,
+  KT: 4,
+  SSG: 7,
+  NC: 8,
+  두산: 9,
+  기아: 6,
+  KIA: 6,
+  SK: 7,
+  삼성: 5,
+  롯데: 3,
+  한화: 1,
 };
 
 // ID를 팀 이름으로 역매핑 (실제 teamTypes.ts와 일치)
@@ -56,7 +54,7 @@ const ID_TO_TEAM_NAME_MAP: { [key: number]: string[] } = {
   7: ['SSG 랜더스'],
   8: ['NC 다이노스'],
   9: ['두산 베어스'],
-  10: ['키움 히어로즈']
+  10: ['키움 히어로즈'],
 };
 
 const GENDER_OPTIONS = [
@@ -76,7 +74,7 @@ export const CreateMatchChatRoomScreen = () => {
   const [showGameModal, setShowGameModal] = useState(false);
   const [games, setGames] = useState<Game[]>([]);
   const [selectedGame, setSelectedGame] = useState<Game | null>(null);
-  
+
   const [formData, setFormData] = useState<CreateMatchChatRoomRequest>({
     gameId: 0, // 경기 선택 후 설정
     matchTitle: '',
@@ -96,27 +94,23 @@ export const CreateMatchChatRoomScreen = () => {
   const loadGames = async () => {
     try {
       setGamesLoading(true);
-      console.log('📅 경기 목록 로드 시작...');
       const response = await gameApi.getGames();
-      console.log('📅 경기 목록 API 응답:', response);
       if (response.status === 'SUCCESS') {
         // 내 팀의 경기만 필터링
-        const myTeamGames = currentUser?.teamId 
-          ? response.data.filter(game => {
+        const myTeamGames = currentUser?.teamId
+          ? response.data.filter((game) => {
               const myTeamNames = ID_TO_TEAM_NAME_MAP[currentUser.teamId] || [];
-              return myTeamNames.some(teamName => 
-                game.awayTeamName.includes(teamName.split(' ')[0]) || 
-                game.homeTeamName.includes(teamName.split(' ')[0])
+              return myTeamNames.some(
+                (teamName) =>
+                  game.awayTeamName.includes(teamName.split(' ')[0]) ||
+                  game.homeTeamName.includes(teamName.split(' ')[0])
               );
             })
           : response.data;
         setGames(myTeamGames);
-        console.log('📅 내 팀 경기 목록 설정 완료:', myTeamGames);
       } else {
-        console.warn('📅 경기 목록 로드 실패:', response);
       }
     } catch (error) {
-      console.error('📅 경기 목록 로드 에러:', error);
     } finally {
       setGamesLoading(false);
     }
@@ -124,29 +118,41 @@ export const CreateMatchChatRoomScreen = () => {
 
   const handleGameSelect = (game: Game) => {
     setSelectedGame(game);
-    setFormData(prev => ({ ...prev, gameId: game.gameId.toString() }));
+    setFormData((prev) => ({ ...prev, gameId: game.gameId.toString() }));
     setShowGameModal(false);
   };
 
   const getGameStatusText = (status: string) => {
     switch (status) {
-      case 'LIVE': return '경기중';
-      case 'SCHEDULED': return '경기예정';
-      case 'FINISHED': return '경기종료';
-      case 'POSTPONED': return '경기연기';
-      case 'CANCELLED': return '경기취소';
-      default: return status;
+      case 'LIVE':
+        return '경기중';
+      case 'SCHEDULED':
+        return '경기예정';
+      case 'FINISHED':
+        return '경기종료';
+      case 'POSTPONED':
+        return '경기연기';
+      case 'CANCELLED':
+        return '경기취소';
+      default:
+        return status;
     }
   };
 
   const getGameStatusColor = (status: string) => {
     switch (status) {
-      case 'LIVE': return '#4CAF50';
-      case 'SCHEDULED': return '#2196F3';
-      case 'FINISHED': return '#9E9E9E';
-      case 'POSTPONED': return '#FF9800';
-      case 'CANCELLED': return '#F44336';
-      default: return '#9E9E9E';
+      case 'LIVE':
+        return '#4CAF50';
+      case 'SCHEDULED':
+        return '#2196F3';
+      case 'FINISHED':
+        return '#9E9E9E';
+      case 'POSTPONED':
+        return '#FF9800';
+      case 'CANCELLED':
+        return '#F44336';
+      default:
+        return '#9E9E9E';
     }
   };
 
@@ -196,13 +202,13 @@ export const CreateMatchChatRoomScreen = () => {
     // 나이 범위 강제 검증 및 수정 (20-100세)
     const correctedMinAge = Math.max(20, Math.min(100, formData.minAge || 20));
     const correctedMaxAge = Math.max(20, Math.min(100, formData.maxAge || 100));
-    
+
     // 자동 조정 (사용자에게 알림 없이)
     if (formData.minAge !== correctedMinAge || formData.maxAge !== correctedMaxAge) {
-      setFormData(prev => ({ 
-        ...prev, 
-        minAge: correctedMinAge, 
-        maxAge: correctedMaxAge 
+      setFormData((prev) => ({
+        ...prev,
+        minAge: correctedMinAge,
+        maxAge: correctedMaxAge,
       }));
     }
 
@@ -219,26 +225,22 @@ export const CreateMatchChatRoomScreen = () => {
     try {
       setLoading(true);
       const response = await chatRoomApi.createMatchChatRoom(formData);
-      
+
       console.log('📱 CreateMatchChatRoom 화면에서 받은 응답:', response);
-      
+
       if (response.data?.status === 'SUCCESS') {
-        Alert.alert(
-          '성공',
-          '채팅방이 생성되었습니다!',
-          [
-            {
-              text: '확인',
-              onPress: () => {
-                if (navigation.canGoBack()) {
-                  navigation.goBack();
-                }
-                // 필요시 생성된 방으로 바로 이동
-                // navigation.navigate('MatchChatRoomDetail', { room: response.data.data });
-              },
+        Alert.alert('성공', '채팅방이 생성되었습니다!', [
+          {
+            text: '확인',
+            onPress: () => {
+              if (navigation.canGoBack()) {
+                navigation.goBack();
+              }
+              // 필요시 생성된 방으로 바로 이동
+              // navigation.navigate('MatchChatRoomDetail', { room: response.data.data });
             },
-          ]
-        );
+          },
+        ]);
       } else {
         Alert.alert('오류', response.data?.message || '채팅방 생성에 실패했습니다.');
       }
@@ -254,7 +256,7 @@ export const CreateMatchChatRoomScreen = () => {
     if (key === 'teamId' && typeof value === 'string') {
       // 팀 이름을 ID로 변환
       const teamId = TEAM_ID_MAP[value];
-      setFormData(prev => ({ ...prev, [key]: teamId || 1 }));
+      setFormData((prev) => ({ ...prev, [key]: teamId || 1 }));
     } else if (key === 'minAge' || key === 'maxAge') {
       // 나이 제한 적용 (20-100세)
       const numericValue = value.toString().replace(/[^0-9]/g, ''); // 숫자만 추출
@@ -264,24 +266,23 @@ export const CreateMatchChatRoomScreen = () => {
       const age = parseInt(numericValue);
       if (isNaN(age)) return;
       const clampedAge = Math.max(20, Math.min(100, age));
-      setFormData(prev => ({ ...prev, [key]: clampedAge }));
+      setFormData((prev) => ({ ...prev, [key]: clampedAge }));
     } else {
-      setFormData(prev => ({ ...prev, [key]: value }));
+      setFormData((prev) => ({ ...prev, [key]: value }));
     }
   };
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={[themeColor, themeColor]}
-        style={[styles.headerGradient, { paddingTop: insets.top }]}
-      >
+      <LinearGradient colors={[themeColor, themeColor]} style={[styles.headerGradient, { paddingTop: insets.top }]}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => {
-            if (navigation.canGoBack()) {
-              navigation.goBack();
-            }
-          }}>
+          <TouchableOpacity
+            onPress={() => {
+              if (navigation.canGoBack()) {
+                navigation.goBack();
+              }
+            }}
+          >
             <Text style={[styles.cancelButton, { color: '#ffffff' }]}>취소</Text>
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: '#ffffff' }]}>채팅방 만들기</Text>
@@ -293,11 +294,7 @@ export const CreateMatchChatRoomScreen = () => {
         </View>
       </LinearGradient>
 
-      <KeyboardAvoidingView 
-        style={styles.keyboardContainer}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
-
+      <KeyboardAvoidingView style={styles.keyboardContainer} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.section}>
             <Text style={styles.label}>경기 선택 *</Text>
@@ -316,8 +313,9 @@ export const CreateMatchChatRoomScreen = () => {
                         month: 'short',
                         day: 'numeric',
                         hour: '2-digit',
-                        minute: '2-digit'
-                      })} | {selectedGame.stadium}
+                        minute: '2-digit',
+                      })}{' '}
+                      | {selectedGame.stadium}
                     </Text>
                   </View>
                 </View>
@@ -335,7 +333,7 @@ export const CreateMatchChatRoomScreen = () => {
               style={styles.textInput}
               value={formData.matchTitle}
               onChangeText={(text) => updateFormData('matchTitle', text)}
-              placeholder="예: 20대 LG팬들 모여라!"
+              placeholder='예: 20대 LG팬들 모여라!'
               maxLength={50}
             />
           </View>
@@ -346,12 +344,11 @@ export const CreateMatchChatRoomScreen = () => {
               style={[styles.textInput, styles.textArea]}
               value={formData.matchDescription}
               onChangeText={(text) => updateFormData('matchDescription', text)}
-              placeholder="채팅방에 대한 간단한 설명을 입력해주세요"
+              placeholder='채팅방에 대한 간단한 설명을 입력해주세요'
               multiline
               maxLength={200}
             />
           </View>
-
 
           <View style={styles.section}>
             <Text style={styles.label}>참여 조건</Text>
@@ -365,25 +362,25 @@ export const CreateMatchChatRoomScreen = () => {
                     onChangeText={(text) => {
                       // 빈 문자열이면 0으로 임시 저장 (화면에는 빈 문자열 표시)
                       if (text === '') {
-                        setFormData(prev => ({ ...prev, minAge: 0 }));
+                        setFormData((prev) => ({ ...prev, minAge: 0 }));
                         return;
                       }
                       // 숫자만 허용
                       const numValue = parseInt(text);
                       if (!isNaN(numValue) && numValue >= 0) {
-                        setFormData(prev => ({ ...prev, minAge: numValue }));
+                        setFormData((prev) => ({ ...prev, minAge: numValue }));
                       }
                     }}
                     onBlur={() => {
                       // 포커스를 잃을 때만 범위 체크
                       if (formData.minAge === 0) {
-                        setFormData(prev => ({ ...prev, minAge: 20 }));
+                        setFormData((prev) => ({ ...prev, minAge: 20 }));
                       } else {
                         const clampedValue = Math.max(20, Math.min(100, formData.minAge));
-                        setFormData(prev => ({ ...prev, minAge: clampedValue }));
+                        setFormData((prev) => ({ ...prev, minAge: clampedValue }));
                       }
                     }}
-                    keyboardType="numeric"
+                    keyboardType='numeric'
                     maxLength={3}
                   />
                   <Text style={styles.ageText}>-</Text>
@@ -393,25 +390,25 @@ export const CreateMatchChatRoomScreen = () => {
                     onChangeText={(text) => {
                       // 빈 문자열이면 0으로 임시 저장 (화면에는 빈 문자열 표시)
                       if (text === '') {
-                        setFormData(prev => ({ ...prev, maxAge: 0 }));
+                        setFormData((prev) => ({ ...prev, maxAge: 0 }));
                         return;
                       }
                       // 숫자만 허용
                       const numValue = parseInt(text);
                       if (!isNaN(numValue) && numValue >= 0) {
-                        setFormData(prev => ({ ...prev, maxAge: numValue }));
+                        setFormData((prev) => ({ ...prev, maxAge: numValue }));
                       }
                     }}
                     onBlur={() => {
                       // 포커스를 잃을 때만 범위 체크
                       if (formData.maxAge === 0) {
-                        setFormData(prev => ({ ...prev, maxAge: 20 }));
+                        setFormData((prev) => ({ ...prev, maxAge: 20 }));
                       } else {
                         const clampedValue = Math.max(20, Math.min(100, formData.maxAge));
-                        setFormData(prev => ({ ...prev, maxAge: clampedValue }));
+                        setFormData((prev) => ({ ...prev, maxAge: clampedValue }));
                       }
                     }}
-                    keyboardType="numeric"
+                    keyboardType='numeric'
                     maxLength={3}
                   />
                   <Text style={styles.ageText}>세</Text>
@@ -427,14 +424,16 @@ export const CreateMatchChatRoomScreen = () => {
                     key={option.value}
                     style={[
                       styles.genderButton,
-                      formData.genderCondition === option.value && styles.selectedGenderButton
+                      formData.genderCondition === option.value && styles.selectedGenderButton,
                     ]}
                     onPress={() => updateFormData('genderCondition', option.value)}
                   >
-                    <Text style={[
-                      styles.genderButtonText,
-                      formData.genderCondition === option.value && styles.selectedGenderButtonText
-                    ]}>
+                    <Text
+                      style={[
+                        styles.genderButtonText,
+                        formData.genderCondition === option.value && styles.selectedGenderButtonText,
+                      ]}
+                    >
                       {option.label}
                     </Text>
                   </TouchableOpacity>
@@ -442,16 +441,14 @@ export const CreateMatchChatRoomScreen = () => {
               </View>
             </View>
           </View>
-
-
         </ScrollView>
       </KeyboardAvoidingView>
 
       {/* 경기 선택 모달 */}
       <Modal
         visible={showGameModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
+        animationType='slide'
+        presentationStyle='pageSheet'
         onRequestClose={() => setShowGameModal(false)}
       >
         <View style={[styles.modalContainer, { paddingTop: insets.top }]}>
@@ -468,10 +465,7 @@ export const CreateMatchChatRoomScreen = () => {
             keyExtractor={(item) => item.gameId.toString()}
             renderItem={({ item: game }) => (
               <TouchableOpacity
-                style={[
-                  styles.gameItem,
-                  selectedGame?.gameId === game.gameId && styles.selectedGameItem
-                ]}
+                style={[styles.gameItem, selectedGame?.gameId === game.gameId && styles.selectedGameItem]}
                 onPress={() => handleGameSelect(game)}
               >
                 <View style={styles.gameItemContent}>
@@ -480,14 +474,15 @@ export const CreateMatchChatRoomScreen = () => {
                       {game.awayTeamName} vs {game.homeTeamName}
                     </Text>
                   </View>
-                  
+
                   <Text style={styles.gameItemDetails}>
                     {new Date(game.dateTime).toLocaleString('ko-KR', {
                       month: 'short',
                       day: 'numeric',
                       hour: '2-digit',
-                      minute: '2-digit'
-                    })} | {game.stadium}
+                      minute: '2-digit',
+                    })}{' '}
+                    | {game.stadium}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -499,4 +494,3 @@ export const CreateMatchChatRoomScreen = () => {
     </View>
   );
 };
-

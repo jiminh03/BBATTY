@@ -131,10 +131,15 @@ export type ChatStackParamList = {
 export type MyPageStackParamList = {
   Profile: {
     userId?: number; // undefined면 본인 프로필
+    fromChatRoom?: boolean; // 채팅방에서 왔는지 여부
+  };
+  OtherProfile: {
+    userId: number; // 다른 사람의 프로필
+    fromChatRoom?: boolean; // 채팅방에서 왔는지 여부
   };
   ProfileEdit: undefined;
   Settings: undefined;
-  PostDetail: { postId: number}
+  PostDetail: { postId: number; fromProfile?: boolean }
 };
 
 // 스크린 Props 타입

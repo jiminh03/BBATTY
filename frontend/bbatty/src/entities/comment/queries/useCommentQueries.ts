@@ -1,12 +1,7 @@
 // entities/comment/queries/useCommentQueries.ts
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { commentApi } from '../api/api';
-import {
-  CreateCommentPayload,
-  DeleteCommentPayload,
-  UpdateCommentPayload,
-  CommentListResponse,
-} from '../api/types';
+import { CreateCommentPayload, DeleteCommentPayload, UpdateCommentPayload, CommentListResponse } from '../api/types';
 import { useUserStore } from '../../user/model/userStore';
 import { syncCommentCountEverywhere } from '../../post/queries/usePostQueries';
 import type { Post } from '../../post/model/types';
@@ -15,8 +10,7 @@ import type { Post } from '../../post/model/types';
 export const useCommentListQuery = (postId: number, pageSize = 10) =>
   useInfiniteQuery<CommentListResponse>({
     queryKey: ['comments', postId, pageSize],
-    queryFn: ({ pageParam = 0 }) =>
-      commentApi.getComments({ postId, page: pageParam as number, size: pageSize }),
+    queryFn: ({ pageParam = 0 }) => commentApi.getComments({ postId, page: pageParam as number, size: pageSize }),
     initialPageParam: 0,
     getNextPageParam: (last) => (last.hasMore ? last.page + 1 : undefined),
   });
@@ -33,7 +27,6 @@ export const useCreateComment = (postId: number) => {
   const qc = useQueryClient();
   const userId = useUserStore((s) => s.currentUser?.userId ?? null);
 
-
   return useMutation({
     mutationFn: async (content: string) => {
       if (!userId) throw new Error('로그인이 필요합니다.');
@@ -49,9 +42,7 @@ export const useCreateComment = (postId: number) => {
       // 상세 재검증(선택)
       qc.invalidateQueries({ queryKey: ['post', postId] });
     },
-    onError: (e: any) => {
-      console.log('[useCreateComment][ERROR]', e?.message, e);
-    },
+    onError: (e: any) => {},
   });
 };
 

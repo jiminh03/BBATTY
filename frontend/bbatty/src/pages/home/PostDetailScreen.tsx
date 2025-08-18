@@ -21,7 +21,9 @@ import {
   StatusBar,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { HomeStackScreenProps } from '../../navigation/types';
+import { useTabBar } from '../../shared/contexts/TabBarContext';
 import {
   usePostDetailQuery,
   useDeletePostMutation,
@@ -96,7 +98,26 @@ export default function PostDetailScreen({ route, navigation }: Props) {
   const rem = useRem();
   const minTouch = useMinTouch();
   const postId = route.params.postId;
+  const fromProfile = route.params?.fromProfile || false;
   const insets = useSafeAreaInsets();
+  const { setTabBarVisible } = useTabBar();
+
+  // 프로필에서 온 경우 tab bar 숨기기
+  useFocusEffect(
+    React.useCallback(() => {
+      if (fromProfile) {
+        console.log('PostDetail - 프로필에서 접근, 탭바 숨김');
+        setTabBarVisible(false);
+      }
+
+      return () => {
+        if (fromProfile) {
+          console.log('PostDetail - 프로필로 돌아가면서 탭바 복원');
+          setTabBarVisible(true);
+        }
+      };
+    }, [fromProfile, setTabBarVisible])
+  );
 
   const { data: post, isLoading, isError, error } = usePostDetailQuery(postId, { refetchOnFocus: true });
 

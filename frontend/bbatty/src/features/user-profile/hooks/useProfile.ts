@@ -13,9 +13,11 @@ const PROFILE_ENTITY = 'profile';
 // 프로필 조회
 export const useProfile = (userId?: number) => {
   const refreshToken = useTokenStore((state) => state.refreshToken);
-  
+
+  const queryKey = userId ? QueryKeys.detail(PROFILE_ENTITY, userId) : QueryKeys.detail(PROFILE_ENTITY, 'me');
+
   return useQuery({
-    queryKey: userId ? QueryKeys.detail(PROFILE_ENTITY, userId) : QueryKeys.detail(PROFILE_ENTITY, 'me'),
+    queryKey,
     queryFn: async () => {
       const result = await profileApi.getProfile(userId);
       if (isOk(result)) {
@@ -126,10 +128,8 @@ export const useDetailedStats = <T = any>(
   return useQuery({
     queryKey: QueryKeys.stats(PROFILE_ENTITY, type, params),
     queryFn: async () => {
-      console.log('승률통계 : ', type, userId, season);
       const result = await statsApi.getDetailedStats<T>(type, userId, season);
       if (isOk(result)) {
-        console.log('승률 result : ', result);
         return result.data;
       }
       throw new Error(result.error.message);
@@ -163,7 +163,7 @@ export const useStreakStats = (userId?: number, season?: Season) => {
 // 직관 년도 목록 조회
 export const useAttendanceYears = (userId?: number) => {
   const refreshToken = useTokenStore((state) => state.refreshToken);
-  
+
   return useQuery({
     queryKey: ['attendanceYears', userId],
     queryFn: async () => {
@@ -189,8 +189,6 @@ export const useAllUserStats = (userId?: number, season?: Season) => {
   const badges = useUserBadges(userId, season);
 
   const queryClient = useQueryClient();
-
-  console.log(badges.data);
 
   return {
     basicStats,

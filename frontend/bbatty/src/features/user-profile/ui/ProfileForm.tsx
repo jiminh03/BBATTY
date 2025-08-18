@@ -21,7 +21,10 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   // 개선된 커스텀 훅 사용 - initialData가 이미 초기 상태로 설정됨
-  const { formData, errors, nicknameStatus, updateField, handleCheckNickname, validate } = useProfileForm(initialData, originalNickname);
+  const { formData, errors, nicknameStatus, updateField, handleCheckNickname, validate } = useProfileForm(
+    initialData,
+    originalNickname
+  );
 
   // 현재 닉네임이 기존 닉네임과 동일한지 체크
   const isNicknameSameAsOriginal = () => {
@@ -35,10 +38,12 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
 
   // 아무 필드도 변경되지 않았는지 체크
   const isDataUnchanged = () => {
-    const nicknameUnchanged = originalNickname ? isNicknameSameAsOriginal() : formData.nickname === (initialData?.nickname || '');
+    const nicknameUnchanged = originalNickname
+      ? isNicknameSameAsOriginal()
+      : formData.nickname === (initialData?.nickname || '');
     const introductionUnchanged = isIntroductionSameAsOriginal();
     const imageUnchanged = formData.profileImage === (initialData?.profileImage || null);
-    
+
     return nicknameUnchanged && introductionUnchanged && imageUnchanged;
   };
 
@@ -98,7 +103,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
   // 제출 버튼 활성화 상태 결정
   const isSubmitDisabled = () => {
     if (isSubmitting) return true;
-    
+
     // 아무것도 변경되지 않았으면 비활성화
     if (isDataUnchanged()) return true;
 
@@ -127,7 +132,6 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
   const handleSubmit = async () => {
     // 전체 검증
     if (!validate()) {
-      console.log('유효성 검증 실패');
       return;
     }
 
@@ -143,8 +147,8 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
 
   return (
     <>
-      <ProfileImagePicker 
-        imageUri={formData.profileImage} 
+      <ProfileImagePicker
+        imageUri={formData.profileImage}
         onImageSelect={(uri) => updateField('profileImage', uri)}
         onImageRemove={() => updateField('profileImage', null)}
         isSignup={!originalNickname}
