@@ -154,6 +154,17 @@
 - 10개 구단별 브랜드 컬러 시스템: 사용자의 응원 팀 선택에 따른 서비스 전체 테마 컬러 적용
 - 야구팬 친화적 UI/UX
 
+
+## 🚀 실행 방법
+
+### APK 다운로드 및 설치
+
+**최신 빌드 APK**: [BBATTY v1.0.0 다운로드](https://drive.google.com/drive/folders/1jbXlDJ-TO4BULXHYZk-QOQ9Qj3vbC1Dv?usp=sharing)
+
+1. Android 기기에서 APK 파일 다운로드
+2. **설정 > 보안 > 알 수 없는 출처** 허용
+3. APK 파일 실행하여 설치
+4. 앱 실행 후 카카오톡으로 로그인
 ---
 
 **⚾ 진짜 야구팬들을 위한 특별한 공간, BBATTY ⚾**
