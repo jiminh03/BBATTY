@@ -49,8 +49,6 @@ export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnaut
         }
       }
 
-      console.log(config.url);
-      console.log(config.params);
       return config;
     },
     (error: AxiosError) => {
@@ -63,7 +61,7 @@ export const setupInterceptors = (client: AxiosInstance, onUnauthorized: OnUnaut
     (response: AxiosResponse) => {
       if (response.data && typeof response.data === 'object') {
       }
-      console.log(response.data.data);
+      console.log(response);
       return response;
     },
     async (error: AxiosError) => {
