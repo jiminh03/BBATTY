@@ -83,7 +83,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLogi
 
       // 1. 사용자 정보 및 토큰 확인
       const hasTokens = hasRefreshToken();
-      
+
       // 토큰이 없으면 일찍 종료
       if (!hasTokens) {
         console.log('🔴 [SplashScreen] No tokens found, skipping auto login');
@@ -91,7 +91,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLogi
         startAnimationWithLogin();
         return;
       }
-      
+
       const hasUserResult = await hasUser();
       const userExists = isOk(hasUserResult) && hasUserResult.data;
 
@@ -111,19 +111,16 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLogi
           startAnimationWithLogin();
           return;
         }
-
-        console.log('🔄 [SplashScreen] 토큰 갱신 시도');
         const refreshResult = await refreshTokens();
 
         if (isOk(refreshResult) && refreshResult.data) {
           // 토큰 갱신 성공 - 이제 실제 사용자 존재 여부 확인
-          console.log('🔄 [SplashScreen] 토큰 갱신 성공, 사용자 존재 여부 확인 중...');
-          
+
           try {
             // 프로필 API 호출로 사용자 존재 여부 확인
             const { profileApi } = await import('../../../features/user-profile/api/profileApi');
             const profileResult = await profileApi.getProfile();
-            
+
             if (isOk(profileResult)) {
               // 사용자 존재 확인 - 자동로그인 성공
               const currentUser = getCurrentUser();
@@ -134,29 +131,21 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onAnimationComplete, onLogi
                 }
               }
 
-              console.log('✅ [SplashScreen] Auto login successful');
               startAnimationAndComplete();
               return;
             } else {
               // 프로필 조회 실패 - 탈퇴된 사용자
-              console.log('🚫 [SplashScreen] User profile not found - user may have been deleted');
               throw new Error('User profile not found');
             }
           } catch (profileError) {
-            console.log('❌ [SplashScreen] Profile check failed:', profileError);
-            
-            // 탈퇴된 사용자로 판단 - 상태 정리
-            console.log('🧹 [SplashScreen] Clearing user state - user may have withdrawn');
             resetToken();
             await resetUser();
             setKakaoUserInfo(null);
             setKakaoAccessToken(null);
           }
         } else {
-          console.log('❌ [SplashScreen] Token refresh failed:', refreshResult.error);
         }
       } else {
-        console.log('🔴 [SplashScreen] No user or tokens found');
       }
 
       // 자동로그인 실패 - 로그인 버튼 표시

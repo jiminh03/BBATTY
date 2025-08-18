@@ -23,7 +23,7 @@ export const profileApi = {
     wrapApiCall(() => apiClient.put('/api/profile/update', data)),
 
   updatePrivacySettings: (settings: UserPrivacySettings): AsyncResult<null, ApiError> => {
-    return wrapApiCall(() => apiClient.put('/api/profile/privacy-setting', settings));
+    return wrapApiCall(() => apiClient.put('/api/profile/privacy-setting', null, { params: settings }));
   },
 
   checkNickname: (request: CheckNicknameRequest): AsyncResult<CheckNicknameResponse, ApiError> =>

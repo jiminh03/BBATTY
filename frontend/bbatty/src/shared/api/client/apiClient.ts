@@ -95,9 +95,6 @@ export const initializeApiClient = async (): Promise<void> => {
 
   // 저장된 토큰 초기화
   const initResult = await useTokenStore.getState().initializeTokens();
-  if (isErr(initResult)) {
-    console.error('❌ [ApiClient] 토큰 초기화 실패:', initResult.error);
-  }
 
   const token = useTokenStore.getState().getAccessToken();
   applyTokenToClients(token);
@@ -106,7 +103,6 @@ export const initializeApiClient = async (): Promise<void> => {
   setupInterceptors(chatApiClient, handleUnauthorized);
   setupInterceptors(uploadClient, handleUnauthorized);
   
-  console.log('✅ [ApiClient] API 클라이언트 초기화 완료');
 };
 
 // AppNavigator에서 호출할 함수

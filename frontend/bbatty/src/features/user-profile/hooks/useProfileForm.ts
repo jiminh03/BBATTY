@@ -50,7 +50,6 @@ export const useProfileForm = (initialData?: Partial<ProfileFormData>, originalN
       const result = await profileApi.checkNickname({ nickname: formData.nickname });
 
       if (isOk(result)) {
-        console.log('닉네임 체크 성공:', result.data);
         setIsNicknameAvailable(result.data.available);
 
         if (result.data.available) {
@@ -147,7 +146,7 @@ export const useProfileForm = (initialData?: Partial<ProfileFormData>, originalN
       } else {
         // 정상 범위 내 입력
         setFormData((prev) => ({ ...prev, introduction: rawValue }));
-        
+
         // 검증
         const validation = validators.introduction(rawValue);
         setErrors((prev) => ({
@@ -205,10 +204,10 @@ export const useProfileForm = (initialData?: Partial<ProfileFormData>, originalN
     }
 
     setErrors(newErrors);
-    
+
     // 닉네임이 기존과 동일한지 체크
     const isNicknameSameAsOriginal = originalNickname && formData.nickname === originalNickname;
-    
+
     // 오류가 없고, 닉네임이 기존과 같거나 중복체크가 완료된 경우 통과
     return Object.keys(newErrors).length === 0 && (isNicknameSameAsOriginal || isNicknameAvailable === true);
   }, [formData, validators, isNicknameAvailable, originalNickname]);
@@ -220,7 +219,8 @@ export const useProfileForm = (initialData?: Partial<ProfileFormData>, originalN
     isChecking: isCheckingNickname,
     showSuccess: isNicknameAvailable === true && !errors.nickname,
     // 중복 확인 버튼 활성화 조건: 현재 표시된 값이 2-10글자이고 한글 초성이 없어야 함
-    canCheck: formData.nickname.length >= 2 && formData.nickname.length <= 10 && !hasIncompleteKorean(formData.nickname),
+    canCheck:
+      formData.nickname.length >= 2 && formData.nickname.length <= 10 && !hasIncompleteKorean(formData.nickname),
     // 에러 판정: 현재 표시된 값 기준으로만 판단 (오버타이핑 경고는 무시)
     hasError: formData.nickname.length < 2 || formData.nickname.length > 10 || isNicknameAvailable === false,
   };

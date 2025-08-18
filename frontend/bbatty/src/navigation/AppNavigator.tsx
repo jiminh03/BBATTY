@@ -17,6 +17,7 @@ import { useTheme } from '../shared/team/ThemeContext';
 import { findTeamById } from '../shared/team/teamTypes';
 import { AttendanceVerificationScreen } from '../pages/attendance';
 import { WatchChatModalScreen } from '../pages/match-chat/WatchChatModalScreen';
+import { TabBarProvider } from '../shared/contexts/TabBarContext';
 
 const Stack = createStackNavigator();
 
@@ -56,9 +57,7 @@ export default function AppNavigator() {
       // await testReset();
       await initializeApiClient();
       setUnauthorizedCallback(handleLogout);
-      console.log('✅ [AppNavigator] 앱 초기화 완료');
     } catch (error) {
-      console.error('❌ [AppNavigator] 앱 초기화 실패:', error);
       // 인증 상태는 Zustand 상태에서 자동으로 계산됨
     }
   }, [initializeTokens, initializeUser, handleLogout]);
@@ -104,22 +103,18 @@ export default function AppNavigator() {
         setIsExistingUser(true);
         setShowSplash(false);
 
-        console.log('Existing user login successful');
       } else {
         // 404 에러는 신규 사용자를 의미하므로 정상 플로우로 처리
         if (loginResult.error?.status === 404 || loginResult.error?.message?.includes('존재하지 않는 사용자')) {
-          console.log('New user detected - proceeding to signup flow');
           setIsExistingUser(false);
           setShowSplash(false);
         } else {
           // 다른 에러는 실제 에러로 처리
-          console.error('Login failed with unexpected error:', loginResult.error);
           setIsExistingUser(false);
           setShowSplash(false);
         }
       }
     } catch (error) {
-      console.error('Login success handling failed:', error);
       setIsExistingUser(false);
       setShowSplash(false);
     }
@@ -128,7 +123,6 @@ export default function AppNavigator() {
   // 유저로부터 팀 상태 정보 설정
   const handleSetUserAndTeam = async (userInfo: any) => {
     await setCurrentUser(userInfo);
-    console.log('userInfo', userInfo);
 
     if (userInfo.teamId) {
       const team = findTeamById(userInfo.teamId);
@@ -160,7 +154,6 @@ export default function AppNavigator() {
         },
       ]);
     } catch (error) {
-      console.error('Sign up completion failed:', error);
       Alert.alert('오류', '회원가입 완료 처리 중 오류가 발생했습니다.');
     }
   };
@@ -176,37 +169,39 @@ export default function AppNavigator() {
   }
 
   return (
-    <NavigationContainer ref={navigationRef} linking={linking}>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {isAuthenticated ? (
-          <>
-            <Stack.Screen name='MainTabs' component={MainNavigator} />
-            <Stack.Screen
-              name='AttendanceVerification'
-              component={AttendanceVerificationScreen}
-              options={{
-                presentation: 'modal',
-                headerShown: true,
-                headerTitle: '직관 인증',
-              }}
-            />
-            <Stack.Screen
-              name='WatchChatModal'
-              component={WatchChatModalScreen}
-              options={{
-                presentation: 'modal',
-                headerShown: false,
-              }}
-            />
-          </>
-        ) : (
-          <Stack.Screen name='AuthStack'>
-            {(props) => (
-              <AuthNavigator {...props} onSignUpComplete={handleSignUpComplete} isExistingUser={isExistingUser} />
-            )}
-          </Stack.Screen>
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
+    <TabBarProvider>
+      <NavigationContainer ref={navigationRef} linking={linking}>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          {isAuthenticated ? (
+            <>
+              <Stack.Screen name='MainTabs' component={MainNavigator} />
+              <Stack.Screen
+                name='AttendanceVerification'
+                component={AttendanceVerificationScreen}
+                options={{
+                  presentation: 'modal',
+                  headerShown: true,
+                  headerTitle: '직관 인증',
+                }}
+              />
+              <Stack.Screen
+                name='WatchChatModal'
+                component={WatchChatModalScreen}
+                options={{
+                  presentation: 'modal',
+                  headerShown: false,
+                }}
+              />
+            </>
+          ) : (
+            <Stack.Screen name='AuthStack'>
+              {(props) => (
+                <AuthNavigator {...props} onSignUpComplete={handleSignUpComplete} isExistingUser={isExistingUser} />
+              )}
+            </Stack.Screen>
+          )}
+        </Stack.Navigator>
+      </NavigationContainer>
+    </TabBarProvider>
   );
 }

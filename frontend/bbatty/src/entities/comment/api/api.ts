@@ -7,12 +7,11 @@ import {
   GetCommentsParams,
   CommentListResponse,
 } from './types';
-import axios, {AxiosHeaders} from 'axios';
+import axios, { AxiosHeaders } from 'axios';
 import { extractData } from '../../../shared/api/types/response';
 
 // AxiosResponse | ApiResponse<T> 모두 커버해 실데이터 꺼내기
-const unwrap = <T>(res: any): { message?: string; data?: T; status?: string } =>
-  (res?.data ?? res) as any;
+const unwrap = <T>(res: any): { message?: string; data?: T; status?: string } => (res?.data ?? res) as any;
 
 // 서버 응답을 CommentListResponse로 정규화 + 아이템 매핑
 const normalizeList = (raw: any, page: number, size: number): CommentListResponse => {
@@ -31,7 +30,7 @@ const normalizeList = (raw: any, page: number, size: number): CommentListRespons
       id: Number(c.id ?? c.commentId),
       authorId: c.authorId ?? c.userId,
       parentId: c.parentId != null ? Number(c.parentId) : null, // 👈 추가
-      depth: Number(c.depth ?? 0),              // 👈 여기 추가
+      depth: Number(c.depth ?? 0), // 👈 여기 추가
       createdAt: c.createdAt ?? c.created_at ?? c.createAt,
       updatedAt: c.updatedAt ?? c.updated_at,
       isDeleted: !!del, // ← 항상 boolean
@@ -54,7 +53,6 @@ const normalizeList = (raw: any, page: number, size: number): CommentListRespons
   };
 };
 
-
 export const commentApi = {
   // 댓글 목록
   async getComments({ postId, page = 0, size = 10 }: GetCommentsParams): Promise<CommentListResponse> {
@@ -67,12 +65,10 @@ export const commentApi = {
       return normalizeList(data, page, size); // ✅ 정규화 후 반환
     } catch (e) {
       if (axios.isAxiosError(e)) {
-        console.log('[getComments][AXIOS]', e.response?.status, e.response?.data);
         if (e.response?.status === 404) {
           return { comments: [], totalCount: 0, page, limit: size, hasMore: false };
         }
       } else {
-        console.log('[getComments][ERROR]', e);
       }
       throw e;
     }
@@ -94,39 +90,35 @@ export const commentApi = {
       }
     } catch (e) {
       if (axios.isAxiosError(e)) {
-        console.log('[createComment][AXIOS]', e.response?.status, e.response?.data);
       } else {
-        console.log('[createComment][ERROR]', e);
       }
       throw e;
     }
   },
 
   // 댓글 수정
-    async updateComment(payload: UpdateCommentPayload): Promise<void> {
-  try {
-    const res = await apiClient.put<void>(
-      `/api/comments/${payload.commentId}`,
-      payload.content, // ← 문자열 그대로
-      {
-        headers: new AxiosHeaders({
-          'Content-Type': 'text/plain; charset=utf-8',
-        }),
+  async updateComment(payload: UpdateCommentPayload): Promise<void> {
+    try {
+      const res = await apiClient.put<void>(
+        `/api/comments/${payload.commentId}`,
+        payload.content, // ← 문자열 그대로
+        {
+          headers: new AxiosHeaders({
+            'Content-Type': 'text/plain; charset=utf-8',
+          }),
+        }
+      );
+      const apiRes: any = (res as any)?.data ?? res;
+      if (apiRes?.status && apiRes.status !== 'SUCCESS') {
+        throw new Error(apiRes.message ?? '댓글 수정 실패');
       }
-    );
-    const apiRes: any = (res as any)?.data ?? res;
-    if (apiRes?.status && apiRes.status !== 'SUCCESS') {
-      throw new Error(apiRes.message ?? '댓글 수정 실패');
+    } catch (e) {
+      if (axios.isAxiosError(e)) {
+      } else {
+      }
+      throw e;
     }
-  } catch (e) {
-    if (axios.isAxiosError(e)) {
-      console.log('[updateComment][AXIOS]', e.response?.status, e.response?.data);
-    } else {
-      console.log('[updateComment][ERROR]', e);
-    }
-    throw e;
-  }
-},
+  },
 
   // 댓글 삭제
   async deleteComment({ commentId }: DeleteCommentPayload): Promise<void> {
@@ -138,9 +130,7 @@ export const commentApi = {
       }
     } catch (e) {
       if (axios.isAxiosError(e)) {
-        console.log('[deleteComment][AXIOS]', e.response?.status, e.response?.data);
       } else {
-        console.log('[deleteComment][ERROR]', e);
       }
       throw e;
     }
