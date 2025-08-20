@@ -31,6 +31,7 @@ interface ApiConfig {
   baseURL: string;
   chatBaseURL: string;
   socketUrl: string;
+  fallbackSocketUrl: string;
   timeout: TimeoutConfig;
   retry: RetryConfig;
   headers: AxiosRequestConfig['headers']; // 이렇게
@@ -43,6 +44,7 @@ export const API_CONFIG: ApiConfig = {
   baseURL: 'http://i13a403.p.ssafy.io:8080', //Platform.OS === 'android' ? 'http://10.0.2.2:8080' : 'http://localhost:8080', // 일반 API 포트
   chatBaseURL: 'http://i13a403.p.ssafy.io:8083', // 채팅 API 포트
   socketUrl: 'ws://i13a403.p.ssafy.io:8083',
+  fallbackSocketUrl: 'ws://i13a403.p.ssafy.io:8084', // 8083 실패시 fallback 포트
 
   timeout: {
     default: 10000, // 10초

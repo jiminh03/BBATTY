@@ -309,7 +309,7 @@ export const MatchChatRoomScreen = () => {
     }
   }, []);
 
-  const connectToWebSocket = useCallback(async () => {
+  const connectToWebSocket = useCallback(async (fallbackPort?: number) => {
     const state = connectionStateRef.current;
 
     // 🔧 FIX 3: 중복 연결 방지 강화
@@ -351,10 +351,16 @@ export const MatchChatRoomScreen = () => {
         }
       }
 
+      // fallback 포트 처리 - 8083에서 8084로 변경
+      if (fallbackPort && wsUrl) {
+        wsUrl = wsUrl.replace(':8083', `:${fallbackPort}`);
+        console.log(`🔄 Fallback 연결 시도: ${wsUrl}`);
+      }
+
       // Mock 처리 로직 (기존과 동일)
       if (
         wsUrl &&
-        wsUrl.includes('i13a403.p.ssafy.io:8083') &&
+        (wsUrl.includes('i13a403.p.ssafy.io:8083') || wsUrl.includes('i13a403.p.ssafy.io:8084')) &&
         sessionToken &&
         sessionToken.startsWith('mock_session_token')
       ) {
@@ -385,6 +391,18 @@ export const MatchChatRoomScreen = () => {
           websocket.close();
           state.isConnecting = false;
           setConnectionStatus('ERROR');
+          
+          // 8083 포트 타임아웃 시 8084로 fallback 시도
+          if (!fallbackPort && wsUrl && wsUrl.includes(':8083')) {
+            console.log('🔄 8083 연결 타임아웃, 8084로 fallback 시도');
+            setTimeout(() => {
+              if (!state.isDestroyed) {
+                connectToWebSocket(8084);
+              }
+            }, 1000);
+            return;
+          }
+          
           scheduleReconnect();
         }
       }, 10000); // 10초 타임아웃
@@ -570,6 +588,17 @@ export const MatchChatRoomScreen = () => {
 
         // 사용자에게 연결 끊어짐 알림 (정상 종료가 아닌 경우만)
         if (event.code !== 1000 && !state.isDestroyed) {
+          // 8083 포트 연결 종료 시 8084로 fallback 시도 (정상 종료가 아닌 경우)
+          if (!fallbackPort && wsUrl && wsUrl.includes(':8083') && event.code !== 1000) {
+            console.log('🔄 8083 연결 종료, 8084로 fallback 시도');
+            setTimeout(() => {
+              if (!state.isDestroyed) {
+                connectToWebSocket(8084);
+              }
+            }, 1000);
+            return;
+          }
+
           const error = getErrorMessage({
             type: 'close',
             code: event.code,
@@ -590,6 +619,17 @@ export const MatchChatRoomScreen = () => {
         console.error('웹소켓 오류:', error);
 
         if (!state.isDestroyed) {
+          // 8083 포트 연결 실패 시 8084로 fallback 시도
+          if (!fallbackPort && wsUrl && wsUrl.includes(':8083')) {
+            console.log('🔄 8083 연결 실패, 8084로 fallback 시도');
+            setTimeout(() => {
+              if (!state.isDestroyed) {
+                connectToWebSocket(8084);
+              }
+            }, 1000);
+            return;
+          }
+
           const chatError = getErrorMessage({
             type: 'CONNECTION_ERROR',
             message: 'WebSocket connection error',
@@ -607,6 +647,18 @@ export const MatchChatRoomScreen = () => {
       state.isConnecting = false;
       setConnectionStatus('ERROR');
       console.error('웹소켓 연결 오류:', error);
+      
+      // 8083 포트 연결 실패 시 8084로 fallback 시도
+      if (!fallbackPort && websocketUrl && websocketUrl.includes(':8083')) {
+        console.log('🔄 8083 연결 실패 (catch), 8084로 fallback 시도');
+        setTimeout(() => {
+          if (!state.isDestroyed) {
+            connectToWebSocket(8084);
+          }
+        }, 1000);
+        return;
+      }
+      
       scheduleReconnect();
     }
   }, [
@@ -623,7 +675,7 @@ export const MatchChatRoomScreen = () => {
   ]);
 
   // 🔧 FIX 6: 재연결 스케줄링 함수 분리
-  const scheduleReconnect = useCallback(() => {
+  const scheduleReconnect = useCallback((useFallback?: boolean) => {
     const state = connectionStateRef.current;
 
     if (!canReconnect()) {
@@ -645,10 +697,16 @@ export const MatchChatRoomScreen = () => {
     state.reconnectTimer = setTimeout(() => {
       if (!state.isDestroyed && canReconnect()) {
         setConnectionStatus('CONNECTING');
-        connectToWebSocket();
+        
+        // 첫 번째 재연결 시도에서 8083이 실패했다면 8084로 시도
+        if (useFallback && websocketUrl && websocketUrl.includes(':8083')) {
+          connectToWebSocket(8084);
+        } else {
+          connectToWebSocket();
+        }
       }
     }, backoffDelay);
-  }, [canReconnect, connectToWebSocket, clearReconnectTimer, showConnectionNotification]);
+  }, [canReconnect, connectToWebSocket, clearReconnectTimer, showConnectionNotification, websocketUrl]);
 
   const disconnect = useCallback(() => {
     const state = connectionStateRef.current;
