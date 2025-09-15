@@ -1,0 +1,4 @@
+.env
+backend/.env
+backend/bbatty/bbatty.env
+backend/bbatty-a403-dcb47aea992d.json
